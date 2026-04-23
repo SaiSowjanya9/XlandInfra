@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+/* Gold gradient text - Updated to #D8B25C */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #E8C96C 0%, #D8B25C 50%, #C8A24C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Gold shimmer effect - Updated to #D8B25C */
+.gold-shimmer {
+  background: linear-gradient(90deg, #B89A3C, #D8B25C, #E8C26C, #D8B25C, #B89A3C);
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Gold border glow - Updated to #D8B25C */
+.gold-glow {
+  box-shadow: 0 0 20px rgba(216, 178, 92, 0.3), 0 0 40px rgba(216, 178, 92, 0.1);
+}
+
+.gold-glow-hover:hover {
+  box-shadow: 0 0 25px rgba(216, 178, 92, 0.4), 0 0 50px rgba(216, 178, 92, 0.2);
+}
+
+/* Custom gold accent color */
+.text-gold-accent {
+  color: #D8B25C;
+}
+
+.border-gold-accent {
+  border-color: #D8B25C;
+}
+
+.bg-gold-accent {
+  background-color: #D8B25C;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-gold-600 to-gold-700 hover:from-gold-500 hover:to-gold-600 text-dark-900 font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl active:scale-[0.98];
+  }
+  
+  .btn-secondary {
+    @apply bg-dark-700 hover:bg-dark-600 text-gold-400 border border-gold-600/30 font-medium py-3 px-6 rounded-lg transition-all duration-200;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-gold-500 text-gold-400 hover:bg-gold-500/10 font-medium py-3 px-6 rounded-lg transition-all duration-200;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 bg-dark-800 border border-dark-600 rounded-lg text-white placeholder-dark-400 focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 outline-none transition-all duration-200;
+  }
+  
+  .select-field {
+    @apply w-full px-4 py-3 bg-dark-800 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 outline-none transition-all duration-200 cursor-pointer;
+  }
+  
+  .card {
+    @apply bg-dark-800/80 backdrop-blur-sm rounded-xl shadow-xl border border-dark-700/50 p-6;
+  }
+  
+  .card-gold {
+    @apply bg-dark-800/80 backdrop-blur-sm rounded-xl shadow-xl border border-gold-600/20 p-6 hover:border-gold-500/40 transition-all duration-300;
+  }
+  
+  .nav-button {
+    @apply flex flex-col items-center justify-center p-4 md:p-6 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+}
