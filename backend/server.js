@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 
+const { testConnection, initOnboardingTables } = require('./config/database');
 const categoriesRouter = require('./routes/categories');
 const workOrdersRouter = require('./routes/workOrders');
 const residentsRouter = require('./routes/residents');
@@ -82,7 +83,19 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📁 Uploads directory: ${uploadsDir}`);
-});
+// Initialize database and start server
+const startServer = async () => {
+  // Test database connection
+  const dbConnected = await testConnection();
+  if (dbConnected) {
+    // Initialize onboarding tables
+    await initOnboardingTables();
+  }
+
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📁 Uploads directory: ${uploadsDir}`);
+  });
+};
+
+startServer();
