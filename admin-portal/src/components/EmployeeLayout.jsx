@@ -7,6 +7,7 @@ import {
   Briefcase,
   Menu,
   X,
+  ClipboardList,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -17,6 +18,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const navItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/employee/properties', icon: Building2, label: 'Properties' },
+    { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/employee/onboarding', icon: FileInput, label: 'Onboarding' },
   ];
 

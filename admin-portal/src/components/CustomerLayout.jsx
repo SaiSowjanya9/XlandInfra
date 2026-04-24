@@ -1,11 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   ClipboardList,
-  FolderTree,
+  CreditCard,
+  Calendar,
+  Phone,
   LogOut,
   Users,
   Menu,
   X,
+  Home,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -14,8 +17,11 @@ const CustomerLayout = ({ admin, onLogout, children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navItems = [
-    { path: '/customer', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/customer/categories', icon: FolderTree, label: 'Categories' },
+    { path: '/customer', icon: Home, label: 'Dashboard' },
+    { path: '/customer/work-order', icon: ClipboardList, label: 'Work Order' },
+    { path: '/customer/payment', icon: CreditCard, label: 'Payment' },
+    { path: '/customer/schedule', icon: Calendar, label: 'Schedule' },
+    { path: '/customer/contact', icon: Phone, label: 'Contact' },
   ];
 
   const NavLink = ({ item, mobile = false }) => {

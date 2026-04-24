@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Building2, 
   Home, 
@@ -18,7 +18,13 @@ import {
   Truck,
   Map,
   AlertCircle,
-  Search
+  Search,
+  Navigation,
+  Loader2,
+  MapPinned,
+  Globe,
+  Building,
+  Hash
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -33,15 +39,27 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// Division options
-const DIVISIONS = ['Division A', 'Division B', 'Division C', 'Division D'];
+// Division options (A through K)
+const DIVISIONS = [
+  'Division A',
+  'Division B',
+  'Division C',
+  'Division D',
+  'Division E',
+  'Division F',
+  'Division G',
+  'Division H',
+  'Division I',
+  'Division J',
+  'Division K'
+];
 
 // Property Type options
 const PROPERTY_TYPES = {
-  GC: ['Gated Community - Residential', 'Gated Community - Commercial', 'Gated Community - Mixed'],
-  APT: ['Apartment - High Rise', 'Apartment - Mid Rise', 'Apartment - Low Rise'],
-  VILLA: ['Villa - Independent', 'Villa - Gated Community'],
-  PLOT: ['Plot - Residential', 'Plot - Commercial']
+  GC: ['Gated Community'],
+  APT: ['Apartment'],
+  VILLA: ['Villa'],
+  PLOT: ['Plot']
 };
 
 // Entry type configuration
@@ -198,12 +216,14 @@ const FlyToLocation = ({ position }) => {
   return null;
 };
 
-// Interactive map location picker with debounced autocomplete
+// Interactive map location picker with debounced autocomplete and live location
 const MapLocationPicker = ({ value, onChange }) => {
   const [searchQuery, setSearchQuery] = useState(value?.address || '');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [gettingLocation, setGettingLocation] = useState(false);
+  const [locationError, setLocationError] = useState('');
 
   // Debounced autocomplete: fires search after 400ms of inactivity
   useEffect(() => {
@@ -244,14 +264,96 @@ const MapLocationPicker = ({ value, onChange }) => {
     onChange(location);
   };
 
+  // Live location functionality using browser Geolocation API
+  const handleGetLiveLocation = async () => {
+    setLocationError('');
+    setGettingLocation(true);
+
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser');
+      setGettingLocation(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude: lat, longitude: lng } = position.coords;
+        
+        // Update map marker position
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+          );
+          const data = await res.json();
+          const addr = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          setSearchQuery(addr);
+          onChange({ lat, lng, address: addr });
+        } catch {
+          onChange({ lat, lng, address: `${lat.toFixed(6)}, ${lng.toFixed(6)}` });
+        }
+        setGettingLocation(false);
+      },
+      (error) => {
+        let errorMessage = 'Unable to get your location';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location access denied. Please allow location access in your browser settings.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information is unavailable.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out.';
+            break;
+        }
+        setLocationError(errorMessage);
+        setGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
   const markerPosition = value?.lat && value?.lng ? [value.lat, value.lng] : null;
   const mapCenter = markerPosition || [20.5937, 78.9629];
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700">
-        Location on Map <span className="text-red-500">*</span>
-      </label>
+      <div className="flex items-center justify-between">
+        <label className="block text-sm font-medium text-gray-700">
+          Location on Map <span className="text-red-500">*</span>
+        </label>
+        {/* Live Location Button */}
+        <button
+          type="button"
+          onClick={handleGetLiveLocation}
+          disabled={gettingLocation}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {gettingLocation ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Getting Location...
+            </>
+          ) : (
+            <>
+              <Navigation className="w-4 h-4" />
+              Use Live Location
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Location Error */}
+      {locationError && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          {locationError}
+        </div>
+      )}
 
       {/* Search bar with autocomplete */}
       <div className="relative">
@@ -278,6 +380,7 @@ const MapLocationPicker = ({ value, onChange }) => {
             {searchResults.map((result, idx) => (
               <button
                 key={idx}
+                type="button"
                 onClick={() => selectResult(result)}
                 className="w-full text-left px-4 py-3 hover:bg-primary-50 border-b border-gray-50 last:border-0 transition-colors"
               >
@@ -317,7 +420,7 @@ const MapLocationPicker = ({ value, onChange }) => {
       {/* Pinned location info */}
       {value?.address && (
         <div className="flex items-start gap-2.5 p-3 bg-green-50 border border-green-200 rounded-xl">
-          <MapPin className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+          <MapPinned className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
           <div className="min-w-0">
             <p className="text-xs font-semibold text-green-700">Pinned Location</p>
             <p className="text-xs text-green-600 mt-0.5 break-words">{value.address}</p>
@@ -330,7 +433,9 @@ const MapLocationPicker = ({ value, onChange }) => {
         </div>
       )}
 
-      <p className="text-[11px] text-gray-400">Start typing to see suggestions, or click directly on the map to pin a location.</p>
+      <p className="text-[11px] text-gray-400">
+        Click "Use Live Location" to automatically pin your current location, search for an address, or click directly on the map.
+      </p>
     </div>
   );
 };
@@ -338,7 +443,6 @@ const MapLocationPicker = ({ value, onChange }) => {
 const Onboarding = ({ admin }) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedEntryType, setSelectedEntryType] = useState(null);
-  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     zone: '',
     areaName: '',
@@ -353,15 +457,23 @@ const Onboarding = ({ admin }) => {
     blockNA: false,
     numberOfUnits: '',
     villaPlotNumber: '',
+    // Address fields
     address: '',
+    addressLine1: '',
+    aptSuiteUnit: '',
+    aptSuiteNA: false,
+    city: '',
+    state: '',
+    postalCode: '',
     landmark: '',
     mapLocation: { lat: null, lng: null, address: '' },
     notes: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [attemptedNext, setAttemptedNext] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [createdProperty, setCreatedProperty] = useState(null);
+  const formRef = useRef(null);
 
   const steps = selectedEntryType ? STEPS_CONFIG[selectedEntryType] : [];
   const totalSteps = steps.length;
@@ -420,25 +532,19 @@ const Onboarding = ({ admin }) => {
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const isValidPhone = (phone) => /^\d{10}$/.test(phone);
 
-  const handleNext = () => {
-    if (!isStepValid()) {
-      setAttemptedNext(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setAttemptedSubmit(true);
+    
+    if (!isFormValid()) {
+      // Scroll to first error
+      const firstError = document.querySelector('.border-red-400');
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
-    setAttemptedNext(false);
-    if (currentStep < totalSteps) {
-      setCurrentStep(prev => prev + 1);
-    }
-  };
 
-  const handlePrevious = () => {
-    setAttemptedNext(false);
-    if (currentStep > 1) {
-      setCurrentStep(prev => prev - 1);
-    }
-  };
-
-  const handleSubmit = async () => {
     setSubmitting(true);
     try {
       const property = await saveProperty(formData, selectedEntryType, selectedCategory);
@@ -456,10 +562,10 @@ const Onboarding = ({ admin }) => {
     }
   };
 
+  
   const handleReset = () => {
     setSelectedCategory(null);
     setSelectedEntryType(null);
-    setCurrentStep(1);
     setFormData({
       zone: '',
       areaName: '',
@@ -475,41 +581,54 @@ const Onboarding = ({ admin }) => {
       numberOfUnits: '',
       villaPlotNumber: '',
       address: '',
+      addressLine1: '',
+      aptSuiteUnit: '',
+      aptSuiteNA: false,
+      city: '',
+      state: '',
+      postalCode: '',
       landmark: '',
       mapLocation: { lat: null, lng: null, address: '' },
       notes: ''
     });
     setSubmitted(false);
+    setAttemptedSubmit(false);
   };
 
-  const isStepValid = () => {
-    switch (currentStep) {
-      case 1: return formData.zone.trim() !== '';
-      case 2: return formData.areaName.trim() !== '';
-      case 3: return formData.division !== '';
-      case 4: return formData.propertyType !== '';
-      case 5: return formData.communityName.trim() !== '';
-      case 6: return formData.associationContacts.every(c => c.name.trim() !== '' && isValidEmail(c.email) && isValidPhone(c.phone));
-      case 7:
-        if (selectedEntryType === 'GC') return formData.numberOfBlocks >= 1;
-        if (selectedEntryType === 'APT') return formData.blockNA || formData.blockInfo.trim() !== '';
-        if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') return formData.villaPlotNumber.trim() !== '';
-        return true;
-      case 8:
-        if (selectedEntryType === 'GC') {
-          for (let i = 1; i <= formData.numberOfBlocks; i++) {
-            if (!formData.unitsPerBlock[i] || formData.unitsPerBlock[i] <= 0) return false;
-          }
-          return true;
-        }
-        if (selectedEntryType === 'APT') return formData.numberOfUnits > 0;
-        return formData.address.trim() !== '';
-      case 9:
-        if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') return true;
-        return formData.address.trim() !== '';
-      case 10: return true;
-      default: return true;
+  const isFormValid = () => {
+    // Basic required fields
+    if (!formData.zone.trim()) return false;
+    if (!formData.areaName.trim()) return false;
+    if (!formData.division) return false;
+    if (!formData.propertyType) return false;
+    if (!formData.communityName.trim()) return false;
+    
+    // Association contacts validation
+    if (!formData.associationContacts.every(c => c.name.trim() !== '' && isValidEmail(c.email) && isValidPhone(c.phone))) return false;
+    
+    // Entry type specific validation
+    if (selectedEntryType === 'GC') {
+      if (formData.numberOfBlocks < 1) return false;
+      for (let i = 1; i <= formData.numberOfBlocks; i++) {
+        if (!formData.unitsPerBlock[i] || formData.unitsPerBlock[i] <= 0) return false;
+      }
     }
+    if (selectedEntryType === 'APT') {
+      if (!formData.blockNA && formData.blockInfo.trim() === '') return false;
+      if (!formData.numberOfUnits || formData.numberOfUnits <= 0) return false;
+    }
+    if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') {
+      if (!formData.villaPlotNumber.trim()) return false;
+    }
+    
+    // Address validation - mandatory fields
+    if (!formData.address.trim()) return false;
+    if (!formData.aptSuiteNA && !formData.aptSuiteUnit.trim()) return false;
+    if (!formData.city.trim()) return false;
+    if (!formData.state.trim()) return false;
+    if (!formData.postalCode.trim()) return false;
+    
+    return true;
   };
 
   // Category Selection Screen (first layer)
@@ -693,788 +812,546 @@ const Onboarding = ({ admin }) => {
     );
   }
 
-  // Helper: error styling for inputs
+  // Helper: error styling for inputs - Clean simple style
   const inputClass = (hasError) =>
-    `w-full px-4 py-3 border rounded-lg transition-colors focus:ring-2 focus:outline-none ${
+    `w-full px-3 py-2.5 border rounded-md transition-colors focus:ring-1 focus:outline-none text-sm ${
       hasError
-        ? 'border-red-400 focus:ring-red-200 focus:border-red-500 bg-red-50/30'
-        : 'border-gray-300 focus:ring-primary-200 focus:border-primary-500'
+        ? 'border-red-400 focus:ring-red-200 focus:border-red-500'
+        : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
     }`;
 
   const selectClass = (hasError) =>
-    `w-full px-4 py-3 border rounded-lg transition-colors focus:ring-2 focus:outline-none appearance-none bg-white ${
+    `w-full px-3 py-2.5 border rounded-md transition-colors focus:ring-1 focus:outline-none appearance-none bg-white text-sm ${
       hasError
-        ? 'border-red-400 focus:ring-red-200 focus:border-red-500 bg-red-50/30'
-        : 'border-gray-300 focus:ring-primary-200 focus:border-primary-500'
+        ? 'border-red-400 focus:ring-red-200 focus:border-red-500'
+        : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
     }`;
 
   const FieldError = ({ show, message }) =>
     show ? (
-      <p className="flex items-center gap-1.5 text-xs text-red-500 mt-1.5">
-        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-        {message}
-      </p>
+      <p className="text-xs text-red-500 mt-1">{message}</p>
     ) : null;
 
-  // Render step content based on entry type and current step
-  const renderStepContent = () => {
-    // Common steps 1-6 for all entry types
-    switch (currentStep) {
-      case 1: {
-        const hasError = attemptedNext && formData.zone.trim() === '';
-        return (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Zone <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.zone}
-              onChange={(e) => updateFormData('zone', e.target.value)}
-              className={inputClass(hasError)}
-              placeholder="Enter zone name"
-            />
-            <FieldError show={hasError} message="Zone is required" />
-          </div>
-        );
-      }
-
-      case 2: {
-        const hasError = attemptedNext && formData.areaName.trim() === '';
-        return (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Area Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.areaName}
-              onChange={(e) => updateFormData('areaName', e.target.value)}
-              className={inputClass(hasError)}
-              placeholder="Enter area name"
-            />
-            <FieldError show={hasError} message="Area name is required" />
-          </div>
-        );
-      }
-
-      case 3: {
-        const hasError = attemptedNext && formData.division === '';
-        return (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Division <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <select
-                value={formData.division}
-                onChange={(e) => updateFormData('division', e.target.value)}
-                className={selectClass(hasError)}
-              >
-                <option value="">Select a division</option>
-                {DIVISIONS.map(division => (
-                  <option key={division} value={division}>{division}</option>
-                ))}
-              </select>
-              <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 rotate-90 pointer-events-none" />
-            </div>
-            <FieldError show={hasError} message="Please select a division" />
-          </div>
-        );
-      }
-
-      case 4: {
-        const hasError = attemptedNext && formData.propertyType === '';
-        return (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Property Type <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <select
-                value={formData.propertyType}
-                onChange={(e) => updateFormData('propertyType', e.target.value)}
-                className={selectClass(hasError)}
-              >
-                <option value="">Select a property type</option>
-                {PROPERTY_TYPES[selectedEntryType]?.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-              <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 rotate-90 pointer-events-none" />
-            </div>
-            <FieldError show={hasError} message="Please select a property type" />
-          </div>
-        );
-      }
-
-      case 5: {
-        const hasError = attemptedNext && formData.communityName.trim() === '';
-        return (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Community Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.communityName}
-              onChange={(e) => updateFormData('communityName', e.target.value)}
-              className={inputClass(hasError)}
-              placeholder="Enter community name"
-            />
-            <FieldError show={hasError} message="Community name is required" />
-          </div>
-        );
-      }
-
-      case 6: {
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-gray-700">
-                Association / Client Details <span className="text-red-500">*</span>
+  // Render single form with all steps as seamless sections
+  const renderSingleForm = () => {
+    const hasError = attemptedSubmit && !isFormValid();
+    
+    return (
+      <form ref={formRef} onSubmit={handleSubmit} className="bg-white border-l-4 border-l-blue-500 shadow-sm">
+        {/* Property Information Section */}
+        <div className="p-8 border-b border-gray-200">
+          <h2 className="text-xl font-medium text-gray-800 mb-6">Property Information</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+            {/* Zone */}
+            <div>
+              <label className="block text-sm text-gray-700 mb-1.5">
+                Zone <span className="text-red-500">*</span>
               </label>
-              <button
-                onClick={addAssociationContact}
-                className="flex items-center gap-2 text-primary-600 hover:text-primary-700 text-sm font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                Add Contact
-              </button>
+              <input
+                type="text"
+                value={formData.zone}
+                onChange={(e) => updateFormData('zone', e.target.value)}
+                className={inputClass(hasError && !formData.zone.trim())}
+                placeholder="Enter zone name"
+              />
+              <FieldError show={hasError && !formData.zone.trim()} message="Zone is required" />
             </div>
 
-            {formData.associationContacts.map((contact, index) => {
-              const nameError = attemptedNext && contact.name.trim() === '';
-              const emailEmpty = attemptedNext && contact.email.trim() === '';
-              const emailInvalid = attemptedNext && contact.email.trim() !== '' && !isValidEmail(contact.email);
-              const emailError = emailEmpty || emailInvalid;
-              const phoneEmpty = attemptedNext && contact.phone.trim() === '';
-              const phoneInvalid = attemptedNext && contact.phone.trim() !== '' && !isValidPhone(contact.phone);
-              const phoneError = phoneEmpty || phoneInvalid;
-              return (
-                <div key={index} className="p-5 bg-gray-50 rounded-xl border border-gray-100 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-gray-700">Contact {index + 1}</span>
-                    {formData.associationContacts.length > 1 && (
-                      <button
-                        onClick={() => removeAssociationContact(index)}
-                        className="text-red-400 hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                  {/* Name */}
+            {/* Area Name */}
+            <div>
+              <label className="block text-sm text-gray-700 mb-1.5">
+                Area Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.areaName}
+                onChange={(e) => updateFormData('areaName', e.target.value)}
+                className={inputClass(hasError && !formData.areaName.trim())}
+                placeholder="Enter area name"
+              />
+              <FieldError show={hasError && !formData.areaName.trim()} message="Area name is required" />
+            </div>
+
+            {/* Division */}
+            <div>
+              <label className="block text-sm text-gray-700 mb-1.5">
+                Division <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={formData.division}
+                  onChange={(e) => updateFormData('division', e.target.value)}
+                  className={selectClass(hasError && !formData.division)}
+                >
+                  <option value="">Select a division</option>
+                  {DIVISIONS.map(division => (
+                    <option key={division} value={division}>{division}</option>
+                  ))}
+                </select>
+                <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 rotate-90 pointer-events-none" />
+              </div>
+              <FieldError show={hasError && !formData.division} message="Please select a division" />
+            </div>
+
+            {/* Property Type */}
+            <div>
+              <label className="block text-sm text-gray-700 mb-1.5">
+                Property Type <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={formData.propertyType}
+                  onChange={(e) => updateFormData('propertyType', e.target.value)}
+                  className={selectClass(hasError && !formData.propertyType)}
+                >
+                  <option value="">Select a property type</option>
+                  {PROPERTY_TYPES[selectedEntryType]?.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 rotate-90 pointer-events-none" />
+              </div>
+              <FieldError show={hasError && !formData.propertyType} message="Please select a property type" />
+            </div>
+
+            {/* Community Name - Full width */}
+            <div className="md:col-span-2">
+              <label className="block text-sm text-gray-700 mb-1.5">
+                Community Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.communityName}
+                onChange={(e) => updateFormData('communityName', e.target.value)}
+                className={inputClass(hasError && !formData.communityName.trim())}
+                placeholder="Enter community name"
+              />
+              <FieldError show={hasError && !formData.communityName.trim()} message="Community name is required" />
+            </div>
+          </div>
+        </div>
+
+        {/* Contact Information Section */}
+        <div className="p-8 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-medium text-gray-800">Contact Information</h2>
+            <button
+              type="button"
+              onClick={addAssociationContact}
+              className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Add Contact
+            </button>
+          </div>
+
+          {formData.associationContacts.map((contact, index) => {
+            const nameError = hasError && contact.name.trim() === '';
+            const emailEmpty = hasError && contact.email.trim() === '';
+            const emailInvalid = hasError && contact.email.trim() !== '' && !isValidEmail(contact.email);
+            const emailError = emailEmpty || emailInvalid;
+            const phoneEmpty = hasError && contact.phone.trim() === '';
+            const phoneInvalid = hasError && contact.phone.trim() !== '' && !isValidPhone(contact.phone);
+            const phoneError = phoneEmpty || phoneInvalid;
+            
+            return (
+              <div key={index} className="mb-6 pb-6 border-b border-gray-100 last:border-0 last:pb-0 last:mb-0">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-medium text-gray-600">Contact {index + 1}</span>
+                  {formData.associationContacts.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeAssociationContact(index)}
+                      className="text-red-400 hover:text-red-600 text-sm"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                    <label className="block text-sm text-gray-700 mb-1.5">
                       Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={contact.name}
                       onChange={(e) => updateAssociationContact(index, 'name', e.target.value)}
-                      className={inputClass(nameError).replace('px-4 py-3', 'px-3 py-2')}
+                      className={inputClass(nameError)}
                       placeholder="Contact name"
                     />
                     <FieldError show={nameError} message="Name is required" />
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {/* Email */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">
-                        Email <span className="text-red-500">*</span>
-                      </label>
+                  
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1.5">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={contact.email}
+                      onChange={(e) => updateAssociationContact(index, 'email', e.target.value)}
+                      className={inputClass(emailError)}
+                      placeholder="example@email.com"
+                    />
+                    <FieldError show={emailEmpty} message="Email is required" />
+                    <FieldError show={emailInvalid} message="Please enter a valid email" />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-sm text-gray-700 mb-1.5">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-2 max-w-md">
+                      <select
+                        value={contact.countryCode || '+91'}
+                        onChange={(e) => updateAssociationContact(index, 'countryCode', e.target.value)}
+                        className="w-24 flex-shrink-0 px-2 py-2.5 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-200 focus:border-blue-400 focus:outline-none bg-white"
+                      >
+                        {COUNTRY_CODES.map(cc => (
+                          <option key={cc.code} value={cc.code}>
+                            {cc.flag} {cc.code}
+                          </option>
+                        ))}
+                      </select>
                       <input
-                        type="email"
-                        value={contact.email}
-                        onChange={(e) => updateAssociationContact(index, 'email', e.target.value)}
-                        className={inputClass(emailError).replace('px-4 py-3', 'px-3 py-2')}
-                        placeholder="example@email.com"
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
+                        value={contact.phone}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          updateAssociationContact(index, 'phone', digits);
+                        }}
+                        className={`flex-1 ${inputClass(phoneError)}`}
+                        placeholder="10-digit number"
                       />
-                      <FieldError show={emailEmpty} message="Email is required" />
-                      <FieldError show={emailInvalid} message="Please enter a valid email (e.g. name@domain.com)" />
                     </div>
-                    {/* Phone with country code */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">
-                        Phone Number <span className="text-red-500">*</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <select
-                          value={contact.countryCode || '+91'}
-                          onChange={(e) => updateAssociationContact(index, 'countryCode', e.target.value)}
-                          className="w-[7.5rem] flex-shrink-0 px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-200 focus:border-primary-500 focus:outline-none bg-white"
-                        >
-                          {COUNTRY_CODES.map(cc => (
-                            <option key={cc.code} value={cc.code}>
-                              {cc.flag} {cc.code}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="tel"
-                          inputMode="numeric"
-                          maxLength={10}
-                          value={contact.phone}
-                          onChange={(e) => {
-                            const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
-                            updateAssociationContact(index, 'phone', digits);
-                          }}
-                          className={`flex-1 ${inputClass(phoneError).replace('px-4 py-3', 'px-3 py-2')}`}
-                          placeholder="10-digit number"
-                        />
-                      </div>
-                      <FieldError show={phoneEmpty} message="Phone number is required" />
-                      <FieldError show={phoneInvalid} message="Phone number must be exactly 10 digits" />
-                    </div>
+                    <FieldError show={phoneEmpty} message="Phone number is required" />
+                    <FieldError show={phoneInvalid} message="Phone number must be exactly 10 digits" />
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        );
-      }
-
-      case 7:
-        // Different for each entry type
-        if (selectedEntryType === 'GC') {
-          const hasError = attemptedNext && formData.numberOfBlocks < 1;
-          return (
-            <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Number of Blocks <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={formData.numberOfBlocks}
-                onChange={(e) => updateFormData('numberOfBlocks', parseInt(e.target.value) || 1)}
-                className={inputClass(hasError)}
-                placeholder="Enter number of blocks"
-              />
-              <FieldError show={hasError} message="Number of blocks is required" />
-              <p className="text-xs text-gray-400">
-                You will enter the number of units for each block in the next step.
-              </p>
-            </div>
-          );
-        }
-        if (selectedEntryType === 'APT') {
-          const hasError = attemptedNext && !formData.blockNA && formData.blockInfo.trim() === '';
-          return (
-            <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Block Information <span className="text-red-500">*</span>
-              </label>
-              <div className="flex items-center gap-3 mb-2">
-                <input
-                  type="checkbox"
-                  id="blockNA"
-                  checked={formData.blockNA}
-                  onChange={(e) => updateFormData('blockNA', e.target.checked)}
-                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                />
-                <label htmlFor="blockNA" className="text-sm text-gray-700">Not Applicable (N/A)</label>
               </div>
-              {!formData.blockNA && (
-                <>
-                  <input
-                    type="text"
-                    value={formData.blockInfo}
-                    onChange={(e) => updateFormData('blockInfo', e.target.value)}
-                    className={inputClass(hasError)}
-                    placeholder="Enter block name/number (e.g., Block A, Tower 1)"
-                  />
-                  <FieldError show={hasError} message="Block information is required (or mark as N/A)" />
-                </>
-              )}
-            </div>
-          );
-        }
-        if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') {
-          const label = selectedEntryType === 'VILLA' ? 'Villa Number' : 'Plot Number';
-          const hasError = attemptedNext && formData.villaPlotNumber.trim() === '';
-          return (
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                {label} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.villaPlotNumber}
-                onChange={(e) => updateFormData('villaPlotNumber', e.target.value)}
-                className={inputClass(hasError)}
-                placeholder={`Enter ${label.toLowerCase()}`}
-              />
-              <FieldError show={hasError} message={`${label} is required`} />
-            </div>
-          );
-        }
-        return null;
+            );
+          })}
+        </div>
 
-      case 8:
-        // Different for each entry type
-        if (selectedEntryType === 'GC') {
-          const hasBlockErrors = attemptedNext;
-          return (
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Units per Block <span className="text-red-500">*</span>
+        {/* Entry Type Specific Section */}
+        {selectedEntryType === 'GC' && (
+          <div className="p-8 border-b border-gray-200">
+            <h2 className="text-xl font-medium text-gray-800 mb-6">Block Details</h2>
+            
+            <div className="space-y-5">
+              <div className="max-w-xs">
+                <label className="block text-sm text-gray-700 mb-1.5">
+                  Number of Blocks <span className="text-red-500">*</span>
                 </label>
-                <p className="text-xs text-gray-400 mt-1">You can rename each block and enter the number of units.</p>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.numberOfBlocks}
+                  onChange={(e) => updateFormData('numberOfBlocks', parseInt(e.target.value) || 1)}
+                  className={inputClass(hasError && formData.numberOfBlocks < 1)}
+                  placeholder="Enter number of blocks"
+                />
+                <FieldError show={hasError && formData.numberOfBlocks < 1} message="Number of blocks is required" />
               </div>
 
-              <div className="space-y-3">
+              {/* Units per Block */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 {Array.from({ length: formData.numberOfBlocks }, (_, i) => i + 1).map(blockNum => {
-                  const blockError = hasBlockErrors && (!formData.unitsPerBlock[blockNum] || formData.unitsPerBlock[blockNum] <= 0);
+                  const blockError = hasError && (!formData.unitsPerBlock[blockNum] || formData.unitsPerBlock[blockNum] <= 0);
                   return (
-                    <div key={blockNum} className={`p-4 rounded-xl border transition-colors ${
-                      blockError ? 'bg-red-50/50 border-red-200' : 'bg-gray-50 border-gray-100'
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        {/* Editable block name */}
-                        <div className="flex-shrink-0 w-40">
-                          <label className="block text-[10px] font-medium text-gray-400 mb-1 uppercase tracking-wider">Block Name</label>
-                          <input
-                            type="text"
-                            value={formData.blockNames[blockNum] || ''}
-                            onChange={(e) => updateBlockName(blockNum, e.target.value)}
-                            className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary-200 focus:border-primary-500 focus:outline-none bg-white"
-                            placeholder={`Block ${blockNum}`}
-                          />
-                        </div>
-                        {/* Units input */}
-                        <div className="flex-1">
-                          <label className="block text-[10px] font-medium text-gray-400 mb-1 uppercase tracking-wider">No. of Units <span className="text-red-500">*</span></label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={formData.unitsPerBlock[blockNum] || ''}
-                            onChange={(e) => updateUnitsForBlock(blockNum, e.target.value)}
-                            className={`w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:outline-none ${
-                              blockError ? 'border-red-400 focus:ring-red-200' : 'border-gray-300 focus:ring-primary-200'
-                            }`}
-                            placeholder={`Units for ${getBlockLabel(blockNum)}`}
-                          />
-                        </div>
+                    <div key={blockNum} className="flex gap-3">
+                      <div className="w-32">
+                        <label className="block text-xs text-gray-500 mb-1">Block Name</label>
+                        <input
+                          type="text"
+                          value={formData.blockNames[blockNum] || ''}
+                          onChange={(e) => updateBlockName(blockNum, e.target.value)}
+                          className={inputClass(false)}
+                          placeholder={`Block ${blockNum}`}
+                        />
                       </div>
-                      {blockError && (
-                        <p className="flex items-center gap-1 text-[11px] text-red-500 mt-2">
-                          <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                          Enter units for {getBlockLabel(blockNum)}
-                        </p>
-                      )}
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-500 mb-1">Units <span className="text-red-500">*</span></label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={formData.unitsPerBlock[blockNum] || ''}
+                          onChange={(e) => updateUnitsForBlock(blockNum, e.target.value)}
+                          className={inputClass(blockError)}
+                          placeholder="No. of units"
+                        />
+                        <FieldError show={blockError} message="Required" />
+                      </div>
                     </div>
                   );
                 })}
               </div>
 
               {formData.numberOfBlocks >= 1 && calculateTotalFlats() > 0 && (
-                <div className="p-4 bg-primary-50 rounded-xl border border-primary-200">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-primary-700">Total Flats</span>
-                    <span className="text-2xl font-bold text-primary-700">{calculateTotalFlats()}</span>
-                  </div>
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md inline-block">
+                  <span className="text-sm text-blue-700">Total Flats: <strong>{calculateTotalFlats()}</strong></span>
                 </div>
               )}
             </div>
-          );
-        }
-        if (selectedEntryType === 'APT') {
-          const hasError = attemptedNext && (!formData.numberOfUnits || formData.numberOfUnits <= 0);
-          return (
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Number of Units <span className="text-red-500">*</span>
+          </div>
+        )}
+
+        {selectedEntryType === 'APT' && (
+          <div className="p-8 border-b border-gray-200">
+            <h2 className="text-xl font-medium text-gray-800 mb-6">Apartment Details</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+              <div>
+                <label className="block text-sm text-gray-700 mb-1.5">
+                  Block Information
+                </label>
+                <div className="flex items-center gap-3 mb-2">
+                  <input
+                    type="checkbox"
+                    id="blockNA"
+                    checked={formData.blockNA}
+                    onChange={(e) => updateFormData('blockNA', e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="blockNA" className="text-sm text-gray-600">Not Applicable</label>
+                </div>
+                {!formData.blockNA && (
+                  <>
+                    <input
+                      type="text"
+                      value={formData.blockInfo}
+                      onChange={(e) => updateFormData('blockInfo', e.target.value)}
+                      className={inputClass(hasError && !formData.blockNA && formData.blockInfo.trim() === '')}
+                      placeholder="Block A, Tower 1, etc."
+                    />
+                    <FieldError show={hasError && !formData.blockNA && formData.blockInfo.trim() === ''} message="Block info required (or mark N/A)" />
+                  </>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-1.5">
+                  Number of Units <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.numberOfUnits}
+                  onChange={(e) => updateFormData('numberOfUnits', e.target.value)}
+                  className={inputClass(hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0))}
+                  placeholder="Total number of units"
+                />
+                <FieldError show={hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0)} message="Number of units is required" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {(selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') && (
+          <div className="p-8 border-b border-gray-200">
+            <h2 className="text-xl font-medium text-gray-800 mb-6">
+              {selectedEntryType === 'VILLA' ? 'Villa Details' : 'Plot Details'}
+            </h2>
+            
+            <div className="max-w-md">
+              <label className="block text-sm text-gray-700 mb-1.5">
+                {selectedEntryType === 'VILLA' ? 'Villa Number' : 'Plot Number'} <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
-                min="1"
-                value={formData.numberOfUnits}
-                onChange={(e) => updateFormData('numberOfUnits', e.target.value)}
-                className={inputClass(hasError)}
-                placeholder="Enter total number of units"
+                type="text"
+                value={formData.villaPlotNumber}
+                onChange={(e) => updateFormData('villaPlotNumber', e.target.value)}
+                className={inputClass(hasError && !formData.villaPlotNumber.trim())}
+                placeholder={`Enter ${selectedEntryType === 'VILLA' ? 'villa' : 'plot'} number`}
               />
-              <FieldError show={hasError} message="Number of units is required" />
+              <FieldError show={hasError && !formData.villaPlotNumber.trim()} message={`${selectedEntryType === 'VILLA' ? 'Villa' : 'Plot'} number is required`} />
             </div>
-          );
-        }
-        // VILLA/PLOT - this is Address step (step 8)
-        if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') {
-          const hasError = attemptedNext && formData.address.trim() === '';
-          return (
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Address / Landmark <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={formData.address}
-                  onChange={(e) => updateFormData('address', e.target.value)}
-                  rows={3}
-                  className={inputClass(hasError)}
-                  placeholder="Enter complete address with landmark"
-                />
-                <FieldError show={hasError} message="Address is required" />
-              </div>
-              <MapLocationPicker
-                value={formData.mapLocation}
-                onChange={(loc) => updateFormData('mapLocation', loc)}
-              />
-            </div>
-          );
-        }
-        return null;
+          </div>
+        )}
 
-      case 9:
-        // For GC and APT this is Address step, for VILLA this is Notes
-        if (selectedEntryType === 'GC' || selectedEntryType === 'APT') {
-          const hasError = attemptedNext && formData.address.trim() === '';
-          return (
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Address / Landmark <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={formData.address}
-                  onChange={(e) => updateFormData('address', e.target.value)}
-                  rows={3}
-                  className={inputClass(hasError)}
-                  placeholder="Enter complete address with landmark"
-                />
-                <FieldError show={hasError} message="Address is required" />
-              </div>
-              <MapLocationPicker
-                value={formData.mapLocation}
-                onChange={(loc) => updateFormData('mapLocation', loc)}
-              />
-            </div>
-          );
-        }
-        // VILLA/PLOT - Notes step
-        if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') {
-          return (
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Notes <span className="text-gray-400 text-xs font-normal">(optional)</span>
+        {/* Address Section */}
+        <div className="p-8 border-b border-gray-200">
+          <h2 className="text-xl font-medium text-gray-800 mb-6">Address</h2>
+          
+          <div className="space-y-5">
+            {/* Street Address */}
+            <div>
+              <label className="block text-sm text-gray-700 mb-1.5">
+                Street Address <span className="text-red-500">*</span>
               </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => updateFormData('notes', e.target.value)}
-                rows={5}
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(e) => updateFormData('address', e.target.value)}
+                className={inputClass(hasError && !formData.address.trim())}
+                placeholder="Enter street address"
+              />
+              <FieldError show={hasError && !formData.address.trim()} message="Address is required" />
+            </div>
+
+            {/* Apt/Suite */}
+            <div>
+              <label className="block text-sm text-gray-700 mb-1.5">
+                Apt/Suite
+              </label>
+              <div className="flex items-center gap-3 mb-2">
+                <input
+                  type="checkbox"
+                  id="aptSuiteNA"
+                  checked={formData.aptSuiteNA}
+                  onChange={(e) => updateFormData('aptSuiteNA', e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="aptSuiteNA" className="text-sm text-gray-600">Not Applicable</label>
+              </div>
+              {!formData.aptSuiteNA && (
+                <input
+                  type="text"
+                  value={formData.aptSuiteUnit}
+                  onChange={(e) => updateFormData('aptSuiteUnit', e.target.value)}
+                  className={inputClass(hasError && !formData.aptSuiteNA && !formData.aptSuiteUnit.trim())}
+                  placeholder="Apt 4B, Suite 100, Unit 5"
+                />
+              )}
+            </div>
+
+            {/* City */}
+            <div className="max-w-sm">
+              <label className="block text-sm text-gray-700 mb-1.5">
+                City <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => updateFormData('city', e.target.value)}
+                className={inputClass(hasError && !formData.city.trim())}
+                placeholder="City name"
+              />
+              <FieldError show={hasError && !formData.city.trim()} message="City is required" />
+            </div>
+
+            {/* State/Province and ZIP/Postal Code side by side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+              <div>
+                <label className="block text-sm text-gray-700 mb-1.5">
+                  State/Province <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.state}
+                  onChange={(e) => updateFormData('state', e.target.value)}
+                  className={inputClass(hasError && !formData.state.trim())}
+                  placeholder="State name"
+                />
+                <FieldError show={hasError && !formData.state.trim()} message="State is required" />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-1.5">
+                  ZIP/Postal Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.postalCode}
+                  onChange={(e) => updateFormData('postalCode', e.target.value)}
+                  className={inputClass(hasError && !formData.postalCode.trim())}
+                  placeholder="Postal code"
+                />
+                <FieldError show={hasError && !formData.postalCode.trim()} message="Postal code is required" />
+              </div>
+            </div>
+
+            {/* Landmark (Optional) */}
+            <div>
+              <label className="block text-sm text-gray-700 mb-1.5">
+                Landmark <span className="text-gray-400 text-xs">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                value={formData.landmark}
+                onChange={(e) => updateFormData('landmark', e.target.value)}
                 className={inputClass(false)}
-                placeholder="Enter any additional notes or comments"
+                placeholder="Near Central Park, Behind Mall, etc."
               />
             </div>
-          );
-        }
-        return null;
 
-      case 10:
-        // Notes step for GC and APT
-        return (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Notes <span className="text-gray-400 text-xs font-normal">(optional)</span>
+            {/* Map Location Picker */}
+            <div className="pt-4">
+              <MapLocationPicker
+                value={formData.mapLocation}
+                onChange={(loc) => updateFormData('mapLocation', loc)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Notes Section */}
+        <div className="p-8">
+          <h2 className="text-xl font-medium text-gray-800 mb-6">Additional Notes</h2>
+          
+          <div>
+            <label className="block text-sm text-gray-700 mb-1.5">
+              Notes <span className="text-gray-400 text-xs">(Optional)</span>
             </label>
             <textarea
               value={formData.notes}
               onChange={(e) => updateFormData('notes', e.target.value)}
-              rows={5}
+              rows={4}
               className={inputClass(false)}
               placeholder="Enter any additional notes or comments"
             />
           </div>
-        );
+        </div>
 
-      default:
-        return null;
-    }
+        {/* Submit Button */}
+        <div className="p-8 pt-0 flex justify-end">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              'Submit Property Entry'
+            )}
+          </button>
+        </div>
+      </form>
+    );
   };
 
-  const currentStepConfig = steps[currentStep - 1];
-  const StepIcon = currentStepConfig?.icon;
   const entryTypeInfo = ENTRY_TYPES.find(t => t.id === selectedEntryType);
-
-  // Get preview value for completed steps
-  const getStepPreview = (stepId) => {
-    switch (stepId) {
-      case 1: return formData.zone || null;
-      case 2: return formData.areaName || null;
-      case 3: return formData.division || null;
-      case 4: return formData.propertyType || null;
-      case 5: return formData.communityName || null;
-      case 6: {
-        const filled = formData.associationContacts.filter(c => c.name.trim());
-        return filled.length > 0 ? `${filled.length} contact${filled.length > 1 ? 's' : ''}` : null;
-      }
-      case 7:
-        if (selectedEntryType === 'GC') return formData.numberOfBlocks ? `${formData.numberOfBlocks} block(s)` : null;
-        if (selectedEntryType === 'APT') return formData.blockNA ? 'N/A' : formData.blockInfo || null;
-        if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') return formData.villaPlotNumber || null;
-        return null;
-      case 8:
-        if (selectedEntryType === 'GC') {
-          const total = calculateTotalFlats();
-          return total > 0 ? `${total} total flats` : null;
-        }
-        if (selectedEntryType === 'APT') return formData.numberOfUnits ? `${formData.numberOfUnits} units` : null;
-        if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') {
-          if (formData.mapLocation?.address) return 'Location pinned';
-          return formData.address ? 'Address added' : null;
-        }
-        return null;
-      case 9:
-        if (selectedEntryType === 'GC' || selectedEntryType === 'APT') {
-          if (formData.mapLocation?.address) return 'Location pinned';
-          return formData.address ? 'Address added' : null;
-        }
-        if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') return formData.notes ? 'Notes added' : null;
-        return null;
-      case 10: return formData.notes ? 'Notes added' : null;
-      default: return null;
-    }
-  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Onboarding</h1>
-            <p className="text-gray-600 mt-1">Property & Vendor Onboarding Module</p>
-          </div>
-          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${entryTypeInfo?.color} text-white text-sm`}>
-            {entryTypeInfo && <entryTypeInfo.icon className="w-3.5 h-3.5" />}
-            <span className="font-medium">{entryTypeInfo?.name}</span>
-          </div>
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Property Onboarding</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {entryTypeInfo?.name} • Complete all required fields
+          </p>
         </div>
         <button
           onClick={handleReset}
-          className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors text-sm font-medium"
+          className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md transition-colors text-sm"
         >
           ← Back
         </button>
       </div>
 
-      {/* Main Layout: Vertical Sidebar + Content */}
-      <div className="flex flex-col lg:flex-row gap-6">
-
-        {/* Left: Vertical Timeline Sidebar */}
-        <div className="lg:w-72 flex-shrink-0">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 lg:sticky lg:top-8">
-            {/* Header with progress */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Steps</h3>
-              <span className="text-xs font-semibold text-white bg-primary-600 px-2.5 py-0.5 rounded-full">
-                {currentStep} / {totalSteps}
-              </span>
-            </div>
-            {/* Progress Bar */}
-            <div className="w-full h-1 bg-gray-100 rounded-full mb-6 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-              />
-            </div>
-
-            {/* Vertical Timeline */}
-            <div className="relative">
-              {steps.map((step, index) => {
-                const isActive = currentStep === step.id;
-                const isCompleted = currentStep > step.id;
-                const isLast = index === steps.length - 1;
-                const preview = isCompleted ? getStepPreview(step.id) : null;
-
-                return (
-                  <div key={step.id} className="relative flex gap-3">
-                    {/* Timeline line + circle */}
-                    <div className="flex flex-col items-center">
-                      {/* Circle */}
-                      <button
-                        onClick={() => { if (isCompleted) { setAttemptedNext(false); setCurrentStep(step.id); } }}
-                        className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold transition-all duration-300 ${
-                          isActive
-                            ? 'bg-primary-600 text-white ring-4 ring-primary-100 shadow-sm'
-                            : isCompleted
-                              ? 'bg-green-500 text-white cursor-pointer hover:bg-green-600'
-                              : 'bg-gray-200 text-gray-400'
-                        }`}
-                      >
-                        {isCompleted ? <Check className="w-3.5 h-3.5" /> : step.id}
-                      </button>
-                      {/* Connecting line */}
-                      {!isLast && (
-                        <div className={`w-0.5 flex-1 min-h-[20px] transition-colors duration-300 ${
-                          isCompleted ? 'bg-green-300' : isActive ? 'bg-primary-200' : 'bg-gray-200'
-                        }`} />
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className={`pb-5 min-w-0 ${isLast ? 'pb-0' : ''}`}>
-                      <button
-                        onClick={() => { if (isCompleted) { setAttemptedNext(false); setCurrentStep(step.id); } }}
-                        className={`text-left block w-full ${isCompleted ? 'cursor-pointer' : 'cursor-default'}`}
-                      >
-                        <span className={`text-sm leading-tight block ${
-                          isActive
-                            ? 'text-primary-700 font-semibold'
-                            : isCompleted
-                              ? 'text-gray-800 font-medium'
-                              : 'text-gray-400 font-normal'
-                        }`}>
-                          {step.title}
-                        </span>
-                        {preview && (
-                          <span className="text-[11px] text-green-600 mt-0.5 block truncate font-medium">
-                            {preview}
-                          </span>
-                        )}
-                        {isActive && (
-                          <span className="text-[11px] text-primary-400 mt-0.5 block">In progress...</span>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Form Content Area */}
-        <div className="flex-1 min-w-0">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            {/* Step Header */}
-            <div className="px-8 py-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center">
-                  {StepIcon && <StepIcon className="w-5 h-5 text-primary-600" />}
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-primary-600 uppercase tracking-wider">Step {currentStep} of {totalSteps}</p>
-                  <h2 className="text-lg font-semibold text-gray-900">{currentStepConfig?.title}</h2>
-                </div>
-              </div>
-            </div>
-
-            {/* Form Content */}
-            <div className="px-8 py-8">
-              {renderStepContent()}
-            </div>
-
-            {/* Navigation Footer */}
-            <div className="px-8 py-5 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
-              <button
-                onClick={handlePrevious}
-                disabled={currentStep === 1}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                  currentStep === 1
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:text-gray-800 hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-200'
-                }`}
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Previous
-              </button>
-
-              {currentStep < totalSteps ? (
-                <button
-                  onClick={handleNext}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium text-sm transition-all bg-primary-600 text-white hover:bg-primary-700 shadow-sm shadow-primary-200"
-                >
-                  Continue
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium text-sm hover:bg-green-700 shadow-sm shadow-green-200 transition-all disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Submit Entry
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Summary Panel */}
-          {(formData.zone || formData.areaName || formData.division || formData.communityName) && (
-            <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Entry Summary</h3>
-              <div className="flex flex-wrap gap-3 text-sm">
-                {formData.zone && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full">
-                    <span className="text-gray-400">Zone:</span>
-                    <span className="font-medium text-gray-700">{formData.zone}</span>
-                  </div>
-                )}
-                {formData.areaName && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full">
-                    <span className="text-gray-400">Area:</span>
-                    <span className="font-medium text-gray-700">{formData.areaName}</span>
-                  </div>
-                )}
-                {formData.division && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full">
-                    <span className="text-gray-400">Division:</span>
-                    <span className="font-medium text-gray-700">{formData.division}</span>
-                  </div>
-                )}
-                {formData.propertyType && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full">
-                    <span className="text-gray-400">Type:</span>
-                    <span className="font-medium text-gray-700">{formData.propertyType}</span>
-                  </div>
-                )}
-                {formData.communityName && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full">
-                    <span className="text-gray-400">Community:</span>
-                    <span className="font-medium text-gray-700">{formData.communityName}</span>
-                  </div>
-                )}
-                {selectedEntryType === 'GC' && formData.numberOfBlocks > 0 && currentStep > 7 && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full">
-                    <span className="text-gray-400">Blocks:</span>
-                    <span className="font-medium text-gray-700">{formData.numberOfBlocks}</span>
-                  </div>
-                )}
-                {selectedEntryType === 'GC' && calculateTotalFlats() > 0 && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 border border-primary-200 rounded-full">
-                    <span className="text-primary-400">Total Flats:</span>
-                    <span className="font-semibold text-primary-700">{calculateTotalFlats()}</span>
-                  </div>
-                )}
-                {selectedEntryType === 'APT' && formData.numberOfUnits && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full">
-                    <span className="text-gray-400">Units:</span>
-                    <span className="font-medium text-gray-700">{formData.numberOfUnits}</span>
-                  </div>
-                )}
-                {(selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') && formData.villaPlotNumber && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full">
-                    <span className="text-gray-400">{selectedEntryType === 'VILLA' ? 'Villa' : 'Plot'} #:</span>
-                    <span className="font-medium text-gray-700">{formData.villaPlotNumber}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Single Form Container */}
+      <div className="max-w-3xl">
+        {renderSingleForm()}
       </div>
     </div>
   );

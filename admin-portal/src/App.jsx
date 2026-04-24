@@ -15,7 +15,14 @@ import Properties from './pages/Properties';
 import Onboarding from './pages/ServicePortal';
 
 import WorkOrders from './pages/WorkOrders';
+import EmployeeWorkOrders from './pages/EmployeeWorkOrders';
 import Categories from './pages/Categories';
+
+import CustomerDashboard from './pages/CustomerDashboard';
+import CustomerWorkOrder from './pages/CustomerWorkOrder';
+import CustomerPayment from './pages/CustomerPayment';
+import CustomerSchedule from './pages/CustomerSchedule';
+import CustomerContact from './pages/CustomerContact';
 
 import VendorDashboard from './pages/VendorDashboard';
 
@@ -25,11 +32,17 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('adminUser');
-    const savedPortal = localStorage.getItem('activePortal');
-    if (savedUser && savedPortal) {
-      setUser(JSON.parse(savedUser));
-      setPortal(savedPortal);
+    try {
+      const savedUser = localStorage.getItem('adminUser');
+      const savedPortal = localStorage.getItem('activePortal');
+      if (savedUser && savedPortal) {
+        setUser(JSON.parse(savedUser));
+        setPortal(savedPortal);
+      }
+    } catch (error) {
+      console.error('Error loading saved state:', error);
+      localStorage.removeItem('adminUser');
+      localStorage.removeItem('activePortal');
     }
     setLoading(false);
   }, []);
@@ -94,6 +107,7 @@ function App() {
           <Routes>
             <Route path="/employee" element={<Dashboard />} />
             <Route path="/employee/properties" element={<Properties />} />
+            <Route path="/employee/work-orders" element={<EmployeeWorkOrders admin={user} />} />
             <Route path="/employee/onboarding" element={<Onboarding admin={user} />} />
             <Route path="*" element={<Navigate to="/employee" replace />} />
           </Routes>
@@ -107,8 +121,11 @@ function App() {
       <Router>
         <CustomerLayout admin={user} onLogout={handleLogout}>
           <Routes>
-            <Route path="/customer" element={<WorkOrders admin={user} />} />
-            <Route path="/customer/categories" element={<Categories admin={user} />} />
+            <Route path="/customer" element={<CustomerDashboard user={user} />} />
+            <Route path="/customer/work-order" element={<CustomerWorkOrder user={user} />} />
+            <Route path="/customer/payment" element={<CustomerPayment user={user} />} />
+            <Route path="/customer/schedule" element={<CustomerSchedule user={user} />} />
+            <Route path="/customer/contact" element={<CustomerContact user={user} />} />
             <Route path="*" element={<Navigate to="/customer" replace />} />
           </Routes>
         </CustomerLayout>
