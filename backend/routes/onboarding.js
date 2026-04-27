@@ -44,7 +44,8 @@ router.post('/', async (req, res) => {
       landmark,
       mapLocation,
       notes,
-      associationContacts
+      associationContacts,
+      createdBy
     } = req.body;
 
     // Calculate total units
@@ -65,8 +66,8 @@ router.post('/', async (req, res) => {
          community_name, number_of_blocks, block_names, units_per_block, block_info,
          block_na, number_of_units, villa_plot_number, total_units,
          address, address_line1, apt_suite_unit, apt_suite_na, city, state, postal_code,
-         landmark, map_lat, map_lng, map_address, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         landmark, map_lat, map_lng, map_address, notes, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         propertyId,
         entryType,
@@ -95,7 +96,8 @@ router.post('/', async (req, res) => {
         mapLocation?.lat || null,
         mapLocation?.lng || null,
         mapLocation?.address || null,
-        notes || null
+        notes || null,
+        createdBy || 'system'
       ]
     );
 
@@ -154,9 +156,19 @@ router.post('/', async (req, res) => {
 // ============================================
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      `SELECT * FROM onboarded_properties WHERE status = 'active' ORDER BY created_at DESC`
-    );
+    const { status } = req.query;
+    let query = `SELECT * FROM onboarded_properties`;
+    let params = [];
+    
+    if (status === 'all') {
+      query += ` ORDER BY created_at DESC`;
+    } else if (status === 'deleted') {
+      query += ` WHERE status = 'deleted' ORDER BY created_at DESC`;
+    } else {
+      query += ` WHERE status = 'active' ORDER BY created_at DESC`;
+    }
+    
+    const [rows] = await pool.execute(query, params);
 
     // Fetch contacts for all properties in one query
     const propertyIds = rows.map(r => r.id);
@@ -213,6 +225,7 @@ router.get('/', async (req, res) => {
       notes: row.notes,
       contacts: contactsMap[row.id] || [],
       status: row.status,
+      createdBy: row.created_by || 'system',
       createdAt: row.created_at
     }));
 

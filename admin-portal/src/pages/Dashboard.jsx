@@ -27,7 +27,7 @@ const Dashboard = () => {
 
   const statCards = [
     { 
-      label: 'Properties', 
+      label: 'Client Submissions', 
       value: stats?.properties || 0, 
       icon: Building2, 
       bgColor: 'bg-blue-100',
@@ -81,7 +81,7 @@ const Dashboard = () => {
               key={index} 
               className="bg-white rounded-lg p-5 border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
               onClick={() => {
-                if (stat.label === 'Properties') navigate('/properties');
+                if (stat.label === 'Client Submissions') navigate('/employee/client-submissions');
                 else if (stat.label === 'Work Orders' || stat.label === 'Pending' || stat.label === 'Completed') navigate('/work-orders');
               }}
             >
@@ -102,13 +102,13 @@ const Dashboard = () => {
           <h2 className="text-lg font-semibold text-gray-900 mb-5">Quick Actions</h2>
           <div className="space-y-3">
             <button 
-              onClick={() => navigate('/properties')}
+              onClick={() => navigate('/employee/client-submissions')}
               className="w-full flex items-center gap-3 p-3.5 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors text-left group"
             >
               <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                 <Building2 className="w-4 h-4 text-blue-600" />
               </div>
-              <span className="text-gray-700 font-medium">Manage Properties</span>
+              <span className="text-gray-700 font-medium">Manage Client Submissions</span>
             </button>
             <button 
               onClick={() => navigate('/work-orders')}
@@ -120,13 +120,13 @@ const Dashboard = () => {
               <span className="text-gray-700 font-medium">View Work Orders</span>
             </button>
             <button 
-              onClick={() => navigate('/onboarding')}
+              onClick={() => navigate('/employee/create-client')}
               className="w-full flex items-center gap-3 p-3.5 bg-gray-50 hover:bg-emerald-50 rounded-lg transition-colors text-left group"
             >
               <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
                 <FileText className="w-4 h-4 text-emerald-600" />
               </div>
-              <span className="text-gray-700 font-medium">New Property Onboarding</span>
+              <span className="text-gray-700 font-medium">Create New Client</span>
             </button>
           </div>
         </div>

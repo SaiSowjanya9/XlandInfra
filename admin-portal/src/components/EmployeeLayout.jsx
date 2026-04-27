@@ -17,9 +17,9 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
   const navItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/employee/properties', icon: Building2, label: 'Properties' },
+    { path: '/employee/client-submissions', icon: Building2, label: 'Client Submissions' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/employee/onboarding', icon: FileInput, label: 'Onboarding' },
+    { path: '/employee/create-client', icon: FileInput, label: 'Create Client' },
   ];
 
   const NavLink = ({ item, mobile = false }) => {

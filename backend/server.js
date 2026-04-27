@@ -19,6 +19,7 @@ const schedulesRouter = require('./routes/schedules');
 const pricingRouter = require('./routes/pricing');
 const contactRouter = require('./routes/contact');
 const onboardingRouter = require('./routes/onboarding');
+const vendorOnboardingRouter = require('./routes/vendorOnboarding');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -55,6 +56,7 @@ app.use('/api/schedules', schedulesRouter);
 app.use('/api/pricing', pricingRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/onboarding', onboardingRouter);
+app.use('/api/vendors/onboarding', vendorOnboardingRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
