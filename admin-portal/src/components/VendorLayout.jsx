@@ -5,7 +5,6 @@ import {
   Truck,
   Menu,
   X,
-  Building2,
   FileInput,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -16,7 +15,6 @@ const VendorLayout = ({ admin, onLogout, children }) => {
 
   const navItems = [
     { path: '/vendor', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/vendor/vendor-details', icon: Building2, label: 'Vendor Details' },
     { path: '/vendor/add-vendor', icon: FileInput, label: 'Add Vendor' },
   ];
 

@@ -637,7 +637,7 @@ const CreateClient = ({ admin }) => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Create Client</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Add Client</h1>
             <p className="text-gray-600 mt-1">Client Creation Module</p>
           </div>
         </div>
@@ -688,7 +688,7 @@ const CreateClient = ({ admin }) => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Create Client</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Add Client</h1>
             <p className="text-gray-600 mt-1">Client Creation Module</p>
           </div>
           <button
@@ -732,7 +732,7 @@ const CreateClient = ({ admin }) => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Create Client</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Add Client</h1>
             <p className="text-gray-600 mt-1">Client Creation Module</p>
           </div>
         </div>
@@ -745,7 +745,7 @@ const CreateClient = ({ admin }) => {
             </div>
             <h2 className="text-2xl font-bold mb-1">Client Created Successfully!</h2>
             <p className="text-green-100">
-              Your {ENTRY_TYPES.find(t => t.id === selectedEntryType)?.name} entry has been created and added to Client Submissions.
+              Your {ENTRY_TYPES.find(t => t.id === selectedEntryType)?.name} entry has been created and added to Property Management.
             </p>
           </div>
 
@@ -804,7 +804,7 @@ const CreateClient = ({ admin }) => {
               href="/employee/client-submissions"
               className="w-full sm:w-auto px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm text-center"
             >
-              View in Client Submissions
+              View in Property Management
             </a>
           </div>
         </div>

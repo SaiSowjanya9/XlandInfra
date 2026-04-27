@@ -111,6 +111,7 @@ function App() {
             <Route path="/employee/client-submissions" element={<ClientSubmissions />} />
             <Route path="/employee/work-orders" element={<EmployeeWorkOrders admin={user} />} />
             <Route path="/employee/create-client" element={<CreateClient admin={user} />} />
+            <Route path="/employee/vendor-details" element={<VendorDetails />} />
             <Route path="*" element={<Navigate to="/employee" replace />} />
           </Routes>
         </EmployeeLayout>
@@ -141,7 +142,6 @@ function App() {
         <VendorLayout admin={user} onLogout={handleLogout}>
           <Routes>
             <Route path="/vendor" element={<VendorDashboard />} />
-            <Route path="/vendor/vendor-details" element={<VendorDetails />} />
             <Route path="/vendor/add-vendor" element={<AddVendor admin={user} />} />
             <Route path="*" element={<Navigate to="/vendor" replace />} />
           </Routes>

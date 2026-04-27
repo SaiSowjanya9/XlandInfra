@@ -8,6 +8,7 @@ import {
   Menu,
   X,
   ClipboardList,
+  Truck,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -17,9 +18,10 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
   const navItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/employee/client-submissions', icon: Building2, label: 'Client Submissions' },
+    { path: '/employee/client-submissions', icon: Building2, label: 'Property Management' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/employee/create-client', icon: FileInput, label: 'Create Client' },
+    { path: '/employee/create-client', icon: FileInput, label: 'Add Client' },
+    { path: '/employee/vendor-details', icon: Truck, label: 'Vendor Details' },
   ];
 
   const NavLink = ({ item, mobile = false }) => {
