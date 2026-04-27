@@ -1,54 +1,45 @@
 import { useState, useEffect } from 'react';
 import { 
-  Truck, 
-  Search, 
-  Eye, 
-  Trash2, 
-  Download, 
-  X, 
-  Bell, 
-  CheckCircle, 
-  Filter,
-  Phone,
-  Mail,
-  MapPin,
-  IndianRupee,
-  Calendar,
-  User,
-  Users,
-  FileCheck,
-  RefreshCw
+  Search, Trash2, X, Truck, Eye, ChevronDown, Bell, 
+  ArrowLeft, Download, RefreshCw, Wrench, Zap, Wind, 
+  Sparkles, Shield, TreePine, Bug, Paintbrush, Hammer,
+  Settings, Flame, ArrowUpDown, Droplets, Trash, Waves,
+  FileCheck
 } from 'lucide-react';
-import { 
-  getVendors, 
-  deleteVendor, 
-  getVendorNotifications, 
-  markAllVendorNotificationsRead 
-} from '../utils/vendorStore';
+import { getVendors, deleteVendor, getVendorNotifications, markAllVendorNotificationsRead } from '../utils/vendorStore';
 import * as XLSX from 'xlsx';
+
+// Service Type Tabs (like Client Submissions tabs)
+const TABS = [
+  { id: 'all', label: 'All Vendors', icon: Truck },
+  { id: 'Plumbing', label: 'Plumbing', icon: Wrench },
+  { id: 'Electrical', label: 'Electrical', icon: Zap },
+  { id: 'HVAC', label: 'HVAC', icon: Wind },
+  { id: 'Cleaning', label: 'Cleaning', icon: Sparkles },
+  { id: 'Security', label: 'Security', icon: Shield },
+];
 
 const VendorDetails = () => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [serviceFilter, setServiceFilter] = useState('');
+  const [divisionFilter, setDivisionFilter] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [viewVendor, setViewVendor] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('active');
+  const [toast, setToast] = useState(null);
 
-  useEffect(() => {
-    fetchVendors();
-    setNotifications(getVendorNotifications());
-  }, [statusFilter]);
-
-  const fetchVendors = async () => {
+  // Load vendors from backend API
+  const loadData = async () => {
     setLoading(true);
     try {
       const data = await getVendors(statusFilter);
       setVendors(data);
+      setNotifications(getVendorNotifications());
     } catch (error) {
       console.error('Error fetching vendors:', error);
     } finally {
@@ -56,11 +47,24 @@ const VendorDetails = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteConfirm) return;
-    const success = await deleteVendor(deleteConfirm.id);
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(loadData, 10000);
+    return () => clearInterval(interval);
+  }, [statusFilter]);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleDelete = async (id) => {
+    const success = await deleteVendor(id);
     if (success) {
-      setVendors(prev => prev.filter(v => v.id !== deleteConfirm.id));
+      await loadData();
+      showToast('Vendor deleted successfully');
+    } else {
+      showToast('Failed to delete vendor', 'error');
     }
     setDeleteConfirm(null);
   };
@@ -90,6 +94,8 @@ const VendorDetails = () => {
       'POC Email': vendor.pocEmail || '-',
       'Rate Per Visit': `₹${vendor.ratePerVisit}`,
       'Coverage Per Day': vendor.coveragePerDay,
+      'Created By': vendor.createdBy || 'Manager',
+      'Status': vendor.status || 'active',
       'Created': new Date(vendor.createdAt).toLocaleDateString()
     }];
     
@@ -97,6 +103,7 @@ const VendorDetails = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Vendor');
     XLSX.writeFile(wb, `Vendor_${vendor.vendorId}.xlsx`);
+    showToast('Vendor exported successfully');
   };
 
   const handleExportAll = () => {
@@ -108,175 +115,239 @@ const VendorDetails = () => {
       'Division': v.division,
       'Owner Name': v.ownerName,
       'Owner Mobile': `${v.ownerCountryCode} ${v.ownerMobile}`,
-      'Owner Email': v.ownerEmail,
-      'Rate Per Visit': v.ratePerVisit,
+      'Rate Per Visit': `₹${v.ratePerVisit}`,
       'Coverage Per Day': v.coveragePerDay,
+      'Created By': v.createdBy || 'Manager',
+      'Status': v.status || 'active',
       'Created': new Date(v.createdAt).toLocaleDateString()
     }));
     
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Vendors');
-    XLSX.writeFile(wb, `Vendors_Export_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, 'All Vendors');
+    XLSX.writeFile(wb, `All_Vendors_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('All vendors exported successfully');
   };
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
-  // Get unique service types and zones for filters
-  const serviceTypes = [...new Set(vendors.map(v => v.serviceType).filter(Boolean))];
+  // Derived data
+  const divisions = [...new Set(vendors.map(v => v.division).filter(Boolean))];
   const zones = [...new Set(vendors.map(v => v.zone).filter(Boolean))];
-
-  // Filter vendors
-  const filteredVendors = vendors.filter(v => {
-    const matchesSearch = !searchTerm || 
-      v.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.vendorId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.serviceType?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesService = !serviceFilter || v.serviceType === serviceFilter;
-    const matchesZone = !zoneFilter || v.zone === zoneFilter;
-    return matchesSearch && matchesService && matchesZone;
-  });
-
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-amber-600 border-t-transparent"></div>
-      </div>
-    );
-  }
+  const filteredVendors = vendors.filter(v => {
+    if (activeTab !== 'all' && v.serviceType !== activeTab) return false;
+    if (divisionFilter && v.division !== divisionFilter) return false;
+    if (zoneFilter && v.zone !== zoneFilter) return false;
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      return (
+        v.ownerName?.toLowerCase().includes(q) ||
+        v.vendorId?.toLowerCase().includes(q) ||
+        v.serviceType?.toLowerCase().includes(q) ||
+        v.zone?.toLowerCase().includes(q) ||
+        v.areaName?.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  // Stats per service type
+  const statsByType = TABS.filter(t => t.id !== 'all').map(tab => ({
+    ...tab,
+    count: vendors.filter(v => v.serviceType === tab.id).length,
+  }));
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  const timeAgo = (timestamp) => {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diff = Math.floor((now - date) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gray-50 p-6 space-y-6">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 ${
+          toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'
+        }`}>
+          {toast.message}
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Vendor Details</h1>
-          <p className="text-gray-500 text-sm mt-1">Manage registered service vendors</p>
+          <h1 className="text-2xl font-bold text-gray-900">Vendor Details</h1>
+          <p className="text-gray-500 text-sm mt-1">{vendors.length} total vendors</p>
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={fetchVendors}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={loadData}
+            className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             title="Refresh"
           >
-            <RefreshCw className="w-5 h-5" />
+            <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
           </button>
+
+          {/* Notifications */}
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="relative p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-5 h-5 text-gray-600" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                   {unreadCount}
                 </span>
               )}
             </button>
+
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
-                <div className="p-3 border-b border-gray-100 flex items-center justify-between">
-                  <span className="font-medium text-gray-900">Notifications</span>
-                  {unreadCount > 0 && (
-                    <button onClick={handleMarkAllRead} className="text-xs text-amber-600 hover:text-amber-700">
-                      Mark all read
-                    </button>
-                  )}
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-800">Notifications</span>
+                    {unreadCount > 0 && (
+                      <button onClick={handleMarkAllRead} className="text-xs text-amber-600 hover:text-amber-700 font-medium">
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-72 overflow-y-auto divide-y divide-gray-50">
+                    {notifications.length === 0 ? (
+                      <div className="p-6 text-center text-sm text-gray-400">No notifications yet</div>
+                    ) : (
+                      notifications.slice(0, 15).map(n => (
+                        <div key={n.id} className={`px-4 py-3 flex items-start gap-3 ${!n.read ? 'bg-amber-50/40' : ''}`}>
+                          <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${!n.read ? 'bg-amber-500' : 'bg-transparent'}`} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-800">{n.title}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
+                            <p className="text-[10px] text-gray-400 mt-1">{timeAgo(n.timestamp)}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {notifications.length === 0 ? (
-                    <p className="p-4 text-sm text-gray-500 text-center">No notifications</p>
-                  ) : (
-                    notifications.slice(0, 5).map(n => (
-                      <div key={n.id} className={`p-3 border-b border-gray-50 ${!n.read ? 'bg-amber-50' : ''}`}>
-                        <p className="text-sm font-medium text-gray-900">{n.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+              </>
             )}
           </div>
-          {filteredVendors.length > 0 && (
-            <button
-              onClick={handleExportAll}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Export All
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
+      {/* Tabs + Filters Bar */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        {/* Tab bar */}
+        <div className="border-b border-gray-200 px-4 flex items-center gap-1 overflow-x-auto">
+          {TABS.map(tab => {
+            const TabIcon = tab.icon;
+            const isActive = activeTab === tab.id;
+            const count = tab.id === 'all' ? vendors.length : vendors.filter(v => v.serviceType === tab.id).length;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'border-amber-600 text-amber-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <TabIcon className="w-4 h-4" />
+                {tab.label}
+                <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
+                  isActive ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search + Filters */}
+        <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
+              placeholder="Search by name, ID, service, or zone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, ID, or service..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 focus:outline-none"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
             />
           </div>
-          <select
-            value={serviceFilter}
-            onChange={(e) => setServiceFilter(e.target.value)}
-            className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 focus:outline-none"
-          >
-            <option value="">All Services</option>
-            {serviceTypes.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <select
-            value={zoneFilter}
-            onChange={(e) => setZoneFilter(e.target.value)}
-            className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 focus:outline-none"
-          >
-            <option value="">All Zones</option>
-            {zones.map(z => <option key={z} value={z}>{z}</option>)}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className={`px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 focus:outline-none ${
-              statusFilter === 'deleted' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-300'
-            }`}
-          >
-            <option value="active">Active Vendors</option>
-            <option value="deleted">Deleted Vendors</option>
-            <option value="all">All Vendors</option>
-          </select>
-          {(searchTerm || serviceFilter || zoneFilter || statusFilter !== 'active') && (
-            <button
-              onClick={() => { setSearchTerm(''); setServiceFilter(''); setZoneFilter(''); setStatusFilter('active'); }}
-              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Clear
-            </button>
-          )}
+          <div className="flex gap-2">
+            <div className="relative">
+              <select
+                value={divisionFilter}
+                onChange={(e) => setDivisionFilter(e.target.value)}
+                className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
+              >
+                <option value="">All Divisions</option>
+                {divisions.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            </div>
+            <div className="relative">
+              <select
+                value={zoneFilter}
+                onChange={(e) => setZoneFilter(e.target.value)}
+                className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
+              >
+                <option value="">All Zones</option>
+                {zones.map(z => <option key={z} value={z}>{z}</option>)}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            </div>
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className={`appearance-none pl-3 pr-8 py-2 border rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none ${
+                  statusFilter === 'deleted' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-300'
+                }`}
+              >
+                <option value="active">Active Vendors</option>
+                <option value="deleted">Deleted Vendors</option>
+                <option value="all">All Vendors</option>
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            </div>
+            {(divisionFilter || zoneFilter || searchTerm || statusFilter !== 'active') && (
+              <button
+                onClick={() => { setDivisionFilter(''); setZoneFilter(''); setSearchTerm(''); setStatusFilter('active'); }}
+                className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Vendors Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {/* Vendor Table */}
         {filteredVendors.length === 0 ? (
           <div className="py-16 text-center">
             <Truck className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">No vendors found</p>
             <p className="text-gray-400 text-sm mt-1">
-              {vendors.length === 0 ? 'Add vendors using the Add Vendor page.' : 'Try adjusting your filters.'}
+              {vendors.length === 0 
+                ? 'Add vendors using the Add Vendor page.' 
+                : 'Try adjusting your search or filters.'
+              }
             </p>
           </div>
         ) : (
@@ -284,50 +355,66 @@ const VendorDetails = () => {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Vendor ID</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Service Type</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Owner</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Zone</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Area</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Division</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Rate/Visit</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Coverage/Day</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Created By</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Created</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
-                  <th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Vendor ID</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Service Type</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Owner</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Zone</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Area</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Division</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Rate/Visit</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Coverage/Day</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created By</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3 text-center font-medium text-gray-600 whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredVendors.map((vendor) => (
                   <tr key={vendor.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600">{vendor.vendorId}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-600 whitespace-nowrap">
+                      {vendor.vendorId}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
                         {vendor.serviceType}
                         {vendor.serviceVerified && <FileCheck className="w-3 h-3 text-emerald-500" />}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{vendor.ownerName}</td>
-                    <td className="px-4 py-3 text-gray-700">{vendor.zone || '-'}</td>
-                    <td className="px-4 py-3 text-gray-700">{vendor.areaName || '-'}</td>
-                    <td className="px-4 py-3 text-gray-700">{vendor.division || '-'}</td>
-                    <td className="px-4 py-3 text-gray-700">₹{vendor.ratePerVisit}</td>
-                    <td className="px-4 py-3 text-gray-700 text-center">{vendor.coveragePerDay}</td>
-                    <td className="px-4 py-3 text-gray-700">{vendor.createdBy || 'Manager'}</td>
-                    <td className="px-4 py-3 text-gray-500">{formatDate(vendor.createdAt)}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
+                      {vendor.ownerName}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                      {vendor.zone || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                      {vendor.areaName || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                      {vendor.division || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                      ₹{vendor.ratePerVisit}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
+                      {vendor.coveragePerDay}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                      {vendor.createdBy || 'Manager'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                      {formatDate(vendor.createdAt)}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                         vendor.status === 'deleted' 
                           ? 'bg-red-100 text-red-700' 
-                          : vendor.status === 'inactive'
-                            ? 'bg-gray-100 text-gray-700'
-                            : 'bg-green-100 text-green-700'
+                          : 'bg-green-100 text-green-700'
                       }`}>
-                        {vendor.status === 'deleted' ? 'Deleted' : vendor.status === 'inactive' ? 'Inactive' : 'Active'}
+                        {vendor.status === 'deleted' ? 'Deleted' : 'Active'}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => setViewVendor(vendor)}
@@ -339,7 +426,7 @@ const VendorDetails = () => {
                         <button
                           onClick={() => handleExportVendor(vendor)}
                           className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                          title="Export"
+                          title="Export to Excel"
                         >
                           <Download className="w-4 h-4" />
                         </button>
@@ -356,188 +443,83 @@ const VendorDetails = () => {
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-
-        {filteredVendors.length > 0 && (
-          <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
-            Showing {filteredVendors.length} of {vendors.length} vendors
+            <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+              Showing {filteredVendors.length} of {vendors.length} vendors
+            </div>
           </div>
         )}
       </div>
 
+      {/* Export All Button */}
+      {filteredVendors.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleExportAll}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export All Vendors
+          </button>
+        </div>
+      )}
+
       {/* View Vendor Modal */}
       {viewVendor && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setViewVendor(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setViewVendor(null)}>
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">{viewVendor.ownerName}</h2>
-                <p className="text-xs font-mono text-gray-500">{viewVendor.vendorId}</p>
+                <p className="text-sm text-gray-500 font-mono">{viewVendor.vendorId}</p>
               </div>
               <button onClick={() => setViewVendor(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-
             <div className="p-6 space-y-6">
               {/* Service Info */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <Truck className="w-4 h-4 text-amber-600" />
-                  Service Information
-                </h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-3">Service Information</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-500">Service Type</label>
-                    <p className="text-sm font-medium text-gray-900">{viewVendor.serviceType}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">Verification Status</label>
-                    <p className="text-sm font-medium text-gray-900">
-                      {viewVendor.serviceVerified ? (
-                        <span className="text-emerald-600 flex items-center gap-1"><CheckCircle className="w-4 h-4" /> Verified</span>
-                      ) : 'Not Verified'}
-                    </p>
-                  </div>
+                  <div><span className="text-xs text-gray-400">Service Type</span><p className="text-sm font-medium text-gray-900">{viewVendor.serviceType}</p></div>
+                  <div><span className="text-xs text-gray-400">Verified</span><p className="text-sm font-medium text-gray-900">{viewVendor.serviceVerified ? 'Yes' : 'No'}</p></div>
                 </div>
               </div>
-
               {/* Location */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-blue-600" />
-                  Location & Division
-                </h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-3">Location & Division</h3>
                 <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-500">Zone</label>
-                    <p className="text-sm text-gray-900">{viewVendor.zone || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">Area</label>
-                    <p className="text-sm text-gray-900">{viewVendor.areaName || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">Division</label>
-                    <p className="text-sm text-gray-900">{viewVendor.division || '-'}</p>
-                  </div>
+                  <div><span className="text-xs text-gray-400">Zone</span><p className="text-sm font-medium text-gray-900">{viewVendor.zone || '-'}</p></div>
+                  <div><span className="text-xs text-gray-400">Area</span><p className="text-sm font-medium text-gray-900">{viewVendor.areaName || '-'}</p></div>
+                  <div><span className="text-xs text-gray-400">Division</span><p className="text-sm font-medium text-gray-900">{viewVendor.division || '-'}</p></div>
                 </div>
               </div>
-
-              {/* Owner Details */}
+              {/* Owner */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <User className="w-4 h-4 text-purple-600" />
-                  Owner Details
-                </h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-3">Owner Details</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-500">Full Name</label>
-                    <p className="text-sm text-gray-900">{viewVendor.ownerName}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">Mobile</label>
-                    <p className="text-sm text-gray-900">{viewVendor.ownerCountryCode} {viewVendor.ownerMobile}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">Email</label>
-                    <p className="text-sm text-gray-900">{viewVendor.ownerEmail}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">Aadhar</label>
-                    <p className="text-sm text-gray-900 font-mono">{viewVendor.ownerAadhar}</p>
-                  </div>
+                  <div><span className="text-xs text-gray-400">Name</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerName}</p></div>
+                  <div><span className="text-xs text-gray-400">Mobile</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerCountryCode} {viewVendor.ownerMobile}</p></div>
+                  <div><span className="text-xs text-gray-400">Email</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerEmail || '-'}</p></div>
+                  <div><span className="text-xs text-gray-400">Aadhar</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerAadhar || '-'}</p></div>
                 </div>
               </div>
-
-              {/* Manager Contact */}
-              {viewVendor.managerName && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                    <Users className="w-4 h-4 text-emerald-600" />
-                    Manager Contact
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-xs text-gray-500">Name</label>
-                      <p className="text-sm text-gray-900">{viewVendor.managerName}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">Mobile</label>
-                      <p className="text-sm text-gray-900">{viewVendor.managerCountryCode} {viewVendor.managerMobile || '-'}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">Email</label>
-                      <p className="text-sm text-gray-900">{viewVendor.managerEmail || '-'}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Point of Contact */}
-              {viewVendor.pocName && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-rose-600" />
-                    Point of Contact
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-xs text-gray-500">Name</label>
-                      <p className="text-sm text-gray-900">{viewVendor.pocName}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">Mobile</label>
-                      <p className="text-sm text-gray-900">{viewVendor.pocCountryCode} {viewVendor.pocMobile || '-'}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">Email</label>
-                      <p className="text-sm text-gray-900">{viewVendor.pocEmail || '-'}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Rate & Coverage */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <IndianRupee className="w-4 h-4 text-indigo-600" />
-                  Rate & Coverage
-                </h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-3">Rate & Coverage</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-indigo-50 p-4 rounded-lg">
-                    <label className="text-xs text-indigo-600 font-medium">Rate Per Visit</label>
-                    <p className="text-2xl font-bold text-indigo-700">₹{viewVendor.ratePerVisit}</p>
-                  </div>
-                  <div className="bg-emerald-50 p-4 rounded-lg">
-                    <label className="text-xs text-emerald-600 font-medium">Coverage Per Day</label>
-                    <p className="text-2xl font-bold text-emerald-700">{viewVendor.coveragePerDay} visits</p>
-                  </div>
+                  <div><span className="text-xs text-gray-400">Rate Per Visit</span><p className="text-sm font-medium text-gray-900">₹{viewVendor.ratePerVisit}</p></div>
+                  <div><span className="text-xs text-gray-400">Coverage Per Day</span><p className="text-sm font-medium text-gray-900">{viewVendor.coveragePerDay}</p></div>
                 </div>
               </div>
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between">
-              <button
-                onClick={() => { setDeleteConfirm(viewVendor); setViewVendor(null); }}
-                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors"
-              >
-                <Trash2 className="w-4 h-4" /> Delete
-              </button>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleExportVendor(viewVendor)}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
-                >
-                  <Download className="w-4 h-4" /> Export
-                </button>
-                <button
-                  onClick={() => setViewVendor(null)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
-                >
-                  Close
-                </button>
+              {/* Metadata */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-3">Metadata</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div><span className="text-xs text-gray-400">Created By</span><p className="text-sm font-medium text-gray-900">{viewVendor.createdBy || 'Manager'}</p></div>
+                  <div><span className="text-xs text-gray-400">Created</span><p className="text-sm font-medium text-gray-900">{formatDate(viewVendor.createdAt)}</p></div>
+                  <div><span className="text-xs text-gray-400">Status</span><p className={`text-sm font-medium ${viewVendor.status === 'deleted' ? 'text-red-600' : 'text-green-600'}`}>{viewVendor.status === 'deleted' ? 'Deleted' : 'Active'}</p></div>
+                </div>
               </div>
             </div>
           </div>
@@ -546,25 +528,22 @@ const VendorDetails = () => {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Trash2 className="w-7 h-7 text-red-500" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 text-center">Delete Vendor?</h3>
-            <p className="text-sm text-gray-500 text-center mt-2">
-              This will permanently remove <strong>{deleteConfirm.ownerName}</strong> ({deleteConfirm.vendorId}).
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Vendor</h3>
+            <p className="text-gray-600 text-sm mb-6">
+              Are you sure you want to delete <strong>{deleteConfirm.ownerName}</strong> ({deleteConfirm.vendorId})? This action will mark the vendor as deleted.
             </p>
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={handleDelete}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                onClick={() => handleDelete(deleteConfirm.id)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
               >
                 Delete
               </button>
