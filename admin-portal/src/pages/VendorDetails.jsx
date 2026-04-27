@@ -400,7 +400,7 @@ const VendorDetails = () => {
                       {vendor.coveragePerDay}
                     </td>
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                      {vendor.createdBy || 'Manager'}
+                      Manager
                     </td>
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                       {formatDate(vendor.createdAt)}
@@ -516,7 +516,7 @@ const VendorDetails = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Metadata</h3>
                 <div className="grid grid-cols-3 gap-4">
-                  <div><span className="text-xs text-gray-400">Created By</span><p className="text-sm font-medium text-gray-900">{viewVendor.createdBy || 'Manager'}</p></div>
+                  <div><span className="text-xs text-gray-400">Created By</span><p className="text-sm font-medium text-gray-900">Manager</p></div>
                   <div><span className="text-xs text-gray-400">Created</span><p className="text-sm font-medium text-gray-900">{formatDate(viewVendor.createdAt)}</p></div>
                   <div><span className="text-xs text-gray-400">Status</span><p className={`text-sm font-medium ${viewVendor.status === 'deleted' ? 'text-red-600' : 'text-green-600'}`}>{viewVendor.status === 'deleted' ? 'Deleted' : 'Active'}</p></div>
                 </div>
