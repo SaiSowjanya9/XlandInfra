@@ -49,6 +49,7 @@ app.use('/api/units', unitsRouter);
 app.use('/api/properties', propertiesRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/staff', staffRouter);
+app.use('/api/vendors/onboarding', vendorOnboardingRouter);
 app.use('/api/vendors', vendorsRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/estimates', estimatesRouter);
@@ -56,7 +57,6 @@ app.use('/api/schedules', schedulesRouter);
 app.use('/api/pricing', pricingRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/onboarding', onboardingRouter);
-app.use('/api/vendors/onboarding', vendorOnboardingRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
