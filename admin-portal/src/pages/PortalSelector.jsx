@@ -68,7 +68,7 @@ const PortalSelector = ({ onSelectPortal }) => {
         <div className="w-full max-w-5xl">
           {/* Title */}
           <div className="text-center mb-14">
-            <h1 className="text-4xl md:text-5xl font-semibold text-white mb-4 tracking-tight">
+            <h1 className="text-4xl md:text-5xl font-normal text-white mb-4 tracking-tight">
               System Administration Portal
             </h1>
             <p className="text-stone-400 text-lg max-w-2xl mx-auto leading-relaxed">
