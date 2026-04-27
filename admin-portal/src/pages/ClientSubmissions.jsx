@@ -509,7 +509,7 @@ const ClientSubmissions = () => {
                         {property.contacts?.length || 0}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {property.createdBy || 'Manager'}
+                        Manager
                       </td>
                       <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                         {formatDate(property.createdAt)}
