@@ -9,6 +9,9 @@ import {
   X,
   ClipboardList,
   Truck,
+  ChevronDown,
+  UserPlus,
+  Store,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -16,13 +19,24 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const [vendorOpen, setVendorOpen] = useState(
+    location.pathname.startsWith('/employee/add-vendor') ||
+    location.pathname.startsWith('/employee/vendor-details')
+  );
+
   const navItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/employee/client-submissions', icon: Building2, label: 'Property Management' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/employee/create-client', icon: FileInput, label: 'Add Client' },
+    { path: '/employee/create-client', icon: FileInput, label: 'Add Customer' },
+  ];
+
+  const vendorSubItems = [
+    { path: '/employee/add-vendor', icon: UserPlus, label: 'Add Vendor' },
     { path: '/employee/vendor-details', icon: Truck, label: 'Vendor Details' },
   ];
+
+  const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
@@ -101,6 +115,35 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             {navItems.map((item) => (
               <NavLink key={item.path} item={item} mobile />
             ))}
+
+            {/* Vendor Management Section */}
+            <div className="mt-2">
+              <button
+                onClick={() => setVendorOpen(!vendorOpen)}
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 ${
+                  isVendorSectionActive && !vendorOpen
+                    ? 'bg-indigo-50 text-indigo-700'
+                    : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Store className="w-5 h-5" />
+                  <span className="font-medium">Vendor Management</span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    vendorOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              {vendorOpen && (
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-indigo-100 pl-2">
+                  {vendorSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile />
+                  ))}
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Logout */}

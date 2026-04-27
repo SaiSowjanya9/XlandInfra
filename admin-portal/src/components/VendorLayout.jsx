@@ -15,7 +15,6 @@ const VendorLayout = ({ admin, onLogout, children }) => {
 
   const navItems = [
     { path: '/vendor', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/vendor/add-vendor', icon: FileInput, label: 'Add Vendor' },
   ];
 
   const NavLink = ({ item, mobile = false }) => {

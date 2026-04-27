@@ -183,9 +183,42 @@ const initOnboardingTables = async () => {
         created_by VARCHAR(100) DEFAULT 'Manager',
         status VARCHAR(20) DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_vendor_id (vendor_id),
+        INDEX idx_service_type (service_type),
+        INDEX idx_zone (zone),
+        INDEX idx_division (division),
+        INDEX idx_status (status)
       )
     `);
+
+    // Seed sample vendor data if table is empty
+    const [vendorRows] = await conn.execute(`SELECT COUNT(*) as cnt FROM onboarded_vendors WHERE status = 'active'`);
+    if (vendorRows[0].cnt === 0) {
+      console.log('  ⏳ Seeding sample vendor data...');
+      const sampleVendors = [
+        ['PLM-SEED-20260401', 'Plumbing', 1, 'North Zone', 'Jubilee Hills', 'Division A', 'Rajesh Kumar', '9876543210', 'rajesh@plumbpro.com', '123456789012', '+91', 'Suresh M', '9876543211', 'suresh@plumbpro.com', '+91', 'Anil K', '9876543212', 'anil@plumbpro.com', '+91', 750.00, 8, 'Manager'],
+        ['ELC-SEED-20260402', 'Electrical', 1, 'South Zone', 'Banjara Hills', 'Division B', 'Vikram Singh', '9123456780', 'vikram@sparkelectric.com', '234567890123', '+91', 'Mohan R', '9123456781', 'mohan@sparkelectric.com', '+91', null, null, null, '+91', 1200.00, 5, 'Manager'],
+        ['HVC-SEED-20260403', 'HVAC', 0, 'East Zone', 'Madhapur', 'Division C', 'Priya Sharma', '9234567890', 'priya@coolairservices.com', '345678901234', '+91', null, null, null, '+91', 'Deepa T', '9234567891', 'deepa@coolairservices.com', '+91', 2000.00, 4, 'Manager'],
+        ['CLN-SEED-20260404', 'Cleaning', 1, 'West Zone', 'Gachibowli', 'Division A', 'Mohammed Ali', '9345678901', 'ali@cleanshine.com', '456789012345', '+91', 'Fatima B', '9345678902', 'fatima@cleanshine.com', '+91', null, null, null, '+91', 500.00, 12, 'Manager'],
+        ['SEC-SEED-20260405', 'Security', 1, 'Central Zone', 'Hitech City', 'Division D', 'Sunil Reddy', '9456789012', 'sunil@safeguard.com', '567890123456', '+91', null, null, null, '+91', 'Kiran P', '9456789013', 'kiran@safeguard.com', '+91', 1500.00, 6, 'Manager'],
+        ['LND-SEED-20260406', 'Landscaping', 0, 'North Zone', 'Kukatpally', 'Division B', 'Lakshmi Devi', '9567890123', 'lakshmi@greenscapes.com', '678901234567', '+91', 'Ravi N', '9567890124', 'ravi@greenscapes.com', '+91', null, null, null, '+91', 800.00, 10, 'Manager'],
+      ];
+
+      for (const v of sampleVendors) {
+        await conn.execute(
+          `INSERT INTO onboarded_vendors
+            (vendor_id, service_type, service_verified, zone, area_name, division,
+             owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
+             manager_name, manager_mobile, manager_email, manager_country_code,
+             poc_name, poc_mobile, poc_email, poc_country_code,
+             rate_per_visit, coverage_per_day, created_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          v
+        );
+      }
+      console.log('  ✅ Seeded 6 sample vendors');
+    }
 
     conn.release();
     console.log('✅ Onboarding tables initialized (properties & vendors)');

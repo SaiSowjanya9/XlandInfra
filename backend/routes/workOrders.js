@@ -133,18 +133,13 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid category' });
     }
     
-    // Handle subcategory - can be an object with id/name or just index
+    // Find subcategory name by ID
     let subcategoryName = '';
     if (category.subcategories && category.subcategories.length > 0) {
-      const subcat = category.subcategories.find(s => 
-        (typeof s === 'object' && s.id === parseInt(subcategoryId)) ||
-        (typeof s === 'string')
-      );
-      if (typeof subcat === 'object') {
+      const parsedSubId = parseInt(subcategoryId);
+      const subcat = category.subcategories.find(s => s.id === parsedSubId);
+      if (subcat) {
         subcategoryName = subcat.name;
-      } else {
-        // It's array index based
-        subcategoryName = category.subcategories[parseInt(subcategoryId) - 1] || '';
       }
     }
 
@@ -458,13 +453,10 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
 
     let subcategoryName = '';
     if (category.subcategories && category.subcategories.length > 0) {
-      const subcat = category.subcategories.find(s => 
-        (typeof s === 'object' && s.id === parseInt(subcategoryId))
-      );
-      if (typeof subcat === 'object') {
+      const parsedSubId = parseInt(subcategoryId);
+      const subcat = category.subcategories.find(s => s.id === parsedSubId);
+      if (subcat) {
         subcategoryName = subcat.name;
-      } else {
-        subcategoryName = category.subcategories[parseInt(subcategoryId) - 1] || '';
       }
     }
 

@@ -31,7 +31,10 @@ const generateVendorId = (serviceType) => {
 // POST /api/vendors/onboarding  — Create a new vendor
 // ============================================
 router.post('/', async (req, res) => {
+  const conn = await pool.getConnection();
   try {
+    await conn.beginTransaction();
+
     const {
       serviceType,
       serviceVerified,
@@ -62,7 +65,7 @@ router.post('/', async (req, res) => {
 
     const vendorId = generateVendorId(serviceType);
 
-    const [result] = await pool.execute(
+    const [result] = await conn.execute(
       `INSERT INTO onboarded_vendors
         (vendor_id, service_type, service_verified, zone, area_name, division,
          owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
@@ -96,6 +99,8 @@ router.post('/', async (req, res) => {
       ]
     );
 
+    await conn.commit();
+
     res.status(201).json({
       success: true,
       message: 'Vendor added successfully',
@@ -110,12 +115,15 @@ router.post('/', async (req, res) => {
       }
     });
   } catch (error) {
+    await conn.rollback();
     console.error('Error adding vendor:', error);
     res.status(500).json({
       success: false,
       message: 'Error adding vendor',
       error: error.message
     });
+  } finally {
+    conn.release();
   }
 });
 

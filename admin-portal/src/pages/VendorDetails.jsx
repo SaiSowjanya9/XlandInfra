@@ -22,6 +22,7 @@ const TABS = [
 const VendorDetails = () => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [divisionFilter, setDivisionFilter] = useState('');
@@ -36,12 +37,14 @@ const VendorDetails = () => {
   // Load vendors from backend API
   const loadData = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const data = await getVendors(statusFilter);
       setVendors(data);
       setNotifications(getVendorNotifications());
     } catch (error) {
       console.error('Error fetching vendors:', error);
+      setFetchError('Failed to load vendors. Please check if the backend server is running.');
     } finally {
       setLoading(false);
     }
@@ -338,8 +341,22 @@ const VendorDetails = () => {
           </div>
         </div>
 
+        {/* Error State */}
+        {fetchError && (
+          <div className="py-8 text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm mb-3">
+              <span>⚠️ {fetchError}</span>
+            </div>
+            <div>
+              <button onClick={loadData} className="text-sm text-amber-600 hover:text-amber-700 font-medium underline">
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Vendor Table */}
-        {filteredVendors.length === 0 ? (
+        {!fetchError && filteredVendors.length === 0 ? (
           <div className="py-16 text-center">
             <Truck className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">No vendors found</p>
