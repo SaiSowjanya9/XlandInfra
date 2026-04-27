@@ -108,7 +108,12 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
       hasPet,
       residentId,
       propertyId,
-      unitId
+      unitId,
+      block,
+      flatNumber,
+      customerName,
+      customerEmail,
+      customerPhone
     } = req.body;
 
     // Validate required fields
@@ -156,13 +161,14 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
 
     // Try to save to database
     try {
-      const [result] = await pool.execute(
+      const [result] = await pool.query(
         `INSERT INTO work_orders (
           work_order_id, resident_id, property_id, unit_id,
           category_id, subcategory_id, category_name, subcategory_name,
           description, permission_to_enter, entry_notes, has_pet,
+          customer_name, customer_email, customer_phone, block, flat_number,
           status, source, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'customer', NOW())`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'customer', NOW())`,
         [
           orderNumber,
           residentId || null,
@@ -175,7 +181,12 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
           description || '',
           permissionToEnter === 'yes' ? 'yes' : 'no',
           entryNotes || '',
-          hasPet === 'yes' ? 'yes' : 'no'
+          hasPet === 'yes' ? 'yes' : 'no',
+          customerName || null,
+          customerEmail || null,
+          customerPhone || null,
+          block || null,
+          flatNumber || null
         ]
       );
 
@@ -183,7 +194,7 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
 
       // Save attachments
       for (const att of attachments) {
-        await pool.execute(
+        await pool.query(
           `INSERT INTO work_order_attachments (work_order_id, file_name, original_name, file_type, file_size, file_path)
            VALUES (?, ?, ?, ?, ?, ?)`,
           [workOrderId, att.fileName, att.originalName, att.fileType, att.fileSize, att.filePath]
@@ -191,7 +202,7 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
       }
 
       // Add to history
-      await pool.execute(
+      await pool.query(
         `INSERT INTO work_order_history (work_order_id, to_status, changed_by_type, notes)
          VALUES (?, 'pending', 'system', 'Work order created by customer')`,
         [workOrderId]
@@ -243,13 +254,12 @@ router.get('/', async (req, res) => {
 
     try {
       let query = `
-        SELECT wo.*, 
-               r.first_name, r.last_name, r.email, r.phone,
-               u.unit_number, p.name as property_name
+        SELECT wo.*,
+               op.community_name as onboarded_property_name,
+               op.entry_type as onboarded_entry_type,
+               op.zone as onboarded_zone
         FROM work_orders wo
-        LEFT JOIN residents r ON wo.resident_id = r.id
-        LEFT JOIN units u ON wo.unit_id = u.id
-        LEFT JOIN properties p ON wo.property_id = p.id
+        LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
       `;
       
       const params = [];
@@ -257,15 +267,21 @@ router.get('/', async (req, res) => {
       
       // Search by work order ID
       if (search && search.trim()) {
-        conditions.push(`(wo.work_order_id LIKE ? OR wo.category_name LIKE ? OR wo.subcategory_name LIKE ? OR r.first_name LIKE ? OR r.last_name LIKE ?)`);
+        conditions.push(`(wo.work_order_id LIKE ? OR wo.category_name LIKE ? OR wo.subcategory_name LIKE ? OR wo.customer_name LIKE ? OR wo.customer_phone LIKE ? OR wo.property_id LIKE ? OR op.community_name LIKE ?)`);
         const searchTerm = `%${search.trim()}%`;
-        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
       }
       
       // Filter by status
       if (status && status !== 'all') {
-        conditions.push(`wo.status = ?`);
-        params.push(status);
+        if (status === 'pending') {
+          conditions.push(`wo.status IN ('pending', 'assigned', 'in_progress')`);
+        } else if (status === 'closed') {
+          conditions.push(`wo.status IN ('completed', 'closed')`);
+        } else {
+          conditions.push(`wo.status = ?`);
+          params.push(status);
+        }
       }
       
       if (conditions.length > 0) {
@@ -275,10 +291,10 @@ router.get('/', async (req, res) => {
       query += ` ORDER BY wo.created_at DESC LIMIT ? OFFSET ?`;
       params.push(parseInt(limit), parseInt(offset));
 
-      const [workOrders] = await pool.execute(query, params);
+      const [workOrders] = await pool.query(query, params);
 
       // Get counts by status
-      const [[counts]] = await pool.execute(`
+      const [[counts]] = await pool.query(`
         SELECT 
           COUNT(*) as total,
           SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
@@ -327,13 +343,12 @@ router.get('/:id', async (req, res) => {
     
     try {
       const [workOrders] = await pool.execute(
-        `SELECT wo.*, 
-                r.first_name, r.last_name, r.email, r.phone,
-                u.unit_number, p.name as property_name
+        `SELECT wo.*,
+                op.community_name as onboarded_property_name,
+                op.entry_type as onboarded_entry_type,
+                op.zone as onboarded_zone
          FROM work_orders wo
-         LEFT JOIN residents r ON wo.resident_id = r.id
-         LEFT JOIN units u ON wo.unit_id = u.id
-         LEFT JOIN properties p ON wo.property_id = p.id
+         LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
          WHERE wo.id = ?`,
         [id]
       );
@@ -396,18 +411,15 @@ router.patch('/:id/status', async (req, res) => {
       }
 
       // Update status
-      let completedDate = null;
-      if (status === 'completed' || status === 'closed') {
-        completedDate = new Date();
-      }
+      const completedDate = (status === 'completed' || status === 'closed') ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
 
-      await pool.execute(
+      await pool.query(
         `UPDATE work_orders SET status = ?, completed_date = ?, admin_notes = COALESCE(?, admin_notes), updated_at = NOW() WHERE id = ?`,
-        [status, completedDate, notes, id]
+        [status, completedDate, notes || null, id]
       );
 
       // Add to history
-      await pool.execute(
+      await pool.query(
         `INSERT INTO work_order_history (work_order_id, from_status, to_status, changed_by, changed_by_type, notes)
          VALUES (?, ?, ?, ?, 'admin', ?)`,
         [id, current.status, status, adminId || null, notes || null]
@@ -415,6 +427,7 @@ router.patch('/:id/status', async (req, res) => {
 
       return res.json({ success: true, message: 'Status updated successfully' });
     } catch (dbError) {
+      console.error('Status update DB error:', dbError.message);
       return res.json({ success: true, message: 'Status updated (Demo Mode)' });
     }
   } catch (error) {
@@ -439,7 +452,12 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
       propertyId,
       unitId,
       priority,
-      adminId
+      adminId,
+      block,
+      flatNumber,
+      customerName,
+      customerEmail,
+      customerPhone
     } = req.body;
 
     if (!categoryId || !subcategoryId) {
@@ -470,13 +488,14 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
     })) : [];
 
     try {
-      const [result] = await pool.execute(
+      const [result] = await pool.query(
         `INSERT INTO work_orders (
           work_order_id, resident_id, property_id, unit_id,
           category_id, subcategory_id, category_name, subcategory_name,
           description, permission_to_enter, entry_notes, has_pet,
+          customer_name, customer_email, customer_phone, block, flat_number,
           status, priority, source, created_by, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 'admin', ?, NOW())`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 'admin', ?, NOW())`,
         [
           orderNumber,
           residentId || null,
@@ -490,6 +509,11 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
           permissionToEnter === 'yes' ? 'yes' : 'no',
           entryNotes || '',
           hasPet === 'yes' ? 'yes' : 'no',
+          customerName || null,
+          customerEmail || null,
+          customerPhone || null,
+          block || null,
+          flatNumber || null,
           priority || 'medium',
           adminId || null
         ]
@@ -498,14 +522,14 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
       const workOrderId = result.insertId;
 
       for (const att of attachments) {
-        await pool.execute(
+        await pool.query(
           `INSERT INTO work_order_attachments (work_order_id, file_name, original_name, file_type, file_size, file_path)
            VALUES (?, ?, ?, ?, ?, ?)`,
           [workOrderId, att.fileName, att.originalName, att.fileType, att.fileSize, att.filePath]
         );
       }
 
-      await pool.execute(
+      await pool.query(
         `INSERT INTO work_order_history (work_order_id, to_status, changed_by, changed_by_type, notes)
          VALUES (?, 'pending', ?, 'admin', 'Work order created by admin')`,
         [workOrderId, adminId || null]
@@ -517,6 +541,7 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
         data: { id: workOrderId, orderNumber, status: 'pending' }
       });
     } catch (dbError) {
+      console.error('Admin create DB error:', dbError.message);
       return res.status(201).json({
         success: true,
         message: 'Work order created (Demo Mode)',

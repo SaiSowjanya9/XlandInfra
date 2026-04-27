@@ -14,6 +14,11 @@ import {
   Eye,
   ChevronRight,
   Upload,
+  Building2,
+  User,
+  Phone,
+  Mail,
+  Loader2,
 } from 'lucide-react';
 
 const API_BASE = '/api';
@@ -26,8 +31,20 @@ const CustomerWorkOrder = ({ user }) => {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
+  // Property state
+  const [properties, setProperties] = useState([]);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [propertySearch, setPropertySearch] = useState('');
+  const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
+    propertyId: '',
+    block: '',
+    flatNumber: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
     categoryId: '',
     subcategoryId: '',
     description: '',
@@ -46,7 +63,42 @@ const CustomerWorkOrder = ({ user }) => {
   useEffect(() => {
     fetchCategories();
     fetchWorkOrders();
+    fetchProperties();
   }, []);
+
+  const fetchProperties = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/onboarding`);
+      const result = await response.json();
+      if (result.success) setProperties(result.data || []);
+    } catch (err) { console.error('Error fetching properties:', err); }
+  };
+
+  const handlePropertySelect = (property) => {
+    setSelectedProperty(property);
+    setPropertySearch(property.propertyId);
+    setShowPropertyDropdown(false);
+    setFormData(prev => ({ ...prev, propertyId: property.propertyId, block: '', flatNumber: '' }));
+    setFormErrors(prev => ({ ...prev, propertyId: '' }));
+  };
+
+  const filteredProperties = properties.filter(p =>
+    p.propertyId?.toLowerCase().includes(propertySearch.toLowerCase()) ||
+    p.name?.toLowerCase().includes(propertySearch.toLowerCase())
+  );
+
+  const needsBlockFlat = selectedProperty &&
+    (selectedProperty.entryType === 'APT' || selectedProperty.entryType === 'GC');
+
+  const getPropertyTypeLabel = (entryType) => {
+    switch (entryType) {
+      case 'APT': return 'Apartment';
+      case 'GC': return 'Gated Community';
+      case 'VILLA': return 'Villa';
+      case 'PLOT': return 'Plot';
+      default: return entryType;
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -146,6 +198,12 @@ const CustomerWorkOrder = ({ user }) => {
 
   const validateForm = () => {
     const newErrors = {};
+    if (!formData.propertyId) newErrors.propertyId = 'Please select a property';
+    if (needsBlockFlat && !formData.block.trim()) newErrors.block = 'Block is required';
+    if (needsBlockFlat && !formData.flatNumber.trim()) newErrors.flatNumber = 'Flat number is required';
+    if (!formData.customerName.trim()) newErrors.customerName = 'Name is required';
+    if (!formData.customerEmail.trim()) newErrors.customerEmail = 'Email is required';
+    if (!formData.customerPhone.trim()) newErrors.customerPhone = 'Phone number is required';
     if (!formData.categoryId) newErrors.categoryId = 'Please select a category';
     if (!formData.subcategoryId) newErrors.subcategoryId = 'Please select a subcategory';
     if (!formData.permissionToEnter) newErrors.permissionToEnter = 'Please select Yes or No';
@@ -161,6 +219,12 @@ const CustomerWorkOrder = ({ user }) => {
     setIsSubmitting(true);
     try {
       const submitData = new FormData();
+      submitData.append('propertyId', formData.propertyId);
+      if (formData.block) submitData.append('block', formData.block);
+      if (formData.flatNumber) submitData.append('flatNumber', formData.flatNumber);
+      submitData.append('customerName', formData.customerName);
+      submitData.append('customerEmail', formData.customerEmail);
+      submitData.append('customerPhone', formData.customerPhone);
       submitData.append('categoryId', formData.categoryId);
       submitData.append('subcategoryId', formData.subcategoryId);
       submitData.append('description', formData.description);
@@ -184,7 +248,15 @@ const CustomerWorkOrder = ({ user }) => {
 
       if (result.success) {
         setSuccess(`Work order submitted successfully! Your order ID is: ${result.data.workOrderId}`);
+        setSelectedProperty(null);
+        setPropertySearch('');
         setFormData({
+          propertyId: '',
+          block: '',
+          flatNumber: '',
+          customerName: '',
+          customerEmail: '',
+          customerPhone: '',
           categoryId: '',
           subcategoryId: '',
           description: '',
@@ -286,6 +358,151 @@ const CustomerWorkOrder = ({ user }) => {
         /* Work Order Form */
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Property Information */}
+            <div className="border border-gray-200 rounded-xl p-5 bg-gray-50/30">
+              <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center space-x-2">
+                <Building2 className="w-4 h-4 text-emerald-600" />
+                <span>Property Information</span>
+              </h3>
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Property ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={propertySearch}
+                  onChange={(e) => {
+                    setPropertySearch(e.target.value);
+                    setShowPropertyDropdown(true);
+                    if (!e.target.value.trim()) {
+                      setSelectedProperty(null);
+                      setFormData(prev => ({ ...prev, propertyId: '', block: '', flatNumber: '' }));
+                    }
+                  }}
+                  onFocus={() => setShowPropertyDropdown(true)}
+                  placeholder="Search by Property ID or Community Name..."
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
+                    formErrors.propertyId ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
+                  }`}
+                />
+                {showPropertyDropdown && propertySearch.trim() && (
+                  <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
+                    {filteredProperties.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-gray-500">No properties found</div>
+                    ) : (
+                      filteredProperties.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => handlePropertySelect(p)}
+                          className={`w-full px-4 py-3 text-left hover:bg-emerald-50 flex items-center justify-between transition-colors ${
+                            formData.propertyId === p.propertyId ? 'bg-emerald-50' : ''
+                          }`}
+                        >
+                          <div>
+                            <p className="font-medium text-gray-900 text-sm">{p.propertyId}</p>
+                            <p className="text-xs text-gray-500">{p.name} - {getPropertyTypeLabel(p.entryType)}</p>
+                          </div>
+                          {formData.propertyId === p.propertyId && <Check className="w-4 h-4 text-emerald-600" />}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+                {formErrors.propertyId && (
+                  <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.propertyId}</p>
+                )}
+              </div>
+
+              {selectedProperty && (
+                <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <p className="text-xs text-emerald-500 uppercase tracking-wider font-medium mb-1">Detected Property Type</p>
+                  <p className="text-sm font-semibold text-emerald-800">{getPropertyTypeLabel(selectedProperty.entryType)}</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">{selectedProperty.name}</p>
+                </div>
+              )}
+
+              {needsBlockFlat && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Block <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={formData.block}
+                      onChange={(e) => setFormData(prev => ({ ...prev, block: e.target.value }))}
+                      placeholder="e.g. Block A"
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
+                        formErrors.block ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
+                      }`}
+                    />
+                    {formErrors.block && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.block}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Flat Number <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={formData.flatNumber}
+                      onChange={(e) => setFormData(prev => ({ ...prev, flatNumber: e.target.value }))}
+                      placeholder="e.g. 101"
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
+                        formErrors.flatNumber ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
+                      }`}
+                    />
+                    {formErrors.flatNumber && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.flatNumber}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Customer Details */}
+            <div className="border border-gray-200 rounded-xl p-5 bg-gray-50/30">
+              <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center space-x-2">
+                <User className="w-4 h-4 text-emerald-600" />
+                <span>Your Details</span>
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    value={formData.customerName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
+                    placeholder="Your name"
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
+                      formErrors.customerName ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
+                    }`}
+                  />
+                  {formErrors.customerName && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.customerName}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email <span className="text-red-500">*</span></label>
+                  <input
+                    type="email"
+                    value={formData.customerEmail}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customerEmail: e.target.value }))}
+                    placeholder="your@email.com"
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
+                      formErrors.customerEmail ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
+                    }`}
+                  />
+                  {formErrors.customerEmail && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.customerEmail}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number <span className="text-red-500">*</span></label>
+                  <input
+                    type="tel"
+                    value={formData.customerPhone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customerPhone: e.target.value }))}
+                    placeholder="Phone number"
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
+                      formErrors.customerPhone ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
+                    }`}
+                  />
+                  {formErrors.customerPhone && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.customerPhone}</p>}
+                </div>
+              </div>
+            </div>
+
             {/* Category Selection */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-3">
