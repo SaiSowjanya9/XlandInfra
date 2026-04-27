@@ -92,20 +92,21 @@ const initOnboardingTables = async () => {
         map_address TEXT,
         notes TEXT,
         status VARCHAR(20) DEFAULT 'active',
-        created_by INT DEFAULT NULL,
+        created_by VARCHAR(100) DEFAULT 'system',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
     
-    // Add new address columns if they don't exist (for existing tables)
+    // Add new columns if they don't exist (for existing tables)
     const columnsToAdd = [
       { name: 'address_line1', def: "VARCHAR(255) DEFAULT NULL" },
       { name: 'apt_suite_unit', def: "VARCHAR(100) DEFAULT NULL" },
       { name: 'apt_suite_na', def: "BOOLEAN DEFAULT FALSE" },
       { name: 'city', def: "VARCHAR(100) DEFAULT NULL" },
       { name: 'state', def: "VARCHAR(100) DEFAULT NULL" },
-      { name: 'postal_code', def: "VARCHAR(20) DEFAULT NULL" }
+      { name: 'postal_code', def: "VARCHAR(20) DEFAULT NULL" },
+      { name: 'created_by', def: "VARCHAR(100) DEFAULT 'system'" }
     ];
     
     for (const col of columnsToAdd) {
@@ -125,6 +126,21 @@ const initOnboardingTables = async () => {
       }
     }
 
+    // Ensure status column exists and has correct values
+    try {
+      const [statusCol] = await conn.execute(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'onboarded_properties' AND COLUMN_NAME = 'status'`,
+        [dbConfig.database]
+      );
+      if (statusCol.length === 0) {
+        await conn.execute(`ALTER TABLE onboarded_properties ADD COLUMN status VARCHAR(20) DEFAULT 'active'`);
+        console.log(`  ✓ Added column: status`);
+      }
+    } catch (e) {
+      console.log(`  - Status column check failed`);
+    }
+
     // Create property_contacts table
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS property_contacts (
@@ -139,8 +155,40 @@ const initOnboardingTables = async () => {
       )
     `);
 
+    // Create onboarded_vendors table (new vendor-specific schema)
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS onboarded_vendors (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        vendor_id VARCHAR(50) UNIQUE NOT NULL,
+        service_type VARCHAR(100) NOT NULL,
+        service_verified TINYINT(1) DEFAULT 0,
+        zone VARCHAR(100),
+        area_name VARCHAR(255),
+        division VARCHAR(100),
+        owner_name VARCHAR(255) NOT NULL,
+        owner_mobile VARCHAR(20),
+        owner_email VARCHAR(255),
+        owner_aadhar VARCHAR(20),
+        owner_country_code VARCHAR(10) DEFAULT '+91',
+        manager_name VARCHAR(255),
+        manager_mobile VARCHAR(20),
+        manager_email VARCHAR(255),
+        manager_country_code VARCHAR(10) DEFAULT '+91',
+        poc_name VARCHAR(255),
+        poc_mobile VARCHAR(20),
+        poc_email VARCHAR(255),
+        poc_country_code VARCHAR(10) DEFAULT '+91',
+        rate_per_visit DECIMAL(10,2) DEFAULT 0,
+        coverage_per_day INT DEFAULT 0,
+        created_by VARCHAR(100) DEFAULT 'Manager',
+        status VARCHAR(20) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
     conn.release();
-    console.log('✅ Onboarding tables initialized');
+    console.log('✅ Onboarding tables initialized (properties & vendors)');
     return true;
   } catch (error) {
     console.error('❌ Failed to initialize onboarding tables:', error.message);

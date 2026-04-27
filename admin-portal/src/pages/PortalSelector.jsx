@@ -4,7 +4,7 @@ const portals = [
   {
     key: 'employee',
     title: 'Employee Portal',
-    description: 'Access dashboard, manage properties, and handle onboarding workflows.',
+    description: 'Access dashboard, manage client submissions, and create new clients.',
     icon: Briefcase,
     gradient: 'from-rose-500 to-red-600',
     hoverGradient: 'from-rose-600 to-red-700',
@@ -40,7 +40,7 @@ const portals = [
     iconColor: 'text-amber-600',
     ring: 'ring-amber-200',
     btnBg: 'bg-amber-600 hover:bg-amber-700',
-    tags: ['Coming Soon'],
+    tags: [],
     tagBg: 'bg-amber-50 text-amber-700',
   },
 ];

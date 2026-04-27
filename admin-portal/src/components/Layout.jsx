@@ -18,10 +18,10 @@ const Layout = ({ admin, onLogout, children }) => {
 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/properties', icon: Building2, label: 'Properties' },
+    { path: '/client-submissions', icon: Building2, label: 'Client Submissions' },
     { path: '/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/categories', icon: FolderTree, label: 'Categories' },
-    { path: '/onboarding', icon: FileInput, label: 'Onboarding' },
+    { path: '/create-client', icon: FileInput, label: 'Create Client' },
   ];
 
   const NavLink = ({ item, mobile = false }) => {

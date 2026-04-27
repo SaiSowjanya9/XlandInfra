@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS onboarded_properties (
   notes TEXT,
 
   -- Tracking
-  status VARCHAR(20) DEFAULT 'active',
-  created_by INT DEFAULT NULL,
+  status ENUM('active','deleted') DEFAULT 'active',
+  created_by VARCHAR(100) DEFAULT 'system',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

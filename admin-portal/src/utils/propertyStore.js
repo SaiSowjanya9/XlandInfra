@@ -9,9 +9,10 @@ const NOTIFICATION_KEY = 'xland_notifications';
 // ============================================
 
 // Get all onboarded properties from the database
-export const getProperties = async () => {
+// status: 'active' (default), 'deleted', or 'all'
+export const getProperties = async (status = 'active') => {
   try {
-    const res = await fetch(API_BASE);
+    const res = await fetch(`${API_BASE}?status=${status}`);
     const json = await res.json();
     if (json.success) return json.data;
     console.error('getProperties failed:', json.message);
@@ -23,7 +24,7 @@ export const getProperties = async () => {
 };
 
 // Save a new property via backend API
-export const saveProperty = async (formData, entryType, category) => {
+export const saveProperty = async (formData, entryType, category, createdBy = 'system') => {
   try {
     const res = await fetch(API_BASE, {
       method: 'POST',
@@ -55,6 +56,7 @@ export const saveProperty = async (formData, entryType, category) => {
         mapLocation: formData.mapLocation,
         notes: formData.notes,
         associationContacts: formData.associationContacts,
+        createdBy,
       }),
     });
     const json = await res.json();
