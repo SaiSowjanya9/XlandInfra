@@ -97,7 +97,7 @@ router.post('/', async (req, res) => {
         mapLocation?.lng || null,
         mapLocation?.address || null,
         notes || null,
-        createdBy || 'system'
+        String(createdBy || 'system')
       ]
     );
 
@@ -237,6 +237,94 @@ router.get('/', async (req, res) => {
       message: 'Error fetching onboarded properties',
       error: error.message
     });
+  }
+});
+
+// ============================================
+// GET /api/onboarding/suggestions/zones — Distinct zones from properties + vendors
+// ============================================
+router.get('/suggestions/zones', async (req, res) => {
+  try {
+    const [propRows] = await pool.execute(
+      `SELECT DISTINCT zone FROM onboarded_properties WHERE zone IS NOT NULL AND zone != '' AND status = 'active'`
+    );
+    let vendorZones = [];
+    try {
+      const [vRows] = await pool.execute(
+        `SELECT DISTINCT zone FROM onboarded_vendors WHERE zone IS NOT NULL AND zone != '' AND status = 'active'`
+      );
+      vendorZones = vRows;
+    } catch (_) {}
+    const allZones = [...new Set([...propRows.map(r => r.zone), ...vendorZones.map(r => r.zone)])].filter(Boolean).sort();
+    res.json({ success: true, data: allZones });
+  } catch (error) {
+    console.error('Error fetching zone suggestions:', error);
+    res.json({ success: true, data: [] });
+  }
+});
+
+// ============================================
+// GET /api/onboarding/suggestions/areas — Distinct areas from properties + vendors
+// ============================================
+router.get('/suggestions/areas', async (req, res) => {
+  try {
+    const [propRows] = await pool.execute(
+      `SELECT DISTINCT area_name FROM onboarded_properties WHERE area_name IS NOT NULL AND area_name != '' AND status = 'active'`
+    );
+    let vendorAreas = [];
+    try {
+      const [vRows] = await pool.execute(
+        `SELECT DISTINCT area_name FROM onboarded_vendors WHERE area_name IS NOT NULL AND area_name != '' AND status = 'active'`
+      );
+      vendorAreas = vRows;
+    } catch (_) {}
+    const allAreas = [...new Set([...propRows.map(r => r.area_name), ...vendorAreas.map(r => r.area_name)])].filter(Boolean).sort();
+    res.json({ success: true, data: allAreas });
+  } catch (error) {
+    console.error('Error fetching area suggestions:', error);
+    res.json({ success: true, data: [] });
+  }
+});
+
+// ============================================
+// GET /api/onboarding/lookup/:propertyId — Find property by property_id string
+// ============================================
+router.get('/lookup/:propertyId', async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const [rows] = await pool.execute(
+      `SELECT * FROM onboarded_properties WHERE property_id = ? AND status = 'active'`,
+      [propertyId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+    const row = rows[0];
+    res.json({
+      success: true,
+      data: {
+        id: row.id.toString(),
+        propertyId: row.property_id,
+        entryType: row.entry_type,
+        category: row.category,
+        name: row.community_name,
+        zone: row.zone,
+        areaName: row.area_name,
+        division: row.division,
+        propertyType: row.property_type,
+        numberOfBlocks: row.number_of_blocks,
+        blockNames: row.block_names ? (typeof row.block_names === 'string' ? JSON.parse(row.block_names) : row.block_names) : null,
+        unitsPerBlock: row.units_per_block ? (typeof row.units_per_block === 'string' ? JSON.parse(row.units_per_block) : row.units_per_block) : null,
+        blockInfo: row.block_info,
+        blockNA: !!row.block_na,
+        numberOfUnits: row.number_of_units,
+        villaPlotNumber: row.villa_plot_number,
+        totalUnits: row.total_units
+      }
+    });
+  } catch (error) {
+    console.error('Error looking up property:', error);
+    res.status(500).json({ success: false, message: 'Error looking up property' });
   }
 });
 

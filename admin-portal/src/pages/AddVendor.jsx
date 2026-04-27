@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Truck,
   MapPin,
@@ -102,6 +102,30 @@ const AddVendor = ({ admin }) => {
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
   const [createdVendor, setCreatedVendor] = useState(null);
+
+  // Zone & Area autocomplete
+  const [zoneSuggestions, setZoneSuggestions] = useState([]);
+  const [areaSuggestions, setAreaSuggestions] = useState([]);
+  const [showZoneDropdown, setShowZoneDropdown] = useState(false);
+  const [showAreaDropdown, setShowAreaDropdown] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/onboarding/suggestions/zones')
+      .then(r => r.json())
+      .then(res => { if (res.success) setZoneSuggestions(res.data || []); })
+      .catch(() => {});
+    fetch('/api/onboarding/suggestions/areas')
+      .then(r => r.json())
+      .then(res => { if (res.success) setAreaSuggestions(res.data || []); })
+      .catch(() => {});
+  }, []);
+
+  const filteredZones = zoneSuggestions.filter(z =>
+    z.toLowerCase().includes((formData.zone || '').toLowerCase())
+  );
+  const filteredAreas = areaSuggestions.filter(a =>
+    a.toLowerCase().includes((formData.areaName || '').toLowerCase())
+  );
 
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -287,40 +311,85 @@ const AddVendor = ({ admin }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Zone */}
-            <div>
+            {/* Zone - Custom text input with autocomplete */}
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Zone <span className="text-red-500">*</span>
               </label>
-              <select
+              <input
+                type="text"
                 value={formData.zone}
-                onChange={(e) => updateField('zone', e.target.value)}
+                onChange={(e) => {
+                  updateField('zone', e.target.value);
+                  setShowZoneDropdown(true);
+                }}
+                onFocus={() => setShowZoneDropdown(true)}
+                onBlur={() => setTimeout(() => setShowZoneDropdown(false), 200)}
+                placeholder="Type or select zone..."
                 className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:outline-none ${
                   errors.zone ? 'border-red-300 bg-red-50' : 'border-gray-300'
                 }`}
-              >
-                <option value="">Select zone...</option>
-                {ZONES.map(zone => (
-                  <option key={zone} value={zone}>{zone}</option>
-                ))}
-              </select>
+              />
+              {showZoneDropdown && filteredZones.length > 0 && (
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredZones.map(z => (
+                    <button
+                      key={z}
+                      type="button"
+                      onMouseDown={() => {
+                        updateField('zone', z);
+                        setShowZoneDropdown(false);
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-blue-50 transition-colors ${
+                        formData.zone === z ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
+                      }`}
+                    >
+                      {z}
+                    </button>
+                  ))}
+                </div>
+              )}
               {errors.zone && <p className="text-xs text-red-500 mt-1">{errors.zone}</p>}
             </div>
 
-            {/* Area Name */}
-            <div>
+            {/* Area Name - Custom text input with autocomplete */}
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Area Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.areaName}
-                onChange={(e) => updateField('areaName', e.target.value)}
-                placeholder="Enter area/locality name"
+                onChange={(e) => {
+                  updateField('areaName', e.target.value);
+                  setShowAreaDropdown(true);
+                }}
+                onFocus={() => setShowAreaDropdown(true)}
+                onBlur={() => setTimeout(() => setShowAreaDropdown(false), 200)}
+                placeholder="Type or select area name..."
                 className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:outline-none ${
                   errors.areaName ? 'border-red-300 bg-red-50' : 'border-gray-300'
                 }`}
               />
+              {showAreaDropdown && filteredAreas.length > 0 && (
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredAreas.map(a => (
+                    <button
+                      key={a}
+                      type="button"
+                      onMouseDown={() => {
+                        updateField('areaName', a);
+                        setShowAreaDropdown(false);
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-blue-50 transition-colors ${
+                        formData.areaName === a ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
+                      }`}
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              )}
               {errors.areaName && <p className="text-xs text-red-500 mt-1">{errors.areaName}</p>}
             </div>
 
