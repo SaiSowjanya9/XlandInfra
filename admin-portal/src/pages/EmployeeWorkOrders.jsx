@@ -18,7 +18,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 
 const EmployeeWorkOrders = ({ admin }) => {
   const [activeTab, setActiveTab] = useState('pending');

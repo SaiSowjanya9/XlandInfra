@@ -13,13 +13,17 @@ const NOTIFICATION_KEY = 'xland_vendor_notifications';
 export const getVendors = async (status = 'active') => {
   try {
     const res = await fetch(`${API_BASE}?status=${status}`);
+    if (!res.ok) {
+      console.error('getVendors HTTP error:', res.status, res.statusText);
+      throw new Error(`Server returned ${res.status}`);
+    }
     const json = await res.json();
     if (json.success) return json.data;
     console.error('getVendors failed:', json.message);
     return [];
   } catch (err) {
     console.error('getVendors error:', err);
-    return [];
+    throw err;
   }
 };
 

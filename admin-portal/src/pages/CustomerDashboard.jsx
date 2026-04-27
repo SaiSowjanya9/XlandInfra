@@ -19,7 +19,7 @@ import {
   Users,
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 
 const CustomerDashboard = ({ user }) => {
   const [recentOrders, setRecentOrders] = useState([]);

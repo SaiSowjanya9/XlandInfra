@@ -26,9 +26,9 @@ router.get('/:categoryId/subcategories', (req, res) => {
       return res.status(404).json({ success: false, message: 'Category not found' });
     }
     
-    const subcategoryList = category.subcategories.map((sub, index) => ({
-      id: index + 1,
-      name: sub,
+    const subcategoryList = category.subcategories.map((sub) => ({
+      id: sub.id,
+      name: sub.name,
       categoryId: categoryId
     }));
     

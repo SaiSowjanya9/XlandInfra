@@ -16,7 +16,7 @@ import {
   Upload,
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 
 const CustomerWorkOrder = ({ user }) => {
   const [activeView, setActiveView] = useState('create'); // 'create' | 'history'

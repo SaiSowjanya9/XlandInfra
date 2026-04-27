@@ -150,6 +150,10 @@ const AddVendor = ({ admin }) => {
       };
       
       const result = await saveVendor(vendorData);
+      if (!result) {
+        alert('Failed to save vendor. Please check the backend connection and try again.');
+        return;
+      }
       setCreatedVendor(result);
       setSubmitted(true);
     } catch (error) {
@@ -181,7 +185,7 @@ const AddVendor = ({ admin }) => {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
-              onClick={() => navigate('/vendor/vendor-details')}
+              onClick={() => navigate('/employee/vendor-details')}
               className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors"
             >
               View Vendor Details
@@ -203,7 +207,7 @@ const AddVendor = ({ admin }) => {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => navigate('/vendor')}
+          onClick={() => navigate('/employee')}
           className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-4 text-sm"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -612,7 +616,7 @@ const AddVendor = ({ admin }) => {
         <div className="flex items-center justify-end gap-3 pt-4">
           <button
             type="button"
-            onClick={() => navigate('/vendor')}
+            onClick={() => navigate('/employee')}
             className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
           >
             Cancel
@@ -637,4 +641,4 @@ const AddVendor = ({ admin }) => {
   );
 };
 
-export default AddVendor;
+export default AddVendor;
