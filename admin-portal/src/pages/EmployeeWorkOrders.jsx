@@ -22,6 +22,8 @@ import {
   Mail,
   Loader2,
 } from 'lucide-react';
+import SelectWithAdd from '../components/SelectWithAdd';
+import { getCategories, addCategory, getSubcategories, addSubcategory } from '../utils/fieldOptionsStore';
 
 const API_BASE = '/api';
 
@@ -212,6 +214,48 @@ const EmployeeWorkOrders = ({ admin }) => {
     }));
     setShowCategoryDropdown(false);
     setFormErrors(prev => ({ ...prev, categoryId: '' }));
+  };
+
+  // Handle adding new category
+  const handleAddCategory = (categoryName) => {
+    // Add to fieldOptionsStore for persistence
+    const result = addCategory(categoryName);
+    if (result.success) {
+      // Also add to local categories state temporarily
+      const newCategory = {
+        id: Date.now(),
+        name: categoryName,
+        subcategories: ['Other']
+      };
+      setCategories(prev => [...prev, newCategory]);
+      // Auto-select the new category
+      handleCategorySelect(newCategory.id);
+    }
+    return result;
+  };
+
+  // Handle adding new subcategory
+  const handleAddSubcategory = (subcategoryName) => {
+    if (!selectedCategory) {
+      return { success: false, message: 'Please select a category first' };
+    }
+    // Add to fieldOptionsStore
+    const result = addSubcategory(selectedCategory.name, subcategoryName);
+    if (result.success) {
+      // Also add to local state temporarily
+      const newSubcategory = {
+        id: Date.now(),
+        name: subcategoryName
+      };
+      setCategories(prev => prev.map(cat => 
+        cat.id === selectedCategory.id
+          ? { ...cat, subcategories: [...cat.subcategories, newSubcategory] }
+          : cat
+      ));
+      // Auto-select the new subcategory
+      handleSubcategorySelect(newSubcategory.id);
+    }
+    return result;
   };
 
   // Handle subcategory selection
@@ -705,117 +749,31 @@ const EmployeeWorkOrders = ({ admin }) => {
             {/* Category Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Category Dropdown */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCategoryDropdown(!showCategoryDropdown);
-                      setShowSubcategoryDropdown(false);
-                    }}
-                    className={`w-full px-4 py-3 bg-white border rounded-lg text-left flex items-center justify-between transition-all ${
-                      formErrors.categoryId
-                        ? 'border-red-500 focus:ring-red-500'
-                        : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'
-                    } ${showCategoryDropdown ? 'ring-2 ring-indigo-500' : ''}`}
-                  >
-                    <span className={selectedCategory ? 'text-gray-900' : 'text-gray-500'}>
-                      {selectedCategory?.name || 'Select a category'}
-                    </span>
-                    <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {showCategoryDropdown && (
-                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                      {categories.map((category) => (
-                        <button
-                          key={category.id}
-                          type="button"
-                          onClick={() => handleCategorySelect(category.id)}
-                          className={`w-full px-4 py-3 text-left hover:bg-indigo-50 flex items-center justify-between transition-colors ${
-                            formData.categoryId === category.id.toString() ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'
-                          }`}
-                        >
-                          <span>{category.name}</span>
-                          {formData.categoryId === category.id.toString() && (
-                            <Check className="w-5 h-5 text-indigo-600" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {formErrors.categoryId && (
-                  <p className="mt-1 text-sm text-red-500 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {formErrors.categoryId}
-                  </p>
-                )}
-              </div>
+              <SelectWithAdd
+                label="Category"
+                value={formData.categoryId}
+                onChange={(value) => handleCategorySelect(value)}
+                options={categories.map(c => ({ label: c.name, value: c.id.toString() }))}
+                onAddOption={(value) => handleAddCategory(value)}
+                placeholder="Select a category"
+                required
+                error={formErrors.categoryId}
+                addPlaceholder="Enter new category name"
+              />
 
               {/* Subcategory Dropdown */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subcategory <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (formData.categoryId) {
-                        setShowSubcategoryDropdown(!showSubcategoryDropdown);
-                        setShowCategoryDropdown(false);
-                      }
-                    }}
-                    disabled={!formData.categoryId}
-                    className={`w-full px-4 py-3 bg-white border rounded-lg text-left flex items-center justify-between transition-all ${
-                      !formData.categoryId
-                        ? 'bg-gray-100 cursor-not-allowed border-gray-200'
-                        : formErrors.subcategoryId
-                          ? 'border-red-500 focus:ring-red-500'
-                          : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'
-                    } ${showSubcategoryDropdown ? 'ring-2 ring-indigo-500' : ''}`}
-                  >
-                    <span className={formData.subcategoryId ? 'text-gray-900' : 'text-gray-500'}>
-                      {formData.subcategoryId
-                        ? subcategories.find(s => s.id === parseInt(formData.subcategoryId))?.name
-                        : formData.categoryId
-                          ? 'Select a subcategory'
-                          : 'Select a category first'}
-                    </span>
-                    <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showSubcategoryDropdown ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {showSubcategoryDropdown && subcategories.length > 0 && (
-                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                      {subcategories.map((sub) => (
-                        <button
-                          key={sub.id}
-                          type="button"
-                          onClick={() => handleSubcategorySelect(sub.id)}
-                          className={`w-full px-4 py-3 text-left hover:bg-indigo-50 flex items-center justify-between transition-colors ${
-                            formData.subcategoryId === sub.id.toString() ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'
-                          }`}
-                        >
-                          <span>{sub.name}</span>
-                          {formData.subcategoryId === sub.id.toString() && (
-                            <Check className="w-5 h-5 text-indigo-600" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {formErrors.subcategoryId && (
-                  <p className="mt-1 text-sm text-red-500 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {formErrors.subcategoryId}
-                  </p>
-                )}
-              </div>
+              <SelectWithAdd
+                label="Subcategory"
+                value={formData.subcategoryId}
+                onChange={(value) => handleSubcategorySelect(value)}
+                options={subcategories.map(s => ({ label: s.name, value: s.id.toString() }))}
+                onAddOption={(value) => handleAddSubcategory(value)}
+                placeholder={formData.categoryId ? 'Select a subcategory' : 'Select a category first'}
+                required
+                disabled={!formData.categoryId}
+                error={formErrors.subcategoryId}
+                addPlaceholder="Enter new subcategory name"
+              />
             </div>
 
             {/* Description */}
