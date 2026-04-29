@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { 
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Briefcase, Lock, 
-  ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, UserPlus, Truck, Users
+  ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, UserPlus, Truck, Users,
+  FileText
 } from 'lucide-react';
 import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
 import { getVendors } from '../utils/vendorStore';
@@ -12,6 +13,7 @@ import {
   assignEmployeeToProperty,
   getPropertyAssignments 
 } from '../utils/assignmentStore';
+import { getEstimatesByPropertyId } from '../utils/estimateStore';
 import * as XLSX from 'xlsx';
 
 // Category options for Customer Submissions (same as Create Customer)
@@ -77,6 +79,7 @@ const CustomerSubmissions = () => {
   const [vendorSearchTerm, setVendorSearchTerm] = useState('');
   const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
   const [propertyAssignments, setPropertyAssignments] = useState({});
+  const [propertyEstimates, setPropertyEstimates] = useState([]);
 
   // Load properties from backend API and notifications from localStorage
   const loadData = async () => {
@@ -96,6 +99,13 @@ const CustomerSubmissions = () => {
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
+  };
+
+  // Handle viewing property with estimates
+  const handleViewProperty = (property) => {
+    setViewProperty(property);
+    const estimates = getEstimatesByPropertyId(property.propertyId);
+    setPropertyEstimates(estimates);
   };
 
   // Delete handler
@@ -677,7 +687,7 @@ const CustomerSubmissions = () => {
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1">
                           <button
-                            onClick={() => setViewProperty(property)}
+                            onClick={() => handleViewProperty(property)}
                             className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                             title="View details"
                           >
@@ -928,6 +938,69 @@ const CustomerSubmissions = () => {
                   <p className="text-sm text-gray-700">{viewProperty.notes}</p>
                 </div>
               )}
+
+              {/* Estimates View Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Estimates ({propertyEstimates.length})
+                </h3>
+                {propertyEstimates.length === 0 ? (
+                  <div className="text-center py-6 bg-gray-50 rounded-lg">
+                    <FileText className="w-8 h-8 mx-auto text-gray-300 mb-2" />
+                    <p className="text-sm text-gray-500">No estimates for this property</p>
+                    <p className="text-xs text-gray-400 mt-1">Create an estimate from the Estimates section</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {propertyEstimates.map((estimate) => (
+                      <div key={estimate.estimateId} className="p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-indigo-700 text-sm">{estimate.estimateId}</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            estimate.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                            estimate.status === 'Sent' ? 'bg-blue-100 text-blue-700' :
+                            estimate.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {estimate.status || 'Draft'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-gray-500">Total:</span>
+                            <span className="ml-1 font-medium text-gray-700">₹{(estimate.totalPrice || 0).toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Services:</span>
+                            <span className="ml-1 font-medium text-gray-700">{estimate.services?.length || 0}</span>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-gray-500">Created:</span>
+                            <span className="ml-1 text-gray-700">{new Date(estimate.createdAt).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        {estimate.services && estimate.services.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-indigo-200">
+                            <div className="flex flex-wrap gap-1">
+                              {estimate.services.slice(0, 3).map((service, idx) => (
+                                <span key={idx} className="px-1.5 py-0.5 bg-white text-indigo-600 rounded text-xs">
+                                  {service.name}
+                                </span>
+                              ))}
+                              {estimate.services.length > 3 && (
+                                <span className="px-1.5 py-0.5 bg-indigo-200 text-indigo-700 rounded text-xs">
+                                  +{estimate.services.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Modal Footer */}

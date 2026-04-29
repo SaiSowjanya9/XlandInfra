@@ -50,7 +50,6 @@ const CustomerContact = ({ user }) => {
     blockTower: '',
     flatUnit: '',
     customerName: '',
-    serviceType: '',
     services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
   });
 
@@ -159,19 +158,6 @@ const CustomerContact = ({ user }) => {
     }
   };
 
-  const handleServiceTypeChange = (serviceType) => {
-    setAMCForm({ ...amcForm, serviceType });
-    
-    // If there's a locked estimate and user selects AMC, pre-fill with estimate data
-    if (serviceType === 'amc' && lockedEstimate) {
-      setAMCForm({
-        ...amcForm,
-        serviceType,
-        services: lockedEstimate.services || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
-      });
-    }
-  };
-
   const handleSave = () => {
     if (!amcForm.propertyId) {
       showToast('Property ID is required', 'error');
@@ -214,7 +200,6 @@ const CustomerContact = ({ user }) => {
       blockTower: '',
       flatUnit: '',
       customerName: '',
-      serviceType: '',
       services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
     });
     setEditingAMC(null);
@@ -229,7 +214,6 @@ const CustomerContact = ({ user }) => {
       blockTower: pkg.blockTower || '',
       flatUnit: pkg.flatUnit || '',
       customerName: pkg.customerName || '',
-      serviceType: pkg.serviceType || 'amc',
       services: pkg.services || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
     });
     
@@ -371,43 +355,22 @@ const CustomerContact = ({ user }) => {
               </div>
             </div>
 
-            {/* Service Type - Wide dropdown */}
-            <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Service Type <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <select
-                  value={amcForm.serviceType}
-                  onChange={(e) => handleServiceTypeChange(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
-                >
-                  <option value="">Select Service Type</option>
-                  <option value="amc">AMC (Annual Maintenance Contract)</option>
-                  <option value="one-time">One-Time Service</option>
-                  <option value="repair">Repair Service</option>
-                  <option value="inspection">Inspection Service</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-              
-              {/* Show locked estimate info if available */}
-              {lockedEstimate && amcForm.serviceType === 'amc' && (
-                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <div className="flex items-center gap-2 text-blue-700">
-                    <Lock className="w-4 h-4" />
-                    <span className="text-sm font-medium">Locked Estimate Found</span>
-                  </div>
-                  <p className="text-xs text-blue-600 mt-1">
-                    Estimate ID: {lockedEstimate.packageId} | Total: ₹{(lockedEstimate.totalPrice || 0).toLocaleString()} | 
-                    Services: {lockedEstimate.services?.length || 0}
-                  </p>
-                  <p className="text-xs text-blue-500 mt-1">
-                    The form has been pre-filled with the locked estimate details.
-                  </p>
+            {/* Show locked estimate info if available */}
+            {lockedEstimate && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center gap-2 text-blue-700">
+                  <Lock className="w-4 h-4" />
+                  <span className="text-sm font-medium">Locked Estimate Found</span>
                 </div>
-              )}
-            </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  Estimate ID: {lockedEstimate.packageId} | Total: ₹{(lockedEstimate.totalPrice || 0).toLocaleString()} | 
+                  Services: {lockedEstimate.services?.length || 0}
+                </p>
+                <p className="text-xs text-blue-500 mt-1">
+                  The form has been pre-filled with the locked estimate details.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Services Section */}

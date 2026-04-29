@@ -500,3 +500,15 @@ export const checkDuplicateAMCPackage = (propertyId, excludePackageId = null) =>
     pkg.status !== 'expired'
   );
 };
+
+// Get AMC package by property ID
+export const getAMCPackageByPropertyId = (propertyId) => {
+  const packages = getStorageData(AMC_PACKAGES_KEY);
+  return packages.find(pkg => pkg.propertyId === propertyId && pkg.status !== 'expired');
+};
+
+// Get estimates by property ID
+export const getEstimatesByPropertyId = (propertyId) => {
+  const estimates = getStorageData(ESTIMATES_KEY);
+  return estimates.filter(est => est.propertyId === propertyId && est.status !== 'Archived');
+};
