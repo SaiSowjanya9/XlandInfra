@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Edit, Trash2, Package, Plus, Calendar, ChevronDown, Home, LayoutGrid, Layers, TreePine, Map, Briefcase } from 'lucide-react';
-import ServiceSelector from './ServiceSelector';
+import { Edit, Trash2, Package, Plus, Calendar, ChevronDown, Home, LayoutGrid, Layers, TreePine, Map, Briefcase, Lock } from 'lucide-react';
 import {
   getAMCPackages, createAMCPackage, updateAMCPackage, deleteAMCPackage,
-  getServices, calculateEstimateTotal, PROPERTY_TYPES, FREQUENCY_TYPES
+  getServices, calculateEstimateTotal, PROPERTY_TYPES, FREQUENCY_TYPES, addService
 } from '../../utils/estimateStore';
 import { getProperties } from '../../utils/propertyStore';
 
@@ -16,13 +15,14 @@ const PROPERTY_ICONS = {
   Commercial: Briefcase
 };
 
-const GST_RATE = 0.18;
+const GST_RATE = 0.02; // 2% GST as default
 
 const AMCPackage = ({ showToast }) => {
   const [amcPackages, setAmcPackages] = useState([]);
   const [services, setServices] = useState([]);
   const [properties, setProperties] = useState([]);
   const [editingAMC, setEditingAMC] = useState(null);
+  const [lockedEstimate, setLockedEstimate] = useState(null);
   const [amcForm, setAMCForm] = useState({
     propertyId: '',
     propertyName: '',
@@ -30,7 +30,8 @@ const AMCPackage = ({ showToast }) => {
     flatUnit: '',
     customerName: '',
     estimateDate: new Date().toISOString().split('T')[0],
-    services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
+    serviceType: '',
+    services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
   });
 
   useEffect(() => {
@@ -57,14 +58,18 @@ const AMCPackage = ({ showToast }) => {
   };
 
   const calculateGST = () => {
-    return Math.round(calculateSubTotal() * GST_RATE);
+    return amcForm.services.reduce((sum, service) => {
+      const serviceTotal = calculateServiceTotal(service);
+      const gstRate = (parseFloat(service.gst) || 2) / 100;
+      return sum + Math.round(serviceTotal * gstRate);
+    }, 0);
   };
 
   const calculateTotal = () => {
     return calculateSubTotal() + calculateGST();
   };
 
-  const handleSaveAMC = (isDraft = false) => {
+  const handleSaveAMC = () => {
     if (!amcForm.propertyId) {
       showToast('Property ID is required', 'error');
       return;
@@ -78,21 +83,21 @@ const AMCPackage = ({ showToast }) => {
 
     const packageData = {
       ...amcForm,
-      services: validServices,
+      services: validServices.map(s => ({ ...s, gst: s.gst || 2 })),
       subTotal: calculateSubTotal(),
       gst: calculateGST(),
       totalPrice: calculateTotal(),
-      status: isDraft ? 'draft' : 'generated',
+      status: 'generated',
       propertyType: amcForm.propertyId.split('-')[0] || 'APT'
     };
 
     if (editingAMC) {
       updateAMCPackage(editingAMC.packageId, packageData);
-      showToast(isDraft ? 'Draft saved!' : 'AMC Estimate updated!');
+      showToast('AMC Estimate updated successfully!');
       setEditingAMC(null);
     } else {
       createAMCPackage(packageData);
-      showToast(isDraft ? 'Draft saved!' : 'AMC Estimate generated!');
+      showToast('AMC Estimate saved successfully!');
     }
 
     resetForm();
@@ -107,9 +112,11 @@ const AMCPackage = ({ showToast }) => {
       flatUnit: '',
       customerName: '',
       estimateDate: new Date().toISOString().split('T')[0],
-      services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
+      serviceType: '',
+      services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
     });
     setEditingAMC(null);
+    setLockedEstimate(null);
   };
 
   const handleEditAMC = (pkg) => {
@@ -121,8 +128,15 @@ const AMCPackage = ({ showToast }) => {
       flatUnit: pkg.flatUnit || '',
       customerName: pkg.customerName || '',
       estimateDate: pkg.estimateDate || new Date().toISOString().split('T')[0],
-      services: pkg.services || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
+      serviceType: pkg.serviceType || 'amc',
+      services: pkg.services?.map(s => ({ ...s, gst: s.gst || 2 })) || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
     });
+    
+    // Check for locked estimate
+    const existingEstimate = amcPackages.find(
+      p => p.propertyId === pkg.propertyId && p.status === 'generated' && p.packageId !== pkg.packageId
+    );
+    setLockedEstimate(existingEstimate || null);
   };
 
   const handleDeleteAMC = (packageId) => {
@@ -134,7 +148,7 @@ const AMCPackage = ({ showToast }) => {
   const addServiceRow = () => {
     setAMCForm({
       ...amcForm,
-      services: [...amcForm.services, { name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
+      services: [...amcForm.services, { name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
     });
   };
 
@@ -150,20 +164,102 @@ const AMCPackage = ({ showToast }) => {
   const updateServiceRow = (index, field, value) => {
     const newServices = [...amcForm.services];
     newServices[index] = { ...newServices[index], [field]: value };
+    // Ensure GST stays at 2% by default when adding new services
+    if (field === 'name' && !newServices[index].gst) {
+      newServices[index].gst = 2;
+    }
     setAMCForm({ ...amcForm, services: newServices });
   };
 
   const handlePropertySelect = (propertyId) => {
+    if (!propertyId) {
+      setAMCForm({
+        ...amcForm,
+        propertyId: '',
+        propertyName: '',
+        blockTower: '',
+        flatUnit: '',
+        customerName: ''
+      });
+      setLockedEstimate(null);
+      return;
+    }
+
     const property = properties.find(p => p.propertyId === propertyId);
     if (property) {
+      // Auto-fill fields from property data
+      let blockTower = '';
+      let flatUnit = '';
+      
+      // Extract block/tower info
+      if (property.blockInfo) {
+        blockTower = property.blockInfo;
+      } else if (property.blockNames && Object.keys(property.blockNames).length > 0) {
+        blockTower = Object.values(property.blockNames).join(', ');
+      } else if (property.numberOfBlocks) {
+        blockTower = `${property.numberOfBlocks} Block(s)`;
+      }
+      
+      // Extract flat/unit info
+      if (property.villaPlotNumber) {
+        flatUnit = property.villaPlotNumber;
+      } else if (property.aptSuiteUnit) {
+        flatUnit = property.aptSuiteUnit;
+      } else if (property.numberOfUnits) {
+        flatUnit = `${property.numberOfUnits} Units`;
+      } else if (property.unitsPerBlock) {
+        const totalUnits = Object.values(property.unitsPerBlock).reduce((sum, u) => sum + (parseInt(u) || 0), 0);
+        flatUnit = totalUnits > 0 ? `${totalUnits} Units` : '';
+      }
+      
+      // Get customer name from association contacts
+      const customerName = property.associationContacts?.[0]?.name || '';
+      
       setAMCForm({
         ...amcForm,
         propertyId: property.propertyId,
         propertyName: property.communityName || '',
-        customerName: property.associationContacts?.[0]?.name || ''
+        blockTower,
+        flatUnit,
+        customerName
       });
+
+      // Check for existing locked estimate for this property
+      const existingEstimate = amcPackages.find(
+        pkg => pkg.propertyId === propertyId && pkg.status === 'generated'
+      );
+      
+      if (existingEstimate) {
+        setLockedEstimate(existingEstimate);
+      } else {
+        setLockedEstimate(null);
+      }
     } else {
       setAMCForm({ ...amcForm, propertyId });
+      setLockedEstimate(null);
+    }
+  };
+
+  const handleServiceTypeChange = (serviceType) => {
+    setAMCForm({ ...amcForm, serviceType });
+    
+    // If there's a locked estimate and user selects AMC, pre-fill with estimate data
+    if (serviceType === 'amc' && lockedEstimate) {
+      setAMCForm({
+        ...amcForm,
+        serviceType,
+        services: lockedEstimate.services?.map(s => ({
+          ...s,
+          gst: s.gst || 2
+        })) || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
+      });
+    }
+  };
+
+  const handleAddNewService = (serviceName) => {
+    if (serviceName.trim()) {
+      addService(serviceName.trim());
+      setServices(getServices());
     }
   };
 
@@ -182,10 +278,11 @@ const AMCPackage = ({ showToast }) => {
         </div>
         
         <div className="px-6 py-4">
-          <div className="grid grid-cols-6 gap-4">
+          <div className="grid grid-cols-5 gap-4 mb-4">
+            {/* Property ID */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Property ID <span className="text-red-500">*</span>
+                Prop ID <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <select
@@ -193,7 +290,7 @@ const AMCPackage = ({ showToast }) => {
                   onChange={(e) => handlePropertySelect(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
                 >
-                  <option value="">APT-1001</option>
+                  <option value="">Select Property</option>
                   {properties.map(prop => (
                     <option key={prop.propertyId} value={prop.propertyId}>{prop.propertyId}</option>
                   ))}
@@ -201,59 +298,107 @@ const AMCPackage = ({ showToast }) => {
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
+            
+            {/* Property Name - Auto-filled */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label>
               <input
                 type="text"
                 value={amcForm.propertyName}
-                onChange={(e) => setAMCForm({ ...amcForm, propertyName: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 bg-gray-50"
-                placeholder="Green City Apartments"
+                readOnly
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                placeholder="Auto-filled"
               />
             </div>
+            
+            {/* Block / Tower - Auto-filled */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Block / Tower</label>
               <input
                 type="text"
                 value={amcForm.blockTower}
-                onChange={(e) => setAMCForm({ ...amcForm, blockTower: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                placeholder="A"
+                readOnly
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                placeholder="Auto-filled"
               />
             </div>
+            
+            {/* Flat / Unit No. - Auto-filled */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Flat / Unit No.</label>
               <input
                 type="text"
                 value={amcForm.flatUnit}
-                onChange={(e) => setAMCForm({ ...amcForm, flatUnit: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                placeholder="A-101"
+                readOnly
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                placeholder="Auto-filled"
               />
             </div>
+            
+            {/* Customer Name - Auto-filled */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Customer Name</label>
               <input
                 type="text"
                 value={amcForm.customerName}
-                onChange={(e) => setAMCForm({ ...amcForm, customerName: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                placeholder="Ramesh Kumar"
+                readOnly
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                placeholder="Auto-filled"
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Estimate Date <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={amcForm.estimateDate}
-                  onChange={(e) => setAMCForm({ ...amcForm, estimateDate: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                />
-              </div>
+          </div>
+
+          {/* Estimate Date */}
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Estimate Date <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={amcForm.estimateDate}
+                onChange={(e) => setAMCForm({ ...amcForm, estimateDate: e.target.value })}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              />
             </div>
+          </div>
+
+          {/* Service Type - Wide dropdown */}
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Service Type <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <select
+                value={amcForm.serviceType}
+                onChange={(e) => handleServiceTypeChange(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
+              >
+                <option value="">Select Service Type</option>
+                <option value="amc">AMC (Annual Maintenance Contract)</option>
+                <option value="one-time">One-Time Service</option>
+                <option value="repair">Repair Service</option>
+                <option value="inspection">Inspection Service</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+            
+            {/* Show locked estimate info if available */}
+            {lockedEstimate && amcForm.serviceType === 'amc' && (
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center gap-2 text-blue-700">
+                  <Lock className="w-4 h-4" />
+                  <span className="text-sm font-medium">Locked Estimate Found</span>
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  Estimate ID: {lockedEstimate.packageId} | Total: ₹{(lockedEstimate.totalPrice || 0).toLocaleString()} | 
+                  Services: {lockedEstimate.services?.length || 0}
+                </p>
+                <p className="text-xs text-blue-500 mt-1">
+                  The form has been pre-filled with the locked estimate details.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -264,19 +409,22 @@ const AMCPackage = ({ showToast }) => {
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-2 mb-2 px-2">
             <div className="col-span-1 text-xs font-medium text-gray-600">#</div>
-            <div className="col-span-3 text-xs font-medium text-gray-600">
+            <div className="col-span-4 text-xs font-medium text-gray-600">
               Service <span className="text-red-500">*</span>
             </div>
-            <div className="col-span-2 text-xs font-medium text-gray-600">
-              Frequency (Visits) <span className="text-red-500">*</span>
+            <div className="col-span-1 text-xs font-medium text-gray-600">
+              Frequency
             </div>
             <div className="col-span-2 text-xs font-medium text-gray-600">
-              Frequency Type <span className="text-red-500">*</span>
+              Frequency Type
             </div>
-            <div className="col-span-2 text-xs font-medium text-gray-600">
-              Price (₹) <span className="text-red-500">*</span>
+            <div className="col-span-1 text-xs font-medium text-gray-600">
+              Price (₹)
             </div>
-            <div className="col-span-1 text-xs font-medium text-gray-600">Total (₹)</div>
+            <div className="col-span-1 text-xs font-medium text-gray-600">
+              GST (%)
+            </div>
+            <div className="col-span-1 text-xs font-medium text-gray-600">Total</div>
             <div className="col-span-1 text-xs font-medium text-gray-600 text-center">Action</div>
           </div>
 
@@ -287,23 +435,37 @@ const AMCPackage = ({ showToast }) => {
                 <div className="col-span-1 text-sm text-gray-600 font-medium pl-2">
                   {index + 1}
                 </div>
-                <div className="col-span-3">
-                  <ServiceSelector
+                <div className="col-span-4">
+                  <select
                     value={service.name}
-                    onChange={(val) => updateServiceRow(index, 'name', val)}
-                    services={services}
-                    onServicesUpdate={setServices}
-                  />
+                    onChange={(e) => {
+                      if (e.target.value === '__add_new__') {
+                        const newService = prompt('Enter new service name:');
+                        if (newService) {
+                          handleAddNewService(newService);
+                          updateServiceRow(index, 'name', newService);
+                        }
+                      } else {
+                        updateServiceRow(index, 'name', e.target.value);
+                      }
+                    }}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  >
+                    <option value="">Select Service</option>
+                    {services.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                    <option value="__add_new__">+ Add New Service</option>
+                  </select>
                 </div>
-                <div className="col-span-2 flex items-center gap-1">
+                <div className="col-span-1">
                   <input
                     type="number"
                     min="1"
                     value={service.frequency}
                     onChange={(e) => updateServiceRow(index, 'frequency', parseInt(e.target.value) || 1)}
-                    className="w-16 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 text-center"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 text-center"
                   />
-                  <span className="text-xs text-gray-500">(Visits per Drop Down)</span>
                 </div>
                 <div className="col-span-2">
                   <select
@@ -316,14 +478,24 @@ const AMCPackage = ({ showToast }) => {
                     ))}
                   </select>
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1">
                   <input
                     type="number"
                     min="0"
                     value={service.price}
                     onChange={(e) => updateServiceRow(index, 'price', e.target.value)}
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
-                    placeholder="15000"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="col-span-1">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={service.gst || 2}
+                    onChange={(e) => updateServiceRow(index, 'gst', parseFloat(e.target.value) || 2)}
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 text-center bg-yellow-50"
                   />
                 </div>
                 <div className="col-span-1 text-sm text-gray-800 font-medium">
@@ -358,46 +530,39 @@ const AMCPackage = ({ showToast }) => {
           </button>
         </div>
 
-        {/* Summary and Actions */}
+        {/* Summary and Actions - Calculation on Right, Buttons Below */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <div className="flex justify-between items-end">
-            <div></div>
-            <div className="flex gap-8 items-end">
-              {/* Totals */}
-              <div className="text-right space-y-1">
-                <div className="flex justify-between gap-8 text-sm">
+          <div className="flex justify-end">
+            <div className="w-80">
+              {/* Calculation Section */}
+              <div className="text-right space-y-2 mb-4">
+                <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Sub Total (₹)</span>
-                  <span className="font-medium text-gray-800 w-24 text-right">{calculateSubTotal().toLocaleString()}</span>
+                  <span className="font-medium text-gray-800">{calculateSubTotal().toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between gap-8 text-sm">
-                  <span className="text-gray-600">GST (₹)</span>
-                  <span className="font-medium text-gray-800 w-24 text-right">{calculateGST().toLocaleString()}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">GST (₹) @ 2%</span>
+                  <span className="font-medium text-gray-800">{calculateGST().toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between gap-8 text-sm bg-blue-50 px-3 py-2 rounded-md -mx-3">
-                  <span className="font-semibold text-blue-700">Total AMC Price (₹)</span>
-                  <span className="font-bold text-blue-700 w-24 text-right">{calculateTotal().toLocaleString()}</span>
+                <div className="flex justify-between text-sm bg-blue-100 px-3 py-2 rounded-md">
+                  <span className="font-semibold text-blue-700">Total Amount (₹)</span>
+                  <span className="font-bold text-blue-700">{calculateTotal().toLocaleString()}</span>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3">
+              {/* Action Buttons - Only Save and Cancel */}
+              <div className="flex gap-3 justify-end">
                 <button
                   onClick={resetForm}
-                  className="px-6 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+                  className="px-6 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => handleSaveAMC(true)}
-                  className="px-6 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 transition-colors"
+                  onClick={handleSaveAMC}
+                  className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
                 >
-                  Save as Draft
-                </button>
-                <button
-                  onClick={() => handleSaveAMC(false)}
-                  className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Generate Estimate
+                  Save
                 </button>
               </div>
             </div>
@@ -407,7 +572,7 @@ const AMCPackage = ({ showToast }) => {
         {/* Footer Note */}
         <div className="px-6 py-3 border-t border-gray-200 bg-white">
           <p className="text-xs text-gray-500">
-            * Currency: INR (₹) | Price Input: Per selected frequency | Frequency (Visits): Number of visits each time (per drop down)
+            * Currency: INR (₹) | GST Default: 2% for all services | Fields marked with * are mandatory
           </p>
         </div>
       </div>
@@ -442,10 +607,17 @@ const AMCPackage = ({ showToast }) => {
                           {pkg.status === 'draft' && (
                             <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded">Draft</span>
                           )}
+                          {pkg.status === 'generated' && (
+                            <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded flex items-center gap-1">
+                              <Lock className="w-3 h-3" /> Locked
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-gray-500">
                           {pkg.customerName && `${pkg.customerName} • `}
-                          {pkg.services?.length || 0} services • {new Date(pkg.estimateDate || pkg.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          {pkg.blockTower && `Block: ${pkg.blockTower} • `}
+                          {pkg.flatUnit && `Unit: ${pkg.flatUnit} • `}
+                          {pkg.services?.length || 0} services
                         </p>
                       </div>
                     </div>
@@ -460,12 +632,14 @@ const AMCPackage = ({ showToast }) => {
                         <button
                           onClick={() => handleEditAMC(pkg)}
                           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                          title="Edit"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteAMC(pkg.packageId)}
                           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                          title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -480,7 +654,7 @@ const AMCPackage = ({ showToast }) => {
                             key={idx}
                             className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
                           >
-                            {service.name} ({service.frequency}x {service.frequencyType})
+                            {service.name} ({service.frequency}x {service.frequencyType}) - GST: {service.gst || 2}%
                           </span>
                         ))}
                       </div>
