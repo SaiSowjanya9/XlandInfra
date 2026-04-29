@@ -5,6 +5,7 @@ import {
   Package, Send
 } from 'lucide-react';
 import ServiceRows from './ServiceRows';
+import PhoneInput from '../common/PhoneInput';
 import { 
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
   getAMCPackageByPropertyId 
@@ -35,6 +36,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
   const [estimateForm, setEstimateForm] = useState({
     customerName: '',
     phone: '',
+    countryCode: '+91',
     email: '',
     services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }],
     notes: ''
@@ -146,7 +148,8 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       notes: estimateForm.notes,
       subTotal: calculateSubTotal(),
       gst: calculateGST(),
-      totalPrice: calculateTotal()
+      totalPrice: calculateTotal(),
+      status: estimateType === 'direct' ? 'Archived' : 'Draft'
     };
 
     if (estimateType === 'property') {
@@ -163,6 +166,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     } else {
       estimateData.customerName = estimateForm.customerName;
       estimateData.phone = estimateForm.phone;
+      estimateData.countryCode = estimateForm.countryCode;
       estimateData.email = estimateForm.email;
       estimateData.customerEmail = estimateForm.email;
     }
@@ -204,6 +208,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     setEstimateForm({
       customerName: '',
       phone: '',
+      countryCode: '+91',
       email: '',
       services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }],
       notes: ''
@@ -383,12 +388,12 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Phone className="w-4 h-4 inline mr-1" /> Phone
               </label>
-              <input
-                type="tel"
+              <PhoneInput
                 value={estimateForm.phone}
-                onChange={(e) => setEstimateForm({ ...estimateForm, phone: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
-                placeholder="Enter phone number"
+                countryCode={estimateForm.countryCode}
+                onChange={(val) => setEstimateForm({ ...estimateForm, phone: val })}
+                onCountryCodeChange={(val) => setEstimateForm({ ...estimateForm, countryCode: val })}
+                placeholder="10-digit phone number"
               />
             </div>
             <div>
@@ -447,7 +452,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                   <span className="font-medium text-gray-700">₹{calculateSubTotal().toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-500 gap-8">
-                  <span>GST (2%):</span>
+                  <span>GST:</span>
                   <span className="font-medium text-gray-700">₹{calculateGST().toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-lg pt-2 border-t border-gray-200 gap-8">

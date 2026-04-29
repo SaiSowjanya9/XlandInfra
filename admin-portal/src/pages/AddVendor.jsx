@@ -417,7 +417,7 @@ const AddVendor = ({ admin }) => {
                 <input
                   type="tel"
                   value={formData.ownerMobile}
-                  onChange={(e) => updateField('ownerMobile', e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => updateField('ownerMobile', e.target.value.replace(/\D/g, '').slice(0, 10))}
                   placeholder="Mobile number"
                   className={`flex-1 px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-500 focus:outline-none ${
                     errors.ownerMobile ? 'border-red-300 bg-red-50' : 'border-gray-300'
@@ -502,7 +502,7 @@ const AddVendor = ({ admin }) => {
                 <input
                   type="tel"
                   value={formData.managerMobile}
-                  onChange={(e) => updateField('managerMobile', e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => updateField('managerMobile', e.target.value.replace(/\D/g, '').slice(0, 10))}
                   placeholder="Mobile"
                   className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 focus:outline-none"
                 />
@@ -559,7 +559,7 @@ const AddVendor = ({ admin }) => {
                 <input
                   type="tel"
                   value={formData.pocMobile}
-                  onChange={(e) => updateField('pocMobile', e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => updateField('pocMobile', e.target.value.replace(/\D/g, '').slice(0, 10))}
                   placeholder="Mobile"
                   className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-200 focus:border-rose-500 focus:outline-none"
                 />
