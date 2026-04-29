@@ -463,13 +463,17 @@ const AMCPackageManager = ({ showToast }) => {
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <input
-                      type="number"
-                      min="1"
+                    <select
                       value={service.frequency}
-                      onChange={(e) => updateServiceRow(index, 'frequency', parseInt(e.target.value) || 1)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 text-center"
-                    />
+                      onChange={(e) => updateServiceRow(index, 'frequency', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200"
+                    >
+                      <option value="monthly">Monthly</option>
+                      <option value="months">Months</option>
+                      <option value="quarterly">Quarterly</option>
+                      <option value="half-yearly">Half-Yearly</option>
+                      <option value="yearly">Yearly</option>
+                    </select>
                   </div>
                   <div className="col-span-2">
                     <input
