@@ -1,247 +1,706 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Phone,
-  Mail,
-  MapPin,
-  Clock,
-  Send,
-  MessageSquare,
-  AlertCircle,
-  CheckCircle2,
-  Building2,
-  Headphones,
+  ChevronDown,
+  Plus,
+  Trash2,
+  Package,
+  Edit,
+  Home,
+  LayoutGrid,
+  Layers,
+  TreePine,
+  Map,
+  Briefcase,
+  FileText,
+  Lock
 } from 'lucide-react';
+import { getProperties } from '../utils/propertyStore';
+import {
+  getAMCPackages,
+  createAMCPackage,
+  updateAMCPackage,
+  deleteAMCPackage,
+  getServices,
+  addService,
+  FREQUENCY_TYPES
+} from '../utils/estimateStore';
+
+const PROPERTY_ICONS = {
+  APT: Home,
+  Flats: LayoutGrid,
+  GC: Layers,
+  Villas: TreePine,
+  Plots: Map,
+  Commercial: Briefcase
+};
+
+const GST_RATE = 0.02; // 2% GST as default
 
 const CustomerContact = ({ user }) => {
-  const [formData, setFormData] = useState({
-    subject: '',
-    message: '',
+  const [amcPackages, setAmcPackages] = useState([]);
+  const [services, setServices] = useState([]);
+  const [properties, setProperties] = useState([]);
+  const [editingAMC, setEditingAMC] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [lockedEstimate, setLockedEstimate] = useState(null);
+  
+  const [amcForm, setAMCForm] = useState({
+    propertyId: '',
+    propertyName: '',
+    blockTower: '',
+    flatUnit: '',
+    customerName: '',
+    serviceType: '',
+    services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState('');
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    // Simulate submission
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSuccess('Your message has been sent! We will get back to you shortly.');
-      setFormData({ subject: '', message: '' });
-      setTimeout(() => setSuccess(''), 5000);
-    }, 1000);
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setAmcPackages(getAMCPackages());
+    setServices(getServices());
+    const props = await getProperties();
+    setProperties(props);
   };
 
-  const contactInfo = [
-    {
-      icon: Phone,
-      label: 'Phone',
-      value: '(555) 123-4567',
-      subtext: 'Call us anytime',
-      color: 'bg-emerald-100 text-emerald-600',
-    },
-    {
-      icon: Mail,
-      label: 'Email',
-      value: 'support@property.com',
-      subtext: 'We reply within 24 hrs',
-      color: 'bg-blue-100 text-blue-600',
-    },
-    {
-      icon: MapPin,
-      label: 'Office',
-      value: '123 Property Lane',
-      subtext: 'Visit our office',
-      color: 'bg-purple-100 text-purple-600',
-    },
-  ];
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
-  const emergencyContacts = [
-    { label: 'Emergency Maintenance', number: '(555) 999-8888' },
-    { label: 'After Hours Security', number: '(555) 777-6666' },
-  ];
+  const calculateServiceTotal = (service) => {
+    const price = parseFloat(service.price) || 0;
+    const frequency = parseInt(service.frequency) || 1;
+    return price * frequency;
+  };
+
+  const calculateSubTotal = () => {
+    return amcForm.services.reduce((sum, service) => {
+      return sum + calculateServiceTotal(service);
+    }, 0);
+  };
+
+  const calculateGST = () => {
+    return amcForm.services.reduce((sum, service) => {
+      const serviceTotal = calculateServiceTotal(service);
+      const gstRate = (parseFloat(service.gst) || 2) / 100;
+      return sum + Math.round(serviceTotal * gstRate);
+    }, 0);
+  };
+
+  const calculateTotal = () => {
+    return calculateSubTotal() + calculateGST();
+  };
+
+  const handlePropertySelect = (propertyId) => {
+    if (!propertyId) {
+      setAMCForm({
+        ...amcForm,
+        propertyId: '',
+        propertyName: '',
+        blockTower: '',
+        flatUnit: '',
+        customerName: ''
+      });
+      setLockedEstimate(null);
+      return;
+    }
+
+    const property = properties.find(p => p.propertyId === propertyId);
+    if (property) {
+      // Auto-fill fields from property data
+      let blockTower = '';
+      let flatUnit = '';
+      
+      // Extract block/tower info
+      if (property.blockInfo) {
+        blockTower = property.blockInfo;
+      } else if (property.blockNames && Object.keys(property.blockNames).length > 0) {
+        blockTower = Object.values(property.blockNames).join(', ');
+      } else if (property.numberOfBlocks) {
+        blockTower = `${property.numberOfBlocks} Block(s)`;
+      }
+      
+      // Extract flat/unit info
+      if (property.villaPlotNumber) {
+        flatUnit = property.villaPlotNumber;
+      } else if (property.aptSuiteUnit) {
+        flatUnit = property.aptSuiteUnit;
+      } else if (property.numberOfUnits) {
+        flatUnit = `${property.numberOfUnits} Units`;
+      } else if (property.unitsPerBlock) {
+        const totalUnits = Object.values(property.unitsPerBlock).reduce((sum, u) => sum + (parseInt(u) || 0), 0);
+        flatUnit = totalUnits > 0 ? `${totalUnits} Units` : '';
+      }
+      
+      // Get customer name from association contacts
+      const customerName = property.associationContacts?.[0]?.name || '';
+      
+      setAMCForm({
+        ...amcForm,
+        propertyId: property.propertyId,
+        propertyName: property.communityName || '',
+        blockTower,
+        flatUnit,
+        customerName
+      });
+
+      // Check for existing locked estimate for this property
+      const existingEstimate = amcPackages.find(
+        pkg => pkg.propertyId === propertyId && pkg.status === 'generated'
+      );
+      
+      if (existingEstimate) {
+        setLockedEstimate(existingEstimate);
+      } else {
+        setLockedEstimate(null);
+      }
+    } else {
+      setAMCForm({ ...amcForm, propertyId });
+      setLockedEstimate(null);
+    }
+  };
+
+  const handleServiceTypeChange = (serviceType) => {
+    setAMCForm({ ...amcForm, serviceType });
+    
+    // If there's a locked estimate and user selects AMC, pre-fill with estimate data
+    if (serviceType === 'amc' && lockedEstimate) {
+      setAMCForm({
+        ...amcForm,
+        serviceType,
+        services: lockedEstimate.services?.map(s => ({
+          ...s,
+          gst: s.gst || 2
+        })) || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
+      });
+    }
+  };
+
+  const handleSave = () => {
+    if (!amcForm.propertyId) {
+      showToast('Property ID is required', 'error');
+      return;
+    }
+
+    const validServices = amcForm.services.filter(s => s.name.trim() && s.price);
+    if (validServices.length === 0) {
+      showToast('At least one service with price is required', 'error');
+      return;
+    }
+
+    const packageData = {
+      ...amcForm,
+      services: validServices.map(s => ({ ...s, gst: s.gst || 2 })),
+      subTotal: calculateSubTotal(),
+      gst: calculateGST(),
+      totalPrice: calculateTotal(),
+      status: 'generated',
+      propertyType: amcForm.propertyId.split('-')[0] || 'APT'
+    };
+
+    if (editingAMC) {
+      updateAMCPackage(editingAMC.packageId, packageData);
+      showToast('AMC Estimate updated successfully!');
+      setEditingAMC(null);
+    } else {
+      createAMCPackage(packageData);
+      showToast('AMC Estimate saved successfully!');
+    }
+
+    resetForm();
+    loadData();
+  };
+
+  const resetForm = () => {
+    setAMCForm({
+      propertyId: '',
+      propertyName: '',
+      blockTower: '',
+      flatUnit: '',
+      customerName: '',
+      serviceType: '',
+      services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
+    });
+    setEditingAMC(null);
+    setLockedEstimate(null);
+  };
+
+  const handleEditAMC = (pkg) => {
+    setEditingAMC(pkg);
+    setAMCForm({
+      propertyId: pkg.propertyId || '',
+      propertyName: pkg.propertyName || '',
+      blockTower: pkg.blockTower || '',
+      flatUnit: pkg.flatUnit || '',
+      customerName: pkg.customerName || '',
+      serviceType: pkg.serviceType || 'amc',
+      services: pkg.services?.map(s => ({ ...s, gst: s.gst || 2 })) || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
+    });
+    
+    // Check for locked estimate
+    const existingEstimate = amcPackages.find(
+      p => p.propertyId === pkg.propertyId && p.status === 'generated' && p.packageId !== pkg.packageId
+    );
+    setLockedEstimate(existingEstimate || null);
+  };
+
+  const handleDeleteAMC = (packageId) => {
+    deleteAMCPackage(packageId);
+    showToast('AMC Estimate deleted');
+    loadData();
+  };
+
+  const addServiceRow = () => {
+    setAMCForm({
+      ...amcForm,
+      services: [...amcForm.services, { name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
+    });
+  };
+
+  const removeServiceRow = (index) => {
+    if (amcForm.services.length > 1) {
+      setAMCForm({
+        ...amcForm,
+        services: amcForm.services.filter((_, i) => i !== index)
+      });
+    }
+  };
+
+  const updateServiceRow = (index, field, value) => {
+    const newServices = [...amcForm.services];
+    newServices[index] = { ...newServices[index], [field]: value };
+    // Ensure GST stays at 2% by default when adding new services
+    if (field === 'name' && !newServices[index].gst) {
+      newServices[index].gst = 2;
+    }
+    setAMCForm({ ...amcForm, services: newServices });
+  };
+
+  const handleAddNewService = (serviceName) => {
+    if (serviceName.trim()) {
+      addService(serviceName.trim());
+      setServices(getServices());
+    }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center space-x-3 mb-2">
-          <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-            <Phone className="w-6 h-6 text-purple-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Contact Us</h1>
-            <p className="text-gray-500">Get in touch with your property management team</p>
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+              <FileText className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Customer Service Contact</h1>
+              <p className="text-sm text-gray-500">Create and manage AMC estimates for customers</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Success Message */}
-      {success && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start space-x-3 text-green-700">
-          <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
-          <p>{success}</p>
-        </div>
-      )}
-
-      {/* Contact Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        {contactInfo.map((info, index) => {
-          const Icon = info.icon;
-          return (
-            <div
-              key={index}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all"
-            >
-              <div className={`w-12 h-12 ${info.color} rounded-xl flex items-center justify-center mb-4`}>
-                <Icon className="w-6 h-6" />
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* AMC Form */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm mb-6">
+          {/* Estimate Details Header */}
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-800">AMC Estimate Details</h3>
+          </div>
+          
+          <div className="px-6 py-4">
+            <div className="grid grid-cols-5 gap-4 mb-4">
+              {/* Property ID */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Prop ID <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={amcForm.propertyId}
+                    onChange={(e) => handlePropertySelect(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
+                  >
+                    <option value="">Select Property</option>
+                    {properties.map(prop => (
+                      <option key={prop.propertyId} value={prop.propertyId}>{prop.propertyId}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
               </div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider">{info.label}</p>
-              <p className="font-semibold text-gray-900 mt-1">{info.value}</p>
-              <p className="text-sm text-gray-500 mt-0.5">{info.subtext}</p>
+              
+              {/* Property Name - Auto-filled */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label>
+                <input
+                  type="text"
+                  value={amcForm.propertyName}
+                  readOnly
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                  placeholder="Auto-filled"
+                />
+              </div>
+              
+              {/* Block / Tower - Auto-filled */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Block / Tower</label>
+                <input
+                  type="text"
+                  value={amcForm.blockTower}
+                  readOnly
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                  placeholder="Auto-filled"
+                />
+              </div>
+              
+              {/* Flat / Unit No. - Auto-filled */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Flat / Unit No.</label>
+                <input
+                  type="text"
+                  value={amcForm.flatUnit}
+                  readOnly
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                  placeholder="Auto-filled"
+                />
+              </div>
+              
+              {/* Customer Name - Auto-filled */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Customer Name</label>
+                <input
+                  type="text"
+                  value={amcForm.customerName}
+                  readOnly
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                  placeholder="Auto-filled"
+                />
+              </div>
             </div>
-          );
-        })}
-      </div>
 
-      {/* Message Form */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-            <MessageSquare className="w-5 h-5 text-emerald-600" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Send us a Message</h2>
-            <p className="text-sm text-gray-500">We typically respond within 24 hours</p>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-            <select
-              value={formData.subject}
-              onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-            >
-              <option value="">Select a topic...</option>
-              <option value="general">General Inquiry</option>
-              <option value="lease">Lease Questions</option>
-              <option value="billing">Billing Questions</option>
-              <option value="amenities">Amenities</option>
-              <option value="complaint">Complaint</option>
-              <option value="feedback">Feedback</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-            <textarea
-              value={formData.message}
-              onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
-              placeholder="Type your message here..."
-              required
-              rows={5}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={`w-full py-3.5 px-6 rounded-xl font-semibold flex items-center justify-center space-x-2 transition-all ${
-              isSubmitting
-                ? 'bg-gray-300 cursor-not-allowed text-gray-500'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-xl'
-            }`}
-          >
-            {isSubmitting ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>Sending...</span>
-              </>
-            ) : (
-              <>
-                <Send className="w-5 h-5" />
-                <span>Send Message</span>
-              </>
-            )}
-          </button>
-        </form>
-      </div>
-
-      {/* Office Hours */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-5 h-5 text-amber-600" />
-            </div>
-            <h3 className="font-semibold text-gray-900">Office Hours</h3>
-          </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Monday - Friday</span>
-              <span className="font-medium text-gray-900">9:00 AM - 6:00 PM</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Saturday</span>
-              <span className="font-medium text-gray-900">10:00 AM - 4:00 PM</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Sunday</span>
-              <span className="font-medium text-gray-500">Closed</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Emergency Contacts */}
-        <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl border border-red-100 p-5">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-            </div>
-            <h3 className="font-semibold text-gray-900">Emergency Contacts</h3>
-          </div>
-          <div className="space-y-3">
-            {emergencyContacts.map((contact, index) => (
-              <div key={index} className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">{contact.label}</span>
-                <a
-                  href={`tel:${contact.number.replace(/[^0-9]/g, '')}`}
-                  className="font-semibold text-red-600 hover:text-red-700"
+            {/* Service Type - Wide dropdown */}
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Service Type <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={amcForm.serviceType}
+                  onChange={(e) => handleServiceTypeChange(e.target.value)}
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
                 >
-                  {contact.number}
-                </a>
+                  <option value="">Select Service Type</option>
+                  <option value="amc">AMC (Annual Maintenance Contract)</option>
+                  <option value="one-time">One-Time Service</option>
+                  <option value="repair">Repair Service</option>
+                  <option value="inspection">Inspection Service</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
-            ))}
+              
+              {/* Show locked estimate info if available */}
+              {lockedEstimate && amcForm.serviceType === 'amc' && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="flex items-center gap-2 text-blue-700">
+                    <Lock className="w-4 h-4" />
+                    <span className="text-sm font-medium">Locked Estimate Found</span>
+                  </div>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Estimate ID: {lockedEstimate.packageId} | Total: ₹{(lockedEstimate.totalPrice || 0).toLocaleString()} | 
+                    Services: {lockedEstimate.services?.length || 0}
+                  </p>
+                  <p className="text-xs text-blue-500 mt-1">
+                    The form has been pre-filled with the locked estimate details.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-          <p className="text-xs text-red-600 mt-3">
-            For life-threatening emergencies, always call 911 first.
-          </p>
-        </div>
-      </div>
 
-      {/* Live Chat Banner */}
-      <div className="mt-6 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl p-5 text-white">
-        <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-            <Headphones className="w-6 h-6" />
+          {/* Services Section */}
+          <div className="px-6 py-4 border-t border-gray-200">
+            <h3 className="text-sm font-semibold text-blue-600 mb-4">Services</h3>
+            
+            {/* Table Header */}
+            <div className="grid grid-cols-12 gap-2 mb-2 px-2">
+              <div className="col-span-1 text-xs font-medium text-gray-600">#</div>
+              <div className="col-span-4 text-xs font-medium text-gray-600">
+                Service <span className="text-red-500">*</span>
+              </div>
+              <div className="col-span-1 text-xs font-medium text-gray-600">
+                Frequency
+              </div>
+              <div className="col-span-2 text-xs font-medium text-gray-600">
+                Frequency Type
+              </div>
+              <div className="col-span-1 text-xs font-medium text-gray-600">
+                Price (₹)
+              </div>
+              <div className="col-span-1 text-xs font-medium text-gray-600">
+                GST (%)
+              </div>
+              <div className="col-span-1 text-xs font-medium text-gray-600">Total</div>
+              <div className="col-span-1 text-xs font-medium text-gray-600 text-center">Action</div>
+            </div>
+
+            {/* Service Rows */}
+            <div className="space-y-2">
+              {amcForm.services.map((service, index) => (
+                <div key={index} className="grid grid-cols-12 gap-2 items-center bg-gray-50 rounded-md p-2">
+                  <div className="col-span-1 text-sm text-gray-600 font-medium pl-2">
+                    {index + 1}
+                  </div>
+                  <div className="col-span-4">
+                    <select
+                      value={service.name}
+                      onChange={(e) => {
+                        if (e.target.value === '__add_new__') {
+                          const newService = prompt('Enter new service name:');
+                          if (newService) {
+                            handleAddNewService(newService);
+                            updateServiceRow(index, 'name', newService);
+                          }
+                        } else {
+                          updateServiceRow(index, 'name', e.target.value);
+                        }
+                      }}
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                    >
+                      <option value="">Select Service</option>
+                      {services.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                      <option value="__add_new__">+ Add New Service</option>
+                    </select>
+                  </div>
+                  <div className="col-span-1">
+                    <input
+                      type="number"
+                      min="1"
+                      value={service.frequency}
+                      onChange={(e) => updateServiceRow(index, 'frequency', parseInt(e.target.value) || 1)}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 text-center"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <select
+                      value={service.frequencyType}
+                      onChange={(e) => updateServiceRow(index, 'frequencyType', e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                    >
+                      {FREQUENCY_TYPES.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-1">
+                    <input
+                      type="number"
+                      min="0"
+                      value={service.price}
+                      onChange={(e) => updateServiceRow(index, 'price', e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={service.gst || 2}
+                      onChange={(e) => updateServiceRow(index, 'gst', parseFloat(e.target.value) || 2)}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 text-center bg-yellow-50"
+                    />
+                  </div>
+                  <div className="col-span-1 text-sm text-gray-800 font-medium">
+                    {calculateServiceTotal(service).toLocaleString()}
+                  </div>
+                  <div className="col-span-1 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => removeServiceRow(index)}
+                      disabled={amcForm.services.length === 1}
+                      className={`p-1.5 rounded ${
+                        amcForm.services.length === 1 
+                          ? 'text-gray-300 cursor-not-allowed' 
+                          : 'text-red-500 hover:bg-red-50'
+                      }`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Add Service Button */}
+            <button
+              type="button"
+              onClick={addServiceRow}
+              className="mt-4 flex items-center gap-2 px-4 py-2 text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Service
+            </button>
           </div>
-          <div className="flex-1">
-            <h3 className="font-semibold">Need immediate help?</h3>
-            <p className="text-sm text-emerald-100 mt-0.5">
-              Our support team is available during office hours for live assistance
+
+          {/* Summary and Actions - Calculation on Right, Buttons Below */}
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex justify-end">
+              <div className="w-80">
+                {/* Calculation Section */}
+                <div className="text-right space-y-2 mb-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Sub Total (₹)</span>
+                    <span className="font-medium text-gray-800">{calculateSubTotal().toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">GST (₹) @ 2%</span>
+                    <span className="font-medium text-gray-800">{calculateGST().toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm bg-blue-100 px-3 py-2 rounded-md">
+                    <span className="font-semibold text-blue-700">Total Amount (₹)</span>
+                    <span className="font-bold text-blue-700">{calculateTotal().toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons - Only Save and Cancel */}
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={resetForm}
+                    className="px-6 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Note */}
+          <div className="px-6 py-3 border-t border-gray-200 bg-white">
+            <p className="text-xs text-gray-500">
+              * Currency: INR (₹) | GST Default: 2% for all services | Fields marked with * are mandatory
             </p>
           </div>
-          <button className="px-5 py-2.5 bg-white text-emerald-600 rounded-lg font-semibold hover:bg-emerald-50 transition-colors">
-            Start Chat
-          </button>
+        </div>
+
+        {/* All AMC Estimates List */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-800">All AMC Estimates</h3>
+          </div>
+          {amcPackages.length === 0 ? (
+            <div className="p-12 text-center">
+              <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500">No AMC estimates yet</p>
+              <p className="text-sm text-gray-400">Create your first AMC estimate above</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {amcPackages.map((pkg) => {
+                const Icon = PROPERTY_ICONS[pkg.propertyType] || Package;
+                return (
+                  <div key={pkg.packageId} className="p-4 hover:bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Icon className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-800">
+                              {pkg.propertyId} {pkg.propertyName && `- ${pkg.propertyName}`}
+                            </p>
+                            {pkg.status === 'draft' && (
+                              <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded">Draft</span>
+                            )}
+                            {pkg.status === 'generated' && (
+                              <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded flex items-center gap-1">
+                                <Lock className="w-3 h-3" /> Locked
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            {pkg.customerName && `${pkg.customerName} • `}
+                            {pkg.blockTower && `Block: ${pkg.blockTower} • `}
+                            {pkg.flatUnit && `Unit: ${pkg.flatUnit} • `}
+                            {pkg.services?.length || 0} services
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">Total Amount</p>
+                          <p className="font-semibold text-gray-800">
+                            ₹{(pkg.totalPrice || 0).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleEditAMC(pkg)}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAMC(pkg.packageId)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    {pkg.services && pkg.services.length > 0 && (
+                      <div className="mt-3 ml-14">
+                        <div className="flex flex-wrap gap-2">
+                          {pkg.services.map((service, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
+                            >
+                              {service.name} ({service.frequency}x {service.frequencyType}) - GST: {service.gst || 2}%
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg ${
+            toast.type === 'success'
+              ? 'bg-green-600 text-white'
+              : toast.type === 'error'
+              ? 'bg-red-600 text-white'
+              : 'bg-gray-800 text-white'
+          }`}>
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
