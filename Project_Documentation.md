@@ -1,7 +1,7 @@
 # Customer Portal - Project Documentation
 
-> **Last Updated:** April 29, 2026 at 12:15 AM (UTC-05:00)
-> **Version:** 2.0.0
+> **Last Updated:** April 29, 2026 at 12:30 AM (UTC-05:00)
+> **Version:** 2.0.1
 > **Status:** In Development
 
 ---
@@ -1263,6 +1263,36 @@ npm run dev
 ---
 
 ## 14. Change Log
+
+### Version 2.0.1 (April 29, 2026)
+
+#### Work Order & Estimates Enhancement
+
+**1. Work Order Form - Category & Subcategory ADD Buttons**
+- Replaced custom dropdowns with `SelectWithAdd` component
+- **Categories**: Admins can now add new categories directly from work order form
+- **Subcategories**: Admins can now add new subcategories directly from work order form
+- Added `handleAddCategory` and `handleAddSubcategory` functions
+- Auto-selects newly added category/subcategory after creation
+- Integrates with `fieldOptionsStore` for persistence
+
+**2. Estimates Panel - Service Type ADD Button**
+- Replaced custom `ServiceSelector` with `SelectWithAdd` component
+- **Service Type**: Admins can now add new service types directly from estimates panel
+- Consistent UI/UX across all dropdowns with ADD functionality
+- Simplified code by reusing the common `SelectWithAdd` component
+
+**Files Modified:**
+- `admin-portal/src/pages/EmployeeWorkOrders.jsx` - Category/Subcategory dropdowns updated
+- `admin-portal/src/components/estimates/ServiceSelector.jsx` - Replaced with SelectWithAdd
+
+**Benefits:**
+- Unified ADD button experience across all forms
+- Reduced code duplication
+- Easier maintenance and consistency
+- Admins can add options without leaving the current form
+
+---
 
 ### Version 2.0.0 (April 29, 2026)
 
