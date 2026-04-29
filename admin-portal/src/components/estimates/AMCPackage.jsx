@@ -31,7 +31,7 @@ const AMCPackage = ({ showToast }) => {
     customerName: '',
     estimateDate: new Date().toISOString().split('T')[0],
     serviceType: '',
-    services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
+    services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
   });
 
   useEffect(() => {
@@ -113,7 +113,7 @@ const AMCPackage = ({ showToast }) => {
       customerName: '',
       estimateDate: new Date().toISOString().split('T')[0],
       serviceType: '',
-      services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
+      services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
     });
     setEditingAMC(null);
     setLockedEstimate(null);
@@ -129,7 +129,7 @@ const AMCPackage = ({ showToast }) => {
       customerName: pkg.customerName || '',
       estimateDate: pkg.estimateDate || new Date().toISOString().split('T')[0],
       serviceType: pkg.serviceType || 'amc',
-      services: pkg.services?.map(s => ({ ...s, gst: s.gst || 2 })) || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
+      services: pkg.services || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
     });
     
     // Check for locked estimate
@@ -409,7 +409,7 @@ const AMCPackage = ({ showToast }) => {
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-2 mb-2 px-2">
             <div className="col-span-1 text-xs font-medium text-gray-600">#</div>
-            <div className="col-span-4 text-xs font-medium text-gray-600">
+            <div className="col-span-5 text-xs font-medium text-gray-600">
               Service <span className="text-red-500">*</span>
             </div>
             <div className="col-span-1 text-xs font-medium text-gray-600">
@@ -418,14 +418,11 @@ const AMCPackage = ({ showToast }) => {
             <div className="col-span-2 text-xs font-medium text-gray-600">
               Frequency Type
             </div>
-            <div className="col-span-1 text-xs font-medium text-gray-600">
+            <div className="col-span-2 text-xs font-medium text-gray-600">
               Price (₹)
             </div>
-            <div className="col-span-1 text-xs font-medium text-gray-600">
-              GST (%)
-            </div>
             <div className="col-span-1 text-xs font-medium text-gray-600">Total</div>
-            <div className="col-span-1 text-xs font-medium text-gray-600 text-center">Action</div>
+            <div className="col-span-0"></div>
           </div>
 
           {/* Service Rows */}
@@ -435,7 +432,7 @@ const AMCPackage = ({ showToast }) => {
                 <div className="col-span-1 text-sm text-gray-600 font-medium pl-2">
                   {index + 1}
                 </div>
-                <div className="col-span-4">
+                <div className="col-span-5">
                   <select
                     value={service.name}
                     onChange={(e) => {
@@ -478,7 +475,7 @@ const AMCPackage = ({ showToast }) => {
                     ))}
                   </select>
                 </div>
-                <div className="col-span-1">
+                <div className="col-span-2">
                   <input
                     type="number"
                     min="0"
@@ -488,33 +485,10 @@ const AMCPackage = ({ showToast }) => {
                     placeholder="0"
                   />
                 </div>
-                <div className="col-span-1">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={service.gst || 2}
-                    onChange={(e) => updateServiceRow(index, 'gst', parseFloat(e.target.value) || 2)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 text-center bg-yellow-50"
-                  />
-                </div>
                 <div className="col-span-1 text-sm text-gray-800 font-medium">
                   {calculateServiceTotal(service).toLocaleString()}
                 </div>
-                <div className="col-span-1 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => removeServiceRow(index)}
-                    disabled={amcForm.services.length === 1}
-                    className={`p-1.5 rounded ${
-                      amcForm.services.length === 1 
-                        ? 'text-gray-300 cursor-not-allowed' 
-                        : 'text-red-500 hover:bg-red-50'
-                    }`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                <div className="col-span-0"></div>
               </div>
             ))}
           </div>
@@ -541,7 +515,7 @@ const AMCPackage = ({ showToast }) => {
                   <span className="font-medium text-gray-800">{calculateSubTotal().toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">GST (₹) @ 2%</span>
+                  <span className="text-gray-600">GST (₹)</span>
                   <span className="font-medium text-gray-800">{calculateGST().toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm bg-blue-100 px-3 py-2 rounded-md">
@@ -654,7 +628,7 @@ const AMCPackage = ({ showToast }) => {
                             key={idx}
                             className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
                           >
-                            {service.name} ({service.frequency}x {service.frequencyType}) - GST: {service.gst || 2}%
+                            {service.name} ({service.frequency}x {service.frequencyType})
                           </span>
                         ))}
                       </div>
