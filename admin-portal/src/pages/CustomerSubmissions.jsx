@@ -2,19 +2,26 @@ import { useState, useEffect } from 'react';
 import { 
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Briefcase, Lock, 
-  ArrowLeft, Download, ExternalLink, Layers
+  ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, UserPlus, Truck, Users
 } from 'lucide-react';
 import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
+import { getVendors } from '../utils/vendorStore';
+import { getEmployees, getEmployeesByZone } from '../utils/employeeStore';
+import { 
+  assignVendorToProperty, 
+  assignEmployeeToProperty,
+  getPropertyAssignments 
+} from '../utils/assignmentStore';
 import * as XLSX from 'xlsx';
 
-// Category options for Client Submissions (same as Create Client)
-const CLIENT_CATEGORIES = [
+// Category options for Customer Submissions (same as Create Customer)
+const CUSTOMER_CATEGORIES = [
   {
     id: 'residential',
     name: 'Residential',
     icon: Home,
     color: 'bg-emerald-500',
-    description: 'View residential clients including gated communities, apartments, and villas',
+    description: 'View residential customers including gated communities, apartments, and villas',
     locked: false
   },
   {
@@ -22,17 +29,18 @@ const CLIENT_CATEGORIES = [
     name: 'Commercial',
     icon: Briefcase,
     color: 'bg-blue-500',
-    description: 'View commercial clients and office spaces',
+    description: 'View commercial customers and office spaces',
     locked: true
   }
 ];
 
 const TABS = [
-  { id: 'all', label: 'All Clients', icon: Building2 },
+  { id: 'all', label: 'All Customers', icon: Building2 },
   { id: 'GC', label: 'Gated Communities', icon: Layers },
   { id: 'APT', label: 'Apartments', icon: Home },
   { id: 'VILLA', label: 'Villas', icon: TreePine },
   { id: 'PLOT', label: 'Plots', icon: Map },
+  { id: 'FLAT', label: 'Flats', icon: LayoutGrid },
 ];
 
 const TYPE_STYLES = {
@@ -40,11 +48,12 @@ const TYPE_STYLES = {
   APT: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700', accent: 'bg-emerald-500' },
   VILLA: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700', accent: 'bg-amber-500' },
   PLOT: { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', badge: 'bg-rose-100 text-rose-700', accent: 'bg-rose-500' },
+  FLAT: { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700', badge: 'bg-cyan-100 text-cyan-700', accent: 'bg-cyan-500' },
 };
 
-const TYPE_LABELS = { GC: 'Gated Community', APT: 'Apartment', VILLA: 'Villa', PLOT: 'Plot' };
+const TYPE_LABELS = { GC: 'Gated Community', APT: 'Apartment', VILLA: 'Villa', PLOT: 'Plot', FLAT: 'Flat' };
 
-const ClientSubmissions = () => {
+const CustomerSubmissions = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [properties, setProperties] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
@@ -57,6 +66,17 @@ const ClientSubmissions = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [statusFilter, setStatusFilter] = useState('active');
+  
+  // Assignment states
+  const [assignVendorModal, setAssignVendorModal] = useState(null); // property to assign vendor to
+  const [assignEmployeeModal, setAssignEmployeeModal] = useState(null); // property to assign employee to
+  const [vendors, setVendors] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [selectedVendor, setSelectedVendor] = useState(null);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [vendorSearchTerm, setVendorSearchTerm] = useState('');
+  const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
+  const [propertyAssignments, setPropertyAssignments] = useState({});
 
   // Load properties from backend API and notifications from localStorage
   const loadData = async () => {
@@ -83,9 +103,9 @@ const ClientSubmissions = () => {
     const success = await deleteProperty(id);
     if (success) {
       await loadData();
-      showToast('Client deleted successfully');
+      showToast('Customer deleted successfully');
     } else {
-      showToast('Failed to delete client', 'error');
+      showToast('Failed to delete customer', 'error');
     }
     setDeleteConfirm(null);
   };
@@ -95,6 +115,103 @@ const ClientSubmissions = () => {
     markAllNotificationsRead();
     setNotifications(getNotifications());
   };
+
+  // Load vendors for assignment modal
+  const openAssignVendorModal = async (property) => {
+    setAssignVendorModal(property);
+    setSelectedVendor(null);
+    setVendorSearchTerm('');
+    try {
+      const vendorList = await getVendors('active');
+      setVendors(vendorList);
+    } catch (err) {
+      console.error('Error loading vendors:', err);
+      setVendors([]);
+    }
+  };
+
+  // Load employees for assignment modal (filtered by zone)
+  const openAssignEmployeeModal = (property) => {
+    setAssignEmployeeModal(property);
+    setSelectedEmployee(null);
+    setEmployeeSearchTerm('');
+    // Get employees eligible for this property's zone
+    const eligibleEmployees = property.zone 
+      ? getEmployeesByZone(property.zone)
+      : getEmployees('active');
+    setEmployees(eligibleEmployees);
+  };
+
+  // Handle vendor assignment
+  const handleAssignVendor = () => {
+    if (!selectedVendor || !assignVendorModal) return;
+    
+    const result = assignVendorToProperty({
+      vendorId: selectedVendor.vendorId,
+      vendorName: selectedVendor.ownerName,
+      vendorPhone: selectedVendor.ownerMobile,
+      vendorEmail: selectedVendor.ownerEmail,
+      serviceType: selectedVendor.serviceType,
+      propertyId: assignVendorModal.propertyId,
+      propertyName: assignVendorModal.name,
+      propertyZone: assignVendorModal.zone,
+      assignedBy: 'admin',
+    });
+
+    if (result.success) {
+      showToast(`${selectedVendor.ownerName} assigned to ${assignVendorModal.name}`);
+      setAssignVendorModal(null);
+      setSelectedVendor(null);
+    } else {
+      showToast(result.message, 'error');
+    }
+  };
+
+  // Handle employee assignment
+  const handleAssignEmployee = () => {
+    if (!selectedEmployee || !assignEmployeeModal) return;
+    
+    const result = assignEmployeeToProperty({
+      employeeId: selectedEmployee.employeeId,
+      employeeName: selectedEmployee.name,
+      employeePhone: selectedEmployee.phone,
+      employeeEmail: selectedEmployee.email,
+      propertyId: assignEmployeeModal.propertyId,
+      propertyName: assignEmployeeModal.name,
+      propertyZone: assignEmployeeModal.zone,
+      assignedBy: 'admin',
+    });
+
+    if (result.success) {
+      showToast(`${selectedEmployee.name} assigned to ${assignEmployeeModal.name}`);
+      setAssignEmployeeModal(null);
+      setSelectedEmployee(null);
+    } else {
+      showToast(result.message, 'error');
+    }
+  };
+
+  // Filter vendors by search term
+  const filteredVendors = vendors.filter(v => {
+    if (!vendorSearchTerm) return true;
+    const q = vendorSearchTerm.toLowerCase();
+    return (
+      v.ownerName?.toLowerCase().includes(q) ||
+      v.vendorId?.toLowerCase().includes(q) ||
+      v.serviceType?.toLowerCase().includes(q)
+    );
+  });
+
+  // Filter employees by search term
+  const filteredEmployees = employees.filter(e => {
+    if (!employeeSearchTerm) return true;
+    const q = employeeSearchTerm.toLowerCase();
+    return (
+      e.name?.toLowerCase().includes(q) ||
+      e.employeeId?.toLowerCase().includes(q) ||
+      e.email?.toLowerCase().includes(q)
+    );
+  });
 
   // Export single property to Excel
   const handleExportProperty = (property) => {
@@ -160,7 +277,7 @@ const ClientSubmissions = () => {
 
     const fileName = `${p.propertyId || p.name || 'Property'}_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
-    showToast('Client exported successfully');
+    showToast('Customer exported successfully');
   };
 
   // Export all filtered properties to Excel
@@ -250,16 +367,16 @@ const ClientSubmissions = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-            <p className="text-gray-600 mt-1">View and manage created clients</p>
+            <p className="text-gray-600 mt-1">View and manage created customers</p>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Category</h2>
-          <p className="text-gray-600 mb-8">Choose the client category to view</p>
+          <p className="text-gray-600 mb-8">Choose the customer category to view</p>
 
           <div className="grid md:grid-cols-2 gap-6 max-w-2xl">
-            {CLIENT_CATEGORIES.map((category) => {
+            {CUSTOMER_CATEGORIES.map((category) => {
               const Icon = category.icon;
               return (
                 <button
@@ -323,7 +440,7 @@ const ClientSubmissions = () => {
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Property Management</h1>
             <p className="text-gray-500 text-sm mt-1">
-              {properties.length} total clients
+              {properties.length} total customers
             </p>
           </div>
         </div>
@@ -447,13 +564,13 @@ const ClientSubmissions = () => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className={`appearance-none pl-3 pr-8 py-2 border rounded-md text-sm bg-white focus:ring-1 focus:ring-blue-200 focus:border-blue-400 outline-none ${
-                  statusFilter === 'deleted' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-300'
+                className={`appearance-none pl-3 pr-8 py-2 border rounded-md text-sm focus:ring-1 focus:ring-blue-200 focus:border-blue-400 outline-none ${
+                  statusFilter === 'deleted' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-300 bg-white'
                 }`}
               >
-                <option value="active">Active Clients</option>
-                <option value="deleted">Deleted Clients</option>
-                <option value="all">All Clients</option>
+                <option value="active" className="bg-white text-gray-900">Active Customers</option>
+                <option value="deleted" className="bg-white text-gray-900">Deleted Customers</option>
+                <option value="all" className="bg-white text-gray-900">All Customers</option>
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
@@ -475,7 +592,7 @@ const ClientSubmissions = () => {
             <p className="text-gray-500 font-medium">No properties found</p>
             <p className="text-gray-400 text-sm mt-1">
               {properties.length === 0 
-                ? 'Clients created from Create Client will appear here.' 
+                ? 'Customers created from Add Customer will appear here.' 
                 : 'Try adjusting your search or filters.'
               }
             </p>
@@ -565,6 +682,20 @@ const ClientSubmissions = () => {
                             title="View details"
                           >
                             <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openAssignVendorModal(property)}
+                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                            title="Assign Vendor"
+                          >
+                            <Truck className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openAssignEmployeeModal(property)}
+                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                            title="Assign Employee"
+                          >
+                            <UserPlus className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleExportProperty(property)}
@@ -691,15 +822,15 @@ const ClientSubmissions = () => {
                 </div>
               )}
 
-              {/* Villa/Plot Number */}
-              {(viewProperty.entryType === 'VILLA' || viewProperty.entryType === 'PLOT') && (
+              {/* Villa/Plot/Flat Number */}
+              {(viewProperty.entryType === 'VILLA' || viewProperty.entryType === 'PLOT' || viewProperty.entryType === 'FLAT') && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">
-                    {viewProperty.entryType === 'VILLA' ? 'Villa Details' : 'Plot Details'}
+                    {viewProperty.entryType === 'VILLA' ? 'Villa Details' : viewProperty.entryType === 'PLOT' ? 'Plot Details' : 'Flat Details'}
                   </h3>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">
-                      {viewProperty.entryType === 'VILLA' ? 'Villa Number' : 'Plot Number'}
+                      {viewProperty.entryType === 'VILLA' ? 'Villa Number' : viewProperty.entryType === 'PLOT' ? 'Plot Number' : 'Flat Number'}
                     </label>
                     <p className="text-sm text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
                   </div>
@@ -833,7 +964,7 @@ const ClientSubmissions = () => {
             <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-7 h-7 text-red-500" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 text-center">Delete Client?</h3>
+            <h3 className="text-lg font-bold text-gray-900 text-center">Delete Customer?</h3>
             <p className="text-sm text-gray-500 text-center mt-2">
               This will permanently remove <strong>{deleteConfirm.name}</strong> ({deleteConfirm.propertyId}). This action cannot be undone.
             </p>
@@ -854,8 +985,176 @@ const ClientSubmissions = () => {
           </div>
         </div>
       )}
+
+      {/* Assign Vendor Modal */}
+      {assignVendorModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setAssignVendorModal(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Assign Vendor</h2>
+                <p className="text-sm text-gray-500">Select a vendor for {assignVendorModal.name}</p>
+              </div>
+              <button onClick={() => setAssignVendorModal(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 border-b border-gray-100">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search vendors by name, ID, or service type..."
+                  value={vendorSearchTerm}
+                  onChange={(e) => setVendorSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 outline-none"
+                />
+              </div>
+            </div>
+            <div className="overflow-y-auto max-h-[400px] p-4">
+              {filteredVendors.length === 0 ? (
+                <div className="py-8 text-center">
+                  <Truck className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm">No vendors found</p>
+                  <p className="text-gray-400 text-xs mt-1">Add vendors from Vendor Management</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredVendors.map((vendor) => (
+                    <button
+                      key={vendor.vendorId}
+                      onClick={() => setSelectedVendor(vendor)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
+                        selectedVendor?.vendorId === vendor.vendorId
+                          ? 'border-amber-500 bg-amber-50'
+                          : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50/50'
+                      }`}
+                    >
+                      <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Truck className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{vendor.ownerName}</p>
+                        <p className="text-xs text-gray-500">{vendor.vendorId} • {vendor.serviceType}</p>
+                      </div>
+                      {selectedVendor?.vendorId === vendor.vendorId && (
+                        <Check className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={() => setAssignVendorModal(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssignVendor}
+                disabled={!selectedVendor}
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Assign Vendor
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Employee Modal */}
+      {assignEmployeeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setAssignEmployeeModal(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Assign Employee</h2>
+                <p className="text-sm text-gray-500">Select an employee for {assignEmployeeModal.name}</p>
+                {assignEmployeeModal.zone && (
+                  <p className="text-xs text-indigo-600 mt-1">Showing employees assigned to {assignEmployeeModal.zone} or all zones</p>
+                )}
+              </div>
+              <button onClick={() => setAssignEmployeeModal(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 border-b border-gray-100">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search employees by name, ID, or email..."
+                  value={employeeSearchTerm}
+                  onChange={(e) => setEmployeeSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none"
+                />
+              </div>
+            </div>
+            <div className="overflow-y-auto max-h-[400px] p-4">
+              {filteredEmployees.length === 0 ? (
+                <div className="py-8 text-center">
+                  <Users className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm">No eligible employees found</p>
+                  <p className="text-gray-400 text-xs mt-1">Add employees from Employee Management</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredEmployees.map((employee) => (
+                    <button
+                      key={employee.employeeId}
+                      onClick={() => setSelectedEmployee(employee)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
+                        selectedEmployee?.employeeId === employee.employeeId
+                          ? 'border-indigo-500 bg-indigo-50'
+                          : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50'
+                      }`}
+                    >
+                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-indigo-600 font-semibold text-sm">
+                          {employee.name?.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{employee.name}</p>
+                        <p className="text-xs text-gray-500">{employee.employeeId}</p>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs ${
+                          employee.assignedZones === 'all'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {employee.assignedZones === 'all' ? 'All Zones' : `${employee.assignedZones?.length || 0} Zones`}
+                        </span>
+                      </div>
+                      {selectedEmployee?.employeeId === employee.employeeId && (
+                        <Check className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={() => setAssignEmployeeModal(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssignEmployee}
+                disabled={!selectedEmployee}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Assign Employee
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default ClientSubmissions;
+export default CustomerSubmissions;

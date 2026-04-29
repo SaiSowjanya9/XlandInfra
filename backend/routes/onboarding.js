@@ -4,7 +4,7 @@ const { pool } = require('../config/database');
 
 // Generate unique property ID: PREFIX-XXXX-YYYYMMDD
 const generatePropertyId = (entryType) => {
-  const prefix = { GC: 'GC', APT: 'APT', VILLA: 'VLA', PLOT: 'PLT' }[entryType] || 'PROP';
+  const prefix = { GC: 'GC', APT: 'APT', VILLA: 'VLA', PLOT: 'PLT', FLAT: 'FLT' }[entryType] || 'PROP';
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   return `${prefix}-${random}-${date}`;
@@ -54,6 +54,8 @@ router.post('/', async (req, res) => {
       totalUnits = Object.values(unitsPerBlock).reduce((sum, u) => sum + (parseInt(u) || 0), 0);
     } else if (entryType === 'APT') {
       totalUnits = parseInt(numberOfUnits) || 0;
+    } else if (entryType === 'VILLA' || entryType === 'PLOT' || entryType === 'FLAT') {
+      totalUnits = 1;
     } else {
       totalUnits = 1;
     }
@@ -83,7 +85,7 @@ router.post('/', async (req, res) => {
         entryType === 'APT' ? (blockInfo || null) : null,
         entryType === 'APT' ? (blockNA ? 1 : 0) : 0,
         entryType === 'APT' ? (parseInt(numberOfUnits) || null) : null,
-        (entryType === 'VILLA' || entryType === 'PLOT') ? (villaPlotNumber || null) : null,
+        (entryType === 'VILLA' || entryType === 'PLOT' || entryType === 'FLAT') ? (villaPlotNumber || null) : null,
         totalUnits,
         address || null,
         addressLine1 || null,

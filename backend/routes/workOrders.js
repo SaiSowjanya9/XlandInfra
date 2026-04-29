@@ -106,6 +106,7 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
       permissionToEnter,
       entryNotes,
       hasPet,
+      priority,
       residentId,
       propertyId,
       unitId,
@@ -165,10 +166,10 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
         `INSERT INTO work_orders (
           work_order_id, resident_id, property_id, unit_id,
           category_id, subcategory_id, category_name, subcategory_name,
-          description, permission_to_enter, entry_notes, has_pet,
+          description, permission_to_enter, entry_notes, has_pet, priority,
           customer_name, customer_email, customer_phone, block, flat_number,
           status, source, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'customer', NOW())`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'customer', NOW())`,
         [
           orderNumber,
           residentId || null,
@@ -182,6 +183,7 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
           permissionToEnter === 'yes' ? 'yes' : 'no',
           entryNotes || '',
           hasPet === 'yes' ? 'yes' : 'no',
+          priority || 'medium',
           customerName || null,
           customerEmail || null,
           customerPhone || null,
@@ -220,18 +222,13 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
         }
       });
     } catch (dbError) {
-      console.log('DB not available, returning mock response:', dbError.message);
-      // Return mock success for demo mode
-      return res.status(201).json({
-        success: true,
-        message: 'Work order created successfully (Demo Mode)',
-        data: {
-          id: uuidv4(),
-          orderNumber,
-          categoryName: category.name,
-          subcategoryName,
-          status: 'pending'
-        }
+      console.error('❌ Database Error creating work order:', dbError.message);
+      console.error('Full error:', dbError);
+      // Return actual error - don't silently fail
+      return res.status(500).json({
+        success: false,
+        message: 'Database error: ' + dbError.message,
+        error: dbError.message
       });
     }
   } catch (error) {
@@ -316,12 +313,13 @@ router.get('/', async (req, res) => {
         }
       });
     } catch (dbError) {
-      console.log('DB not available:', dbError.message);
-      return res.json({
-        success: true,
+      console.error('❌ DB Error fetching work orders:', dbError.message);
+      console.error('Full error:', dbError);
+      return res.status(500).json({
+        success: false,
         data: [],
         counts: { total: 0, pending: 0, assigned: 0, inProgress: 0, completed: 0 },
-        message: 'Database not connected - Demo Mode'
+        message: 'Database error: ' + dbError.message
       });
     }
   } catch (error) {
@@ -411,16 +409,16 @@ router.patch('/:id/status', async (req, res) => {
       }
 
       // Update status
-      const completedDate = (status === 'completed' || status === 'closed') ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
+      const completedAt = (status === 'completed' || status === 'closed') ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
 
       await pool.query(
-        `UPDATE work_orders SET status = ?, completed_date = ?, admin_notes = COALESCE(?, admin_notes), updated_at = NOW() WHERE id = ?`,
-        [status, completedDate, notes || null, id]
+        `UPDATE work_orders SET status = ?, completed_at = ?, updated_at = NOW() WHERE id = ?`,
+        [status, completedAt, id]
       );
 
       // Add to history
       await pool.query(
-        `INSERT INTO work_order_history (work_order_id, from_status, to_status, changed_by, changed_by_type, notes)
+        `INSERT INTO work_order_history (work_order_id, from_status, to_status, changed_by_id, changed_by_type, notes)
          VALUES (?, ?, ?, ?, 'admin', ?)`,
         [id, current.status, status, adminId || null, notes || null]
       );

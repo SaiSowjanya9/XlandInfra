@@ -141,6 +141,21 @@ const initOnboardingTables = async () => {
       console.log(`  - Status column check failed`);
     }
 
+    // Fix created_by column type if it's INT (should be VARCHAR)
+    try {
+      const [colType] = await conn.execute(
+        `SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'onboarded_properties' AND COLUMN_NAME = 'created_by'`,
+        [dbConfig.database]
+      );
+      if (colType.length > 0 && colType[0].DATA_TYPE === 'int') {
+        await conn.execute(`ALTER TABLE onboarded_properties MODIFY COLUMN created_by VARCHAR(100) DEFAULT 'system'`);
+        console.log(`  ✓ Fixed created_by column type to VARCHAR`);
+      }
+    } catch (e) {
+      console.log(`  - created_by column type check failed:`, e.message);
+    }
+
     // Create property_contacts table
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS property_contacts (
@@ -219,6 +234,73 @@ const initOnboardingTables = async () => {
       }
       console.log('  ✅ Seeded 6 sample vendors');
     }
+
+    // Create work_orders table if not exists
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS work_orders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        work_order_id VARCHAR(50) UNIQUE NOT NULL,
+        resident_id INT DEFAULT NULL,
+        property_id VARCHAR(50) DEFAULT NULL,
+        unit_id INT DEFAULT NULL,
+        category_id INT NOT NULL,
+        subcategory_id INT NOT NULL,
+        category_name VARCHAR(100),
+        subcategory_name VARCHAR(100),
+        description TEXT,
+        permission_to_enter ENUM('yes', 'no') DEFAULT 'no',
+        entry_notes TEXT,
+        has_pet ENUM('yes', 'no') DEFAULT 'no',
+        priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+        customer_name VARCHAR(200),
+        customer_email VARCHAR(255),
+        customer_phone VARCHAR(20),
+        block VARCHAR(50),
+        flat_number VARCHAR(50),
+        status ENUM('pending', 'assigned', 'in_progress', 'completed', 'closed') DEFAULT 'pending',
+        source ENUM('customer', 'admin', 'system') DEFAULT 'customer',
+        assigned_vendor_id INT DEFAULT NULL,
+        assigned_at TIMESTAMP NULL,
+        completed_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_status (status),
+        INDEX idx_property (property_id),
+        INDEX idx_created (created_at)
+      )
+    `);
+    console.log('  ✅ Work orders table initialized');
+
+    // Create work_order_attachments table
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS work_order_attachments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        work_order_id INT NOT NULL,
+        file_name VARCHAR(255) NOT NULL,
+        original_name VARCHAR(255),
+        file_type VARCHAR(100),
+        file_size INT,
+        file_path VARCHAR(500),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (work_order_id) REFERENCES work_orders(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Create work_order_history table
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS work_order_history (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        work_order_id INT NOT NULL,
+        from_status VARCHAR(50),
+        to_status VARCHAR(50) NOT NULL,
+        changed_by_id INT DEFAULT NULL,
+        changed_by_type ENUM('admin', 'vendor', 'customer', 'system') DEFAULT 'system',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (work_order_id) REFERENCES work_orders(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('  ✅ Work order attachments & history tables initialized');
 
     conn.release();
     console.log('✅ Onboarding tables initialized (properties & vendors)');

@@ -159,7 +159,11 @@ function CustomerHome() {
   };
 
   const handleLogin = () => {
-    navigate('/login');
+    // Clear any previous admin portal session to ensure fresh portal selection
+    localStorage.removeItem('adminUser');
+    localStorage.removeItem('activePortal');
+    // Redirect to admin portal's System Administration Portal
+    window.location.href = 'http://localhost:3001';
   };
 
   const handleNavigation = (path) => {

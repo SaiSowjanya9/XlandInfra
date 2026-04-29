@@ -11,8 +11,8 @@ import CustomerLayout from './components/CustomerLayout';
 import VendorLayout from './components/VendorLayout';
 
 import Dashboard from './pages/Dashboard';
-import ClientSubmissions from './pages/ClientSubmissions';
-import CreateClient from './pages/CreateClient';
+import CustomerSubmissions from './pages/CustomerSubmissions';
+import CreateCustomer from './pages/CreateCustomer';
 
 import WorkOrders from './pages/WorkOrders';
 import EmployeeWorkOrders from './pages/EmployeeWorkOrders';
@@ -27,6 +27,12 @@ import CustomerContact from './pages/CustomerContact';
 import VendorDashboard from './pages/VendorDashboard';
 import VendorDetails from './pages/VendorDetails';
 import AddVendor from './pages/AddVendor';
+import AssignedVendors from './pages/AssignedVendors';
+
+import AddEmployee from './pages/AddEmployee';
+import EmployeeDetails from './pages/EmployeeDetails';
+import ZoneManagement from './pages/ZoneManagement';
+import Estimates from './pages/Estimates';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -108,11 +114,16 @@ function App() {
         <EmployeeLayout admin={user} onLogout={handleLogout}>
           <Routes>
             <Route path="/employee" element={<Dashboard />} />
-            <Route path="/employee/client-submissions" element={<ClientSubmissions />} />
+            <Route path="/employee/customer-submissions" element={<CustomerSubmissions />} />
             <Route path="/employee/work-orders" element={<EmployeeWorkOrders admin={user} />} />
-            <Route path="/employee/create-client" element={<CreateClient admin={user} />} />
+            <Route path="/employee/create-customer" element={<CreateCustomer admin={user} />} />
             <Route path="/employee/add-vendor" element={<AddVendor admin={user} />} />
             <Route path="/employee/vendor-details" element={<VendorDetails />} />
+            <Route path="/employee/assigned-vendors" element={<AssignedVendors />} />
+            <Route path="/employee/add-employee" element={<AddEmployee admin={user} />} />
+            <Route path="/employee/employee-details" element={<EmployeeDetails />} />
+            <Route path="/employee/zone-management" element={<ZoneManagement />} />
+            <Route path="/employee/estimates" element={<Estimates admin={user} />} />
             <Route path="*" element={<Navigate to="/employee" replace />} />
           </Routes>
         </EmployeeLayout>

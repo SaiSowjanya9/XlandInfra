@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Briefcase, Lock, 
-  ArrowLeft, Download, ExternalLink, Layers
+  ArrowLeft, Download, ExternalLink, Layers, LayoutGrid
 } from 'lucide-react';
 import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
 import * as XLSX from 'xlsx';
@@ -33,6 +33,7 @@ const TABS = [
   { id: 'APT', label: 'Apartments', icon: Home },
   { id: 'VILLA', label: 'Villas', icon: TreePine },
   { id: 'PLOT', label: 'Plots', icon: Map },
+  { id: 'FLAT', label: 'Flats', icon: LayoutGrid },
 ];
 
 const TYPE_STYLES = {
@@ -40,9 +41,10 @@ const TYPE_STYLES = {
   APT: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700', accent: 'bg-emerald-500' },
   VILLA: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700', accent: 'bg-amber-500' },
   PLOT: { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', badge: 'bg-rose-100 text-rose-700', accent: 'bg-rose-500' },
+  FLAT: { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700', badge: 'bg-cyan-100 text-cyan-700', accent: 'bg-cyan-500' },
 };
 
-const TYPE_LABELS = { GC: 'Gated Community', APT: 'Apartment', VILLA: 'Villa', PLOT: 'Plot' };
+const TYPE_LABELS = { GC: 'Gated Community', APT: 'Apartment', VILLA: 'Villa', PLOT: 'Plot', FLAT: 'Flat' };
 
 const Properties = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -615,15 +617,15 @@ const Properties = () => {
                 </div>
               )}
 
-              {/* Villa/Plot Number */}
-              {(viewProperty.entryType === 'VILLA' || viewProperty.entryType === 'PLOT') && (
+              {/* Villa/Plot/Flat Number */}
+              {(viewProperty.entryType === 'VILLA' || viewProperty.entryType === 'PLOT' || viewProperty.entryType === 'FLAT') && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">
-                    {viewProperty.entryType === 'VILLA' ? 'Villa Details' : 'Plot Details'}
+                    {viewProperty.entryType === 'VILLA' ? 'Villa Details' : viewProperty.entryType === 'PLOT' ? 'Plot Details' : 'Flat Details'}
                   </h3>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">
-                      {viewProperty.entryType === 'VILLA' ? 'Villa Number' : 'Plot Number'}
+                      {viewProperty.entryType === 'VILLA' ? 'Villa Number' : viewProperty.entryType === 'PLOT' ? 'Plot Number' : 'Flat Number'}
                     </label>
                     <p className="text-sm text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
                   </div>
