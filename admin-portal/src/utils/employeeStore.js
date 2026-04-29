@@ -156,6 +156,44 @@ export const updateEmployeeZones = (id, zones) => {
   return updateEmployee(id, { assignedZones: zones });
 };
 
+// Get all zones that are already assigned to employees
+export const getAssignedZones = (excludeEmployeeId = null) => {
+  const employees = getEmployees('active');
+  const assignedZones = new Set();
+  
+  for (const emp of employees) {
+    // Skip the employee we're excluding (useful when editing)
+    if (excludeEmployeeId && (emp.id === excludeEmployeeId || emp.employeeId === excludeEmployeeId)) {
+      continue;
+    }
+    
+    // If any employee has 'all' zones, all zones are assigned
+    if (emp.assignedZones === 'all') {
+      return { hasAllZonesEmployee: true, zones: [] };
+    }
+    
+    // Add individual zones
+    if (Array.isArray(emp.assignedZones)) {
+      emp.assignedZones.forEach(zone => assignedZones.add(zone));
+    }
+  }
+  
+  return { hasAllZonesEmployee: false, zones: Array.from(assignedZones) };
+};
+
+// Get available zones for assignment (zones not assigned to other employees)
+export const getAvailableZonesForEmployee = (allZones, excludeEmployeeId = null) => {
+  const { hasAllZonesEmployee, zones: assignedZones } = getAssignedZones(excludeEmployeeId);
+  
+  // If someone has all zones assigned, no zones are available
+  if (hasAllZonesEmployee) {
+    return [];
+  }
+  
+  // Return zones that are not already assigned
+  return allZones.filter(zone => !assignedZones.includes(zone.name));
+};
+
 // ============================================
 // Notifications
 // ============================================
