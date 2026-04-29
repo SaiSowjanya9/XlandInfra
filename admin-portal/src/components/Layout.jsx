@@ -18,7 +18,7 @@ const Layout = ({ admin, onLogout, children }) => {
 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/customer-submissions', icon: Building2, label: 'Customer Submissions' },
+    { path: '/customer-submissions', icon: Building2, label: 'Property Management' },
     { path: '/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/categories', icon: FolderTree, label: 'Categories' },
     { path: '/create-customer', icon: FileInput, label: 'Create Customer' },

@@ -18,7 +18,7 @@ const ServiceSelector = ({ value, onChange, services, onServicesUpdate }) => {
       label=""
       value={value}
       onChange={onChange}
-      options={services.map(s => ({ label: s, value: s }))}
+      options={services}
       onAddOption={handleAddService}
       placeholder="Select or type service"
       required={false}

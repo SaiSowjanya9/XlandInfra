@@ -78,8 +78,9 @@ export const addService = (serviceName) => {
   if (!services.includes(serviceName)) {
     services.push(serviceName);
     setStorageData(SERVICES_KEY, services);
+    return { success: true, services };
   }
-  return services;
+  return { success: true, services };
 };
 
 // ============================================
