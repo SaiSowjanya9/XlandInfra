@@ -28,7 +28,7 @@ const PortalSelector = ({ onSelectPortal }) => {
             <img
               src="/logo.png"
               alt="XLand Infra Logo"
-              className="h-10 w-auto object-contain drop-shadow-lg"
+              className="h-16 w-auto object-contain drop-shadow-lg"
             />
           </div>
           
@@ -58,109 +58,51 @@ const PortalSelector = ({ onSelectPortal }) => {
               <span className="text-sm text-amber-400 font-medium">Welcome to XLand Infra</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-light text-white mb-5 tracking-tight">
-              System <span className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-clip-text text-transparent font-normal">Administration</span> Portal
+              XLandInfra <span className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-clip-text text-transparent font-normal">Service</span> Portal
             </h1>
             <p className="text-zinc-400 text-lg max-w-2xl mx-auto leading-relaxed">
               Select your portal to access personalized services and features
             </p>
           </div>
 
-          {/* Main Portal Cards - Customer & Vendor */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Customer Portal Card */}
+          {/* Portal Access Links */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-2xl mx-auto">
+            {/* Customer Portal Link */}
             <button
               onClick={() => onSelectPortal('customer')}
-              className="group relative bg-gradient-to-br from-zinc-900/90 via-zinc-900/80 to-zinc-800/90 backdrop-blur-xl border border-zinc-800 hover:border-amber-500/50 rounded-3xl p-8 text-left transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10 hover:-translate-y-1 overflow-hidden"
+              className="group flex items-center gap-3 px-6 py-3 bg-zinc-900/60 backdrop-blur-sm border border-zinc-700/50 hover:border-amber-500/50 rounded-full transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10"
             >
-              {/* Gold gradient border on top */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 opacity-70 group-hover:opacity-100 transition-opacity" />
-              
-              {/* Hover glow */}
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-amber-500/0 via-amber-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
-              {/* Shine effect on hover */}
-              <div className="absolute inset-0 rounded-3xl overflow-hidden">
-                <div className="absolute -inset-full bg-gradient-to-r from-transparent via-white/5 to-transparent skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/20">
+                <Users className="w-5 h-5 text-black" />
               </div>
-
-              {/* Icon */}
-              <div className="relative w-16 h-16 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-amber-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                <Users className="w-8 h-8 text-black" />
-              </div>
-
-              {/* Title */}
-              <h3 className="relative text-2xl font-semibold text-white mb-3 group-hover:text-amber-50 transition-colors">
-                Customer Portal
-              </h3>
-
-              {/* Description */}
-              <p className="relative text-zinc-400 mb-6 leading-relaxed group-hover:text-zinc-300 transition-colors">
-                Submit work orders, browse service categories, track your requests in real-time, and manage payments.
-              </p>
-
-              {/* Features */}
-              <div className="relative flex flex-wrap gap-2 mb-6">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-xs text-amber-400">
-                  <Clock className="w-3 h-3" /> Real-time Tracking
+              <div className="text-left">
+                <span className="block text-sm font-medium text-white group-hover:text-amber-50 transition-colors">
+                  Customer Portal
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-xs text-amber-400">
-                  <Shield className="w-3 h-3" /> Secure Access
-                </span>
+                <span className="block text-xs text-zinc-500">Submit work orders & track requests</span>
               </div>
-
-              {/* CTA */}
-              <div className="relative inline-flex items-center gap-2 text-sm font-semibold text-amber-400 group-hover:text-amber-300">
-                <span>Enter Customer Portal</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
+              <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-1 transition-all ml-2" />
             </button>
 
-            {/* Vendor Portal Card */}
+            {/* Divider */}
+            <div className="hidden sm:block w-px h-10 bg-zinc-700/50" />
+            <div className="sm:hidden w-16 h-px bg-zinc-700/50" />
+
+            {/* Vendor Portal Link */}
             <button
               onClick={() => onSelectPortal('vendor')}
-              className="group relative bg-gradient-to-br from-zinc-900/90 via-zinc-900/80 to-zinc-800/90 backdrop-blur-xl border border-zinc-800 hover:border-amber-500/50 rounded-3xl p-8 text-left transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10 hover:-translate-y-1 overflow-hidden"
+              className="group flex items-center gap-3 px-6 py-3 bg-zinc-900/60 backdrop-blur-sm border border-zinc-700/50 hover:border-amber-500/50 rounded-full transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10"
             >
-              {/* Gold gradient border on top */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-400 opacity-70 group-hover:opacity-100 transition-opacity" />
-              
-              {/* Hover glow */}
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-amber-500/0 via-amber-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
-              {/* Shine effect on hover */}
-              <div className="absolute inset-0 rounded-3xl overflow-hidden">
-                <div className="absolute -inset-full bg-gradient-to-r from-transparent via-white/5 to-transparent skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/20">
+                <Truck className="w-5 h-5 text-black" />
               </div>
-
-              {/* Icon */}
-              <div className="relative w-16 h-16 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-amber-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                <Truck className="w-8 h-8 text-black" />
-              </div>
-
-              {/* Title */}
-              <h3 className="relative text-2xl font-semibold text-white mb-3 group-hover:text-amber-50 transition-colors">
-                Vendor Portal
-              </h3>
-
-              {/* Description */}
-              <p className="relative text-zinc-400 mb-6 leading-relaxed group-hover:text-zinc-300 transition-colors">
-                Manage your vendor profile, view assigned contracts, handle service requests, and track assignments.
-              </p>
-
-              {/* Features */}
-              <div className="relative flex flex-wrap gap-2 mb-6">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-xs text-amber-400">
-                  <Clock className="w-3 h-3" /> Contract Management
+              <div className="text-left">
+                <span className="block text-sm font-medium text-white group-hover:text-amber-50 transition-colors">
+                  Vendor Portal
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-xs text-amber-400">
-                  <Shield className="w-3 h-3" /> Verified Partner
-                </span>
+                <span className="block text-xs text-zinc-500">Manage contracts & assignments</span>
               </div>
-
-              {/* CTA */}
-              <div className="relative inline-flex items-center gap-2 text-sm font-semibold text-amber-400 group-hover:text-amber-300">
-                <span>Enter Vendor Portal</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
+              <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-1 transition-all ml-2" />
             </button>
           </div>
         </div>
@@ -168,7 +110,7 @@ const PortalSelector = ({ onSelectPortal }) => {
 
       {/* Footer */}
       <footer className="py-5 text-center relative z-10 border-t border-zinc-900">
-        <p className="text-zinc-600 text-sm">&copy; 2025 XLand Infra. All rights reserved.</p>
+        <p className="text-zinc-600 text-sm">&copy; 2026 XLand Infra. All rights reserved.</p>
       </footer>
     </div>
   );

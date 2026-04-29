@@ -27,7 +27,7 @@ const Dashboard = () => {
 
   const statCards = [
     { 
-      label: 'Customer Submissions', 
+      label: 'Property Management', 
       value: stats?.properties || 0, 
       icon: Building2, 
       bgColor: 'bg-blue-100',
@@ -81,7 +81,7 @@ const Dashboard = () => {
               key={index} 
               className="bg-white rounded-lg p-5 border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
               onClick={() => {
-                if (stat.label === 'Customer Submissions') navigate('/employee/customer-submissions');
+                if (stat.label === 'Property Management') navigate('/employee/customer-submissions');
                 else if (stat.label === 'Work Orders' || stat.label === 'Pending' || stat.label === 'Completed') navigate('/work-orders');
               }}
             >
@@ -108,7 +108,7 @@ const Dashboard = () => {
               <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                 <Building2 className="w-4 h-4 text-blue-600" />
               </div>
-              <span className="text-gray-700 font-medium">Manage Customer Submissions</span>
+              <span className="text-gray-700 font-medium">Manage Property Management</span>
             </button>
             <button 
               onClick={() => navigate('/work-orders')}

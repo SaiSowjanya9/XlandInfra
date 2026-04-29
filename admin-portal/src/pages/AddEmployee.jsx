@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   User,
   Phone,
   Mail,
   CreditCard,
-  MapPin,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -13,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createEmployee, checkDuplicateEmployee } from '../utils/employeeStore';
-import { getZones } from '../utils/zoneStore';
 
 const COUNTRY_CODES = [
   { code: '+91', flag: '🇮🇳', label: 'India' },
@@ -29,22 +27,15 @@ const initialFormState = {
   countryCode: '+91',
   email: '',
   aadhaar: '',
-  zoneAssignment: 'all', // 'all' or 'selected'
-  selectedZones: [],
 };
 
 const AddEmployee = ({ admin }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState(initialFormState);
-  const [zones, setZones] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
   const [createdEmployee, setCreatedEmployee] = useState(null);
-
-  useEffect(() => {
-    setZones(getZones('active'));
-  }, []);
 
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -53,17 +44,6 @@ const AddEmployee = ({ admin }) => {
     }
   };
 
-  const toggleZone = (zoneName) => {
-    setFormData(prev => {
-      const selected = prev.selectedZones.includes(zoneName)
-        ? prev.selectedZones.filter(z => z !== zoneName)
-        : [...prev.selectedZones, zoneName];
-      return { ...prev, selectedZones: selected };
-    });
-    if (errors.selectedZones) {
-      setErrors(prev => ({ ...prev, selectedZones: null }));
-    }
-  };
 
   const validateEmail = (email) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -107,10 +87,6 @@ const AddEmployee = ({ admin }) => {
       newErrors.aadhaar = 'Aadhaar must be 12 digits';
     }
 
-    if (formData.zoneAssignment === 'selected' && formData.selectedZones.length === 0) {
-      newErrors.selectedZones = 'Please select at least one zone';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -143,7 +119,7 @@ const AddEmployee = ({ admin }) => {
         countryCode: formData.countryCode,
         email: formData.email.trim().toLowerCase(),
         aadhaar: formData.aadhaar.replace(/\s/g, ''),
-        assignedZones: formData.zoneAssignment === 'all' ? 'all' : formData.selectedZones,
+        assignedZones: [],
         createdBy: admin?.username || 'system',
       };
 
@@ -184,15 +160,6 @@ const AddEmployee = ({ admin }) => {
           <p className="text-gray-500 mb-6">
             {createdEmployee.name} has been registered in the system.
           </p>
-          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Zone Assignment</h3>
-            <p className="text-sm text-gray-600">
-              {createdEmployee.assignedZones === 'all' 
-                ? 'Assigned to All Zones' 
-                : `Assigned to: ${createdEmployee.assignedZones.join(', ')}`
-              }
-            </p>
-          </div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               onClick={() => navigate('/employee/employee-details')}
@@ -328,98 +295,6 @@ const AddEmployee = ({ admin }) => {
               {errors.aadhaar && <p className="text-xs text-red-500 mt-1">{errors.aadhaar}</p>}
               <p className="text-xs text-gray-400 mt-1">Aadhaar number must be unique for each employee</p>
             </div>
-          </div>
-        </div>
-
-        {/* Zone Assignment */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Zone Assignment</h2>
-              <p className="text-sm text-gray-500">Assign employee to operational zones</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {/* Assignment Type Selection */}
-            <div className="flex gap-4">
-              <label className="flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all hover:border-purple-300 flex-1">
-                <input
-                  type="radio"
-                  name="zoneAssignment"
-                  value="all"
-                  checked={formData.zoneAssignment === 'all'}
-                  onChange={() => updateField('zoneAssignment', 'all')}
-                  className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                />
-                <div>
-                  <p className="font-medium text-gray-900">Assign to All Zones</p>
-                  <p className="text-xs text-gray-500">Employee will have access to all zones</p>
-                </div>
-              </label>
-              <label className="flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all hover:border-purple-300 flex-1">
-                <input
-                  type="radio"
-                  name="zoneAssignment"
-                  value="selected"
-                  checked={formData.zoneAssignment === 'selected'}
-                  onChange={() => updateField('zoneAssignment', 'selected')}
-                  className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                />
-                <div>
-                  <p className="font-medium text-gray-900">Assign to Selected Zones</p>
-                  <p className="text-xs text-gray-500">Choose specific zones for this employee</p>
-                </div>
-              </label>
-            </div>
-
-            {/* Zone Selection (shown when 'selected' is chosen) */}
-            {formData.zoneAssignment === 'selected' && (
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Select Zones <span className="text-red-500">*</span>
-                </label>
-                {zones.length === 0 ? (
-                  <div className="p-4 bg-gray-50 rounded-lg text-center">
-                    <p className="text-sm text-gray-500">No zones available. Please create zones first.</p>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/employee/zone-management')}
-                      className="mt-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-                    >
-                      Go to Zone Management →
-                    </button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {zones.map((zone) => (
-                      <label
-                        key={zone.id}
-                        className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-all ${
-                          formData.selectedZones.includes(zone.name)
-                            ? 'border-purple-500 bg-purple-50'
-                            : 'border-gray-200 hover:border-purple-300'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={formData.selectedZones.includes(zone.name)}
-                          onChange={() => toggleZone(zone.name)}
-                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                        />
-                        <span className="text-sm text-gray-700">{zone.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-                {errors.selectedZones && (
-                  <p className="text-xs text-red-500 mt-2">{errors.selectedZones}</p>
-                )}
-              </div>
-            )}
           </div>
         </div>
 

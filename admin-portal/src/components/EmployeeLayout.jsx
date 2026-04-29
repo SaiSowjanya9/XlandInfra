@@ -16,6 +16,8 @@ import {
   MapPin,
   ClipboardCheck,
   FileText,
+  PanelLeft,
+  PanelLeftClose,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -23,6 +25,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
   const [vendorOpen, setVendorOpen] = useState(
     location.pathname.startsWith('/employee/add-vendor') ||
@@ -37,7 +40,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
   const navItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/employee/customer-submissions', icon: Building2, label: 'Customer Submissions' },
+    { path: '/employee/customer-submissions', icon: Building2, label: 'Property Management' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
     { path: '/employee/estimates', icon: FileText, label: 'Estimates' },
@@ -79,8 +82,8 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
         onClick={handleClick}
         className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
           isActive
-            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-            : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700'
+            ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-500/30'
+            : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700'
         }`}
       >
         <Icon className="w-5 h-5" />
@@ -112,26 +115,36 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-white border-r border-indigo-100 z-50 transform transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed top-0 left-0 h-full ${sidebarExpanded ? 'lg:w-80' : 'w-64'} bg-white/95 backdrop-blur-sm border-r border-indigo-100 z-50 transform transition-all duration-300 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between px-6 h-16 border-b border-indigo-100">
+          <div className="flex items-center justify-between px-6 h-16 border-b border-indigo-100 bg-gradient-to-r from-indigo-50/80 to-blue-50/80">
             <div className="flex items-center space-x-2">
-              <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
+              <div className="w-9 h-9 bg-gradient-to-br from-indigo-600 to-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-300/50">
                 <Briefcase className="w-5 h-5 text-white" />
               </div>
               <span className="font-bold text-lg text-gray-900">Employee</span>
             </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-indigo-50">
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setSidebarExpanded((prev) => !prev)}
+                className="hidden lg:flex p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 transition-colors duration-200"
+                title={sidebarExpanded ? 'Set normal width' : 'Expand panel width'}
+                aria-label={sidebarExpanded ? 'Set normal width' : 'Expand panel width'}
+              >
+                {sidebarExpanded ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
+              </button>
+              <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-indigo-50">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Admin Info */}
-          <div className="px-6 py-4 border-b border-indigo-50">
+          <div className="px-6 py-4 border-b border-indigo-50 bg-white">
             <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Signed in as</p>
             <p className="font-semibold text-gray-900 mt-1">
               {admin?.firstName} {admin?.lastName}
@@ -142,7 +155,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/80">
             <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Menu</p>
             {navItems.map((item) => (
               <NavLink key={item.path} item={item} mobile />
@@ -155,7 +168,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
                 className={`flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 ${
                   isVendorSectionActive && !vendorOpen
                     ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700'
+                    : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700'
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -184,7 +197,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
                 className={`flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 ${
                   isEmployeeSectionActive && !employeeOpen
                     ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700'
+                    : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700'
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -216,7 +229,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
           </nav>
 
           {/* Logout */}
-          <div className="p-4 border-t border-indigo-50">
+          <div className="p-4 border-t border-indigo-50 bg-white">
             <button
               onClick={onLogout}
               className="flex items-center space-x-3 w-full px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200"
@@ -229,7 +242,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="lg:ml-64 min-h-screen">
+      <main className={`min-h-screen transition-all duration-300 ${sidebarExpanded ? 'lg:ml-80' : 'lg:ml-64'}`}>
         <div className="p-4 lg:p-8">{children}</div>
       </main>
     </div>

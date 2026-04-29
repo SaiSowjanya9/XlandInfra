@@ -13,7 +13,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { getZones, createZone, updateZone, deactivateZone, reactivateZone, deleteZone } from '../utils/zoneStore';
-import { getEmployees } from '../utils/employeeStore';
+import { getEmployees, updateEmployeeZones } from '../utils/employeeStore';
 
 const ZoneManagement = () => {
   const [zones, setZones] = useState([]);
@@ -26,6 +26,7 @@ const ZoneManagement = () => {
   const [toast, setToast] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewEmployeesZone, setViewEmployeesZone] = useState(null);
+  const [showAddEmployeeToZone, setShowAddEmployeeToZone] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -107,6 +108,33 @@ const ZoneManagement = () => {
       e.assignedZones === 'all' || 
       (Array.isArray(e.assignedZones) && e.assignedZones.includes(zoneName))
     );
+  };
+
+  const getEmployeesNotInZone = (zoneName) => {
+    return employees.filter(e => 
+      e.assignedZones !== 'all' && 
+      (!Array.isArray(e.assignedZones) || !e.assignedZones.includes(zoneName))
+    );
+  };
+
+  const handleAddEmployeeToZone = (employee, zoneName) => {
+    const currentZones = Array.isArray(employee.assignedZones) ? employee.assignedZones : [];
+    const newZones = [...currentZones, zoneName];
+    updateEmployeeZones(employee.id, newZones);
+    showToast(`${employee.name} added to ${zoneName}`);
+    loadData();
+  };
+
+  const handleRemoveEmployeeFromZone = (employee, zoneName) => {
+    if (employee.assignedZones === 'all') {
+      showToast('Cannot remove employee assigned to all zones. Edit their assignment first.', 'error');
+      return;
+    }
+    const currentZones = Array.isArray(employee.assignedZones) ? employee.assignedZones : [];
+    const newZones = currentZones.filter(z => z !== zoneName);
+    updateEmployeeZones(employee.id, newZones);
+    showToast(`${employee.name} removed from ${zoneName}`);
+    loadData();
   };
 
   const filteredZones = zones.filter(z =>
@@ -386,22 +414,64 @@ const ZoneManagement = () => {
 
       {/* View Employees Modal */}
       {viewEmployeesZone && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setViewEmployeesZone(null)}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setViewEmployeesZone(null); setShowAddEmployeeToZone(false); }}>
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Employees in {viewEmployeesZone.name}</h2>
                 <p className="text-sm text-gray-500">{getEmployeesInZone(viewEmployeesZone.name).length} employees assigned</p>
               </div>
-              <button onClick={() => setViewEmployeesZone(null)} className="p-2 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setShowAddEmployeeToZone(!showAddEmployeeToZone)} 
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Employee
+                </button>
+                <button onClick={() => { setViewEmployeesZone(null); setShowAddEmployeeToZone(false); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
             </div>
+
+            {/* Add Employee Section */}
+            {showAddEmployeeToZone && (
+              <div className="px-4 py-3 border-b border-gray-200 bg-indigo-50">
+                <p className="text-sm font-medium text-gray-700 mb-2">Select employee to add to {viewEmployeesZone.name}:</p>
+                {getEmployeesNotInZone(viewEmployeesZone.name).length === 0 ? (
+                  <p className="text-sm text-gray-500">All employees are already assigned to this zone.</p>
+                ) : (
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {getEmployeesNotInZone(viewEmployeesZone.name).map((emp) => (
+                      <button
+                        key={emp.id}
+                        onClick={() => handleAddEmployeeToZone(emp, viewEmployeesZone.name)}
+                        className="flex items-center gap-2 w-full p-2 bg-white rounded-lg hover:bg-indigo-100 transition-colors text-left"
+                      >
+                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                          <span className="text-gray-600 font-semibold text-xs">
+                            {emp.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{emp.name}</p>
+                          <p className="text-xs text-gray-500">{emp.employeeId}</p>
+                        </div>
+                        <Plus className="w-4 h-4 text-indigo-600" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="p-4 overflow-y-auto max-h-[60vh]">
               {getEmployeesInZone(viewEmployeesZone.name).length === 0 ? (
                 <div className="py-8 text-center">
                   <Users className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                   <p className="text-gray-500 text-sm">No employees assigned to this zone</p>
+                  <p className="text-gray-400 text-xs mt-1">Click "Add Employee" above to assign employees</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -423,6 +493,15 @@ const ZoneManagement = () => {
                       }`}>
                         {emp.assignedZones === 'all' ? 'All Zones' : 'Selected'}
                       </span>
+                      {emp.assignedZones !== 'all' && (
+                        <button
+                          onClick={() => handleRemoveEmployeeFromZone(emp, viewEmployeesZone.name)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Remove from zone"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
