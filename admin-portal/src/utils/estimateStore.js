@@ -32,6 +32,17 @@ export const PROPERTY_TYPES = ['APT', 'Flats', 'GC', 'Villas', 'Plots', 'Commerc
 // Frequency types
 export const FREQUENCY_TYPES = ['Monthly', 'Months', 'Half-yearly', 'Quarterly', 'Yearly'];
 
+// Billing duration options with multipliers
+export const BILLING_DURATIONS = [
+  { value: 'monthly', label: 'Monthly', multiplier: 1 },
+  { value: 'quarterly', label: 'Quarterly', multiplier: 3 },
+  { value: 'half-yearly', label: 'Half-Yearly', multiplier: 6 },
+  { value: 'yearly', label: 'Yearly', multiplier: 12 }
+];
+
+// AMC Templates storage key
+const AMC_TEMPLATES_KEY = 'xland_amc_templates';
+
 // Estimate statuses
 export const ESTIMATE_STATUSES = ['Draft', 'Sent', 'Approved', 'Rejected', 'Expired', 'Archived'];
 
@@ -396,4 +407,96 @@ export const calculateEstimateTotal = (estimate) => {
   }
   
   return total;
+};
+
+// ============================================
+// AMC Templates CRUD
+// ============================================
+
+export const getAMCTemplates = () => {
+  return getStorageData(AMC_TEMPLATES_KEY);
+};
+
+export const getAMCTemplateById = (templateId) => {
+  const templates = getStorageData(AMC_TEMPLATES_KEY);
+  return templates.find(t => t.templateId === templateId);
+};
+
+export const getDefaultAMCTemplate = () => {
+  const templates = getStorageData(AMC_TEMPLATES_KEY);
+  return templates.find(t => t.isDefault === true);
+};
+
+export const createAMCTemplate = (templateData) => {
+  const templates = getStorageData(AMC_TEMPLATES_KEY);
+  const templateId = `AMCT-${Date.now()}`;
+  
+  // If this is set as default, unset other defaults
+  if (templateData.isDefault) {
+    templates.forEach(t => t.isDefault = false);
+  }
+  
+  const newTemplate = {
+    ...templateData,
+    templateId,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  templates.unshift(newTemplate);
+  setStorageData(AMC_TEMPLATES_KEY, templates);
+  
+  return newTemplate;
+};
+
+export const updateAMCTemplate = (templateId, updates) => {
+  const templates = getStorageData(AMC_TEMPLATES_KEY);
+  const index = templates.findIndex(t => t.templateId === templateId);
+  
+  if (index !== -1) {
+    // If setting as default, unset other defaults
+    if (updates.isDefault) {
+      templates.forEach(t => t.isDefault = false);
+    }
+    
+    templates[index] = {
+      ...templates[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    setStorageData(AMC_TEMPLATES_KEY, templates);
+    return templates[index];
+  }
+  
+  return null;
+};
+
+export const deleteAMCTemplate = (templateId) => {
+  let templates = getStorageData(AMC_TEMPLATES_KEY);
+  templates = templates.filter(t => t.templateId !== templateId);
+  setStorageData(AMC_TEMPLATES_KEY, templates);
+  return true;
+};
+
+// Calculate AMC price based on services, frequency, and billing duration
+export const calculateAMCPrice = (services, billingDuration) => {
+  if (!services || !Array.isArray(services)) return 0;
+  
+  const durationInfo = BILLING_DURATIONS.find(d => d.value === billingDuration) || { multiplier: 1 };
+  
+  return services.reduce((total, service) => {
+    const rate = parseFloat(service.rate) || 0;
+    const frequency = parseInt(service.frequency) || 1;
+    return total + (rate * frequency * durationInfo.multiplier);
+  }, 0);
+};
+
+// Check if AMC package already exists for a property
+export const checkDuplicateAMCPackage = (propertyId, excludePackageId = null) => {
+  const packages = getStorageData(AMC_PACKAGES_KEY);
+  return packages.some(pkg => 
+    pkg.propertyId === propertyId && 
+    pkg.packageId !== excludePackageId &&
+    pkg.status !== 'expired'
+  );
 };

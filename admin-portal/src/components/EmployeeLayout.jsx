@@ -35,7 +35,8 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
   const [employeeOpen, setEmployeeOpen] = useState(
     location.pathname.startsWith('/employee/add-employee') ||
-    location.pathname.startsWith('/employee/employee-details')
+    location.pathname.startsWith('/employee/employee-details') ||
+    location.pathname.startsWith('/employee/zone-management')
   );
 
   const navItems = [
@@ -55,6 +56,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const employeeSubItems = [
     { path: '/employee/add-employee', icon: UserPlus, label: 'Add Employee' },
     { path: '/employee/employee-details', icon: Users, label: 'Employee Details' },
+    { path: '/employee/zone-management', icon: MapPin, label: 'Zone Management' },
   ];
 
   const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
@@ -219,13 +221,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               )}
             </div>
 
-            {/* Zone Management */}
-            <div className="mt-2">
-              <NavLink 
-                item={{ path: '/employee/zone-management', icon: MapPin, label: 'Zone Management' }} 
-                mobile 
-              />
-            </div>
           </nav>
 
           {/* Logout */}

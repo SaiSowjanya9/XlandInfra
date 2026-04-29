@@ -6,17 +6,18 @@ import {
 import CreateEstimate from '../components/estimates/CreateEstimate';
 import EstimatesList from '../components/estimates/EstimatesList';
 import AMCPackage from '../components/estimates/AMCPackage';
+import AMCPackageManager from '../components/estimates/AMCPackageManager';
 import AddonsManager from '../components/estimates/AddonsManager';
 import ArchivedEstimates from '../components/estimates/ArchivedEstimates';
 
 import {
-  getEstimates, getArchivedEstimates, getAMCPackages, getAddons
+  getEstimates, getArchivedEstimates, getAMCPackages, getAddons, getAMCTemplates
 } from '../utils/estimateStore';
 
 const TABS = [
   { id: 'create', label: 'Create Estimate', icon: Plus },
   { id: 'list', label: 'All Estimates', icon: List },
-  { id: 'amc', label: 'AMC Package', icon: Package },
+  { id: 'amc-manager', label: 'AMC Package Manager', icon: Package },
   { id: 'addons', label: 'Add-ons', icon: PlusCircle },
   { id: 'archived', label: 'Archived', icon: Archive }
 ];
@@ -74,9 +75,9 @@ const Estimates = ({ admin }) => {
             showToast={showToast}
           />
         );
-      case 'amc':
+      case 'amc-manager':
         return (
-          <AMCPackage showToast={showToast} />
+          <AMCPackageManager showToast={showToast} />
         );
       case 'addons':
         return (
