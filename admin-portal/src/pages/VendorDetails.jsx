@@ -320,13 +320,13 @@ const VendorDetails = () => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className={`appearance-none pl-3 pr-8 py-2 border rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none ${
-                  statusFilter === 'deleted' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-300'
+                className={`appearance-none pl-3 pr-8 py-2 border rounded-md text-sm focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none ${
+                  statusFilter === 'deleted' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-300 bg-white'
                 }`}
               >
-                <option value="active">Active Vendors</option>
-                <option value="deleted">Deleted Vendors</option>
-                <option value="all">All Vendors</option>
+                <option value="active" className="bg-white text-gray-900">Active Vendors</option>
+                <option value="deleted" className="bg-white text-gray-900">Deleted Vendors</option>
+                <option value="all" className="bg-white text-gray-900">All Vendors</option>
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>

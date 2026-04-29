@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Building2, 
   Home, 
@@ -24,12 +25,15 @@ import {
   MapPinned,
   Globe,
   Building,
-  Hash
+  Hash,
+  LayoutGrid
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { saveProperty } from '../utils/propertyStore';
+import SelectWithAdd from '../components/SelectWithAdd';
+import { getDivisions, addDivision } from '../utils/fieldOptionsStore';
 
 // Fix Leaflet default marker icon (broken in bundlers like Vite)
 delete L.Icon.Default.prototype._getIconUrl;
@@ -39,27 +43,13 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// Division options (A through K)
-const DIVISIONS = [
-  'Division A',
-  'Division B',
-  'Division C',
-  'Division D',
-  'Division E',
-  'Division F',
-  'Division G',
-  'Division H',
-  'Division I',
-  'Division J',
-  'Division K'
-];
-
 // Property Type options
 const PROPERTY_TYPES = {
   GC: ['Gated Community'],
   APT: ['Apartment'],
   VILLA: ['Villa'],
-  PLOT: ['Plot']
+  PLOT: ['Plot'],
+  FLAT: ['Flat']
 };
 
 // Entry type configuration
@@ -91,6 +81,13 @@ const ENTRY_TYPES = [
     icon: Map, 
     color: 'bg-rose-500',
     description: 'For residential or commercial plot numbers'
+  },
+  { 
+    id: 'FLAT', 
+    name: 'Flats', 
+    icon: LayoutGrid, 
+    color: 'bg-cyan-500',
+    description: 'For individual flat properties'
   }
 ];
 
@@ -102,7 +99,7 @@ const STEPS_CONFIG = {
     { id: 3, title: 'Division', icon: Grid3X3 },
     { id: 4, title: 'Property Type', icon: Building2 },
     { id: 5, title: 'Community Name', icon: Home },
-    { id: 6, title: 'Association / Client Details', icon: Users },
+    { id: 6, title: 'Association / Customer Details', icon: Users },
     { id: 7, title: 'Number of Blocks', icon: Layers },
     { id: 8, title: 'Units per Block', icon: Grid3X3 },
     { id: 9, title: 'Address & Location', icon: MapPin },
@@ -114,7 +111,7 @@ const STEPS_CONFIG = {
     { id: 3, title: 'Division', icon: Grid3X3 },
     { id: 4, title: 'Property Type', icon: Building2 },
     { id: 5, title: 'Community Name', icon: Home },
-    { id: 6, title: 'Association / Client Details', icon: Users },
+    { id: 6, title: 'Association / Customer Details', icon: Users },
     { id: 7, title: 'Block Information', icon: Layers },
     { id: 8, title: 'Number of Units', icon: Grid3X3 },
     { id: 9, title: 'Address & Location', icon: MapPin },
@@ -126,7 +123,7 @@ const STEPS_CONFIG = {
     { id: 3, title: 'Division', icon: Grid3X3 },
     { id: 4, title: 'Property Type', icon: Building2 },
     { id: 5, title: 'Community Name', icon: Home },
-    { id: 6, title: 'Association / Client Details', icon: Users },
+    { id: 6, title: 'Association / Customer Details', icon: Users },
     { id: 7, title: 'Villa Number', icon: Home },
     { id: 8, title: 'Address & Location', icon: MapPin },
     { id: 9, title: 'Notes', icon: FileText }
@@ -137,8 +134,19 @@ const STEPS_CONFIG = {
     { id: 3, title: 'Division', icon: Grid3X3 },
     { id: 4, title: 'Property Type', icon: Building2 },
     { id: 5, title: 'Community Name', icon: Home },
-    { id: 6, title: 'Association / Client Details', icon: Users },
+    { id: 6, title: 'Association / Customer Details', icon: Users },
     { id: 7, title: 'Plot Number', icon: Map },
+    { id: 8, title: 'Address & Location', icon: MapPin },
+    { id: 9, title: 'Notes', icon: FileText }
+  ],
+  FLAT: [
+    { id: 1, title: 'Zone Selection', icon: MapPin },
+    { id: 2, title: 'Area Name', icon: FileText },
+    { id: 3, title: 'Division', icon: Grid3X3 },
+    { id: 4, title: 'Property Type', icon: Building2 },
+    { id: 5, title: 'Community Name', icon: Home },
+    { id: 6, title: 'Association / Customer Details', icon: Users },
+    { id: 7, title: 'Flat Number', icon: LayoutGrid },
     { id: 8, title: 'Address & Location', icon: MapPin },
     { id: 9, title: 'Notes', icon: FileText }
   ]
@@ -440,7 +448,8 @@ const MapLocationPicker = ({ value, onChange }) => {
   );
 };
 
-const CreateClient = ({ admin }) => {
+const CreateCustomer = ({ admin }) => {
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedEntryType, setSelectedEntryType] = useState(null);
   const [formData, setFormData] = useState({
@@ -474,6 +483,47 @@ const CreateClient = ({ admin }) => {
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [createdProperty, setCreatedProperty] = useState(null);
   const formRef = useRef(null);
+
+  // Check if form has unsaved data
+  const isFormDirty = useCallback(() => {
+    if (!selectedEntryType) return false;
+    if (submitted) return false;
+    return (
+      formData.zone.trim() !== '' ||
+      formData.areaName.trim() !== '' ||
+      formData.communityName.trim() !== '' ||
+      formData.address.trim() !== '' ||
+      formData.city.trim() !== ''
+    );
+  }, [selectedEntryType, submitted, formData]);
+
+  // Handle beforeunload (tab close/reload and navigation)
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isFormDirty()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isFormDirty]);
+
+  // Set localStorage flag for dirty state (used by sidebar)
+  useEffect(() => {
+    if (isFormDirty()) {
+      localStorage.setItem('formDirty', 'true');
+    } else {
+      localStorage.removeItem('formDirty');
+    }
+  }, [isFormDirty]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      localStorage.removeItem('formDirty');
+    };
+  }, []);
 
   // Zone & Area autocomplete
   const [zoneSuggestions, setZoneSuggestions] = useState([]);
@@ -572,21 +622,18 @@ const CreateClient = ({ admin }) => {
     setSubmitting(true);
     try {
       const property = await saveProperty(formData, selectedEntryType, selectedCategory);
-      if (property) {
-        setCreatedProperty(property);
-        setSubmitted(true);
-      } else {
-        alert('Failed to save property. Please check the server connection and try again.');
-      }
+      setCreatedProperty(property);
+      setSubmitted(true);
+      localStorage.removeItem('formDirty'); // Clear dirty flag on successful submit
     } catch (err) {
       console.error('Submit error:', err);
-      alert('An error occurred while saving. Please try again.');
+      alert(`Failed to save: ${err.message || 'Please check the server connection and try again.'}`);
     } finally {
       setSubmitting(false);
     }
   };
 
-  
+
   const handleReset = () => {
     setSelectedCategory(null);
     setSelectedEntryType(null);
@@ -615,8 +662,6 @@ const CreateClient = ({ admin }) => {
       mapLocation: { lat: null, lng: null, address: '' },
       notes: ''
     });
-    setSubmitted(false);
-    setAttemptedSubmit(false);
   };
 
   const isFormValid = () => {
@@ -641,7 +686,7 @@ const CreateClient = ({ admin }) => {
       if (!formData.blockNA && formData.blockInfo.trim() === '') return false;
       if (!formData.numberOfUnits || formData.numberOfUnits <= 0) return false;
     }
-    if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') {
+    if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT' || selectedEntryType === 'FLAT') {
       if (!formData.villaPlotNumber.trim()) return false;
     }
     
@@ -662,13 +707,13 @@ const CreateClient = ({ admin }) => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-            <p className="text-gray-600 mt-1">Client Creation Module</p>
+            <p className="text-gray-600 mt-1">Customer Creation Module</p>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Category</h2>
-          <p className="text-gray-600 mb-8">Choose the client category to proceed</p>
+          <p className="text-gray-600 mb-8">Choose the customer category to proceed</p>
 
           <div className="grid md:grid-cols-3 gap-6">
             {CATEGORIES.map((category) => {
@@ -713,7 +758,7 @@ const CreateClient = ({ admin }) => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-            <p className="text-gray-600 mt-1">Client Creation Module</p>
+            <p className="text-gray-600 mt-1">Customer Creation Module</p>
           </div>
           <button
             onClick={() => setSelectedCategory(null)}
@@ -723,24 +768,29 @@ const CreateClient = ({ admin }) => {
           </button>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Entry Type</h2>
-          <p className="text-gray-600 mb-8">Choose the type of client data you want to enter</p>
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-100 p-10">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Entry Type</h2>
+            <p className="text-gray-500">Choose the type of customer data you want to enter</p>
+          </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
             {ENTRY_TYPES.map((type) => {
               const Icon = type.icon;
               return (
                 <button
                   key={type.id}
                   onClick={() => setSelectedEntryType(type.id)}
-                  className="group p-6 bg-white border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-lg transition-all duration-200 text-left"
+                  className="group relative p-6 bg-white border border-gray-200 rounded-2xl hover:border-transparent hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 text-center overflow-hidden"
                 >
-                  <div className={`w-14 h-14 ${type.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                    <Icon className="w-7 h-7 text-white" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="relative z-10">
+                    <div className={`w-16 h-16 ${type.color} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg`}>
+                      <Icon className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-base font-semibold text-gray-900 mb-1.5">{type.name}</h3>
+                    <p className="text-xs text-gray-500 leading-relaxed">{type.description}</p>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{type.name}</h3>
-                  <p className="text-sm text-gray-600">{type.description}</p>
                 </button>
               );
             })}
@@ -757,7 +807,7 @@ const CreateClient = ({ admin }) => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-            <p className="text-gray-600 mt-1">Client Creation Module</p>
+            <p className="text-gray-600 mt-1">Customer Creation Module</p>
           </div>
         </div>
 
@@ -767,7 +817,7 @@ const CreateClient = ({ admin }) => {
             <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-2xl font-bold mb-1">Client Created Successfully!</h2>
+            <h2 className="text-2xl font-bold mb-1">Customer Created Successfully!</h2>
             <p className="text-green-100">
               Your {ENTRY_TYPES.find(t => t.id === selectedEntryType)?.name} entry has been created and added to Property Management.
             </p>
@@ -778,7 +828,7 @@ const CreateClient = ({ admin }) => {
             <div className="px-8 py-6">
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Client ID</p>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Customer ID</p>
                   <p className="text-xl font-bold text-gray-900 font-mono tracking-wider">{createdProperty.propertyId}</p>
                 </div>
                 <div className="text-right">
@@ -787,6 +837,7 @@ const CreateClient = ({ admin }) => {
                     selectedEntryType === 'GC' ? 'bg-blue-100 text-blue-700' :
                     selectedEntryType === 'APT' ? 'bg-green-100 text-green-700' :
                     selectedEntryType === 'VILLA' ? 'bg-amber-100 text-amber-700' :
+                    selectedEntryType === 'FLAT' ? 'bg-cyan-100 text-cyan-700' :
                     'bg-rose-100 text-rose-700'
                   }`}>
                     {ENTRY_TYPES.find(t => t.id === selectedEntryType)?.name}
@@ -825,7 +876,7 @@ const CreateClient = ({ admin }) => {
               Add Another Entry
             </button>
             <a
-              href="/employee/client-submissions"
+              href="/employee/customer-submissions"
               className="w-full sm:w-auto px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm text-center"
             >
               View in Property Management
@@ -950,25 +1001,17 @@ const CreateClient = ({ admin }) => {
             </div>
 
             {/* Division */}
-            <div>
-              <label className="block text-sm text-gray-700 mb-1.5">
-                Division <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <select
-                  value={formData.division}
-                  onChange={(e) => updateFormData('division', e.target.value)}
-                  className={selectClass(hasError && !formData.division)}
-                >
-                  <option value="">Select a division</option>
-                  {DIVISIONS.map(division => (
-                    <option key={division} value={division}>{division}</option>
-                  ))}
-                </select>
-                <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 rotate-90 pointer-events-none" />
-              </div>
-              <FieldError show={hasError && !formData.division} message="Please select a division" />
-            </div>
+            <SelectWithAdd
+              label="Division"
+              value={formData.division}
+              onChange={(value) => updateFormData('division', value)}
+              options={getDivisions()}
+              onAddOption={(value) => addDivision(value)}
+              placeholder="Select a division"
+              required
+              error={hasError && !formData.division ? 'Please select a division' : ''}
+              addPlaceholder="Enter new division (e.g., Division L)"
+            />
 
             {/* Property Type */}
             <div>
@@ -1228,24 +1271,24 @@ const CreateClient = ({ admin }) => {
           </div>
         )}
 
-        {(selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') && (
+        {(selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT' || selectedEntryType === 'FLAT') && (
           <div className="p-8 border-b border-gray-200">
             <h2 className="text-xl font-medium text-gray-800 mb-6">
-              {selectedEntryType === 'VILLA' ? 'Villa Details' : 'Plot Details'}
+              {selectedEntryType === 'VILLA' ? 'Villa Details' : selectedEntryType === 'PLOT' ? 'Plot Details' : 'Flat Details'}
             </h2>
             
             <div className="max-w-md">
               <label className="block text-sm text-gray-700 mb-1.5">
-                {selectedEntryType === 'VILLA' ? 'Villa Number' : 'Plot Number'} <span className="text-red-500">*</span>
+                {selectedEntryType === 'VILLA' ? 'Villa Number' : selectedEntryType === 'PLOT' ? 'Plot Number' : 'Flat Number'} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.villaPlotNumber}
                 onChange={(e) => updateFormData('villaPlotNumber', e.target.value)}
                 className={inputClass(hasError && !formData.villaPlotNumber.trim())}
-                placeholder={`Enter ${selectedEntryType === 'VILLA' ? 'villa' : 'plot'} number`}
+                placeholder={`Enter ${selectedEntryType === 'VILLA' ? 'villa' : selectedEntryType === 'PLOT' ? 'plot' : 'flat'} number`}
               />
-              <FieldError show={hasError && !formData.villaPlotNumber.trim()} message={`${selectedEntryType === 'VILLA' ? 'Villa' : 'Plot'} number is required`} />
+              <FieldError show={hasError && !formData.villaPlotNumber.trim()} message={`${selectedEntryType === 'VILLA' ? 'Villa' : selectedEntryType === 'PLOT' ? 'Plot' : 'Flat'} number is required`} />
             </div>
           </div>
         )}
@@ -1412,7 +1455,7 @@ const CreateClient = ({ admin }) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Create Client</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Create Customer</h1>
           <p className="text-gray-500 text-sm mt-1">
             {entryTypeInfo?.name} • Complete all required fields
           </p>
@@ -1433,4 +1476,4 @@ const CreateClient = ({ admin }) => {
   );
 };
 
-export default CreateClient;
+export default CreateCustomer;

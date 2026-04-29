@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Building2, 
   Home, 
@@ -24,7 +25,8 @@ import {
   MapPinned,
   Globe,
   Building,
-  Hash
+  Hash,
+  LayoutGrid
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -59,7 +61,8 @@ const PROPERTY_TYPES = {
   GC: ['Gated Community'],
   APT: ['Apartment'],
   VILLA: ['Villa'],
-  PLOT: ['Plot']
+  PLOT: ['Plot'],
+  FLAT: ['Flat']
 };
 
 // Entry type configuration
@@ -91,6 +94,13 @@ const ENTRY_TYPES = [
     icon: Map, 
     color: 'bg-rose-500',
     description: 'For residential or commercial plot numbers'
+  },
+  { 
+    id: 'FLAT', 
+    name: 'Flats', 
+    icon: LayoutGrid, 
+    color: 'bg-cyan-500',
+    description: 'For individual flat properties'
   }
 ];
 
@@ -102,7 +112,7 @@ const STEPS_CONFIG = {
     { id: 3, title: 'Division', icon: Grid3X3 },
     { id: 4, title: 'Property Type', icon: Building2 },
     { id: 5, title: 'Community Name', icon: Home },
-    { id: 6, title: 'Association / Client Details', icon: Users },
+    { id: 6, title: 'Association / Customer Details', icon: Users },
     { id: 7, title: 'Number of Blocks', icon: Layers },
     { id: 8, title: 'Units per Block', icon: Grid3X3 },
     { id: 9, title: 'Address & Location', icon: MapPin },
@@ -114,7 +124,7 @@ const STEPS_CONFIG = {
     { id: 3, title: 'Division', icon: Grid3X3 },
     { id: 4, title: 'Property Type', icon: Building2 },
     { id: 5, title: 'Community Name', icon: Home },
-    { id: 6, title: 'Association / Client Details', icon: Users },
+    { id: 6, title: 'Association / Customer Details', icon: Users },
     { id: 7, title: 'Block Information', icon: Layers },
     { id: 8, title: 'Number of Units', icon: Grid3X3 },
     { id: 9, title: 'Address & Location', icon: MapPin },
@@ -126,7 +136,7 @@ const STEPS_CONFIG = {
     { id: 3, title: 'Division', icon: Grid3X3 },
     { id: 4, title: 'Property Type', icon: Building2 },
     { id: 5, title: 'Community Name', icon: Home },
-    { id: 6, title: 'Association / Client Details', icon: Users },
+    { id: 6, title: 'Association / Customer Details', icon: Users },
     { id: 7, title: 'Villa Number', icon: Home },
     { id: 8, title: 'Address & Location', icon: MapPin },
     { id: 9, title: 'Notes', icon: FileText }
@@ -137,8 +147,19 @@ const STEPS_CONFIG = {
     { id: 3, title: 'Division', icon: Grid3X3 },
     { id: 4, title: 'Property Type', icon: Building2 },
     { id: 5, title: 'Community Name', icon: Home },
-    { id: 6, title: 'Association / Client Details', icon: Users },
+    { id: 6, title: 'Association / Customer Details', icon: Users },
     { id: 7, title: 'Plot Number', icon: Map },
+    { id: 8, title: 'Address & Location', icon: MapPin },
+    { id: 9, title: 'Notes', icon: FileText }
+  ],
+  FLAT: [
+    { id: 1, title: 'Zone Selection', icon: MapPin },
+    { id: 2, title: 'Area Name', icon: FileText },
+    { id: 3, title: 'Division', icon: Grid3X3 },
+    { id: 4, title: 'Property Type', icon: Building2 },
+    { id: 5, title: 'Community Name', icon: Home },
+    { id: 6, title: 'Association / Customer Details', icon: Users },
+    { id: 7, title: 'Flat Number', icon: LayoutGrid },
     { id: 8, title: 'Address & Location', icon: MapPin },
     { id: 9, title: 'Notes', icon: FileText }
   ]
@@ -441,6 +462,7 @@ const MapLocationPicker = ({ value, onChange }) => {
 };
 
 const Onboarding = ({ admin }) => {
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedEntryType, setSelectedEntryType] = useState(null);
   const [formData, setFormData] = useState({
@@ -473,7 +495,34 @@ const Onboarding = ({ admin }) => {
   const [submitted, setSubmitted] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [createdProperty, setCreatedProperty] = useState(null);
+  const [showNavigationModal, setShowNavigationModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState(null);
   const formRef = useRef(null);
+
+  // Check if form has unsaved data
+  const isFormDirty = useCallback(() => {
+    if (!selectedEntryType) return false;
+    if (submitted) return false;
+    return (
+      formData.zone.trim() !== '' ||
+      formData.areaName.trim() !== '' ||
+      formData.communityName.trim() !== '' ||
+      formData.address.trim() !== '' ||
+      formData.city.trim() !== ''
+    );
+  }, [selectedEntryType, submitted, formData]);
+
+  // Handle beforeunload (tab close/reload)
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isFormDirty()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isFormDirty]);
 
   const steps = selectedEntryType ? STEPS_CONFIG[selectedEntryType] : [];
   const totalSteps = steps.length;
@@ -564,35 +613,83 @@ const Onboarding = ({ admin }) => {
 
   
   const handleReset = () => {
-    setSelectedCategory(null);
-    setSelectedEntryType(null);
-    setFormData({
-      zone: '',
-      areaName: '',
-      division: '',
-      propertyType: '',
-      communityName: '',
-      associationContacts: [{ name: '', email: '', phone: '', countryCode: '+91' }],
-      numberOfBlocks: 1,
-      unitsPerBlock: {},
-      blockNames: {},
-      blockInfo: '',
-      blockNA: false,
-      numberOfUnits: '',
-      villaPlotNumber: '',
-      address: '',
-      addressLine1: '',
-      aptSuiteUnit: '',
-      aptSuiteNA: false,
-      city: '',
-      state: '',
-      postalCode: '',
-      landmark: '',
-      mapLocation: { lat: null, lng: null, address: '' },
-      notes: ''
-    });
-    setSubmitted(false);
-    setAttemptedSubmit(false);
+    if (isFormDirty()) {
+      setShowNavigationModal(true);
+      setPendingNavigation(() => () => {
+        setSelectedCategory(null);
+        setSelectedEntryType(null);
+        setFormData({
+          zone: '',
+          areaName: '',
+          division: '',
+          propertyType: '',
+          communityName: '',
+          associationContacts: [{ name: '', email: '', phone: '', countryCode: '+91' }],
+          numberOfBlocks: 1,
+          unitsPerBlock: {},
+          blockNames: {},
+          blockInfo: '',
+          blockNA: false,
+          numberOfUnits: '',
+          villaPlotNumber: '',
+          address: '',
+          addressLine1: '',
+          aptSuiteUnit: '',
+          aptSuiteNA: false,
+          city: '',
+          state: '',
+          postalCode: '',
+          landmark: '',
+          mapLocation: { lat: null, lng: null, address: '' },
+          notes: ''
+        });
+        setSubmitted(false);
+        setAttemptedSubmit(false);
+      });
+    } else {
+      setSelectedCategory(null);
+      setSelectedEntryType(null);
+      setFormData({
+        zone: '',
+        areaName: '',
+        division: '',
+        propertyType: '',
+        communityName: '',
+        associationContacts: [{ name: '', email: '', phone: '', countryCode: '+91' }],
+        numberOfBlocks: 1,
+        unitsPerBlock: {},
+        blockNames: {},
+        blockInfo: '',
+        blockNA: false,
+        numberOfUnits: '',
+        villaPlotNumber: '',
+        address: '',
+        addressLine1: '',
+        aptSuiteUnit: '',
+        aptSuiteNA: false,
+        city: '',
+        state: '',
+        postalCode: '',
+        landmark: '',
+        mapLocation: { lat: null, lng: null, address: '' },
+        notes: ''
+      });
+      setSubmitted(false);
+      setAttemptedSubmit(false);
+    }
+  };
+
+  const handleConfirmNavigation = () => {
+    if (pendingNavigation) {
+      pendingNavigation();
+      setPendingNavigation(null);
+    }
+    setShowNavigationModal(false);
+  };
+
+  const handleCancelNavigation = () => {
+    setPendingNavigation(null);
+    setShowNavigationModal(false);
   };
 
   const isFormValid = () => {
@@ -617,7 +714,7 @@ const Onboarding = ({ admin }) => {
       if (!formData.blockNA && formData.blockInfo.trim() === '') return false;
       if (!formData.numberOfUnits || formData.numberOfUnits <= 0) return false;
     }
-    if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') {
+    if (selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT' || selectedEntryType === 'FLAT') {
       if (!formData.villaPlotNumber.trim()) return false;
     }
     
@@ -1152,24 +1249,24 @@ const Onboarding = ({ admin }) => {
           </div>
         )}
 
-        {(selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT') && (
+        {(selectedEntryType === 'VILLA' || selectedEntryType === 'PLOT' || selectedEntryType === 'FLAT') && (
           <div className="p-8 border-b border-gray-200">
             <h2 className="text-xl font-medium text-gray-800 mb-6">
-              {selectedEntryType === 'VILLA' ? 'Villa Details' : 'Plot Details'}
+              {selectedEntryType === 'VILLA' ? 'Villa Details' : selectedEntryType === 'PLOT' ? 'Plot Details' : 'Flat Details'}
             </h2>
             
             <div className="max-w-md">
               <label className="block text-sm text-gray-700 mb-1.5">
-                {selectedEntryType === 'VILLA' ? 'Villa Number' : 'Plot Number'} <span className="text-red-500">*</span>
+                {selectedEntryType === 'VILLA' ? 'Villa Number' : selectedEntryType === 'PLOT' ? 'Plot Number' : 'Flat Number'} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.villaPlotNumber}
                 onChange={(e) => updateFormData('villaPlotNumber', e.target.value)}
                 className={inputClass(hasError && !formData.villaPlotNumber.trim())}
-                placeholder={`Enter ${selectedEntryType === 'VILLA' ? 'villa' : 'plot'} number`}
+                placeholder={`Enter ${selectedEntryType === 'VILLA' ? 'villa' : selectedEntryType === 'PLOT' ? 'plot' : 'flat'} number`}
               />
-              <FieldError show={hasError && !formData.villaPlotNumber.trim()} message={`${selectedEntryType === 'VILLA' ? 'Villa' : 'Plot'} number is required`} />
+              <FieldError show={hasError && !formData.villaPlotNumber.trim()} message={`${selectedEntryType === 'VILLA' ? 'Villa' : selectedEntryType === 'PLOT' ? 'Plot' : 'Flat'} number is required`} />
             </div>
           </div>
         )}
@@ -1332,28 +1429,64 @@ const Onboarding = ({ admin }) => {
   const entryTypeInfo = ENTRY_TYPES.find(t => t.id === selectedEntryType);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Property Onboarding</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {entryTypeInfo?.name} • Complete all required fields
-          </p>
+    <>
+      {/* Navigation Confirmation Modal */}
+      {showNavigationModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Unsaved Changes</h3>
+                <p className="text-sm text-gray-500">You have unsaved form data</p>
+              </div>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to leave this page? All unsaved changes will be lost.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={handleCancelNavigation}
+                className="px-4 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+              >
+                Stay on Page
+              </button>
+              <button
+                onClick={handleConfirmNavigation}
+                className="px-4 py-2.5 text-white bg-red-500 hover:bg-red-600 rounded-lg font-medium transition-colors"
+              >
+                Leave Page
+              </button>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={handleReset}
-          className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md transition-colors text-sm"
-        >
-          ← Back
-        </button>
-      </div>
+      )}
 
-      {/* Single Form Container */}
-      <div className="max-w-3xl">
-        {renderSingleForm()}
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Property Onboarding</h1>
+            <p className="text-gray-500 text-sm mt-1">
+              {entryTypeInfo?.name} • Complete all required fields
+            </p>
+          </div>
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md transition-colors text-sm"
+          >
+            ← Back
+          </button>
+        </div>
+
+        {/* Single Form Container */}
+        <div className="max-w-3xl">
+          {renderSingleForm()}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

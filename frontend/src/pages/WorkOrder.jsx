@@ -30,6 +30,7 @@ const WorkOrder = ({ user }) => {
     permissionToEnter: '',
     entryNotes: '',
     hasPet: '',
+    priority: 'medium',
     attachments: []
   });
   
@@ -38,6 +39,7 @@ const WorkOrder = ({ user }) => {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
+  const [toast, setToast] = useState(null);
 
   // Get selected category
   const selectedCategory = categories.find(c => c.id === parseInt(formData.categoryId));
@@ -150,6 +152,7 @@ const WorkOrder = ({ user }) => {
       submitData.append('permissionToEnter', formData.permissionToEnter);
       submitData.append('entryNotes', formData.entryNotes);
       submitData.append('hasPet', formData.hasPet);
+      submitData.append('priority', formData.priority);
       // Add user property information
       if (user) {
         submitData.append('residentId', user.id);
@@ -169,6 +172,10 @@ const WorkOrder = ({ user }) => {
       const result = await response.json();
 
       if (result.success) {
+        // Show toast notification for 5 seconds
+        setToast({ message: 'Work order submitted successfully!', type: 'success' });
+        setTimeout(() => setToast(null), 5000);
+        
         setSubmitSuccess(true);
         // Reset form after 3 seconds
         setTimeout(() => {
@@ -179,11 +186,14 @@ const WorkOrder = ({ user }) => {
             permissionToEnter: '',
             entryNotes: '',
             hasPet: '',
+            priority: 'medium',
             attachments: []
           });
           setSubmitSuccess(false);
         }, 3000);
       } else {
+        setToast({ message: result.message || 'Failed to submit work order', type: 'error' });
+        setTimeout(() => setToast(null), 5000);
         setErrors({ submit: result.message || 'Failed to submit work order' });
       }
     } catch (error) {
@@ -221,6 +231,28 @@ const WorkOrder = ({ user }) => {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl border animate-slide-in ${
+          toast.type === 'success' 
+            ? 'bg-green-900/90 border-green-500/50 text-green-100' 
+            : 'bg-red-900/90 border-red-500/50 text-red-100'
+        }`}>
+          {toast.type === 'success' ? (
+            <Check className="w-5 h-5 text-green-400" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-red-400" />
+          )}
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button 
+            onClick={() => setToast(null)} 
+            className="ml-2 p-1 hover:bg-white/10 rounded transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <button
@@ -525,6 +557,32 @@ const WorkOrder = ({ user }) => {
               {errors.hasPet}
             </p>
           )}
+        </div>
+
+        {/* Priority Selection */}
+        <div className="bg-dark-800/80 rounded-xl shadow-lg border border-gold-600/20 p-5">
+          <label className="block text-sm font-medium text-white mb-4">
+            Priority
+          </label>
+          <div className="grid grid-cols-4 gap-3">
+            {['low', 'medium', 'high', 'urgent'].map((priority) => (
+              <button
+                key={priority}
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, priority }))}
+                className={`py-3 px-4 rounded-lg border-2 transition-all capitalize font-medium ${
+                  formData.priority === priority
+                    ? priority === 'low' ? 'border-green-500 bg-green-900/30 text-green-400'
+                      : priority === 'medium' ? 'border-yellow-500 bg-yellow-900/30 text-yellow-400'
+                        : priority === 'high' ? 'border-orange-500 bg-orange-900/30 text-orange-400'
+                          : 'border-red-500 bg-red-900/30 text-red-400'
+                    : 'border-dark-600 hover:border-dark-500 text-dark-300'
+                }`}
+              >
+                {priority}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* File Attachments */}

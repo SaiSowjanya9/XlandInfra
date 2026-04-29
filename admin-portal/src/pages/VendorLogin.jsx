@@ -12,7 +12,7 @@ const VendorLogin = ({ onLogin, onBack }) => {
     setError('');
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/login', {
+      const response = await fetch('/api/vendors/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -114,7 +114,7 @@ const VendorLogin = ({ onLogin, onBack }) => {
 
           <div className="mt-6 p-4 bg-amber-50 rounded-xl border border-amber-100">
             <p className="text-xs text-amber-600 text-center">
-              <strong>Demo:</strong> admin / admin123
+              <strong>Demo:</strong> vendor1 / vendor123
             </p>
           </div>
         </div>

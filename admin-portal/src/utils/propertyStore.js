@@ -59,6 +59,13 @@ export const saveProperty = async (formData, entryType, category, createdBy = 's
         createdBy,
       }),
     });
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('saveProperty HTTP error:', res.status, errorText);
+      throw new Error(`Server error: ${res.status}`);
+    }
+    
     const json = await res.json();
     if (json.success) {
       // Add local notification
@@ -73,11 +80,11 @@ export const saveProperty = async (formData, entryType, category, createdBy = 's
       });
       return json.data;
     }
-    console.error('saveProperty failed:', json.message);
-    return null;
+    console.error('saveProperty failed:', json.message, json.error);
+    throw new Error(json.message || 'Failed to save property');
   } catch (err) {
     console.error('saveProperty error:', err);
-    return null;
+    throw err; // Re-throw so the calling code can handle it
   }
 };
 

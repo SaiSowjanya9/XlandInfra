@@ -1,141 +1,174 @@
-import { Users, Briefcase, Truck, ArrowRight } from 'lucide-react';
-
-const portals = [
-  {
-    key: 'employee',
-    title: 'Employee Portal',
-    description: 'Access dashboard, manage client submissions, and create new clients.',
-    icon: Briefcase,
-    gradient: 'from-rose-500 to-red-600',
-    hoverGradient: 'from-rose-600 to-red-700',
-    iconBg: 'bg-rose-100',
-    iconColor: 'text-rose-600',
-    ring: 'ring-rose-200',
-    btnBg: 'bg-rose-600 hover:bg-rose-700',
-    tags: [],
-    tagBg: 'bg-rose-50 text-rose-700',
-  },
-  {
-    key: 'customer',
-    title: 'Customer Portal',
-    description: 'Submit work orders, browse service categories, and track requests.',
-    icon: Users,
-    gradient: 'from-emerald-500 to-teal-600',
-    hoverGradient: 'from-emerald-600 to-teal-700',
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-600',
-    ring: 'ring-emerald-200',
-    btnBg: 'bg-emerald-600 hover:bg-emerald-700',
-    tags: [],
-    tagBg: 'bg-emerald-50 text-emerald-700',
-  },
-  {
-    key: 'vendor',
-    title: 'Vendor Portal',
-    description: 'Manage vendor profiles, contracts, and service assignments.',
-    icon: Truck,
-    gradient: 'from-amber-500 to-orange-600',
-    hoverGradient: 'from-amber-600 to-orange-700',
-    iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-600',
-    ring: 'ring-amber-200',
-    btnBg: 'bg-amber-600 hover:bg-amber-700',
-    tags: [],
-    tagBg: 'bg-amber-50 text-amber-700',
-  },
-];
+import { Users, Briefcase, Truck, ArrowRight, Sparkles, Shield, Clock } from 'lucide-react';
 
 const PortalSelector = ({ onSelectPortal }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950 flex flex-col relative overflow-hidden font-gotham">
-      {/* Decorative background blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-rose-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen bg-black flex flex-col relative overflow-hidden">
+      {/* Animated Background Effects */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Gold gradient orbs */}
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-amber-500/20 via-yellow-400/10 to-transparent rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-amber-600/15 via-orange-400/10 to-transparent rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-[40%] left-[50%] w-[400px] h-[400px] bg-gradient-to-br from-yellow-500/10 to-transparent rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '2s' }} />
+        
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `linear-gradient(rgba(212,175,55,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(212,175,55,0.3) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px'
+        }} />
+        
+        {/* Diagonal shine effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-amber-500/5 to-transparent transform -skew-y-12" />
+      </div>
 
-      {/* Header */}
-      <header className="w-full py-6 px-6 md:px-10 relative z-10">
-        <div className="max-w-7xl mx-auto flex items-center space-x-4">
-          <img
-            src="/logo.png"
-            alt="XLand Infra Logo"
-            className="h-12 w-auto object-contain drop-shadow-md"
-          />
+      {/* Header with Employee Portal */}
+      <header className="w-full py-5 px-6 md:px-10 relative z-10">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center space-x-3">
+            <img
+              src="/logo.png"
+              alt="XLand Infra Logo"
+              className="h-10 w-auto object-contain drop-shadow-lg"
+            />
+          </div>
+          
+          {/* Employee Portal - Top Right */}
+          <button
+            onClick={() => onSelectPortal('employee')}
+            className="group flex items-center gap-3 px-5 py-2.5 bg-gradient-to-r from-zinc-800/80 to-zinc-900/80 border border-zinc-700/50 hover:border-amber-500/50 rounded-full backdrop-blur-sm transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10"
+          >
+            <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/30">
+              <Briefcase className="w-4 h-4 text-black" />
+            </div>
+            <span className="text-sm font-medium text-zinc-300 group-hover:text-amber-400 transition-colors">
+              Employee Portal
+            </span>
+            <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
+          </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-4 pb-12 relative z-10">
+      <div className="flex-1 flex items-center justify-center px-4 pb-16 relative z-10">
         <div className="w-full max-w-5xl">
-          {/* Title */}
-          <div className="text-center mb-14">
-            <h1 className="text-4xl md:text-5xl font-normal text-white mb-4 tracking-tight">
-              System Administration Portal
+          {/* Title Section */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full mb-6">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span className="text-sm text-amber-400 font-medium">Welcome to XLand Infra</span>
+            </div>
+            <h1 className="text-4xl md:text-6xl font-light text-white mb-5 tracking-tight">
+              System <span className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-clip-text text-transparent font-normal">Administration</span> Portal
             </h1>
-            <p className="text-stone-400 text-lg max-w-2xl mx-auto leading-relaxed">
-              Choose the appropriate login portal to continue with an experience tailored to your role.
+            <p className="text-zinc-400 text-lg max-w-2xl mx-auto leading-relaxed">
+              Select your portal to access personalized services and features
             </p>
           </div>
 
-          {/* Portal Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {portals.map((portal) => {
-              const Icon = portal.icon;
-              return (
-                <button
-                  key={portal.key}
-                  onClick={() => onSelectPortal(portal.key)}
-                  className="group relative bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-7 text-left transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:scale-[1.02] hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-white/20 overflow-hidden"
-                >
-                  {/* Gradient top border */}
-                  <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${portal.gradient} opacity-60 group-hover:opacity-100 transition-opacity`} />
+          {/* Main Portal Cards - Customer & Vendor */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* Customer Portal Card */}
+            <button
+              onClick={() => onSelectPortal('customer')}
+              className="group relative bg-gradient-to-br from-zinc-900/90 via-zinc-900/80 to-zinc-800/90 backdrop-blur-xl border border-zinc-800 hover:border-amber-500/50 rounded-3xl p-8 text-left transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10 hover:-translate-y-1 overflow-hidden"
+            >
+              {/* Gold gradient border on top */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 opacity-70 group-hover:opacity-100 transition-opacity" />
+              
+              {/* Hover glow */}
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-amber-500/0 via-amber-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              {/* Shine effect on hover */}
+              <div className="absolute inset-0 rounded-3xl overflow-hidden">
+                <div className="absolute -inset-full bg-gradient-to-r from-transparent via-white/5 to-transparent skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+              </div>
 
-                  {/* Glow Effect */}
-                  <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${portal.gradient} opacity-0 group-hover:opacity-[0.07] transition-opacity duration-300`} />
+              {/* Icon */}
+              <div className="relative w-16 h-16 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-amber-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                <Users className="w-8 h-8 text-black" />
+              </div>
 
-                  {/* Top-right tag for vendor */}
-                  {portal.tags.length > 0 && (
-                    <div className="absolute top-5 right-5 z-10">
-                      {portal.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className={`inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full ${portal.tagBg} border border-white/10 shadow-sm`}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+              {/* Title */}
+              <h3 className="relative text-2xl font-semibold text-white mb-3 group-hover:text-amber-50 transition-colors">
+                Customer Portal
+              </h3>
 
-                  {/* Icon */}
-                  <div className={`relative w-14 h-14 ${portal.iconBg} rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
-                    <Icon className={`w-7 h-7 ${portal.iconColor}`} />
-                  </div>
+              {/* Description */}
+              <p className="relative text-zinc-400 mb-6 leading-relaxed group-hover:text-zinc-300 transition-colors">
+                Submit work orders, browse service categories, track your requests in real-time, and manage payments.
+              </p>
 
-                  {/* Title */}
-                  <h3 className="relative text-xl font-semibold text-white mb-2">
-                    {portal.title}
-                  </h3>
+              {/* Features */}
+              <div className="relative flex flex-wrap gap-2 mb-6">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-xs text-amber-400">
+                  <Clock className="w-3 h-3" /> Real-time Tracking
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-xs text-amber-400">
+                  <Shield className="w-3 h-3" /> Secure Access
+                </span>
+              </div>
 
-                  {/* Description */}
-                  <p className="relative text-sm text-stone-400 mb-5 leading-relaxed">
-                    {portal.description}
-                  </p>
+              {/* CTA */}
+              <div className="relative inline-flex items-center gap-2 text-sm font-semibold text-amber-400 group-hover:text-amber-300">
+                <span>Enter Customer Portal</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </button>
 
-                  {/* CTA */}
-                  <div className={`relative inline-flex items-center space-x-2 text-sm font-semibold ${portal.iconColor} group-hover:translate-x-1 transition-transform duration-300`}>
-                    <span>Enter Portal</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </div>
-                </button>
-              );
-            })}
+            {/* Vendor Portal Card */}
+            <button
+              onClick={() => onSelectPortal('vendor')}
+              className="group relative bg-gradient-to-br from-zinc-900/90 via-zinc-900/80 to-zinc-800/90 backdrop-blur-xl border border-zinc-800 hover:border-amber-500/50 rounded-3xl p-8 text-left transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10 hover:-translate-y-1 overflow-hidden"
+            >
+              {/* Gold gradient border on top */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-400 opacity-70 group-hover:opacity-100 transition-opacity" />
+              
+              {/* Hover glow */}
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-amber-500/0 via-amber-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              {/* Shine effect on hover */}
+              <div className="absolute inset-0 rounded-3xl overflow-hidden">
+                <div className="absolute -inset-full bg-gradient-to-r from-transparent via-white/5 to-transparent skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+              </div>
+
+              {/* Icon */}
+              <div className="relative w-16 h-16 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-amber-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                <Truck className="w-8 h-8 text-black" />
+              </div>
+
+              {/* Title */}
+              <h3 className="relative text-2xl font-semibold text-white mb-3 group-hover:text-amber-50 transition-colors">
+                Vendor Portal
+              </h3>
+
+              {/* Description */}
+              <p className="relative text-zinc-400 mb-6 leading-relaxed group-hover:text-zinc-300 transition-colors">
+                Manage your vendor profile, view assigned contracts, handle service requests, and track assignments.
+              </p>
+
+              {/* Features */}
+              <div className="relative flex flex-wrap gap-2 mb-6">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-xs text-amber-400">
+                  <Clock className="w-3 h-3" /> Contract Management
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-xs text-amber-400">
+                  <Shield className="w-3 h-3" /> Verified Partner
+                </span>
+              </div>
+
+              {/* CTA */}
+              <div className="relative inline-flex items-center gap-2 text-sm font-semibold text-amber-400 group-hover:text-amber-300">
+                <span>Enter Vendor Portal</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </button>
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="py-4 text-center relative z-10">
-        <p className="text-stone-500 text-xs">&copy; 2025 XLand Infra. All rights reserved.</p>
+      <footer className="py-5 text-center relative z-10 border-t border-zinc-900">
+        <p className="text-zinc-600 text-sm">&copy; 2025 XLand Infra. All rights reserved.</p>
       </footer>
     </div>
   );

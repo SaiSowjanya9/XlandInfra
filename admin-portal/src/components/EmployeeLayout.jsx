@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Building2,
@@ -12,39 +12,71 @@ import {
   ChevronDown,
   UserPlus,
   Store,
+  Users,
+  MapPin,
+  ClipboardCheck,
+  FileText,
 } from 'lucide-react';
 import { useState } from 'react';
 
 const EmployeeLayout = ({ admin, onLogout, children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [vendorOpen, setVendorOpen] = useState(
     location.pathname.startsWith('/employee/add-vendor') ||
-    location.pathname.startsWith('/employee/vendor-details')
+    location.pathname.startsWith('/employee/vendor-details') ||
+    location.pathname.startsWith('/employee/assigned-vendors')
+  );
+
+  const [employeeOpen, setEmployeeOpen] = useState(
+    location.pathname.startsWith('/employee/add-employee') ||
+    location.pathname.startsWith('/employee/employee-details')
   );
 
   const navItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/employee/client-submissions', icon: Building2, label: 'Property Management' },
+    { path: '/employee/customer-submissions', icon: Building2, label: 'Customer Submissions' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/employee/create-client', icon: FileInput, label: 'Add Customer' },
+    { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
+    { path: '/employee/estimates', icon: FileText, label: 'Estimates' },
   ];
 
   const vendorSubItems = [
     { path: '/employee/add-vendor', icon: UserPlus, label: 'Add Vendor' },
     { path: '/employee/vendor-details', icon: Truck, label: 'Vendor Details' },
+    { path: '/employee/assigned-vendors', icon: ClipboardCheck, label: 'Assigned Vendors' },
+  ];
+
+  const employeeSubItems = [
+    { path: '/employee/add-employee', icon: UserPlus, label: 'Add Employee' },
+    { path: '/employee/employee-details', icon: Users, label: 'Employee Details' },
   ];
 
   const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
+  const isEmployeeSectionActive = employeeSubItems.some(item => location.pathname === item.path);
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
     const isActive = location.pathname === item.path;
+    const handleClick = (e) => {
+      if (mobile) setSidebarOpen(false);
+
+      // Check for unsaved form changes
+      if (localStorage.getItem('formDirty') === 'true') {
+        e.preventDefault();
+        const confirmed = window.confirm("You haven't submitted the form yet. Are you sure you want to leave this page?");
+        if (confirmed) {
+          localStorage.removeItem('formDirty');
+          navigate(item.path);
+        }
+      }
+    };
     return (
       <Link
         to={item.path}
-        onClick={() => mobile && setSidebarOpen(false)}
+        onClick={handleClick}
         className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
           isActive
             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
@@ -143,6 +175,43 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Employee Management Section */}
+            <div className="mt-2">
+              <button
+                onClick={() => setEmployeeOpen(!employeeOpen)}
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 ${
+                  isEmployeeSectionActive && !employeeOpen
+                    ? 'bg-indigo-50 text-indigo-700'
+                    : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Users className="w-5 h-5" />
+                  <span className="font-medium">Employee Management</span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    employeeOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              {employeeOpen && (
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-indigo-100 pl-2">
+                  {employeeSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Zone Management */}
+            <div className="mt-2">
+              <NavLink 
+                item={{ path: '/employee/zone-management', icon: MapPin, label: 'Zone Management' }} 
+                mobile 
+              />
             </div>
           </nav>
 

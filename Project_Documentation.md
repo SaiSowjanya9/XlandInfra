@@ -1,7 +1,7 @@
 # Customer Portal - Project Documentation
 
-> **Last Updated:** April 21, 2026 at 10:49 AM (UTC-05:00)
-> **Version:** 1.0.2
+> **Last Updated:** April 29, 2026 at 12:15 AM (UTC-05:00)
+> **Version:** 2.0.0
 > **Status:** In Development
 
 ---
@@ -88,10 +88,14 @@ The Customer Portal is a comprehensive property management system designed for r
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        CLIENT LAYER                              │
+│                     FRONTEND LAYER                               │
 ├─────────────────────────────┬───────────────────────────────────┤
-│   Customer Portal (React)   │      Admin Portal (React)         │
-│   Port: 5173                │      Port: 3001                   │
+│  Public Website (React)     │   Admin Portal (React)            │
+│  Port: 3000                 │   Port: 3001                      │
+│  - Landing Page             │   - System Administration Portal  │
+│  - Service Browsing         │   - Employee Portal               │
+│  - Login to Portal          │   - Customer Portal               │
+│                             │   - Vendor Portal                 │
 └─────────────────────────────┴───────────────────────────────────┘
                               │
                               ▼
@@ -107,6 +111,10 @@ The Customer Portal is a comprehensive property management system designed for r
 │  - /api/properties/*   (Property management)                    │
 │  - /api/categories/*   (Work order categories)                  │
 │  - /api/work-orders/*  (Work order CRUD)                        │
+│  - /api/vendors/*      (Vendor management)                      │
+│  - /api/onboarding/*   (Property onboarding)                    │
+│  - /api/estimates/*    (Estimate management)                    │
+│  - /api/schedules/*    (Schedule management)                    │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -116,9 +124,10 @@ The Customer Portal is a comprehensive property management system designed for r
 │                   Port: 3306                                     │
 ├─────────────────────────────────────────────────────────────────┤
 │  Tables:                                                         │
-│  - properties, units, residents, admin_users                    │
-│  - categories, subcategories, work_orders, attachments          │
-│  - audit_logs                                                    │
+│  - onboarded_properties, onboarded_vendors                      │
+│  - work_orders, work_order_attachments, work_order_history      │
+│  - property_contacts, categories, subcategories                 │
+│  - admin_users, audit_logs                                       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1254,6 +1263,81 @@ npm run dev
 ---
 
 ## 14. Change Log
+
+### Version 2.0.0 (April 29, 2026)
+
+#### Major Enhancement: Multi-Portal System Administration
+
+**1. System Administration Portal Redesign**
+- Completely redesigned Portal Selector with **black & gold elegant theme**
+- **Customer Portal** and **Vendor Portal** now as main highlighted cards
+- **Employee Portal** moved to top-right header as compact button
+- Added animated gradient effects, shine animations, and modern hover states
+- Responsive design for all screen sizes
+
+**2. Portal Routing & Session Management**
+- Fixed routing issue where "Login to Portal" bypassed portal selection
+- Added automatic session clearing when accessing from public frontend
+- Each portal type (Employee, Customer, Vendor) has its own login and dashboard
+- Unified URL structure under single admin-portal application
+
+**3. Terminology Standardization: Client → Customer**
+- **Renamed Files:**
+  - `CreateClient.jsx` → `CreateCustomer.jsx`
+  - `ClientSubmissions.jsx` → `CustomerSubmissions.jsx`
+- **Updated Routes:**
+  - `/employee/create-client` → `/employee/create-customer`
+  - `/employee/client-submissions` → `/employee/customer-submissions`
+- All UI labels, form titles, and navigation updated to use "Customer"
+- Backend maintains internal "client" for database compatibility
+
+**4. Dynamic Field Management System**
+- Created `fieldOptionsStore.js` for managing dropdown field options
+- Created `SelectWithAdd.jsx` component for dropdowns with ADD functionality
+- **Fields with ADD capability:**
+  - Service Type (in Add Vendor form)
+  - Division (in Add Vendor and Create Customer forms)
+  - Categories and Sub-categories (managed via Categories page)
+- Admins can add new options directly while filling forms
+
+**5. Sidebar Navigation Cleanup**
+- Removed ADD buttons from sidebar menu sections
+- Streamlined navigation structure
+- Clean separation between Vendor Management and Employee Management sections
+
+**6. Employee Portal Enhancements**
+- Added **Zone Management** page for managing operational zones
+- Added **Employee Details** page with employee listing
+- Added **Add Employee** form with validation
+- Added **Assigned Vendors** page for vendor-property assignments
+- Implemented vendor and employee assignment functionality in Customer Submissions
+
+**Files Added:**
+- `admin-portal/src/utils/fieldOptionsStore.js` - Field options management
+- `admin-portal/src/components/SelectWithAdd.jsx` - Dropdown with ADD button
+- `admin-portal/src/pages/ZoneManagement.jsx` - Zone management page
+- `admin-portal/src/pages/AddEmployee.jsx` - Add employee form
+- `admin-portal/src/pages/EmployeeDetails.jsx` - Employee listing
+- `admin-portal/src/pages/AssignedVendors.jsx` - Vendor assignments
+- `admin-portal/src/utils/zoneStore.js` - Zone data management
+- `admin-portal/src/utils/employeeStore.js` - Employee data management
+- `admin-portal/src/utils/assignmentStore.js` - Assignment management
+
+**Files Modified:**
+- `admin-portal/src/pages/PortalSelector.jsx` - Complete redesign
+- `admin-portal/src/components/EmployeeLayout.jsx` - Navigation updates
+- `admin-portal/src/App.jsx` - Route updates
+- `admin-portal/src/pages/Dashboard.jsx` - Quick actions updates
+- `admin-portal/src/pages/CustomerSubmissions.jsx` - Vendor/Employee assignment
+- `frontend/src/pages/CustomerHome.jsx` - Session clearing on login
+
+**Known Issues Resolved:**
+- Fixed: "Login to Portal" bypassing portal selection
+- Fixed: Old session persisting after logout
+- Fixed: Inconsistent "Client" vs "Customer" terminology
+- Fixed: Missing ADD functionality for dynamic fields
+
+---
 
 ### Version 1.0.2 (April 21, 2026)
 

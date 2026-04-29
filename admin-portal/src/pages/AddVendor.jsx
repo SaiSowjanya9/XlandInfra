@@ -18,25 +18,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { saveVendor } from '../utils/vendorStore';
-
-// Service Type options (vendor services)
-const SERVICE_TYPES = [
-  'Plumbing',
-  'Electrical',
-  'HVAC',
-  'Cleaning',
-  'Security',
-  'Landscaping',
-  'Pest Control',
-  'Painting',
-  'Carpentry',
-  'General Maintenance',
-  'Fire Safety',
-  'Elevator Maintenance',
-  'Water Tank Cleaning',
-  'Garbage Collection',
-  'Swimming Pool Maintenance'
-];
+import SelectWithAdd from '../components/SelectWithAdd';
+import { getServiceTypes, addServiceType, getDivisions, addDivision } from '../utils/fieldOptionsStore';
 
 // Zone options
 const ZONES = [
@@ -45,21 +28,6 @@ const ZONES = [
   'East Zone',
   'West Zone',
   'Central Zone'
-];
-
-// Division options (A through K)
-const DIVISIONS = [
-  'Division A',
-  'Division B',
-  'Division C',
-  'Division D',
-  'Division E',
-  'Division F',
-  'Division G',
-  'Division H',
-  'Division I',
-  'Division J',
-  'Division K'
 ];
 
 // Country codes with flag emojis
@@ -256,24 +224,17 @@ const AddVendor = ({ admin }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Service Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Service Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.serviceType}
-                onChange={(e) => updateField('serviceType', e.target.value)}
-                className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 focus:outline-none ${
-                  errors.serviceType ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
-              >
-                <option value="">Select service type...</option>
-                {SERVICE_TYPES.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-              {errors.serviceType && <p className="text-xs text-red-500 mt-1">{errors.serviceType}</p>}
-            </div>
+            <SelectWithAdd
+              label="Service Type"
+              value={formData.serviceType}
+              onChange={(value) => updateField('serviceType', value)}
+              options={getServiceTypes()}
+              onAddOption={(value) => addServiceType(value)}
+              placeholder="Select service type..."
+              required
+              error={errors.serviceType}
+              addPlaceholder="Enter new service type"
+            />
 
             {/* Service Verification */}
             <div>
@@ -394,24 +355,17 @@ const AddVendor = ({ admin }) => {
             </div>
 
             {/* Division */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Division <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.division}
-                onChange={(e) => updateField('division', e.target.value)}
-                className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:outline-none ${
-                  errors.division ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
-              >
-                <option value="">Select division...</option>
-                {DIVISIONS.map(div => (
-                  <option key={div} value={div}>{div}</option>
-                ))}
-              </select>
-              {errors.division && <p className="text-xs text-red-500 mt-1">{errors.division}</p>}
-            </div>
+            <SelectWithAdd
+              label="Division"
+              value={formData.division}
+              onChange={(value) => updateField('division', value)}
+              options={getDivisions()}
+              onAddOption={(value) => addDivision(value)}
+              placeholder="Select division..."
+              required
+              error={errors.division}
+              addPlaceholder="Enter new division (e.g., Division L)"
+            />
           </div>
         </div>
 

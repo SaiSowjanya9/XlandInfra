@@ -153,6 +153,7 @@ const EmployeeWorkOrders = ({ admin }) => {
       case 'GC': return 'Gated Community';
       case 'VILLA': return 'Villa';
       case 'PLOT': return 'Plot';
+      case 'FLAT': return 'Flat';
       default: return entryType;
     }
   };
@@ -1115,20 +1116,56 @@ const EmployeeWorkOrders = ({ admin }) => {
                 </select>
               </div>
 
-              {/* Details Grid */}
+              {/* Priority Badge */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 uppercase tracking-wider">Priority:</span>
+                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                  selectedOrder.priority === 'low' ? 'bg-green-100 text-green-700' :
+                  selectedOrder.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                  selectedOrder.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                  selectedOrder.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {selectedOrder.priority || 'Medium'}
+                </span>
+              </div>
+
+              {/* Customer/Resident Details */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider">Resident</p>
-                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.first_name} {selectedOrder.last_name}</p>
-                  <p className="text-sm text-gray-600">{selectedOrder.email}</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Customer Name</p>
+                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.customer_name || selectedOrder.first_name + ' ' + selectedOrder.last_name || 'N/A'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider">Location</p>
-                  <p className="font-medium text-gray-900 mt-1">Unit {selectedOrder.unit_number || 'N/A'}</p>
-                  <p className="text-sm text-gray-600">{selectedOrder.property_name || 'N/A'}</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Email</p>
+                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.customer_email || selectedOrder.email || 'N/A'}</p>
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Phone</p>
+                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.customer_phone || selectedOrder.phone || 'N/A'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Property ID</p>
+                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.property_id || 'N/A'}</p>
+                </div>
+              </div>
+
+              {/* Location Details */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Block</p>
+                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.block || 'N/A'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Property/Community</p>
+                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.onboarded_property_name || selectedOrder.property_name || 'N/A'}</p>
+                </div>
+              </div>
+
+              {/* Category Details */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Category</p>
@@ -1140,24 +1177,25 @@ const EmployeeWorkOrders = ({ admin }) => {
                 </div>
               </div>
 
-              {selectedOrder.description && (
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Description</p>
-                  <p className="p-3 bg-gray-50 rounded-lg text-gray-700">{selectedOrder.description}</p>
-                </div>
-              )}
+              {/* Description */}
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Description</p>
+                <p className="p-3 bg-gray-50 rounded-lg text-gray-700">{selectedOrder.description || 'No description provided'}</p>
+              </div>
 
+              {/* Entry Permissions */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
                   <span className={`w-3 h-3 rounded-full ${selectedOrder.permission_to_enter === 'yes' ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                  <span className="text-sm text-gray-700">Permission to Enter: <strong>{selectedOrder.permission_to_enter}</strong></span>
+                  <span className="text-sm text-gray-700">Permission to Enter: <strong>{selectedOrder.permission_to_enter || 'N/A'}</strong></span>
                 </div>
                 <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
                   <span className={`w-3 h-3 rounded-full ${selectedOrder.has_pet === 'yes' ? 'bg-amber-500' : 'bg-gray-300'}`}></span>
-                  <span className="text-sm text-gray-700">Has Pet: <strong>{selectedOrder.has_pet}</strong></span>
+                  <span className="text-sm text-gray-700">Has Pet: <strong>{selectedOrder.has_pet || 'N/A'}</strong></span>
                 </div>
               </div>
 
+              {/* Entry Notes */}
               {selectedOrder.entry_notes && (
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Entry Notes</p>
@@ -1165,8 +1203,18 @@ const EmployeeWorkOrders = ({ admin }) => {
                 </div>
               )}
 
-              <div className="text-sm text-gray-500">
-                Created: {new Date(selectedOrder.created_at).toLocaleString()}
+              {/* Timestamps */}
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+                <div className="text-sm text-gray-500">
+                  <span className="text-xs uppercase tracking-wider">Created:</span><br/>
+                  {new Date(selectedOrder.created_at).toLocaleString()}
+                </div>
+                {selectedOrder.completed_at && (
+                  <div className="text-sm text-gray-500">
+                    <span className="text-xs uppercase tracking-wider">Completed:</span><br/>
+                    {new Date(selectedOrder.completed_at).toLocaleString()}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1177,7 +1225,16 @@ const EmployeeWorkOrders = ({ admin }) => {
               >
                 Close
               </button>
-              {selectedOrder.status !== 'closed' && selectedOrder.status !== 'cancelled' && (
+              {(selectedOrder.status === 'closed' || selectedOrder.status === 'completed') && (
+                <button
+                  onClick={() => updateStatus(selectedOrder.id, 'pending')}
+                  className="px-5 py-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors flex items-center space-x-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Revert to Pending</span>
+                </button>
+              )}
+              {selectedOrder.status !== 'closed' && selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'completed' && (
                 <button
                   onClick={() => updateStatus(selectedOrder.id, 'closed')}
                   className="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"

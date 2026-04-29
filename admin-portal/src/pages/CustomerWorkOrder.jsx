@@ -41,7 +41,6 @@ const CustomerWorkOrder = ({ user }) => {
   const [formData, setFormData] = useState({
     propertyId: '',
     block: '',
-    flatNumber: '',
     customerName: '',
     customerEmail: '',
     customerPhone: '',
@@ -51,8 +50,10 @@ const CustomerWorkOrder = ({ user }) => {
     permissionToEnter: '',
     entryNotes: '',
     hasPet: '',
+    priority: 'medium',
     attachments: []
   });
+  const [toast, setToast] = useState(null);
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -78,7 +79,7 @@ const CustomerWorkOrder = ({ user }) => {
     setSelectedProperty(property);
     setPropertySearch(property.propertyId);
     setShowPropertyDropdown(false);
-    setFormData(prev => ({ ...prev, propertyId: property.propertyId, block: '', flatNumber: '' }));
+    setFormData(prev => ({ ...prev, propertyId: property.propertyId, block: '' }));
     setFormErrors(prev => ({ ...prev, propertyId: '' }));
   };
 
@@ -96,6 +97,7 @@ const CustomerWorkOrder = ({ user }) => {
       case 'GC': return 'Gated Community';
       case 'VILLA': return 'Villa';
       case 'PLOT': return 'Plot';
+      case 'FLAT': return 'Flat';
       default: return entryType;
     }
   };
@@ -200,7 +202,6 @@ const CustomerWorkOrder = ({ user }) => {
     const newErrors = {};
     if (!formData.propertyId) newErrors.propertyId = 'Please select a property';
     if (needsBlockFlat && !formData.block.trim()) newErrors.block = 'Block is required';
-    if (needsBlockFlat && !formData.flatNumber.trim()) newErrors.flatNumber = 'Flat number is required';
     if (!formData.customerName.trim()) newErrors.customerName = 'Name is required';
     if (!formData.customerEmail.trim()) newErrors.customerEmail = 'Email is required';
     if (!formData.customerPhone.trim()) newErrors.customerPhone = 'Phone number is required';
@@ -221,7 +222,6 @@ const CustomerWorkOrder = ({ user }) => {
       const submitData = new FormData();
       submitData.append('propertyId', formData.propertyId);
       if (formData.block) submitData.append('block', formData.block);
-      if (formData.flatNumber) submitData.append('flatNumber', formData.flatNumber);
       submitData.append('customerName', formData.customerName);
       submitData.append('customerEmail', formData.customerEmail);
       submitData.append('customerPhone', formData.customerPhone);
@@ -231,6 +231,7 @@ const CustomerWorkOrder = ({ user }) => {
       submitData.append('permissionToEnter', formData.permissionToEnter);
       submitData.append('entryNotes', formData.entryNotes);
       submitData.append('hasPet', formData.hasPet);
+      submitData.append('priority', formData.priority);
       
       // Add resident info if available
       if (user?.id) submitData.append('residentId', user.id);
@@ -247,13 +248,16 @@ const CustomerWorkOrder = ({ user }) => {
       const result = await response.json();
 
       if (result.success) {
-        setSuccess(`Work order submitted successfully! Your order ID is: ${result.data.workOrderId}`);
+        // Show toast notification for 5 seconds
+        setToast({ message: `Work order submitted successfully! Order ID: ${result.data.orderNumber || result.data.workOrderId}`, type: 'success' });
+        setTimeout(() => setToast(null), 5000);
+        
+        setSuccess(`Work order submitted successfully! Your order ID is: ${result.data.orderNumber || result.data.workOrderId}`);
         setSelectedProperty(null);
         setPropertySearch('');
         setFormData({
           propertyId: '',
           block: '',
-          flatNumber: '',
           customerName: '',
           customerEmail: '',
           customerPhone: '',
@@ -263,6 +267,7 @@ const CustomerWorkOrder = ({ user }) => {
           permissionToEnter: '',
           entryNotes: '',
           hasPet: '',
+          priority: 'medium',
           attachments: []
         });
         fetchWorkOrders();
@@ -292,6 +297,28 @@ const CustomerWorkOrder = ({ user }) => {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl border ${
+          toast.type === 'success' 
+            ? 'bg-green-50 border-green-200 text-green-800' 
+            : 'bg-red-50 border-red-200 text-red-800'
+        }`} style={{ animation: 'slideIn 0.3s ease-out' }}>
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 text-green-600" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-red-600" />
+          )}
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button 
+            onClick={() => setToast(null)} 
+            className="ml-2 p-1 hover:bg-black/5 rounded transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center space-x-3 mb-2">
@@ -376,7 +403,7 @@ const CustomerWorkOrder = ({ user }) => {
                     setShowPropertyDropdown(true);
                     if (!e.target.value.trim()) {
                       setSelectedProperty(null);
-                      setFormData(prev => ({ ...prev, propertyId: '', block: '', flatNumber: '' }));
+                      setFormData(prev => ({ ...prev, propertyId: '', block: '' }));
                     }
                   }}
                   onFocus={() => setShowPropertyDropdown(true)}
@@ -423,33 +450,28 @@ const CustomerWorkOrder = ({ user }) => {
               )}
 
               {needsBlockFlat && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Block <span className="text-red-500">*</span></label>
-                    <input
-                      type="text"
-                      value={formData.block}
-                      onChange={(e) => setFormData(prev => ({ ...prev, block: e.target.value }))}
-                      placeholder="e.g. Block A"
-                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
-                        formErrors.block ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
-                      }`}
-                    />
-                    {formErrors.block && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.block}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Flat Number <span className="text-red-500">*</span></label>
-                    <input
-                      type="text"
-                      value={formData.flatNumber}
-                      onChange={(e) => setFormData(prev => ({ ...prev, flatNumber: e.target.value }))}
-                      placeholder="e.g. 101"
-                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
-                        formErrors.flatNumber ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
-                      }`}
-                    />
-                    {formErrors.flatNumber && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.flatNumber}</p>}
-                  </div>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Block <span className="text-red-500">*</span></label>
+                  <select
+                    value={formData.block}
+                    onChange={(e) => setFormData(prev => ({ ...prev, block: e.target.value }))}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
+                      formErrors.block ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
+                    }`}
+                  >
+                    <option value="">Select Block</option>
+                    {selectedProperty?.blockNames && (
+                      Array.isArray(selectedProperty.blockNames) 
+                        ? selectedProperty.blockNames.map((blockName, idx) => (
+                            <option key={idx} value={blockName}>{blockName}</option>
+                          ))
+                        : Object.values(selectedProperty.blockNames).map((blockName, idx) => (
+                            <option key={idx} value={blockName}>{blockName}</option>
+                          ))
+                    )}
+                    <option value="N/A">N/A</option>
+                  </select>
+                  {formErrors.block && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.block}</p>}
                 </div>
               )}
             </div>
@@ -769,6 +791,32 @@ const CustomerWorkOrder = ({ user }) => {
                 rows={2}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none transition-all"
               />
+            </div>
+
+            {/* Priority Selection */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Priority Level
+              </label>
+              <div className="grid grid-cols-4 gap-3">
+                {['low', 'medium', 'high', 'urgent'].map((priority) => (
+                  <button
+                    key={priority}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, priority }))}
+                    className={`py-3 px-4 rounded-xl border-2 transition-all capitalize font-medium ${
+                      formData.priority === priority
+                        ? priority === 'low' ? 'border-green-500 bg-green-50 text-green-700'
+                          : priority === 'medium' ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                            : priority === 'high' ? 'border-orange-500 bg-orange-50 text-orange-700'
+                              : 'border-red-500 bg-red-50 text-red-700'
+                        : 'border-gray-200 bg-white hover:border-gray-300 text-gray-600'
+                    }`}
+                  >
+                    {priority}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* File Attachments */}
