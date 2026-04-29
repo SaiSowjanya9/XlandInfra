@@ -33,6 +33,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { saveProperty } from '../utils/propertyStore';
 import SelectWithAdd from '../components/SelectWithAdd';
+import StateSelect from '../components/common/StateSelect';
 import { getDivisions, addDivision } from '../utils/fieldOptionsStore';
 
 // Fix Leaflet default marker icon (broken in bundlers like Vite)
@@ -1362,12 +1363,12 @@ const CreateCustomer = ({ admin }) => {
                 <label className="block text-sm text-gray-700 mb-1.5">
                   State/Province <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <StateSelect
                   value={formData.state}
-                  onChange={(e) => updateFormData('state', e.target.value)}
-                  className={inputClass(hasError && !formData.state.trim())}
-                  placeholder="State name"
+                  onChange={(val) => updateFormData('state', val)}
+                  className={hasError && !formData.state.trim() ? 'ring-1 ring-red-300' : ''}
+                  placeholder="Select or type state"
+                  required
                 />
                 <FieldError show={hasError && !formData.state.trim()} message="State is required" />
               </div>

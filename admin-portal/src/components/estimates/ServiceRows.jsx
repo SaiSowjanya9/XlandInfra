@@ -14,7 +14,7 @@ const ServiceRows = ({
     <div className="space-y-3">
       {serviceList.map((service, index) => (
         <div key={index} className="flex gap-3 items-start p-4 bg-gray-50 rounded-lg">
-          <div className="flex-1">
+          <div className="w-48">
             <label className="block text-xs font-medium text-gray-500 mb-1">Service Name</label>
             <ServiceSelector
               value={service.name}
@@ -23,20 +23,10 @@ const ServiceRows = ({
               onServicesUpdate={onServicesUpdate}
             />
           </div>
-          <div className="w-24">
-            <label className="block text-xs font-medium text-gray-500 mb-1">Frequency</label>
-            <input
-              type="number"
-              min="1"
-              value={service.frequency}
-              onChange={(e) => onUpdate(index, 'frequency', parseInt(e.target.value) || 1)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200"
-            />
-          </div>
-          <div className="w-36">
+          <div className="w-32">
             <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
             <select
-              value={service.frequencyType}
+              value={service.frequencyType || 'Monthly'}
               onChange={(e) => onUpdate(index, 'frequencyType', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200"
             >
@@ -45,7 +35,7 @@ const ServiceRows = ({
               ))}
             </select>
           </div>
-          <div className="w-32">
+          <div className="w-28">
             <label className="block text-xs font-medium text-gray-500 mb-1">Price (₹)</label>
             <input
               type="number"
