@@ -512,3 +512,46 @@ export const getEstimatesByPropertyId = (propertyId) => {
   const estimates = getStorageData(ESTIMATES_KEY);
   return estimates.filter(est => est.propertyId === propertyId && est.status !== 'Archived');
 };
+
+// Get AMC template by property type (e.g., GC, APT, VILLA)
+export const getAMCTemplateByPropertyType = (propertyType) => {
+  const templates = getStorageData(AMC_TEMPLATES_KEY);
+  // Map entry types to template property types
+  const typeMapping = {
+    'GC': 'GC',
+    'APT': 'APT',
+    'VILLA': 'VILLA',
+    'FLAT': 'FLAT',
+    'PLOT': 'PLOT',
+    'Gated Community': 'GC',
+    'Apartment': 'APT',
+    'Villa': 'VILLA',
+    'Flat': 'FLAT',
+    'Plot': 'PLOT'
+  };
+  const mappedType = typeMapping[propertyType] || propertyType;
+  return templates.find(t => t.propertyType === mappedType);
+};
+
+// Get all AMC packages with their associated property info
+export const getAMCPackagesWithPropertyInfo = () => {
+  return getStorageData(AMC_PACKAGES_KEY);
+};
+
+// Link AMC package to property
+export const linkAMCToProperty = (packageId, propertyId) => {
+  const packages = getStorageData(AMC_PACKAGES_KEY);
+  const index = packages.findIndex(pkg => pkg.packageId === packageId);
+  
+  if (index !== -1) {
+    packages[index] = {
+      ...packages[index],
+      propertyId,
+      linkedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setStorageData(AMC_PACKAGES_KEY, packages);
+    return packages[index];
+  }
+  return null;
+};

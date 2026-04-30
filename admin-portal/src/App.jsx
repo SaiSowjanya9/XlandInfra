@@ -31,7 +31,6 @@ import AssignedVendors from './pages/AssignedVendors';
 
 import AddEmployee from './pages/AddEmployee';
 import EmployeeDetails from './pages/EmployeeDetails';
-import ZoneManagement from './pages/ZoneManagement';
 import Estimates from './pages/Estimates';
 
 function App() {
@@ -122,8 +121,12 @@ function App() {
             <Route path="/employee/assigned-vendors" element={<AssignedVendors />} />
             <Route path="/employee/add-employee" element={<AddEmployee admin={user} />} />
             <Route path="/employee/employee-details" element={<EmployeeDetails />} />
-            <Route path="/employee/zone-management" element={<ZoneManagement />} />
-            <Route path="/employee/estimates" element={<Estimates admin={user} />} />
+            <Route path="/employee/estimates" element={<Navigate to="/employee/estimates/list" replace />} />
+            <Route path="/employee/estimates/create" element={<Estimates admin={user} defaultTab="create" />} />
+            <Route path="/employee/estimates/list" element={<Estimates admin={user} defaultTab="list" />} />
+            <Route path="/employee/estimates/amc-manager" element={<Estimates admin={user} defaultTab="amc-manager" />} />
+            <Route path="/employee/estimates/addons" element={<Estimates admin={user} defaultTab="addons" />} />
+            <Route path="/employee/estimates/archived" element={<Estimates admin={user} defaultTab="archived" />} />
             <Route path="*" element={<Navigate to="/employee" replace />} />
           </Routes>
         </EmployeeLayout>

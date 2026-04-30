@@ -12,12 +12,16 @@ import {
   UserPlus,
   Store,
   Users,
-  MapPin,
   ClipboardCheck,
   FileText,
   PanelLeft,
   PanelLeftClose,
   Briefcase,
+  Plus,
+  List,
+  Package,
+  PlusCircle,
+  Archive
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -35,8 +39,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
   const [employeeOpen, setEmployeeOpen] = useState(
     location.pathname.startsWith('/employee/add-employee') ||
-    location.pathname.startsWith('/employee/employee-details') ||
-    location.pathname.startsWith('/employee/zone-management')
+    location.pathname.startsWith('/employee/employee-details')
   );
 
   const navItems = [
@@ -44,8 +47,21 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     { path: '/employee/customer-submissions', icon: Building2, label: 'Property Management' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
-    { path: '/employee/estimates', icon: FileText, label: 'Estimates' },
   ];
+
+  const [estimatesOpen, setEstimatesOpen] = useState(
+    location.pathname.startsWith('/employee/estimates')
+  );
+
+  const estimatesSubItems = [
+    { path: '/employee/estimates/create', icon: Plus, label: 'Create Estimate' },
+    { path: '/employee/estimates/list', icon: List, label: 'All Estimates' },
+    { path: '/employee/estimates/amc-manager', icon: Package, label: 'AMC Package Manager' },
+    { path: '/employee/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
+    { path: '/employee/estimates/archived', icon: Archive, label: 'Archived' },
+  ];
+
+  const isEstimatesSectionActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/employee/estimates';
 
   const vendorSubItems = [
     { path: '/employee/add-vendor', icon: UserPlus, label: 'Add Vendor' },
@@ -56,7 +72,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const employeeSubItems = [
     { path: '/employee/add-employee', icon: UserPlus, label: 'Add Employee' },
     { path: '/employee/employee-details', icon: Users, label: 'Employee Details' },
-    { path: '/employee/zone-management', icon: MapPin, label: 'Zone Management' },
   ];
 
   const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
@@ -215,6 +230,35 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               {employeeOpen && (
                 <div className="ml-4 mt-1 space-y-1 border-l-2 border-indigo-100 pl-2">
                   {employeeSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Estimates Section */}
+            <div className="mt-2">
+              <button
+                onClick={() => setEstimatesOpen(!estimatesOpen)}
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 ${
+                  isEstimatesSectionActive && !estimatesOpen
+                    ? 'bg-indigo-50 text-indigo-700'
+                    : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <FileText className="w-5 h-5" />
+                  <span className="font-medium">Estimates</span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    estimatesOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              {estimatesOpen && (
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-indigo-100 pl-2">
+                  {estimatesSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
                   ))}
                 </div>

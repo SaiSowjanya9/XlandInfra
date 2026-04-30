@@ -45,12 +45,12 @@ const PhoneInput = ({
   const selectedCountry = COUNTRY_CODES.find(c => c.code === countryCode) || COUNTRY_CODES[0];
 
   return (
-    <div className={`flex ${className}`}>
-      <div className="relative" ref={dropdownRef}>
+    <div className={`flex h-full ${className}`}>
+      <div className="relative h-full" ref={dropdownRef}>
         <button
           type="button"
           onClick={() => !disabled && setShowDropdown(!showDropdown)}
-          className={`flex items-center gap-1 px-3 py-2 border border-r-0 border-gray-300 rounded-l-lg bg-gray-50 text-sm hover:bg-gray-100 ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+          className={`flex items-center gap-1 h-full px-3 py-2 border border-r-0 border-gray-300 rounded-l-lg bg-gray-50 text-sm hover:bg-gray-100 ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
           disabled={disabled}
         >
           <span>{selectedCountry.flag}</span>

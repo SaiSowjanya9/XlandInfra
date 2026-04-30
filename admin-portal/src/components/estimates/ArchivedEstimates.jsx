@@ -86,7 +86,7 @@ const ArchivedEstimates = ({ onRefresh, showToast }) => {
                       <div className="flex items-center gap-2">
                         <Icon className="w-4 h-4 text-gray-400" />
                         <span className="text-sm text-gray-600">
-                          {estimate.estimateType === 'property-based' ? estimate.propertyType : 'Direct'}
+                          {estimate.estimateType === 'property-based' ? estimate.propertyType : 'Direct-Based'}
                         </span>
                       </div>
                     </td>

@@ -35,6 +35,7 @@ import { saveProperty } from '../utils/propertyStore';
 import SelectWithAdd from '../components/SelectWithAdd';
 import StateSelect from '../components/common/StateSelect';
 import { getDivisions, addDivision } from '../utils/fieldOptionsStore';
+import { getZoneNames, createZone } from '../utils/zoneStore';
 
 // Fix Leaflet default marker icon (broken in bundlers like Vite)
 delete L.Icon.Default.prototype._getIconUrl;
@@ -533,10 +534,23 @@ const CreateCustomer = ({ admin }) => {
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
 
   useEffect(() => {
-    fetch('/api/onboarding/suggestions/zones')
-      .then(r => r.json())
-      .then(res => { if (res.success) setZoneSuggestions(res.data || []); })
-      .catch(() => {});
+    // Fetch zones from both backend API and local zoneStore, merge them
+    const loadZones = async () => {
+      try {
+        const res = await fetch('/api/onboarding/suggestions/zones');
+        const json = await res.json();
+        const apiZones = json.success ? (json.data || []) : [];
+        const localZones = getZoneNames(); // From zoneStore
+        // Merge and deduplicate
+        const mergedZones = [...new Set([...localZones, ...apiZones])];
+        setZoneSuggestions(mergedZones);
+      } catch {
+        // If API fails, use local zones only
+        setZoneSuggestions(getZoneNames());
+      }
+    };
+    loadZones();
+    
     fetch('/api/onboarding/suggestions/areas')
       .then(r => r.json())
       .then(res => { if (res.success) setAreaSuggestions(res.data || []); })
@@ -622,6 +636,16 @@ const CreateCustomer = ({ admin }) => {
 
     setSubmitting(true);
     try {
+      // Auto-add new zone to zoneStore if it doesn't exist
+      // This ensures the zone is available in Zone Assignment (Add Employee)
+      if (formData.zone && formData.zone.trim()) {
+        const existingZones = getZoneNames();
+        const zoneExists = existingZones.some(z => z.toLowerCase() === formData.zone.trim().toLowerCase());
+        if (!zoneExists) {
+          createZone(formData.zone.trim());
+        }
+      }
+      
       const property = await saveProperty(formData, selectedEntryType, selectedCategory);
       setCreatedProperty(property);
       setSubmitted(true);

@@ -1,29 +1,29 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   FileText, Plus, List, Package, PlusCircle, Archive, Check, X, AlertCircle
 } from 'lucide-react';
 
 import CreateEstimate from '../components/estimates/CreateEstimate';
 import EstimatesList from '../components/estimates/EstimatesList';
-import AMCPackage from '../components/estimates/AMCPackage';
 import AMCPackageManager from '../components/estimates/AMCPackageManager';
 import AddonsManager from '../components/estimates/AddonsManager';
 import ArchivedEstimates from '../components/estimates/ArchivedEstimates';
 
 import {
-  getEstimates, getArchivedEstimates, getAMCPackages, getAddons, getAMCTemplates
+  getEstimates, getArchivedEstimates, getAMCPackages, getAddons
 } from '../utils/estimateStore';
 
-const TABS = [
-  { id: 'create', label: 'Create Estimate', icon: Plus },
-  { id: 'list', label: 'All Estimates', icon: List },
-  { id: 'amc-manager', label: 'AMC Package Manager', icon: Package },
-  { id: 'addons', label: 'Add-ons', icon: PlusCircle },
-  { id: 'archived', label: 'Archived', icon: Archive }
-];
+const TAB_TITLES = {
+  'create': 'Create Estimate',
+  'list': 'All Estimates',
+  'amc-manager': 'AMC Package Manager',
+  'addons': 'Add-ons',
+  'archived': 'Archived Estimates'
+};
 
-const Estimates = ({ admin }) => {
-  const [activeTab, setActiveTab] = useState('list');
+const Estimates = ({ admin, defaultTab = 'list' }) => {
+  const navigate = useNavigate();
   const [toast, setToast] = useState(null);
   const [stats, setStats] = useState({
     estimates: 0,
@@ -34,7 +34,7 @@ const Estimates = ({ admin }) => {
 
   useEffect(() => {
     loadStats();
-  }, [activeTab]);
+  }, [defaultTab]);
 
   const loadStats = () => {
     setStats({
@@ -56,11 +56,11 @@ const Estimates = ({ admin }) => {
 
   const handleEstimateCreated = () => {
     loadStats();
-    setActiveTab('list');
+    navigate('/employee/estimates/list');
   };
 
-  const renderTabContent = () => {
-    switch (activeTab) {
+  const renderContent = () => {
+    switch (defaultTab) {
       case 'create':
         return (
           <CreateEstimate
@@ -106,7 +106,7 @@ const Estimates = ({ admin }) => {
                 <FileText className="w-6 h-6 text-indigo-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">Estimates</h1>
+                <h1 className="text-2xl font-bold text-gray-800">{TAB_TITLES[defaultTab] || 'Estimates'}</h1>
                 <p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and add-ons</p>
               </div>
             </div>
@@ -134,40 +134,9 @@ const Estimates = ({ admin }) => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-1">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                    isActive
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span className="font-medium">{tab.label}</span>
-                  {tab.id === 'archived' && stats.archived > 0 && (
-                    <span className="ml-1 px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
-                      {stats.archived}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
       {/* Content */}
       <div className="max-w-7xl mx-auto px-6 py-6">
-        {renderTabContent()}
+        {renderContent()}
       </div>
 
       {/* Toast Notification */}
