@@ -413,10 +413,10 @@ const CustomerContact = ({ user }) => {
               <div className="mt-2 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                 <div className="flex items-center gap-2 text-blue-700">
                   <Lock className="w-4 h-4" />
-                  <span className="text-sm font-medium">Existing Package Services (Locked)</span>
+                  <span className="text-sm font-medium">Existing Package Services</span>
                 </div>
                 <p className="text-xs text-blue-600 mt-1">
-                  {lockedServices.length} service(s) from existing package are shown below as locked. Use "Add Service" to add additional services.
+                  {lockedServices.length} service(s) from existing package. Use "Add Service" to add additional services.
                 </p>
               </div>
             )}

@@ -70,7 +70,6 @@ const ArchivedEstimates = ({ onRefresh, showToast }) => {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Client</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Archived On</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Reason</th>
                 <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
@@ -109,13 +108,6 @@ const ArchivedEstimates = ({ onRefresh, showToast }) => {
                     <td className="px-6 py-4">
                       <span className="font-semibold text-gray-800">
                         ₹{(estimate.totalPrice || calculateEstimateTotal(estimate)).toLocaleString()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        estimate.autoArchived ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-700'
-                      }`}>
-                        {estimate.autoArchived ? 'Auto-archived (30 days)' : 'Manual'}
                       </span>
                     </td>
                     <td className="px-6 py-4">

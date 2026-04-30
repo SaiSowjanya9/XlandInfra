@@ -138,7 +138,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
         isLocked: true
       }));
       setLockedServices(amcServices);
-      showToast?.('Existing package services loaded (locked)', 'success');
+      showToast?.('Existing package services loaded', 'success');
     } else {
       setAmcPackage(null);
       setLockedServices([]);
@@ -214,6 +214,10 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       showToast?.('Customer name is required', 'error');
       return;
     }
+    if (estimateType === 'direct' && !estimateForm.phone.trim()) {
+      showToast?.('Phone number is required', 'error');
+      return;
+    }
 
     // Combine locked services with new services
     const newValidServices = estimateForm.services.filter(s => s.name && s.name.trim() && s.price);
@@ -231,7 +235,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       subTotal: calculateSubTotal(),
       gst: calculateGST(),
       totalPrice: calculateTotal(),
-      status: 'Draft'
+      status: estimateType === 'direct' ? 'Archived' : 'Draft'
     };
 
     if (estimateType === 'property') {
@@ -255,6 +259,16 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       estimateData.countryCode = estimateForm.countryCode;
       estimateData.email = estimateForm.email;
       estimateData.customerEmail = estimateForm.email;
+      estimateData.propertyName = estimateForm.propertyName;
+      estimateData.entryType = estimateForm.entryType;
+      estimateData.zone = estimateForm.zone;
+      estimateData.areaName = estimateForm.areaName;
+      estimateData.division = estimateForm.division;
+      estimateData.numberOfUnits = estimateForm.numberOfUnits;
+      estimateData.address = estimateForm.address;
+      estimateData.city = estimateForm.city;
+      estimateData.blockTower = estimateForm.blockTower;
+      estimateData.flatUnit = estimateForm.flatUnit;
     }
 
     const createdEstimate = createEstimate(estimateData);
@@ -557,7 +571,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-md mb-4">
                     <div className="flex items-center gap-2 text-blue-700">
                       <Lock className="w-4 h-4" />
-                      <span className="text-sm font-medium">Existing Package Services (Locked)</span>
+                      <span className="text-sm font-medium">Existing Package Services</span>
                     </div>
                     <p className="text-xs text-blue-600 mt-1">
                       {lockedServices.length} service(s) from existing package. Use "Add Service" to add additional services.
@@ -791,49 +805,414 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
 
       {/* Direct-Based Estimate Form */}
       {estimateType === 'direct' && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Customer Details</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <User className="w-4 h-4 inline mr-1" /> Customer Name *
-              </label>
-              <input
-                type="text"
-                value={estimateForm.customerName}
-                onChange={(e) => setEstimateForm({ ...estimateForm, customerName: e.target.value })}
-                className="w-full h-[42px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
-                placeholder="Enter customer name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <Phone className="w-4 h-4 inline mr-1" /> Phone
-              </label>
-              <div className="h-[42px]">
-                <PhoneInput
-                  value={estimateForm.phone}
-                  countryCode={estimateForm.countryCode}
-                  onChange={(val) => setEstimateForm({ ...estimateForm, phone: val })}
-                  onCountryCodeChange={(val) => setEstimateForm({ ...estimateForm, countryCode: val })}
-                  placeholder="10-digit phone number"
-                  className="h-full"
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          {/* Customer Information Header */}
+          <div className="px-6 py-3 bg-blue-600">
+            <h3 className="text-base font-semibold text-white">Customer Information</h3>
+          </div>
+          
+          <div className="px-6 py-4">
+            {/* Customer Information Row */}
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Customer Name *</label>
+                <input
+                  type="text"
+                  value={estimateForm.customerName}
+                  onChange={(e) => setEstimateForm({ ...estimateForm, customerName: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  placeholder="Enter customer name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Phone *</label>
+                <div className="flex">
+                  <select
+                    value={estimateForm.countryCode}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, countryCode: e.target.value })}
+                    className="px-2 py-2 text-sm border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-200 bg-gray-50"
+                  >
+                    <option value="+91">+91</option>
+                    <option value="+1">+1</option>
+                    <option value="+44">+44</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={estimateForm.phone}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, phone: e.target.value })}
+                    className="flex-1 px-3 py-2 text-sm border border-l-0 border-gray-300 rounded-r-md focus:ring-2 focus:ring-blue-200"
+                    placeholder="10-digit phone number"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={estimateForm.email}
+                  onChange={(e) => setEstimateForm({ ...estimateForm, email: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  placeholder="Enter email address"
                 />
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <Mail className="w-4 h-4 inline mr-1" /> Email
-              </label>
-              <input
-                type="email"
-                value={estimateForm.email}
-                onChange={(e) => setEstimateForm({ ...estimateForm, email: e.target.value })}
-                className="w-full h-[42px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
-                placeholder="Enter email address"
-              />
+          </div>
+
+          {/* Property Details Header */}
+          <div className="px-6 py-3 bg-indigo-600">
+            <h3 className="text-base font-semibold text-white">Property Details</h3>
+          </div>
+          
+          <div className="px-6 py-4">
+            {/* Property Type Selection */}
+            <div className="grid grid-cols-4 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Property Type *</label>
+                <select
+                  value={estimateForm.propertyType}
+                  onChange={(e) => setEstimateForm({ ...estimateForm, propertyType: e.target.value, blockTower: '', flatUnit: '', numberOfUnits: '' })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Select Property Type</option>
+                  <option value="GC">Gated Community</option>
+                  <option value="APT">Apartment</option>
+                  <option value="VILLA">Villa</option>
+                  <option value="FLAT">Flat</option>
+                  <option value="PLOT">Plot</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label>
+                <input
+                  type="text"
+                  value={estimateForm.propertyName}
+                  onChange={(e) => setEstimateForm({ ...estimateForm, propertyName: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  placeholder="Enter property name"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Zone</label>
+                <input
+                  type="text"
+                  value={estimateForm.zone}
+                  onChange={(e) => setEstimateForm({ ...estimateForm, zone: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  placeholder="Enter zone"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
+                <input
+                  type="text"
+                  value={estimateForm.city}
+                  onChange={(e) => setEstimateForm({ ...estimateForm, city: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  placeholder="Enter city"
+                />
+              </div>
+            </div>
+
+            {/* Dynamic Fields Based on Property Type */}
+            {estimateForm.propertyType === 'GC' && (
+              <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Number of Blocks *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={estimateForm.blockTower}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, blockTower: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                    placeholder="Enter number of blocks"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Block Name</label>
+                  <input
+                    type="text"
+                    value={estimateForm.areaName}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, areaName: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                    placeholder="e.g., Block A, B, C"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Units *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={estimateForm.numberOfUnits}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, numberOfUnits: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                    placeholder="Total units"
+                  />
+                </div>
+              </div>
+            )}
+
+            {estimateForm.propertyType === 'APT' && (
+              <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Block Information</label>
+                  <input
+                    type="text"
+                    value={estimateForm.blockTower}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, blockTower: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                    placeholder="Block/Tower info (optional)"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Not Applicable</label>
+                  <input
+                    type="text"
+                    value={estimateForm.areaName}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, areaName: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 bg-gray-50"
+                    placeholder="N/A"
+                    disabled
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Number of Units *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={estimateForm.numberOfUnits}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, numberOfUnits: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                    placeholder="Total units"
+                  />
+                </div>
+              </div>
+            )}
+
+            {estimateForm.propertyType === 'VILLA' && (
+              <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-amber-50 rounded-lg border border-amber-100">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Villa Number *</label>
+                  <input
+                    type="text"
+                    value={estimateForm.flatUnit}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, flatUnit: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                    placeholder="Enter villa number"
+                  />
+                </div>
+              </div>
+            )}
+
+            {estimateForm.propertyType === 'PLOT' && (
+              <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-rose-50 rounded-lg border border-rose-100">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Plot Number *</label>
+                  <input
+                    type="text"
+                    value={estimateForm.flatUnit}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, flatUnit: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                    placeholder="Enter plot number"
+                  />
+                </div>
+              </div>
+            )}
+
+            {estimateForm.propertyType === 'FLAT' && (
+              <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-cyan-50 rounded-lg border border-cyan-100">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Flat Number *</label>
+                  <input
+                    type="text"
+                    value={estimateForm.flatUnit}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, flatUnit: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                    placeholder="Enter flat number"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Address Row */}
+            <div className="grid grid-cols-1 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
+                <input
+                  type="text"
+                  value={estimateForm.address}
+                  onChange={(e) => setEstimateForm({ ...estimateForm, address: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  placeholder="Enter full address"
+                />
+              </div>
             </div>
           </div>
+
+          {/* AMC Services Section */}
+          <>
+            <div className="px-6 py-3 bg-blue-600">
+              <h3 className="text-base font-semibold text-white">AMC Services</h3>
+            </div>
+            
+            <div className="px-6 py-4">
+              {/* Table Header */}
+              <div className="grid grid-cols-12 gap-2 mb-2 px-2 py-2 bg-gray-100 rounded-t-md">
+                <div className="col-span-1 text-xs font-semibold text-gray-700">#</div>
+                <div className="col-span-3 text-xs font-semibold text-gray-700">
+                  Service <span className="text-red-500">*</span>
+                </div>
+                <div className="col-span-2 text-xs font-semibold text-gray-700">
+                  Frequency (Visits) <span className="text-red-500">*</span>
+                </div>
+                <div className="col-span-2 text-xs font-semibold text-gray-700">
+                  Frequency Type <span className="text-red-500">*</span>
+                </div>
+                <div className="col-span-2 text-xs font-semibold text-gray-700">
+                  Price (₹) <span className="text-red-500">*</span>
+                </div>
+                <div className="col-span-1 text-xs font-semibold text-gray-700">Total (₹)</div>
+                <div className="col-span-1 text-xs font-semibold text-gray-700 text-center">Action</div>
+              </div>
+
+              {/* Service Rows */}
+              <div className="border border-gray-200 rounded-b-md divide-y divide-gray-100">
+                {estimateForm.services.map((service, index) => (
+                  <div key={`new-${index}`} className="grid grid-cols-12 gap-2 items-center p-3 bg-white hover:bg-gray-50">
+                    <div className="col-span-1 text-sm text-gray-600 font-medium pl-2">
+                      {index + 1}
+                    </div>
+                    <div className="col-span-3">
+                      <select
+                        value={service.name}
+                        onChange={(e) => {
+                          if (e.target.value === '__add_new__') {
+                            const newService = prompt('Enter new service name:');
+                            if (newService) {
+                              handleAddNewService(newService);
+                              updateServiceRow(index, 'name', newService);
+                            }
+                          } else {
+                            updateServiceRow(index, 'name', e.target.value);
+                          }
+                        }}
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                      >
+                        <option value="">Select Service</option>
+                        {availableServices.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                        <option value="__add_new__">+ Add New Service</option>
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="1"
+                          value={service.frequency}
+                          onChange={(e) => updateServiceRow(index, 'frequency', parseInt(e.target.value) || 1)}
+                          className="w-16 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 text-center"
+                        />
+                        <span className="text-xs text-gray-500">(Visits per Drop Down)</span>
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <select
+                        value={service.frequencyType}
+                        onChange={(e) => updateServiceRow(index, 'frequencyType', e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                      >
+                        {FREQUENCY_TYPES.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="number"
+                        min="0"
+                        value={service.price}
+                        onChange={(e) => updateServiceRow(index, 'price', e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="col-span-1 text-sm text-gray-800 font-medium">
+                      {calculateServiceTotal(service).toLocaleString()}
+                    </div>
+                    <div className="col-span-1 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => removeServiceRow(index)}
+                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                        title="Remove service"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Empty state */}
+                {estimateForm.services.length === 0 && (
+                  <div className="p-6 text-center text-gray-500">
+                    <p className="text-sm">No services added. Click "Add Service" to add a new service.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Add Service Button */}
+              <button
+                type="button"
+                onClick={addServiceRow}
+                className="mt-4 flex items-center gap-2 px-4 py-2 text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Service
+              </button>
+            </div>
+
+            {/* Summary and Actions */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex justify-end">
+                <div className="w-80">
+                  {/* Calculation Section - GST calculated in backend, not shown */}
+                  <div className="text-right space-y-2 mb-4">
+                    <div className="flex justify-between text-sm bg-blue-100 px-3 py-2 rounded-md">
+                      <span className="font-semibold text-blue-700">Total Price (₹)</span>
+                      <span className="font-bold text-blue-700">{calculateSubTotal().toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons - Only Save and Cancel */}
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={resetForm}
+                      className="px-6 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Save to Archive
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Note */}
+            <div className="px-6 py-3 border-t border-gray-200 bg-white">
+              <p className="text-xs text-gray-500">
+                * Currency: INR (₹) | Price Input: Per selected frequency | Fields marked with * are mandatory | Direct estimates are saved to Archive section
+              </p>
+            </div>
+          </>
         </div>
       )}
 

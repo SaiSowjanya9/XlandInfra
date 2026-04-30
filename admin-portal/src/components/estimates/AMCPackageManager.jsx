@@ -189,26 +189,34 @@ const AMCPackageManager = ({ showToast }) => {
     }
   };
 
-  // Frequency type multipliers for annual calculation
+  // Frequency type multipliers (times per year)
   const FREQUENCY_MULTIPLIERS = {
     'Monthly': 12,
+    'Months': 1, // Custom months - count is the actual number
     'Quarterly': 4,
     'Half-Yearly': 2,
     'Yearly': 1
   };
 
   // Calculations - AMC Price based on services, frequency count, and frequency type
-  const calculateServiceAnnualPrice = (service) => {
+  // Calculates price based on billing duration (not always annual)
+  const calculateServicePrice = (service) => {
     const rate = parseFloat(service.rate) || 0;
     const frequencyCount = parseInt(service.frequencyCount) || 1;
-    const frequencyMultiplier = FREQUENCY_MULTIPLIERS[service.frequencyType] || 12;
-    // Annual price = rate per service × frequency count × times per year
-    return rate * frequencyCount * frequencyMultiplier;
+    
+    // For Months type, use the count directly (e.g., 3 months = 3)
+    // For other types, multiply by the yearly multiplier
+    if (service.frequencyType === 'Months') {
+      return rate * frequencyCount;
+    } else {
+      const frequencyMultiplier = FREQUENCY_MULTIPLIERS[service.frequencyType] || 12;
+      return rate * frequencyCount * frequencyMultiplier;
+    }
   };
 
   const calculateSubTotal = () => {
     return amcForm.services.reduce((sum, service) => {
-      return sum + calculateServiceAnnualPrice(service);
+      return sum + calculateServicePrice(service);
     }, 0);
   };
 
@@ -434,7 +442,7 @@ const AMCPackageManager = ({ showToast }) => {
         >
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            AMC Templates
+            All AMC Packages
             {templates.length > 0 && (
               <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded text-xs">
                 {templates.length}
@@ -444,99 +452,77 @@ const AMCPackageManager = ({ showToast }) => {
         </button>
       </div>
 
-      {/* Templates Tab */}
+      {/* Templates Tab - All AMC Packages */}
       {activeTab === 'templates' && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-800">AMC Templates</h2>
-                  <p className="text-sm text-gray-500">Create reusable templates for different property types</p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  resetTemplateForm();
-                  resetForm();
-                  setShowTemplateModal(true);
-                }}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 text-sm font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                Create Template
-              </button>
-            </div>
+        <div className="space-y-4">
+          {/* Create Button */}
+          <div className="flex justify-end">
+            <button
+              onClick={() => {
+                resetTemplateForm();
+                resetForm();
+                setShowTemplateModal(true);
+              }}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 text-sm font-medium shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Create AMC Package
+            </button>
           </div>
 
-          <div className="p-6">
-            {templates.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <FileText className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                <p className="text-lg font-medium mb-2">No templates yet</p>
-                <p className="text-sm mb-4">Create AMC templates for GC, APT, VILLA to auto-populate when selecting properties</p>
-                <button
-                  onClick={() => {
-                    resetTemplateForm();
-                    resetForm();
-                    setShowTemplateModal(true);
-                  }}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
-                >
-                  Create Your First Template
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {templates.map(template => (
-                  <div key={template.templateId} className="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
-                            {template.propertyType}
+          {/* Package Cards */}
+          {templates.length === 0 ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500">
+              <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No AMC packages created yet. Click "Create AMC Package" to add one.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {templates.map(template => (
+                <div key={template.templateId} className="bg-white border border-gray-200 rounded-xl p-4 hover:border-purple-300 hover:shadow-md transition-all">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                          {template.propertyType}
+                        </span>
+                        {template.isDefault && (
+                          <span className="flex items-center gap-1 text-yellow-600 text-xs">
+                            <Star className="w-3 h-3 fill-current" />
+                            Default
                           </span>
-                          {template.isDefault && (
-                            <span className="flex items-center gap-1 text-yellow-600 text-xs">
-                              <Star className="w-3 h-3 fill-current" />
-                              Default
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="font-semibold text-gray-800 mt-2">{template.name}</h3>
+                        )}
                       </div>
-                    </div>
-                    
-                    <div className="text-sm text-gray-600 mb-3">
-                      <p>{template.services?.length || 0} services configured</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Updated: {new Date(template.updatedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEditTemplate(template)}
-                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-1"
-                      >
-                        <Edit className="w-3 h-3" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteTemplate(template.templateId)}
-                        className="px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                      <h3 className="font-semibold text-gray-800 mt-2">{template.name}</h3>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  
+                  <div className="text-sm text-gray-600 mb-3">
+                    <p>{template.services?.length || 0} services configured</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Updated: {new Date(template.updatedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEditTemplate(template)}
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-1"
+                    >
+                      <Edit className="w-3 h-3" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTemplate(template.templateId)}
+                      className="px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -813,17 +799,27 @@ const AMCPackageManager = ({ showToast }) => {
                       min="1"
                       value={service.frequencyCount}
                       onChange={(e) => updateServiceRow(index, 'frequencyCount', parseInt(e.target.value) || 1)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 text-center"
+                      disabled={service.frequencyType === 'Monthly'}
+                      className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 text-center ${
+                        service.frequencyType === 'Monthly' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                      }`}
                       placeholder="1"
                     />
                   </div>
                   <div className="col-span-2">
                     <select
                       value={service.frequencyType}
-                      onChange={(e) => updateServiceRow(index, 'frequencyType', e.target.value)}
+                      onChange={(e) => {
+                        updateServiceRow(index, 'frequencyType', e.target.value);
+                        // If Monthly is selected, set frequencyCount to 1
+                        if (e.target.value === 'Monthly') {
+                          updateServiceRow(index, 'frequencyCount', 1);
+                        }
+                      }}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200"
                     >
                       <option value="Monthly">Monthly</option>
+                      <option value="Months">Months</option>
                       <option value="Quarterly">Quarterly</option>
                       <option value="Half-Yearly">Half-Yearly</option>
                       <option value="Yearly">Yearly</option>
@@ -887,29 +883,42 @@ const AMCPackageManager = ({ showToast }) => {
               AMC Price Summary
             </h3>
             <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl p-6 text-white">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-3 gap-6">
                 {/* Services Summary */}
                 <div>
                   <p className="text-sm opacity-80 mb-1">Services Configured</p>
                   <p className="text-2xl font-bold">{amcForm.services.filter(s => s.name && s.rate).length}</p>
                 </div>
                 
-                {/* Total AMC Price */}
+                {/* Sub Total */}
                 <div className="bg-white/20 rounded-lg p-4">
-                  <p className="text-sm opacity-90 mb-1">Total AMC Price</p>
-                  <p className="text-3xl font-bold">₹{calculateSubTotal().toLocaleString()}</p>
+                  <p className="text-sm opacity-90 mb-1">Sub Total</p>
+                  <p className="text-2xl font-bold">₹{calculateSubTotal().toLocaleString()}</p>
                 </div>
+                
+                {/* GST */}
+                <div className="bg-white/20 rounded-lg p-4">
+                  <p className="text-sm opacity-90 mb-1">GST</p>
+                  <p className="text-2xl font-bold">₹{calculateGST().toLocaleString()}</p>
+                </div>
+              </div>
+              
+              {/* Total Price */}
+              <div className="mt-6 bg-white/30 rounded-lg p-4 flex justify-between items-center">
+                <p className="text-lg font-semibold">Total AMC Price (incl. GST)</p>
+                <p className="text-3xl font-bold">₹{calculateTotal().toLocaleString()}</p>
               </div>
               
               {/* Per Service Breakdown */}
               {amcForm.services.filter(s => s.name && s.rate).length > 0 && (
                 <div className="mt-4 pt-4 border-t border-white/20">
-                  <p className="text-xs opacity-80 mb-2">Service-wise Breakdown:</p>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-xs opacity-80 mb-2">Service-wise Price Breakdown:</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
                     {amcForm.services.filter(s => s.name && s.rate).map((service, idx) => (
-                      <span key={idx} className="px-2 py-1 bg-white/20 rounded text-xs">
-                        {service.name}: ₹{(parseFloat(service.rate) || 0).toLocaleString()}
-                      </span>
+                      <div key={idx} className="flex justify-between items-center px-2 py-1 bg-white/20 rounded">
+                        <span>{service.name} ({service.frequencyCount}x {service.frequencyType})</span>
+                        <span className="font-semibold">₹{calculateServicePrice(service).toLocaleString()}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -1042,7 +1051,7 @@ const AMCPackageManager = ({ showToast }) => {
           <div className="bg-white rounded-xl w-full max-w-lg p-6 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-800">
-                {editingTemplate ? 'Edit AMC Template' : 'Create AMC Template'}
+                {editingTemplate ? 'Edit AMC Package' : 'Create AMC Package'}
               </h3>
               <button
                 onClick={() => {
@@ -1071,13 +1080,13 @@ const AMCPackageManager = ({ showToast }) => {
                   ))}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  This template will auto-apply when selecting properties of this type
+                  This AMC package will auto-apply when selecting properties of this type
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Template Name <span className="text-red-500">*</span>
+                  Package Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1095,11 +1104,11 @@ const AMCPackageManager = ({ showToast }) => {
                 </label>
                 <div className="border border-gray-200 rounded-lg p-3 space-y-2 max-h-48 overflow-y-auto">
                   {amcForm.services.map((service, index) => (
-                    <div key={index} className="flex gap-2 items-center">
+                    <div key={index} className="grid grid-cols-5 gap-2 items-center">
                       <select
                         value={service.name}
                         onChange={(e) => updateServiceRow(index, 'name', e.target.value)}
-                        className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded"
+                        className="col-span-2 px-2 py-1.5 text-sm border border-gray-300 rounded"
                       >
                         <option value="">Select Service</option>
                         {services.map(s => (
@@ -1108,10 +1117,37 @@ const AMCPackageManager = ({ showToast }) => {
                       </select>
                       <input
                         type="number"
+                        min="1"
+                        value={service.frequencyCount}
+                        onChange={(e) => updateServiceRow(index, 'frequencyCount', parseInt(e.target.value) || 1)}
+                        disabled={service.frequencyType === 'Monthly'}
+                        className={`px-2 py-1.5 text-sm border border-gray-300 rounded text-center ${
+                          service.frequencyType === 'Monthly' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                        }`}
+                        placeholder="1"
+                      />
+                      <select
+                        value={service.frequencyType}
+                        onChange={(e) => {
+                          updateServiceRow(index, 'frequencyType', e.target.value);
+                          if (e.target.value === 'Monthly') {
+                            updateServiceRow(index, 'frequencyCount', 1);
+                          }
+                        }}
+                        className="px-2 py-1.5 text-sm border border-gray-300 rounded"
+                      >
+                        <option value="Monthly">Monthly</option>
+                        <option value="Months">Months</option>
+                        <option value="Quarterly">Quarterly</option>
+                        <option value="Half-Yearly">Half-Yearly</option>
+                        <option value="Yearly">Yearly</option>
+                      </select>
+                      <input
+                        type="number"
                         value={service.rate}
                         onChange={(e) => updateServiceRow(index, 'rate', e.target.value)}
                         placeholder="Rate"
-                        className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded"
                       />
                       <button
                         onClick={() => removeServiceRow(index)}
@@ -1139,11 +1175,11 @@ const AMCPackageManager = ({ showToast }) => {
                   onChange={(e) => setIsDefaultTemplate(e.target.checked)}
                   className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                 />
-                <span className="text-sm text-gray-700">Set as default template</span>
+                <span className="text-sm text-gray-700">Set as default package for this property type</span>
               </label>
 
               <div className="p-3 bg-purple-50 rounded-lg text-sm text-purple-700">
-                <p className="font-medium mb-1">Template Summary:</p>
+                <p className="font-medium mb-1">Package Summary:</p>
                 <ul className="list-disc list-inside text-xs space-y-1">
                   <li>Property Type: {templatePropertyType || 'Not selected'}</li>
                   <li>{amcForm.services.filter(s => s.name.trim()).length} service(s) configured</li>
@@ -1166,7 +1202,7 @@ const AMCPackageManager = ({ showToast }) => {
                 className="px-4 py-2 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700 flex items-center gap-2"
               >
                 <Save className="w-4 h-4" />
-                {editingTemplate ? 'Update Template' : 'Save Template'}
+                {editingTemplate ? 'Update Package' : 'Save Package'}
               </button>
             </div>
           </div>

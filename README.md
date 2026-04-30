@@ -218,9 +218,11 @@ The application is fully responsive and works on:
 
 ### AMC Package Manager Enhancements
 - **Property Type Selection**: Select GC, APT, VILLA, FLAT, or PLOT before creating AMC package
-- **AMC Templates**: Create reusable templates per property type
-- **Auto-Population**: Templates auto-apply when property type is selected
-- **Editable Templates**: Templates are not locked - can be modified anytime
+- **All AMC Packages**: Renamed from "AMC Templates" - create and manage AMC packages
+- **Auto-Population**: Packages auto-apply when property type is selected
+- **Flexible Editing**: AMC packages are fully editable - can be modified anytime
+- **Frequency Types**: Monthly, Months (custom), Quarterly, Half-Yearly, Yearly
+- **Price Summary**: Shows Sub Total, GST, and Total with service-wise breakdown
 
 ### Property Management Improvements
 - **AMC Status Column**: View AMC linkage directly in property table
@@ -233,6 +235,22 @@ The application is fully responsive and works on:
 ### Contact Auto-Population
 - Contact Name, Phone, and Email auto-populate from Property Management
 - Works for all property types (GC, APT, VILLA, FLAT, PLOT)
+
+### Employee Portal Redesign
+- **Modern Login UI**: Glassmorphism design with animated backgrounds
+- **Role-Based Access**: Four user roles - Admin, Manager, Supervisor, Executive
+- **User Management**: Full CRUD operations for managing users
+- **Demo Accounts**: Quick login options for testing different roles
+- **Responsive Design**: Works seamlessly on all devices
+
+### User Management System
+- **Default Roles**:
+  - **Admin**: Full system access (username: admin, password: admin123)
+  - **Manager**: Manage properties, vendors, employees (username: manager1, password: manager123)
+  - **Supervisor**: Supervise work orders, vendors (username: supervisor1, password: super123)
+  - **Executive**: Execute daily operations (username: executive1, password: exec123)
+- **Status Management**: Activate/deactivate users
+- **Flexible Addition**: Easily add new users of any role
 
 ## Future Features (Coming Soon)
 
