@@ -271,7 +271,7 @@ const AddVendor = ({ admin }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Zone - Custom text input with autocomplete */}
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -476,7 +476,7 @@ const AddVendor = ({ admin }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Name</label>
               <input
@@ -484,6 +484,16 @@ const AddVendor = ({ admin }) => {
                 value={formData.managerName}
                 onChange={(e) => updateField('managerName', e.target.value)}
                 placeholder="Manager name"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+              <input
+                type="email"
+                value={formData.managerEmail}
+                onChange={(e) => updateField('managerEmail', e.target.value)}
+                placeholder="manager@example.com"
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 focus:outline-none"
               />
             </div>
@@ -508,16 +518,6 @@ const AddVendor = ({ admin }) => {
                 />
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-              <input
-                type="email"
-                value={formData.managerEmail}
-                onChange={(e) => updateField('managerEmail', e.target.value)}
-                placeholder="manager@example.com"
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 focus:outline-none"
-              />
-            </div>
           </div>
         </div>
 
@@ -533,7 +533,7 @@ const AddVendor = ({ admin }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Name</label>
               <input
@@ -541,6 +541,16 @@ const AddVendor = ({ admin }) => {
                 value={formData.pocName}
                 onChange={(e) => updateField('pocName', e.target.value)}
                 placeholder="Contact person name"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-200 focus:border-rose-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+              <input
+                type="email"
+                value={formData.pocEmail}
+                onChange={(e) => updateField('pocEmail', e.target.value)}
+                placeholder="poc@example.com"
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-200 focus:border-rose-500 focus:outline-none"
               />
             </div>
@@ -564,16 +574,6 @@ const AddVendor = ({ admin }) => {
                   className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-200 focus:border-rose-500 focus:outline-none"
                 />
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-              <input
-                type="email"
-                value={formData.pocEmail}
-                onChange={(e) => updateField('pocEmail', e.target.value)}
-                placeholder="poc@example.com"
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-200 focus:border-rose-500 focus:outline-none"
-              />
             </div>
           </div>
         </div>

@@ -92,12 +92,18 @@ const startServer = async () => {
   if (dbConnected) {
     // Initialize onboarding tables
     await initOnboardingTables();
+    console.log('✅ Database mode: Connected');
+  } else {
+    console.log('⚠️ Database mode: Demo (no MySQL connection)');
+    console.log('   To enable database, update .env with valid MySQL credentials');
   }
 
   app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📁 Uploads directory: ${uploadsDir}`);
+    console.log(`🌐 CORS origins: localhost:3000, 3001, 3002, 3003, 5173`);
   });
 };
 
 startServer();
+

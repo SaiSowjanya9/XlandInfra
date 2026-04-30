@@ -12,7 +12,22 @@ const dbConfig = {
   queueLimit: 0
 };
 
-let pool = mysql.createPool(dbConfig);
+let pool = null;
+let isDbConnected = false;
+
+// Initialize pool with error handling
+const initPool = () => {
+  try {
+    pool = mysql.createPool(dbConfig);
+    return pool;
+  } catch (error) {
+    console.error('❌ Failed to create database pool:', error.message);
+    return null;
+  }
+};
+
+// Initialize on load
+initPool();
 
 // Ensure database exists and create it if not
 const ensureDatabase = async () => {
@@ -41,21 +56,40 @@ const ensureDatabase = async () => {
 
 const testConnection = async () => {
   try {
+    if (!pool) {
+      console.log('⚠️ Database pool not initialized - running in demo mode');
+      isDbConnected = false;
+      return false;
+    }
+    
     // First ensure the database exists
-    await ensureDatabase();
+    const dbExists = await ensureDatabase();
+    if (!dbExists) {
+      console.log('⚠️ Database not available - running in demo mode');
+      isDbConnected = false;
+      return false;
+    }
     
     const connection = await pool.getConnection();
     console.log('✅ Database connected successfully');
     connection.release();
+    isDbConnected = true;
     return true;
   } catch (error) {
     console.error('❌ Database connection failed:', error.message);
+    console.log('⚠️ Server will continue in demo mode without database');
+    isDbConnected = false;
     return false;
   }
 };
 
 // Initialize onboarding tables if they don't exist
 const initOnboardingTables = async () => {
+  if (!pool || !isDbConnected) {
+    console.log('⚠️ Skipping table initialization - database not connected');
+    return false;
+  }
+  
   try {
     const conn = await pool.getConnection();
     
@@ -313,7 +347,8 @@ const initOnboardingTables = async () => {
 
 // Export pool getter to ensure we always get the current pool instance
 module.exports = { 
-  get pool() { return pool; }, 
+  get pool() { return pool; },
+  get isDbConnected() { return isDbConnected; },
   testConnection, 
   initOnboardingTables 
 };
