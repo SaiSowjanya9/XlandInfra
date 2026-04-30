@@ -21,7 +21,8 @@ import {
   List,
   Package,
   PlusCircle,
-  Archive
+  Archive,
+  Shield
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -47,6 +48,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     { path: '/employee/customer-submissions', icon: Building2, label: 'Property Management' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
+    { path: '/employee/user-management', icon: Shield, label: 'User Management' },
   ];
 
   const [estimatesOpen, setEstimatesOpen] = useState(

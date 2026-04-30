@@ -60,36 +60,36 @@ const ENTRY_TYPES = [
     id: 'GC', 
     name: 'Gated Community', 
     icon: Building2, 
-    color: 'bg-blue-500',
-    description: 'For gated communities with multiple blocks and units'
+    color: 'bg-gradient-to-br from-blue-500 to-blue-600',
+    description: 'Multiple blocks & units'
   },
   { 
     id: 'APT', 
     name: 'Apartment', 
     icon: Home, 
-    color: 'bg-green-500',
-    description: 'For apartment buildings with optional block info'
+    color: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+    description: 'Building with units'
   },
   { 
     id: 'VILLA', 
-    name: 'Villas', 
+    name: 'Villa', 
     icon: TreePine, 
-    color: 'bg-amber-500',
-    description: 'For individual villa properties'
-  },
-  { 
-    id: 'PLOT', 
-    name: 'Plots', 
-    icon: Map, 
-    color: 'bg-rose-500',
-    description: 'For residential or commercial plot numbers'
+    color: 'bg-gradient-to-br from-amber-500 to-amber-600',
+    description: 'Individual villa'
   },
   { 
     id: 'FLAT', 
-    name: 'Flats', 
+    name: 'Flat', 
     icon: LayoutGrid, 
-    color: 'bg-cyan-500',
-    description: 'For individual flat properties'
+    color: 'bg-gradient-to-br from-cyan-500 to-cyan-600',
+    description: 'Individual flat'
+  },
+  { 
+    id: 'PLOT', 
+    name: 'Plot', 
+    icon: Map, 
+    color: 'bg-gradient-to-br from-rose-500 to-rose-600',
+    description: 'Residential/commercial plot'
   }
 ];
 
@@ -799,23 +799,20 @@ const CreateCustomer = ({ admin }) => {
             <p className="text-gray-500">Choose the type of customer data you want to enter</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
+          <div className="grid grid-cols-5 gap-4">
             {ENTRY_TYPES.map((type) => {
               const Icon = type.icon;
               return (
                 <button
                   key={type.id}
                   onClick={() => setSelectedEntryType(type.id)}
-                  className="group relative p-6 bg-white border border-gray-200 rounded-2xl hover:border-transparent hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 text-center overflow-hidden"
+                  className="group relative p-5 bg-white border-2 border-gray-100 rounded-xl hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100/50 transition-all duration-300 text-center"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="relative z-10">
-                    <div className={`w-16 h-16 ${type.color} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg`}>
-                      <Icon className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-base font-semibold text-gray-900 mb-1.5">{type.name}</h3>
-                    <p className="text-xs text-gray-500 leading-relaxed">{type.description}</p>
+                  <div className={`w-14 h-14 ${type.color} rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform duration-300 shadow-md`}>
+                    <Icon className="w-7 h-7 text-white" />
                   </div>
+                  <h3 className="text-sm font-semibold text-gray-800 whitespace-nowrap">{type.name}</h3>
+                  <p className="text-[11px] text-gray-500 mt-1">{type.description}</p>
                 </button>
               );
             })}
