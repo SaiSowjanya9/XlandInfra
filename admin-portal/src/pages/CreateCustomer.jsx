@@ -15,7 +15,7 @@ import {
   Layers,
   Grid3X3,
   Lock,
-  Briefcase,
+  Store,
   Truck,
   Map,
   AlertCircle,
@@ -166,7 +166,7 @@ const CATEGORIES = [
   {
     id: 'commercial',
     name: 'Commercial',
-    icon: Briefcase,
+    icon: Store,
     color: 'bg-blue-500',
     description: 'Commercial properties and office spaces',
     locked: true

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { 
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
-  Eye, ChevronDown, AlertCircle, Bell, Clock, Briefcase, Lock, 
-  ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, UserPlus, Truck, Users,
-  FileText
+  Eye, ChevronDown, AlertCircle, Bell, Clock, Hammer, Lock, 
+  ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, UserPlus, Users,
+  FileText, Store
 } from 'lucide-react';
 import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
 import { getVendors } from '../utils/vendorStore';
@@ -29,7 +29,7 @@ const CUSTOMER_CATEGORIES = [
   {
     id: 'commercial',
     name: 'Commercial',
-    icon: Briefcase,
+    icon: Store,
     color: 'bg-blue-500',
     description: 'View commercial customers and office spaces',
     locked: true
@@ -698,7 +698,7 @@ const CustomerSubmissions = () => {
                             className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
                             title="Assign Vendor"
                           >
-                            <Truck className="w-4 h-4" />
+                            <Hammer className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => openAssignEmployeeModal(property)}
@@ -1087,7 +1087,7 @@ const CustomerSubmissions = () => {
             <div className="overflow-y-auto max-h-[400px] p-4">
               {filteredVendors.length === 0 ? (
                 <div className="py-8 text-center">
-                  <Truck className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                  <Hammer className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                   <p className="text-gray-500 text-sm">No vendors found</p>
                   <p className="text-gray-400 text-xs mt-1">Add vendors from Vendor Management</p>
                 </div>
@@ -1104,7 +1104,7 @@ const CustomerSubmissions = () => {
                       }`}
                     >
                       <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Truck className="w-5 h-5 text-amber-600" />
+                        <Hammer className="w-5 h-5 text-amber-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 truncate">{vendor.ownerName}</p>

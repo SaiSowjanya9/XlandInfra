@@ -4,11 +4,10 @@ import {
   Building2,
   FileInput,
   LogOut,
-  Briefcase,
+  Hammer,
   Menu,
   X,
   ClipboardList,
-  Truck,
   ChevronDown,
   UserPlus,
   Store,
@@ -18,6 +17,7 @@ import {
   FileText,
   PanelLeft,
   PanelLeftClose,
+  Briefcase,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -49,7 +49,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
   const vendorSubItems = [
     { path: '/employee/add-vendor', icon: UserPlus, label: 'Add Vendor' },
-    { path: '/employee/vendor-details', icon: Truck, label: 'Vendor Details' },
+    { path: '/employee/vendor-details', icon: Hammer, label: 'Vendor Details' },
     { path: '/employee/assigned-vendors', icon: ClipboardCheck, label: 'Assigned Vendors' },
   ];
 
