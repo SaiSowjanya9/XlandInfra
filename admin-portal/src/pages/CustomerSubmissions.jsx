@@ -3,9 +3,10 @@ import {
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Hammer, Lock, 
   ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, UserPlus, Users,
-  FileText, Store
+  FileText, Store, Package
 } from 'lucide-react';
 import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
+import { getZoneNames, createZone } from '../utils/zoneStore';
 import { getVendors } from '../utils/vendorStore';
 import { getEmployees, getEmployeesByZone } from '../utils/employeeStore';
 import { 
@@ -13,7 +14,7 @@ import {
   assignEmployeeToProperty,
   getPropertyAssignments 
 } from '../utils/assignmentStore';
-import { getEstimatesByPropertyId } from '../utils/estimateStore';
+import { getEstimatesByPropertyId, getAMCPackageByPropertyId } from '../utils/estimateStore';
 import * as XLSX from 'xlsx';
 
 // Category options for Customer Submissions (same as Create Customer)
@@ -80,12 +81,27 @@ const CustomerSubmissions = () => {
   const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
   const [propertyAssignments, setPropertyAssignments] = useState({});
   const [propertyEstimates, setPropertyEstimates] = useState([]);
+  const [viewAMCDetails, setViewAMCDetails] = useState(null); // AMC package details modal
+  const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
 
   // Load properties from backend API and notifications from localStorage
   const loadData = async () => {
     const props = await getProperties(statusFilter);
     setProperties(props);
     setNotifications(getNotifications());
+    
+    // Sync zones from properties to zoneStore for Zone Assignment
+    // This ensures any zone from Property Management appears in Add Employee zone assignment
+    const existingZones = getZoneNames();
+    props.forEach(prop => {
+      if (prop.zone && prop.zone.trim()) {
+        const zoneExists = existingZones.some(z => z.toLowerCase() === prop.zone.trim().toLowerCase());
+        if (!zoneExists) {
+          createZone(prop.zone.trim());
+          existingZones.push(prop.zone.trim()); // Add to local array to avoid duplicates in same batch
+        }
+      }
+    });
   };
 
   useEffect(() => {
@@ -623,6 +639,7 @@ const CustomerSubmissions = () => {
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Address</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">City</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Contacts</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">AMC</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created By</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Status</th>
@@ -668,6 +685,25 @@ const CustomerSubmissions = () => {
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
                         {property.contacts?.length || 0}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {(() => {
+                          const amcPackage = getAMCPackageByPropertyId(property.propertyId);
+                          return amcPackage ? (
+                            <button
+                              onClick={() => setViewAMCDetails({ property, amcPackage })}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors cursor-pointer"
+                              title="Click to view AMC details"
+                            >
+                              <Package className="w-3 h-3" />
+                              View AMC
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
+                              None
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         Manager
@@ -1221,6 +1257,189 @@ const CustomerSubmissions = () => {
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Assign Employee
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AMC Details Modal */}
+      {viewAMCDetails && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Package className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">AMC Package Details</h3>
+                    <p className="text-sm text-indigo-100">
+                      {viewAMCDetails.amcPackage.packageId}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setViewAMCDetails(null)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Property Info Section */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  Property Information
+                </h4>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Property ID</p>
+                      <p className="font-medium text-gray-900">{viewAMCDetails.property.propertyId}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Property Name</p>
+                      <p className="font-medium text-gray-900">{viewAMCDetails.property.name || viewAMCDetails.property.communityName || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Type</p>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${TYPE_STYLES[viewAMCDetails.property.entryType]?.badge || 'bg-gray-100 text-gray-700'}`}>
+                        {TYPE_LABELS[viewAMCDetails.property.entryType] || viewAMCDetails.property.entryType}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Zone</p>
+                      <p className="font-medium text-gray-900">{viewAMCDetails.property.zone || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Division</p>
+                      <p className="font-medium text-gray-900">{viewAMCDetails.property.division || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                      <p className="font-medium text-gray-900">{viewAMCDetails.property.totalUnits || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* AMC Package Summary */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Package Summary
+                </h4>
+                <div className="bg-indigo-50 rounded-lg p-4">
+                  <div className="grid grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-indigo-600 mb-1">Package ID</p>
+                      <p className="font-mono text-sm font-medium text-indigo-900">{viewAMCDetails.amcPackage.packageId}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-indigo-600 mb-1">Billing Duration</p>
+                      <p className="font-medium text-indigo-900 capitalize">{viewAMCDetails.amcPackage.billingDuration || 'Monthly'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-indigo-600 mb-1">Status</p>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                        viewAMCDetails.amcPackage.status === 'active' 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {viewAMCDetails.amcPackage.status || 'Active'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-indigo-600 mb-1">Created</p>
+                      <p className="font-medium text-indigo-900 text-sm">
+                        {viewAMCDetails.amcPackage.createdAt 
+                          ? new Date(viewAMCDetails.amcPackage.createdAt).toLocaleDateString() 
+                          : '-'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Services Table */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Layers className="w-4 h-4" />
+                  Services ({viewAMCDetails.amcPackage.services?.length || 0})
+                </h4>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">#</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Service Name</th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-600">Frequency</th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-600">Type</th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-600">Rate (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {viewAMCDetails.amcPackage.services?.map((service, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
+                          <td className="px-4 py-3 font-medium text-gray-900">{service.name}</td>
+                          <td className="px-4 py-3 text-center text-gray-700">
+                            {service.frequencyCount || service.frequency || 1}x
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                              {service.frequencyType || 'Monthly'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-gray-900">
+                            ₹{parseFloat(service.rate || 0).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Pricing Summary */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Pricing Summary</h4>
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-gray-600">Sub Total</span>
+                    <span className="font-medium text-gray-900">
+                      ₹{(viewAMCDetails.amcPackage.subTotal || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-gray-600">GST (2%)</span>
+                    <span className="font-medium text-gray-900">
+                      ₹{(viewAMCDetails.amcPackage.gst || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="border-t border-indigo-200 pt-2 mt-2 flex justify-between items-center">
+                    <span className="font-semibold text-indigo-900">Total Amount</span>
+                    <span className="text-xl font-bold text-indigo-600">
+                      ₹{(viewAMCDetails.amcPackage.totalPrice || 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setViewAMCDetails(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>

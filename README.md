@@ -1,16 +1,33 @@
-# Customer Portal - Work Order Management System
+# Customer Portal - Property Management System
 
-A full-stack web application for managing customer work orders, built with React, Node.js, and MySQL.
+A comprehensive full-stack web application for property management, work orders, vendor management, and AMC (Annual Maintenance Contract) packages, built with React, Node.js, and MySQL.
 
 ## Features
 
+### Customer Portal
 - **Work Order Management**: Submit maintenance and repair requests with categories and subcategories
 - **18 Service Categories**: Including Lifts, AC, Plumbing, Electrical, Appliances, and more
 - **File Attachments**: Upload images from camera roll, take photos, or attach PDFs
 - **Permission to Enter**: Grant access for service personnel when you're unavailable
 - **Pet Notification**: Alert service personnel about pets in the premises
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Modern UI**: Built with TailwindCSS for a clean, professional look
+
+### Admin Portal
+- **Property Management**: Manage properties (GC, APT, VILLA, FLAT, PLOT) with full CRUD operations
+- **Vendor Management**: Track and manage vendors with service assignments
+- **Employee Management**: Manage employees with zone-based assignments
+- **Estimates Module**:
+  - **Create Estimate**: Property-based and direct estimates with auto-population
+  - **AMC Package Manager**: Create and manage AMC packages with reusable templates
+  - **AMC Templates**: Create templates per property type (AMC-GC, AMC-APT, AMC-VILLA) that auto-populate
+  - **Add-ons**: Additional service management
+  - **All Estimates**: View and manage all estimates
+  - **Archived**: Access archived estimates
+- **Contact Auto-Population**: Contact name, phone, and email auto-populate from Property Management
+- **AMC Integration**: View AMC packages directly from Property Management table
+
+### Responsive Design
+- Works on desktop, tablet, and mobile devices
+- Modern UI built with TailwindCSS
 
 ## Tech Stack
 
@@ -31,7 +48,7 @@ A full-stack web application for managing customer work orders, built with React
 
 ```
 customer-portal/
-├── frontend/                 # React frontend application
+├── frontend/                 # Customer-facing React application
 │   ├── src/
 │   │   ├── components/       # Reusable UI components
 │   │   ├── pages/            # Page components
@@ -41,9 +58,29 @@ customer-portal/
 │   │   └── main.jsx          # Entry point
 │   ├── public/               # Static assets
 │   └── package.json
+├── admin-portal/             # Admin React application
+│   ├── src/
+│   │   ├── components/       # Admin UI components
+│   │   │   ├── estimates/    # Estimate components (AMC, Create, etc.)
+│   │   │   ├── EmployeeLayout.jsx
+│   │   │   └── Layout.jsx
+│   │   ├── pages/            # Admin pages
+│   │   │   ├── CustomerSubmissions.jsx  # Property Management
+│   │   │   ├── CreateCustomer.jsx       # Add Property
+│   │   │   ├── Estimates.jsx            # Estimates Module
+│   │   │   └── ...
+│   │   ├── utils/            # Utility stores
+│   │   │   ├── estimateStore.js   # AMC & Estimate management
+│   │   │   ├── propertyStore.js   # Property CRUD
+│   │   │   ├── vendorStore.js     # Vendor management
+│   │   │   └── employeeStore.js   # Employee management
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   └── package.json
 ├── backend/                  # Node.js backend API
 │   ├── config/               # Configuration files
 │   ├── routes/               # API routes
+│   │   └── onboarding.js     # Property onboarding API
 │   ├── database/             # SQL schema
 │   ├── uploads/              # Uploaded files directory
 │   ├── server.js             # Express server
@@ -98,12 +135,19 @@ customer-portal/
    ```
    The API will be available at `http://localhost:5000`
 
-2. **Start the frontend development server**
+2. **Start the customer frontend**
    ```bash
    cd frontend
    npm run dev
    ```
-   The app will be available at `http://localhost:3000`
+   The customer app will be available at `http://localhost:3000`
+
+3. **Start the admin portal**
+   ```bash
+   cd admin-portal
+   npm run dev
+   ```
+   The admin portal will be available at `http://localhost:3002`
 
 ## API Endpoints
 
@@ -117,6 +161,17 @@ customer-portal/
 - `GET /api/work-orders` - Get all work orders
 - `GET /api/work-orders/:id` - Get a specific work order
 - `PATCH /api/work-orders/:id/status` - Update work order status
+
+### Properties (Onboarding)
+- `POST /api/onboarding` - Create a new property
+- `GET /api/onboarding` - Get all properties
+- `GET /api/onboarding/:id` - Get a specific property
+- `DELETE /api/onboarding/:id` - Delete a property
+
+### AMC Packages (localStorage)
+- AMC packages are managed via localStorage in the admin portal
+- Templates can be created per property type (GC, APT, VILLA, FLAT, PLOT)
+- Auto-populate services when property type is selected
 
 ### Health Check
 - `GET /api/health` - Check API status
@@ -159,11 +214,33 @@ The application is fully responsive and works on:
 - Tablets
 - Mobile phones
 
+## Recent Updates (April 2026)
+
+### AMC Package Manager Enhancements
+- **Property Type Selection**: Select GC, APT, VILLA, FLAT, or PLOT before creating AMC package
+- **AMC Templates**: Create reusable templates per property type
+- **Auto-Population**: Templates auto-apply when property type is selected
+- **Editable Templates**: Templates are not locked - can be modified anytime
+
+### Property Management Improvements
+- **AMC Status Column**: View AMC linkage directly in property table
+- **AMC Details Modal**: Click "View AMC" to see full package details including:
+  - Property information
+  - Package summary
+  - Services list with frequency and rates
+  - Pricing breakdown (subtotal, GST, total)
+
+### Contact Auto-Population
+- Contact Name, Phone, and Email auto-populate from Property Management
+- Works for all property types (GC, APT, VILLA, FLAT, PLOT)
+
 ## Future Features (Coming Soon)
 
 - **Schedule**: View and manage appointments
 - **Payment**: Make payments and view billing history
 - **Live Chat**: Real-time support
+- **PDF Export**: Export AMC packages and estimates to PDF
+- **Email Integration**: Send estimates directly to customers
 
 ## License
 

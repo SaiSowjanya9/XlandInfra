@@ -22,6 +22,7 @@ import {
   deleteAMCPackage,
   getServices,
   addService,
+  getAMCPackageByPropertyId,
   FREQUENCY_TYPES
 } from '../utils/estimateStore';
 
@@ -34,7 +35,7 @@ const PROPERTY_ICONS = {
   Commercial: Briefcase
 };
 
-const GST_RATE = 0.02; // 2% GST as default
+const GST_RATE = 0.02; // 2% GST - calculated in backend, not shown in UI
 
 const CustomerContact = ({ user }) => {
   const [amcPackages, setAmcPackages] = useState([]);
@@ -42,7 +43,7 @@ const CustomerContact = ({ user }) => {
   const [properties, setProperties] = useState([]);
   const [editingAMC, setEditingAMC] = useState(null);
   const [toast, setToast] = useState(null);
-  const [lockedEstimate, setLockedEstimate] = useState(null);
+  const [lockedServices, setLockedServices] = useState([]); // Services from existing package (locked/read-only)
   
   const [amcForm, setAMCForm] = useState({
     propertyId: '',
@@ -50,7 +51,9 @@ const CustomerContact = ({ user }) => {
     blockTower: '',
     flatUnit: '',
     customerName: '',
-    services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
+    customerPhone: '',
+    customerEmail: '',
+    services: [] // Only new/additional services (editable)
   });
 
   useEffect(() => {
@@ -76,9 +79,14 @@ const CustomerContact = ({ user }) => {
   };
 
   const calculateSubTotal = () => {
-    return amcForm.services.reduce((sum, service) => {
+    // Include both locked services and new services
+    const lockedTotal = lockedServices.reduce((sum, service) => {
       return sum + calculateServiceTotal(service);
     }, 0);
+    const newTotal = amcForm.services.reduce((sum, service) => {
+      return sum + calculateServiceTotal(service);
+    }, 0);
+    return lockedTotal + newTotal;
   };
 
   const calculateGST = () => {
@@ -97,9 +105,12 @@ const CustomerContact = ({ user }) => {
         propertyName: '',
         blockTower: '',
         flatUnit: '',
-        customerName: ''
+        customerName: '',
+        customerPhone: '',
+        customerEmail: '',
+        services: []
       });
-      setLockedEstimate(null);
+      setLockedServices([]);
       return;
     }
 
@@ -130,8 +141,24 @@ const CustomerContact = ({ user }) => {
         flatUnit = totalUnits > 0 ? `${totalUnits} Units` : '';
       }
       
-      // Get customer name from association contacts
-      const customerName = property.associationContacts?.[0]?.name || '';
+      // Get customer details from association contacts
+      const primaryContact = property.associationContacts?.[0] || {};
+      const customerName = primaryContact.name || '';
+      const customerPhone = primaryContact.phone || primaryContact.mobile || '';
+      const customerEmail = primaryContact.email || '';
+      
+      // Check for existing AMC package for this property
+      const existingPackage = getAMCPackageByPropertyId(propertyId);
+      
+      if (existingPackage && existingPackage.services && existingPackage.services.length > 0) {
+        // Set locked services from existing package
+        setLockedServices(existingPackage.services.map(s => ({
+          ...s,
+          isLocked: true
+        })));
+      } else {
+        setLockedServices([]);
+      }
       
       setAMCForm({
         ...amcForm,
@@ -139,22 +166,14 @@ const CustomerContact = ({ user }) => {
         propertyName: property.communityName || '',
         blockTower,
         flatUnit,
-        customerName
+        customerName,
+        customerPhone,
+        customerEmail,
+        services: [] // Start with empty new services
       });
-
-      // Check for existing locked estimate for this property
-      const existingEstimate = amcPackages.find(
-        pkg => pkg.propertyId === propertyId && pkg.status === 'generated'
-      );
-      
-      if (existingEstimate) {
-        setLockedEstimate(existingEstimate);
-      } else {
-        setLockedEstimate(null);
-      }
     } else {
-      setAMCForm({ ...amcForm, propertyId });
-      setLockedEstimate(null);
+      setAMCForm({ ...amcForm, propertyId, services: [] });
+      setLockedServices([]);
     }
   };
 
@@ -164,15 +183,18 @@ const CustomerContact = ({ user }) => {
       return;
     }
 
-    const validServices = amcForm.services.filter(s => s.name.trim() && s.price);
-    if (validServices.length === 0) {
+    // Combine locked services with new services
+    const newValidServices = amcForm.services.filter(s => s.name && s.name.trim() && s.price);
+    const allServices = [...lockedServices, ...newValidServices];
+    
+    if (allServices.length === 0) {
       showToast('At least one service with price is required', 'error');
       return;
     }
 
     const packageData = {
       ...amcForm,
-      services: validServices,
+      services: allServices,
       subTotal: calculateSubTotal(),
       gst: calculateGST(),
       totalPrice: calculateTotal(),
@@ -200,28 +222,30 @@ const CustomerContact = ({ user }) => {
       blockTower: '',
       flatUnit: '',
       customerName: '',
-      services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
+      customerPhone: '',
+      customerEmail: '',
+      services: []
     });
     setEditingAMC(null);
-    setLockedEstimate(null);
+    setLockedServices([]);
   };
 
   const handleEditAMC = (pkg) => {
     setEditingAMC(pkg);
+    // When editing, all services become locked (from saved package)
+    const savedServices = pkg.services || [];
+    setLockedServices(savedServices.map(s => ({ ...s, isLocked: true })));
+    
     setAMCForm({
       propertyId: pkg.propertyId || '',
       propertyName: pkg.propertyName || '',
       blockTower: pkg.blockTower || '',
       flatUnit: pkg.flatUnit || '',
       customerName: pkg.customerName || '',
-      services: pkg.services || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
+      customerPhone: pkg.customerPhone || '',
+      customerEmail: pkg.customerEmail || '',
+      services: [] // Start with empty new services when editing
     });
-    
-    // Check for locked estimate
-    const existingEstimate = amcPackages.find(
-      p => p.propertyId === pkg.propertyId && p.status === 'generated' && p.packageId !== pkg.packageId
-    );
-    setLockedEstimate(existingEstimate || null);
   };
 
   const handleDeleteAMC = (packageId) => {
@@ -280,16 +304,17 @@ const CustomerContact = ({ user }) => {
         {/* AMC Form */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm mb-6">
           {/* Estimate Details Header */}
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800">AMC Estimate Details</h3>
+          <div className="px-6 py-3 bg-blue-600">
+            <h3 className="text-base font-semibold text-white">Estimate Details</h3>
           </div>
           
           <div className="px-6 py-4">
+            {/* First Row - Property Details */}
             <div className="grid grid-cols-5 gap-4 mb-4">
               {/* Property ID */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Prop ID <span className="text-red-500">*</span>
+                  Property ID <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <select
@@ -306,104 +331,185 @@ const CustomerContact = ({ user }) => {
                 </div>
               </div>
               
-              {/* Property Name - Auto-filled */}
+              {/* Property Name - Auto-filled & Locked */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label>
                 <input
                   type="text"
                   value={amcForm.propertyName}
                   readOnly
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
                   placeholder="Auto-filled"
                 />
               </div>
               
-              {/* Block / Tower - Auto-filled */}
+              {/* Block / Tower - Auto-filled & Locked */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Block / Tower</label>
                 <input
                   type="text"
                   value={amcForm.blockTower}
                   readOnly
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
                   placeholder="Auto-filled"
                 />
               </div>
               
-              {/* Flat / Unit No. - Auto-filled */}
+              {/* Flat / Unit No. - Auto-filled & Locked */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Flat / Unit No.</label>
                 <input
                   type="text"
                   value={amcForm.flatUnit}
                   readOnly
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
                   placeholder="Auto-filled"
                 />
               </div>
               
-              {/* Customer Name - Auto-filled */}
+              {/* Customer Name - Auto-filled & Locked */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Customer Name</label>
                 <input
                   type="text"
                   value={amcForm.customerName}
                   readOnly
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                  placeholder="Auto-filled"
+                />
+              </div>
+              
+            </div>
+
+            {/* Second Row - Contact Details (Auto-filled & Locked) */}
+            <div className="grid grid-cols-5 gap-4 mb-4">
+              {/* Phone - Auto-filled & Locked */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                <input
+                  type="text"
+                  value={amcForm.customerPhone}
+                  readOnly
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                  placeholder="Auto-filled"
+                />
+              </div>
+              
+              {/* Email - Auto-filled & Locked */}
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                <input
+                  type="text"
+                  value={amcForm.customerEmail}
+                  readOnly
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
                   placeholder="Auto-filled"
                 />
               </div>
             </div>
 
-            {/* Show locked estimate info if available */}
-            {lockedEstimate && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            {/* Locked Estimate Info */}
+            {lockedServices.length > 0 && (
+              <div className="mt-2 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                 <div className="flex items-center gap-2 text-blue-700">
                   <Lock className="w-4 h-4" />
-                  <span className="text-sm font-medium">Locked Estimate Found</span>
+                  <span className="text-sm font-medium">Existing Package Services (Locked)</span>
                 </div>
                 <p className="text-xs text-blue-600 mt-1">
-                  Estimate ID: {lockedEstimate.packageId} | Total: ₹{(lockedEstimate.totalPrice || 0).toLocaleString()} | 
-                  Services: {lockedEstimate.services?.length || 0}
-                </p>
-                <p className="text-xs text-blue-500 mt-1">
-                  The form has been pre-filled with the locked estimate details.
+                  {lockedServices.length} service(s) from existing package are shown below as locked. Use "Add Service" to add additional services.
                 </p>
               </div>
             )}
           </div>
 
           {/* Services Section */}
-          <div className="px-6 py-4 border-t border-gray-200">
-            <h3 className="text-sm font-semibold text-blue-600 mb-4">Services</h3>
+          <div className="border-t border-gray-200">
+            <div className="px-6 py-3 bg-blue-600">
+              <h3 className="text-base font-semibold text-white">AMC Services</h3>
+            </div>
+            <div className="px-6 py-4">
             
             {/* Table Header */}
-            <div className="grid grid-cols-12 gap-2 mb-2 px-2">
-              <div className="col-span-1 text-xs font-medium text-gray-600">#</div>
-              <div className="col-span-5 text-xs font-medium text-gray-600">
+            <div className="grid grid-cols-12 gap-2 mb-2 px-2 py-2 bg-gray-100 rounded-t-md">
+              <div className="col-span-1 text-xs font-semibold text-gray-700">#</div>
+              <div className="col-span-3 text-xs font-semibold text-gray-700">
                 Service <span className="text-red-500">*</span>
               </div>
-              <div className="col-span-1 text-xs font-medium text-gray-600">
-                Frequency
+              <div className="col-span-2 text-xs font-semibold text-gray-700">
+                Frequency (Visits) <span className="text-red-500">*</span>
               </div>
-              <div className="col-span-2 text-xs font-medium text-gray-600">
-                Frequency Type
+              <div className="col-span-2 text-xs font-semibold text-gray-700">
+                Frequency Type <span className="text-red-500">*</span>
               </div>
-              <div className="col-span-2 text-xs font-medium text-gray-600">
-                Price (₹)
+              <div className="col-span-2 text-xs font-semibold text-gray-700">
+                Price (₹) <span className="text-red-500">*</span>
               </div>
-              <div className="col-span-1 text-xs font-medium text-gray-600">Total</div>
-              <div className="col-span-0"></div>
+              <div className="col-span-1 text-xs font-semibold text-gray-700">Total (₹)</div>
+              <div className="col-span-1 text-xs font-semibold text-gray-700 text-center">Action</div>
             </div>
 
             {/* Service Rows */}
-            <div className="space-y-2">
-              {amcForm.services.map((service, index) => (
-                <div key={index} className="grid grid-cols-12 gap-2 items-center bg-gray-50 rounded-md p-2">
+            <div className="border border-gray-200 rounded-b-md divide-y divide-gray-100">
+              {/* Locked Services (from existing package) */}
+              {lockedServices.map((service, index) => (
+                <div key={`locked-${index}`} className="grid grid-cols-12 gap-2 items-center p-3 bg-blue-50">
                   <div className="col-span-1 text-sm text-gray-600 font-medium pl-2">
                     {index + 1}
                   </div>
-                  <div className="col-span-5">
+                  <div className="col-span-3">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-3 h-3 text-blue-500" />
+                      <input
+                        type="text"
+                        value={service.name}
+                        readOnly
+                        className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={service.frequency}
+                        readOnly
+                        className="w-16 px-2 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 text-center cursor-not-allowed"
+                      />
+                      <span className="text-xs text-gray-500">(Visits per Drop Down)</span>
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <input
+                      type="text"
+                      value={service.frequencyType}
+                      readOnly
+                      className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <input
+                      type="text"
+                      value={service.price}
+                      readOnly
+                      className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div className="col-span-1 text-sm text-gray-800 font-medium">
+                    {calculateServiceTotal(service).toLocaleString()}
+                  </div>
+                  <div className="col-span-1 flex justify-center">
+                    <Lock className="w-4 h-4 text-gray-400" title="Locked service" />
+                  </div>
+                </div>
+              ))}
+              
+              {/* New Editable Services */}
+              {amcForm.services.map((service, index) => (
+                <div key={`new-${index}`} className="grid grid-cols-12 gap-2 items-center p-3 bg-white hover:bg-gray-50">
+                  <div className="col-span-1 text-sm text-gray-600 font-medium pl-2">
+                    {lockedServices.length + index + 1}
+                  </div>
+                  <div className="col-span-3">
                     <select
                       value={service.name}
                       onChange={(e) => {
@@ -426,14 +532,17 @@ const CustomerContact = ({ user }) => {
                       <option value="__add_new__">+ Add New Service</option>
                     </select>
                   </div>
-                  <div className="col-span-1">
-                    <input
-                      type="number"
-                      min="1"
-                      value={service.frequency}
-                      onChange={(e) => updateServiceRow(index, 'frequency', parseInt(e.target.value) || 1)}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 text-center"
-                    />
+                  <div className="col-span-2">
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="1"
+                        value={service.frequency}
+                        onChange={(e) => updateServiceRow(index, 'frequency', parseInt(e.target.value) || 1)}
+                        className="w-16 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 text-center"
+                      />
+                      <span className="text-xs text-gray-500">(Visits per Drop Down)</span>
+                    </div>
                   </div>
                   <div className="col-span-2">
                     <select
@@ -459,9 +568,25 @@ const CustomerContact = ({ user }) => {
                   <div className="col-span-1 text-sm text-gray-800 font-medium">
                     {calculateServiceTotal(service).toLocaleString()}
                   </div>
-                  <div className="col-span-0"></div>
+                  <div className="col-span-1 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => removeServiceRow(index)}
+                      className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                      title="Remove service"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
+              
+              {/* Empty state when no services */}
+              {lockedServices.length === 0 && amcForm.services.length === 0 && (
+                <div className="p-6 text-center text-gray-500">
+                  <p className="text-sm">No services added yet. Click "Add Service" to add a new service.</p>
+                </div>
+              )}
             </div>
 
             {/* Add Service Button */}
@@ -473,24 +598,17 @@ const CustomerContact = ({ user }) => {
               <Plus className="w-4 h-4" />
               Add Service
             </button>
+            </div>
           </div>
 
           {/* Summary and Actions - Calculation on Right, Buttons Below */}
           <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
             <div className="flex justify-end">
               <div className="w-80">
-                {/* Calculation Section */}
+                {/* Calculation Section - GST calculated in backend, not shown */}
                 <div className="text-right space-y-2 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Sub Total (₹)</span>
-                    <span className="font-medium text-gray-800">{calculateSubTotal().toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">GST (₹)</span>
-                    <span className="font-medium text-gray-800">{calculateGST().toLocaleString()}</span>
-                  </div>
                   <div className="flex justify-between text-sm bg-blue-100 px-3 py-2 rounded-md">
-                    <span className="font-semibold text-blue-700">Total Amount (₹)</span>
+                    <span className="font-semibold text-blue-700">Total Price (₹)</span>
                     <span className="font-bold text-blue-700">{calculateTotal().toLocaleString()}</span>
                   </div>
                 </div>
@@ -517,7 +635,7 @@ const CustomerContact = ({ user }) => {
           {/* Footer Note */}
           <div className="px-6 py-3 border-t border-gray-200 bg-white">
             <p className="text-xs text-gray-500">
-              * Currency: INR (₹) | GST Default: 2% for all services | Fields marked with * are mandatory
+              * Currency: INR (₹) | Fields marked with * are mandatory
             </p>
           </div>
         </div>

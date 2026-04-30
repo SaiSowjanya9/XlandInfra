@@ -2,13 +2,12 @@ import { useState, useEffect } from 'react';
 import { 
   Building2, User, Phone, Mail, Search, FileText, 
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase,
-  Package, Send
+  Package, Send, Plus, Trash2, Lock, ChevronDown
 } from 'lucide-react';
-import ServiceRows from './ServiceRows';
 import PhoneInput from '../common/PhoneInput';
 import { 
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
-  getAMCPackageByPropertyId 
+  getAMCPackageByPropertyId, addService, FREQUENCY_TYPES
 } from '../../utils/estimateStore';
 import { getProperties } from '../../utils/propertyStore';
 
@@ -21,7 +20,7 @@ const PROPERTY_ICONS = {
   Commercial: Briefcase
 };
 
-const GST_RATE = 0.02;
+const GST_RATE = 0.02; // 2% GST - calculated in backend, not shown in UI
 
 const CreateEstimate = ({ onSuccess, showToast }) => {
   const [estimateType, setEstimateType] = useState(null);
@@ -29,16 +28,34 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
   const [propertyIdInput, setPropertyIdInput] = useState('');
   const [showPropertySuggestions, setShowPropertySuggestions] = useState(false);
   const [properties, setProperties] = useState([]);
-  const [services, setServices] = useState([]);
+  const [availableServices, setAvailableServices] = useState([]);
   const [amcPackage, setAmcPackage] = useState(null);
   const [showEmailConfirm, setShowEmailConfirm] = useState(false);
   const [lastCreatedEstimate, setLastCreatedEstimate] = useState(null);
+  const [lockedServices, setLockedServices] = useState([]); // Services from existing AMC package (locked/read-only)
   const [estimateForm, setEstimateForm] = useState({
+    // Property-based auto-populated fields
+    propertyId: '',
+    propertyName: '',
+    entryType: '',
+    zone: '',
+    areaName: '',
+    division: '',
+    propertyType: '',
+    numberOfUnits: '',
+    address: '',
+    city: '',
+    blockTower: '',
+    flatUnit: '',
     customerName: '',
+    customerPhone: '',
+    customerEmail: '',
+    // Direct customer fields
     phone: '',
     countryCode: '+91',
     email: '',
-    services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }],
+    // Services (new/additional only)
+    services: [],
     notes: ''
   });
 
@@ -49,7 +66,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
   const loadData = async () => {
     const props = await getProperties();
     setProperties(props);
-    setServices(getServices());
+    setAvailableServices(getServices());
   };
 
   const filteredProperties = properties.filter(prop => {
@@ -82,36 +99,98 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     setPropertyIdInput(property.propertyId);
     setShowPropertySuggestions(false);
     
-    // Check for AMC package and auto-populate services
+    // Extract block/tower info
+    let blockTower = '';
+    if (property.blockInfo) {
+      blockTower = property.blockInfo;
+    } else if (property.blockNames && Object.keys(property.blockNames).length > 0) {
+      blockTower = Object.values(property.blockNames).join(', ');
+    } else if (property.numberOfBlocks) {
+      blockTower = `${property.numberOfBlocks} Block(s)`;
+    }
+    
+    // Extract flat/unit info
+    let flatUnit = '';
+    if (property.villaPlotNumber) {
+      flatUnit = property.villaPlotNumber;
+    } else if (property.aptSuiteUnit) {
+      flatUnit = property.aptSuiteUnit;
+    } else if (property.numberOfUnits) {
+      flatUnit = `${property.numberOfUnits} Units`;
+    } else if (property.unitsPerBlock) {
+      const totalUnits = Object.values(property.unitsPerBlock).reduce((sum, u) => sum + (parseInt(u) || 0), 0);
+      flatUnit = totalUnits > 0 ? `${totalUnits} Units` : '';
+    }
+    
+    // Get customer details from contacts (backend returns 'contacts', not 'associationContacts')
+    const primaryContact = property.contacts?.[0] || {};
+    
+    // Check for AMC package and auto-populate locked services
     const existingAMC = getAMCPackageByPropertyId(property.propertyId);
-    if (existingAMC) {
+    if (existingAMC && existingAMC.services && existingAMC.services.length > 0) {
       setAmcPackage(existingAMC);
-      // Auto-populate services from AMC package
-      const amcServices = existingAMC.services?.map(s => ({
+      // Set locked services from AMC package (read-only)
+      const amcServices = existingAMC.services.map(s => ({
         name: s.name,
         frequency: s.frequency || 1,
         frequencyType: s.frequencyType || 'Monthly',
-        price: s.rate || s.price || ''
-      })) || [];
-      
-      if (amcServices.length > 0) {
-        setEstimateForm(prev => ({
-          ...prev,
-          services: amcServices
-        }));
-        showToast?.('AMC package services auto-populated', 'success');
-      }
+        price: s.rate || s.price || '',
+        isLocked: true
+      }));
+      setLockedServices(amcServices);
+      showToast?.('Existing package services loaded (locked)', 'success');
     } else {
       setAmcPackage(null);
+      setLockedServices([]);
     }
+    
+    // Build full address
+    const fullAddress = [
+      property.addressLine1,
+      property.aptSuiteUnit,
+      property.landmark
+    ].filter(Boolean).join(', ') || property.address || '';
+    
+    // Update form with auto-populated fields
+    // Note: backend returns communityName as 'name'
+    setEstimateForm(prev => ({
+      ...prev,
+      propertyId: property.propertyId || '',
+      propertyName: property.communityName || property.name || '',
+      entryType: property.entryType || '',
+      zone: property.zone || '',
+      areaName: property.areaName || '',
+      division: property.division || '',
+      propertyType: property.propertyType || '',
+      numberOfUnits: property.numberOfUnits || property.unitsPerBlock ? 
+        (typeof property.numberOfUnits === 'number' ? property.numberOfUnits : 
+          Object.values(property.unitsPerBlock || {}).reduce((sum, u) => sum + (parseInt(u) || 0), 0)) : '',
+      address: fullAddress,
+      city: property.city || '',
+      blockTower,
+      flatUnit,
+      customerName: primaryContact.name || '',
+      customerPhone: primaryContact.phone ? `${primaryContact.countryCode || '+91'} ${primaryContact.phone}` : '',
+      customerEmail: primaryContact.email || '',
+      services: [] // Start with empty new services
+    }));
+  };
+
+  const calculateServiceTotal = (service) => {
+    const price = parseFloat(service.price) || 0;
+    const frequency = parseInt(service.frequency) || 1;
+    return price * frequency;
   };
 
   const calculateSubTotal = () => {
-    return estimateForm.services.reduce((sum, service) => {
-      const price = parseFloat(service.price) || 0;
-      const frequency = parseInt(service.frequency) || 1;
-      return sum + (price * frequency);
+    // Include both locked services and new services
+    const lockedTotal = lockedServices.reduce((sum, service) => {
+      return sum + calculateServiceTotal(service);
     }, 0);
+    const newTotal = estimateForm.services.reduce((sum, service) => {
+      return sum + calculateServiceTotal(service);
+    }, 0);
+    return lockedTotal + newTotal;
   };
 
   const calculateGST = () => {
@@ -122,7 +201,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     return calculateSubTotal() + calculateGST();
   };
 
-  const handleCreateEstimate = () => {
+  const handleSave = () => {
     if (!estimateType) {
       showToast?.('Please select an estimate type', 'error');
       return;
@@ -136,29 +215,36 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       return;
     }
 
-    const validServices = estimateForm.services.filter(s => s.name.trim() && s.price);
-    if (validServices.length === 0) {
+    // Combine locked services with new services
+    const newValidServices = estimateForm.services.filter(s => s.name && s.name.trim() && s.price);
+    const allServices = [...lockedServices, ...newValidServices];
+    
+    if (allServices.length === 0) {
       showToast?.('At least one service with price is required', 'error');
       return;
     }
 
     const estimateData = {
       estimateType: estimateType === 'property' ? 'property-based' : 'direct',
-      services: validServices,
+      services: allServices,
       notes: estimateForm.notes,
       subTotal: calculateSubTotal(),
       gst: calculateGST(),
       totalPrice: calculateTotal(),
-      status: estimateType === 'direct' ? 'Archived' : 'Draft'
+      status: 'Draft'
     };
 
     if (estimateType === 'property') {
       estimateData.propertyId = selectedProperty.propertyId;
       estimateData.propertyType = selectedProperty.entryType;
-      estimateData.clientName = selectedProperty.associationContacts?.[0]?.name || selectedProperty.communityName;
+      estimateData.propertyName = estimateForm.propertyName;
+      estimateData.blockTower = estimateForm.blockTower;
+      estimateData.flatUnit = estimateForm.flatUnit;
+      estimateData.clientName = estimateForm.customerName || selectedProperty.communityName;
       estimateData.communityName = selectedProperty.communityName;
-      estimateData.customerEmail = selectedProperty.associationContacts?.[0]?.email || '';
-      estimateData.customerPhone = selectedProperty.associationContacts?.[0]?.phone || '';
+      estimateData.customerName = estimateForm.customerName;
+      estimateData.customerEmail = estimateForm.customerEmail;
+      estimateData.customerPhone = estimateForm.customerPhone;
       
       if (amcPackage) {
         estimateData.amcPackageId = amcPackage.packageId;
@@ -174,14 +260,9 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     const createdEstimate = createEstimate(estimateData);
     setLastCreatedEstimate(createdEstimate);
     
-    const customerEmail = estimateData.customerEmail;
-    if (customerEmail) {
-      setShowEmailConfirm(true);
-    } else {
-      showToast?.('Estimate created successfully!', 'success');
-      resetForm();
-      if (onSuccess) onSuccess();
-    }
+    showToast?.('Estimate saved successfully!', 'success');
+    resetForm();
+    if (onSuccess) onSuccess();
   };
 
   const handleSendEmail = () => {
@@ -205,14 +286,36 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     setPropertyIdInput('');
     setAmcPackage(null);
     setLastCreatedEstimate(null);
+    setLockedServices([]);
     setEstimateForm({
+      propertyId: '',
+      propertyName: '',
+      entryType: '',
+      zone: '',
+      areaName: '',
+      division: '',
+      propertyType: '',
+      numberOfUnits: '',
+      address: '',
+      city: '',
+      blockTower: '',
+      flatUnit: '',
       customerName: '',
+      customerPhone: '',
+      customerEmail: '',
       phone: '',
       countryCode: '+91',
       email: '',
-      services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }],
+      services: [],
       notes: ''
     });
+  };
+
+  const handleAddNewService = (serviceName) => {
+    if (serviceName && serviceName.trim()) {
+      addService(serviceName.trim());
+      setAvailableServices(getServices());
+    }
   };
 
   const addServiceRow = () => {
@@ -223,12 +326,10 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
   };
 
   const removeServiceRow = (index) => {
-    if (estimateForm.services.length > 1) {
-      setEstimateForm({
-        ...estimateForm,
-        services: estimateForm.services.filter((_, i) => i !== index)
-      });
-    }
+    setEstimateForm({
+      ...estimateForm,
+      services: estimateForm.services.filter((_, i) => i !== index)
+    });
   };
 
   const updateServiceRow = (index, field, value) => {
@@ -244,7 +345,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Estimate Type</h3>
         <div className="grid grid-cols-2 gap-4">
           <button
-            onClick={() => { setEstimateType('property'); setSelectedProperty(null); setPropertyIdInput(''); }}
+            onClick={() => { setEstimateType('property'); resetForm(); setEstimateType('property'); }}
             className={`p-6 rounded-xl border-2 transition-all ${
               estimateType === 'property'
                 ? 'border-indigo-500 bg-indigo-50'
@@ -252,11 +353,11 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
             }`}
           >
             <Building2 className={`w-8 h-8 mx-auto mb-3 ${estimateType === 'property' ? 'text-indigo-600' : 'text-gray-400'}`} />
-            <p className="font-medium text-gray-800">Property-based</p>
+            <p className="font-medium text-gray-800">Property-Based Estimate</p>
             <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
           </button>
           <button
-            onClick={() => { setEstimateType('direct'); setSelectedProperty(null); setPropertyIdInput(''); }}
+            onClick={() => { setEstimateType('direct'); resetForm(); setEstimateType('direct'); }}
             className={`p-6 rounded-xl border-2 transition-all ${
               estimateType === 'direct'
                 ? 'border-indigo-500 bg-indigo-50'
@@ -264,110 +365,431 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
             }`}
           >
             <User className={`w-8 h-8 mx-auto mb-3 ${estimateType === 'direct' ? 'text-indigo-600' : 'text-gray-400'}`} />
-            <p className="font-medium text-gray-800">Direct Customer</p>
+            <p className="font-medium text-gray-800">Direct-Based Estimate</p>
             <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
           </button>
         </div>
       </div>
 
-      {/* Property ID Input with Auto-fill */}
+      {/* Property-based Estimate Form */}
       {estimateType === 'property' && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Property Details</h3>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          {/* Estimate Details Header */}
+          <div className="px-6 py-3 bg-blue-600">
+            <h3 className="text-base font-semibold text-white">Estimate Details</h3>
+          </div>
           
-          <div className="relative mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Property ID <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={propertyIdInput}
-                onChange={(e) => handlePropertyIdChange(e.target.value)}
-                onFocus={() => setShowPropertySuggestions(true)}
-                onBlur={() => setTimeout(() => setShowPropertySuggestions(false), 200)}
-                placeholder="Type Property ID (e.g., GC-2024-001)"
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
-              />
-            </div>
-            
-            {showPropertySuggestions && propertyIdInput && filteredProperties.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                {filteredProperties.slice(0, 8).map((prop) => {
-                  const Icon = PROPERTY_ICONS[prop.entryType] || Building2;
-                  return (
-                    <button
-                      key={prop.propertyId}
-                      onClick={() => handlePropertySelect(prop)}
-                      className="w-full p-3 text-left hover:bg-indigo-50 flex items-center gap-3"
-                    >
-                      <Icon className="w-4 h-4 text-gray-400" />
-                      <div>
-                        <p className="font-medium text-gray-800 text-sm">{prop.propertyId}</p>
-                        <p className="text-xs text-gray-500">{prop.communityName}</p>
-                      </div>
-                    </button>
-                  );
-                })}
+          <div className="px-6 py-4">
+            {/* Property ID Search */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Property ID <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={propertyIdInput}
+                  onChange={(e) => handlePropertyIdChange(e.target.value)}
+                  onFocus={() => setShowPropertySuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowPropertySuggestions(false), 200)}
+                  placeholder="Type Property ID (e.g., GC-2024-001)"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                />
+                
+                {showPropertySuggestions && propertyIdInput && filteredProperties.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {filteredProperties.slice(0, 8).map((prop) => {
+                      const Icon = PROPERTY_ICONS[prop.entryType] || Building2;
+                      return (
+                        <button
+                          key={prop.propertyId}
+                          onClick={() => handlePropertySelect(prop)}
+                          className="w-full p-3 text-left hover:bg-blue-50 flex items-center gap-3"
+                        >
+                          <Icon className="w-4 h-4 text-gray-400" />
+                          <div>
+                            <p className="font-medium text-gray-800 text-sm">{prop.propertyId}</p>
+                            <p className="text-xs text-gray-500">{prop.communityName}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+            </div>
+
+            {/* Auto-populated Fields (only show when property selected) */}
+            {selectedProperty && (
+              <>
+                {/* First Row - Contact Name, Property ID, Type, Zone, Area */}
+                <div className="grid grid-cols-5 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Contact Name</label>
+                    <input
+                      type="text"
+                      value={estimateForm.customerName}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Property ID</label>
+                    <input
+                      type="text"
+                      value={estimateForm.propertyId}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Entry Type</label>
+                    <input
+                      type="text"
+                      value={estimateForm.entryType}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Zone</label>
+                    <input
+                      type="text"
+                      value={estimateForm.zone}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Area</label>
+                    <input
+                      type="text"
+                      value={estimateForm.areaName}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                {/* Second Row - Community Name, Division, Property Type, Units, City */}
+                <div className="grid grid-cols-5 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Community Name</label>
+                    <input
+                      type="text"
+                      value={estimateForm.propertyName}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Division</label>
+                    <input
+                      type="text"
+                      value={estimateForm.division}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Property Type</label>
+                    <input
+                      type="text"
+                      value={estimateForm.propertyType}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Units</label>
+                    <input
+                      type="text"
+                      value={estimateForm.numberOfUnits}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
+                    <input
+                      type="text"
+                      value={estimateForm.city}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                {/* Third Row - Address, Contact Phone, Contact Email */}
+                <div className="grid grid-cols-4 gap-4 mb-4">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
+                    <input
+                      type="text"
+                      value={estimateForm.address}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Contact Phone</label>
+                    <input
+                      type="text"
+                      value={estimateForm.customerPhone}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Contact Email</label>
+                    <input
+                      type="text"
+                      value={estimateForm.customerEmail}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-blue-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                {/* AMC Package Info */}
+                {lockedServices.length > 0 && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-md mb-4">
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <Lock className="w-4 h-4" />
+                      <span className="text-sm font-medium">Existing Package Services (Locked)</span>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      {lockedServices.length} service(s) from existing package. Use "Add Service" to add additional services.
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
+          {/* AMC Services Section */}
           {selectedProperty && (
-            <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Property Name</label>
-                <p className="text-sm font-medium text-gray-800">{selectedProperty.communityName || selectedProperty.name}</p>
+            <>
+              <div className="px-6 py-3 bg-blue-600">
+                <h3 className="text-base font-semibold text-white">AMC Services</h3>
               </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Property Type</label>
-                <p className="text-sm font-medium text-gray-800">{selectedProperty.entryType}</p>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Contact Person</label>
-                <p className="text-sm font-medium text-gray-800">
-                  {selectedProperty.associationContacts?.[0]?.name || '-'}
-                </p>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Zone</label>
-                <p className="text-sm font-medium text-gray-800">{selectedProperty.zone || '-'}</p>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Email</label>
-                <p className="text-sm font-medium text-gray-800">
-                  {selectedProperty.associationContacts?.[0]?.email || '-'}
-                </p>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Phone</label>
-                <p className="text-sm font-medium text-gray-800">
-                  {selectedProperty.associationContacts?.[0]?.phone || '-'}
-                </p>
-              </div>
-            </div>
-          )}
+              
+              <div className="px-6 py-4">
+                {/* Table Header */}
+                <div className="grid grid-cols-12 gap-2 mb-2 px-2 py-2 bg-gray-100 rounded-t-md">
+                  <div className="col-span-1 text-xs font-semibold text-gray-700">#</div>
+                  <div className="col-span-3 text-xs font-semibold text-gray-700">
+                    Service <span className="text-red-500">*</span>
+                  </div>
+                  <div className="col-span-2 text-xs font-semibold text-gray-700">
+                    Frequency (Visits) <span className="text-red-500">*</span>
+                  </div>
+                  <div className="col-span-2 text-xs font-semibold text-gray-700">
+                    Frequency Type <span className="text-red-500">*</span>
+                  </div>
+                  <div className="col-span-2 text-xs font-semibold text-gray-700">
+                    Price (₹) <span className="text-red-500">*</span>
+                  </div>
+                  <div className="col-span-1 text-xs font-semibold text-gray-700">Total (₹)</div>
+                  <div className="col-span-1 text-xs font-semibold text-gray-700 text-center">Action</div>
+                </div>
 
-          {amcPackage && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center gap-2 text-green-700 mb-2">
-                <Package className="w-5 h-5" />
-                <span className="font-medium">AMC Package Found</span>
+                {/* Service Rows */}
+                <div className="border border-gray-200 rounded-b-md divide-y divide-gray-100">
+                  {/* Locked Services (from existing package) */}
+                  {lockedServices.map((service, index) => (
+                    <div key={`locked-${index}`} className="grid grid-cols-12 gap-2 items-center p-3 bg-blue-50">
+                      <div className="col-span-1 text-sm text-gray-600 font-medium pl-2">
+                        {index + 1}
+                      </div>
+                      <div className="col-span-3">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                          <input
+                            type="text"
+                            value={service.name}
+                            readOnly
+                            className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 cursor-not-allowed"
+                          />
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={service.frequency}
+                            readOnly
+                            className="w-16 px-2 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 text-center cursor-not-allowed"
+                          />
+                          <span className="text-xs text-gray-500">(Visits per Drop Down)</span>
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="text"
+                          value={service.frequencyType}
+                          readOnly
+                          className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="text"
+                          value={service.price}
+                          readOnly
+                          className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                      <div className="col-span-1 text-sm text-gray-800 font-medium">
+                        {calculateServiceTotal(service).toLocaleString()}
+                      </div>
+                      <div className="col-span-1 flex justify-center">
+                        <Lock className="w-4 h-4 text-gray-400" title="Locked service" />
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* New Editable Services */}
+                  {estimateForm.services.map((service, index) => (
+                    <div key={`new-${index}`} className="grid grid-cols-12 gap-2 items-center p-3 bg-white hover:bg-gray-50">
+                      <div className="col-span-1 text-sm text-gray-600 font-medium pl-2">
+                        {lockedServices.length + index + 1}
+                      </div>
+                      <div className="col-span-3">
+                        <select
+                          value={service.name}
+                          onChange={(e) => {
+                            if (e.target.value === '__add_new__') {
+                              const newService = prompt('Enter new service name:');
+                              if (newService) {
+                                handleAddNewService(newService);
+                                updateServiceRow(index, 'name', newService);
+                              }
+                            } else {
+                              updateServiceRow(index, 'name', e.target.value);
+                            }
+                          }}
+                          className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                        >
+                          <option value="">Select Service</option>
+                          {availableServices.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                          <option value="__add_new__">+ Add New Service</option>
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="1"
+                            value={service.frequency}
+                            onChange={(e) => updateServiceRow(index, 'frequency', parseInt(e.target.value) || 1)}
+                            className="w-16 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 text-center"
+                          />
+                          <span className="text-xs text-gray-500">(Visits per Drop Down)</span>
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <select
+                          value={service.frequencyType}
+                          onChange={(e) => updateServiceRow(index, 'frequencyType', e.target.value)}
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                        >
+                          {FREQUENCY_TYPES.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="number"
+                          min="0"
+                          value={service.price}
+                          onChange={(e) => updateServiceRow(index, 'price', e.target.value)}
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="col-span-1 text-sm text-gray-800 font-medium">
+                        {calculateServiceTotal(service).toLocaleString()}
+                      </div>
+                      <div className="col-span-1 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={() => removeServiceRow(index)}
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                          title="Remove service"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Empty state */}
+                  {lockedServices.length === 0 && estimateForm.services.length === 0 && (
+                    <div className="p-6 text-center text-gray-500">
+                      <p className="text-sm">No services added. Click "Add Service" to add a new service.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add Service Button */}
+                <button
+                  type="button"
+                  onClick={addServiceRow}
+                  className="mt-4 flex items-center gap-2 px-4 py-2 text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Service
+                </button>
               </div>
-              <p className="text-sm text-green-600">
-                Package ID: {amcPackage.packageId} | {amcPackage.services?.length || 0} services | 
-                Total: ₹{(amcPackage.totalPrice || 0).toLocaleString()}
-              </p>
-              <p className="text-xs text-green-500 mt-1">
-                Services have been auto-populated from this AMC package.
-              </p>
-            </div>
+
+              {/* Summary and Actions */}
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex justify-end">
+                  <div className="w-80">
+                    {/* Calculation Section - GST calculated in backend, not shown */}
+                    <div className="text-right space-y-2 mb-4">
+                      <div className="flex justify-between text-sm bg-blue-100 px-3 py-2 rounded-md">
+                        <span className="font-semibold text-blue-700">Total Price (₹)</span>
+                        <span className="font-bold text-blue-700">{calculateSubTotal().toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons - Only Save and Cancel */}
+                    <div className="flex gap-3 justify-end">
+                      <button
+                        onClick={resetForm}
+                        className="px-6 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Note */}
+              <div className="px-6 py-3 border-t border-gray-200 bg-white">
+                <p className="text-xs text-gray-500">
+                  * Currency: INR (₹) | Price Input: Per selected frequency | Fields marked with * are mandatory
+                </p>
+              </div>
+            </>
           )}
         </div>
       )}
 
-      {/* Direct Customer Form */}
+      {/* Direct-Based Estimate Form */}
       {estimateType === 'direct' && (
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Customer Details</h3>
@@ -380,7 +802,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                 type="text"
                 value={estimateForm.customerName}
                 onChange={(e) => setEstimateForm({ ...estimateForm, customerName: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
+                className="w-full h-[42px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
                 placeholder="Enter customer name"
               />
             </div>
@@ -388,13 +810,16 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Phone className="w-4 h-4 inline mr-1" /> Phone
               </label>
-              <PhoneInput
-                value={estimateForm.phone}
-                countryCode={estimateForm.countryCode}
-                onChange={(val) => setEstimateForm({ ...estimateForm, phone: val })}
-                onCountryCodeChange={(val) => setEstimateForm({ ...estimateForm, countryCode: val })}
-                placeholder="10-digit phone number"
-              />
+              <div className="h-[42px]">
+                <PhoneInput
+                  value={estimateForm.phone}
+                  countryCode={estimateForm.countryCode}
+                  onChange={(val) => setEstimateForm({ ...estimateForm, phone: val })}
+                  onCountryCodeChange={(val) => setEstimateForm({ ...estimateForm, countryCode: val })}
+                  placeholder="10-digit phone number"
+                  className="h-full"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -404,77 +829,9 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                 type="email"
                 value={estimateForm.email}
                 onChange={(e) => setEstimateForm({ ...estimateForm, email: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
+                className="w-full h-[42px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
                 placeholder="Enter email address"
               />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Services Selection */}
-      {estimateType && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Services</h3>
-          <ServiceRows
-            services={estimateForm.services}
-            onUpdate={updateServiceRow}
-            onAdd={addServiceRow}
-            onRemove={removeServiceRow}
-            availableServices={services}
-            onServicesUpdate={setServices}
-          />
-        </div>
-      )}
-
-      {/* Notes */}
-      {estimateType && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Additional Notes</h3>
-          <textarea
-            value={estimateForm.notes}
-            onChange={(e) => setEstimateForm({ ...estimateForm, notes: e.target.value })}
-            rows={3}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
-            placeholder="Enter any additional notes or terms..."
-          />
-        </div>
-      )}
-
-      {/* Total and Submit */}
-      {estimateType && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-sm text-gray-500 gap-8">
-                  <span>Sub Total:</span>
-                  <span className="font-medium text-gray-700">₹{calculateSubTotal().toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-500 gap-8">
-                  <span>GST:</span>
-                  <span className="font-medium text-gray-700">₹{calculateGST().toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-lg pt-2 border-t border-gray-200 gap-8">
-                  <span className="font-medium text-gray-700">Total:</span>
-                  <span className="font-bold text-gray-800">₹{calculateTotal().toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={resetForm}
-                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              >
-                Reset
-              </button>
-              <button
-                onClick={handleCreateEstimate}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2"
-              >
-                <FileText className="w-5 h-5" />
-                Create Estimate
-              </button>
             </div>
           </div>
         </div>

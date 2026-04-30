@@ -143,8 +143,8 @@ ${estimate.notes ? `\nNotes: ${estimate.notes}` : ''}`;
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 >
                   <option value="all">All Types</option>
-                  <option value="property-based">Property-based</option>
-                  <option value="direct">Direct</option>
+                  <option value="property-based">Property-Based Estimate</option>
+                  <option value="direct">Direct-Based Estimate</option>
                 </select>
               </div>
               <div>
@@ -235,7 +235,7 @@ ${estimate.notes ? `\nNotes: ${estimate.notes}` : ''}`;
                       <div className="flex items-center gap-2">
                         <Icon className="w-4 h-4 text-gray-400" />
                         <span className="text-sm text-gray-600">
-                          {estimate.estimateType === 'property-based' ? estimate.propertyType : 'Direct'}
+                          {estimate.estimateType === 'property-based' ? estimate.propertyType : 'Direct-Based'}
                         </span>
                       </div>
                     </td>
