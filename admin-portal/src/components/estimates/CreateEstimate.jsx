@@ -46,6 +46,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     address: '',
     city: '',
     blockTower: '',
+    blockNumber: '', // Block Number with N/A option
     flatUnit: '',
     customerName: '',
     customerPhone: '',
@@ -268,6 +269,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       estimateData.address = estimateForm.address;
       estimateData.city = estimateForm.city;
       estimateData.blockTower = estimateForm.blockTower;
+      estimateData.blockNumber = estimateForm.blockNumber;
       estimateData.flatUnit = estimateForm.flatUnit;
     }
 
@@ -918,7 +920,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
 
             {/* Dynamic Fields Based on Property Type */}
             {estimateForm.propertyType === 'GC' && (
-              <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <div className="grid grid-cols-4 gap-4 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Number of Blocks *</label>
                   <input
@@ -931,13 +933,29 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                   />
                 </div>
                 <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Block Number</label>
+                  <select
+                    value={estimateForm.blockNumber || ''}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, blockNumber: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  >
+                    <option value="">Select Block</option>
+                    <option value="N/A">N/A</option>
+                    <option value="A">Block A</option>
+                    <option value="B">Block B</option>
+                    <option value="C">Block C</option>
+                    <option value="D">Block D</option>
+                    <option value="E">Block E</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Block Name</label>
                   <input
                     type="text"
                     value={estimateForm.areaName}
                     onChange={(e) => setEstimateForm({ ...estimateForm, areaName: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="e.g., Block A, B, C"
+                    placeholder="e.g., Tower 1, Phase 2"
                   />
                 </div>
                 <div>
@@ -954,27 +972,42 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
               </div>
             )}
 
-            {estimateForm.propertyType === 'APT' && (
-              <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+            {(estimateForm.propertyType === 'APT' || estimateForm.propertyType === 'FLAT') && (
+              <div className="grid grid-cols-4 gap-4 mb-4 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Block Information</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Tower/Building Name</label>
                   <input
                     type="text"
                     value={estimateForm.blockTower}
                     onChange={(e) => setEstimateForm({ ...estimateForm, blockTower: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="Block/Tower info (optional)"
+                    placeholder="Tower/Building name"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Not Applicable</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Block Number</label>
+                  <select
+                    value={estimateForm.blockNumber || ''}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, blockNumber: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  >
+                    <option value="">Select Block</option>
+                    <option value="N/A">N/A (Not Applicable)</option>
+                    <option value="A">Block A</option>
+                    <option value="B">Block B</option>
+                    <option value="C">Block C</option>
+                    <option value="D">Block D</option>
+                    <option value="E">Block E</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Flat/Unit Number</label>
                   <input
                     type="text"
-                    value={estimateForm.areaName}
-                    onChange={(e) => setEstimateForm({ ...estimateForm, areaName: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 bg-gray-50"
-                    placeholder="N/A"
-                    disabled
+                    value={estimateForm.flatUnit}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, flatUnit: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                    placeholder="e.g., 101, 202"
                   />
                 </div>
                 <div>
