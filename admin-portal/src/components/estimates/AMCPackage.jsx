@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Edit, Trash2, Package, Plus, Calendar, ChevronDown, Home, LayoutGrid, Layers, TreePine, Map, Briefcase, Lock } from 'lucide-react';
+import { Edit, Trash2, Package, Plus, ChevronDown, Home, LayoutGrid, Layers, TreePine, Map, Briefcase, Lock, X, PlusCircle } from 'lucide-react';
 import {
   getAMCPackages, createAMCPackage, updateAMCPackage, deleteAMCPackage,
-  getServices, calculateEstimateTotal, PROPERTY_TYPES, FREQUENCY_TYPES, addService
+  getAddons, FREQUENCY_TYPES, createEstimate
 } from '../../utils/estimateStore';
 import { getProperties } from '../../utils/propertyStore';
 
@@ -15,23 +15,28 @@ const PROPERTY_ICONS = {
   Commercial: Briefcase
 };
 
-const GST_RATE = 0.02; // 2% GST as default
+const GST_RATE = 0.02; // 2% GST applied at estimate level only
 
 const AMCPackage = ({ showToast }) => {
-  const [amcPackages, setAmcPackages] = useState([]);
-  const [services, setServices] = useState([]);
+  // Core data
+  const [amcPackages, setAmcPackages] = useState([]); // Created AMC Packages from AMC Package Manager
+  const [availableAddons, setAvailableAddons] = useState([]); // Add-ons from Add-ons Manager
   const [properties, setProperties] = useState([]);
-  const [editingAMC, setEditingAMC] = useState(null);
-  const [lockedEstimate, setLockedEstimate] = useState(null);
-  const [amcForm, setAMCForm] = useState({
+  const [savedEstimates, setSavedEstimates] = useState([]); // Property-based estimates list
+  
+  // Form state
+  const [editingEstimate, setEditingEstimate] = useState(null);
+  const [selectedPackage, setSelectedPackage] = useState(null); // Selected AMC Package
+  const [selectedAddons, setSelectedAddons] = useState([]); // Selected add-ons from dropdown
+  const [discount, setDiscount] = useState(''); // Discount amount
+  
+  const [estimateForm, setEstimateForm] = useState({
     propertyId: '',
     propertyName: '',
     blockTower: '',
     flatUnit: '',
     customerName: '',
-    estimateDate: new Date().toISOString().split('T')[0],
-    serviceType: '',
-    services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
+    estimateDate: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
@@ -40,64 +45,113 @@ const AMCPackage = ({ showToast }) => {
 
   const loadData = async () => {
     setAmcPackages(getAMCPackages());
-    setServices(getServices());
+    setAvailableAddons(getAddons());
     const props = await getProperties();
     setProperties(props);
   };
 
-  const calculateServiceTotal = (service) => {
-    const price = parseFloat(service.price) || 0;
-    const frequency = parseInt(service.frequency) || 1;
-    return price * frequency;
+  // Calculate package price
+  const getPackagePrice = () => {
+    return selectedPackage ? (parseFloat(selectedPackage.rate) || 0) : 0;
   };
 
+  // Calculate total add-ons price
+  const getAddonsTotal = () => {
+    return selectedAddons.reduce((sum, addon) => {
+      // Each addon has services with prices
+      const addonTotal = addon.services?.reduce((s, service) => {
+        const price = parseFloat(service.price) || 0;
+        const frequency = parseInt(service.frequency) || 1;
+        return s + (price * frequency);
+      }, 0) || addon.totalPrice || 0;
+      return sum + addonTotal;
+    }, 0);
+  };
+
+  // Calculate subtotal (Package + Add-ons)
   const calculateSubTotal = () => {
-    return amcForm.services.reduce((sum, service) => {
-      return sum + calculateServiceTotal(service);
-    }, 0);
+    return getPackagePrice() + getAddonsTotal();
   };
 
+  // Calculate GST (2% on subtotal)
   const calculateGST = () => {
-    return amcForm.services.reduce((sum, service) => {
-      const serviceTotal = calculateServiceTotal(service);
-      const gstRate = (parseFloat(service.gst) || 2) / 100;
-      return sum + Math.round(serviceTotal * gstRate);
-    }, 0);
+    return Math.round(calculateSubTotal() * GST_RATE);
   };
 
+  // Calculate discount amount
+  const getDiscountAmount = () => {
+    return parseFloat(discount) || 0;
+  };
+
+  // Calculate final total: (Package + Add-ons) + GST - Discount
   const calculateTotal = () => {
-    return calculateSubTotal() + calculateGST();
+    return calculateSubTotal() + calculateGST() - getDiscountAmount();
   };
 
-  const handleSaveAMC = () => {
-    if (!amcForm.propertyId) {
+  // Handle AMC Package selection
+  const handlePackageSelect = (packageId) => {
+    if (!packageId) {
+      setSelectedPackage(null);
+      return;
+    }
+    const pkg = amcPackages.find(p => p.packageId === packageId);
+    setSelectedPackage(pkg || null);
+  };
+
+  // Handle adding an add-on from dropdown
+  const handleAddAddon = (addonId) => {
+    if (!addonId) return;
+    const addon = availableAddons.find(a => a.addonId === addonId);
+    if (addon && !selectedAddons.find(a => a.addonId === addonId)) {
+      setSelectedAddons([...selectedAddons, addon]);
+    }
+  };
+
+  // Handle removing an add-on
+  const handleRemoveAddon = (addonId) => {
+    setSelectedAddons(selectedAddons.filter(a => a.addonId !== addonId));
+  };
+
+  // Handle save estimate
+  const handleSaveEstimate = () => {
+    if (!estimateForm.propertyId) {
       showToast('Property ID is required', 'error');
       return;
     }
 
-    const validServices = amcForm.services.filter(s => s.name.trim() && s.price);
-    if (validServices.length === 0) {
-      showToast('At least one service with price is required', 'error');
+    if (!selectedPackage) {
+      showToast('Please select an AMC Package', 'error');
       return;
     }
 
-    const packageData = {
-      ...amcForm,
-      services: validServices.map(s => ({ ...s, gst: s.gst || 2 })),
+    const estimateData = {
+      ...estimateForm,
+      packageId: selectedPackage.packageId,
+      packageName: selectedPackage.packageName,
+      packageRate: getPackagePrice(),
+      addons: selectedAddons.map(a => ({
+        addonId: a.addonId,
+        services: a.services,
+        totalPrice: a.totalPrice
+      })),
+      addonsTotal: getAddonsTotal(),
       subTotal: calculateSubTotal(),
       gst: calculateGST(),
+      discount: getDiscountAmount(),
       totalPrice: calculateTotal(),
       status: 'generated',
-      propertyType: amcForm.propertyId.split('-')[0] || 'APT'
+      propertyType: estimateForm.propertyId.split('-')[0] || 'APT'
     };
 
-    if (editingAMC) {
-      updateAMCPackage(editingAMC.packageId, packageData);
-      showToast('AMC Estimate updated successfully!');
-      setEditingAMC(null);
+    if (editingEstimate) {
+      // Update existing estimate - store as AMC Package for now
+      updateAMCPackage(editingEstimate.packageId, estimateData);
+      showToast('Estimate updated successfully!');
+      setEditingEstimate(null);
     } else {
-      createAMCPackage(packageData);
-      showToast('AMC Estimate saved successfully!');
+      // Create new estimate
+      createAMCPackage(estimateData);
+      showToast('Estimate saved successfully!');
     }
 
     resetForm();
@@ -105,83 +159,65 @@ const AMCPackage = ({ showToast }) => {
   };
 
   const resetForm = () => {
-    setAMCForm({
+    setEstimateForm({
       propertyId: '',
       propertyName: '',
       blockTower: '',
       flatUnit: '',
       customerName: '',
-      estimateDate: new Date().toISOString().split('T')[0],
-      serviceType: '',
-      services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
+      estimateDate: new Date().toISOString().split('T')[0]
     });
-    setEditingAMC(null);
-    setLockedEstimate(null);
+    setSelectedPackage(null);
+    setSelectedAddons([]);
+    setDiscount('');
+    setEditingEstimate(null);
   };
 
-  const handleEditAMC = (pkg) => {
-    setEditingAMC(pkg);
-    setAMCForm({
-      propertyId: pkg.propertyId || '',
-      propertyName: pkg.propertyName || '',
-      blockTower: pkg.blockTower || '',
-      flatUnit: pkg.flatUnit || '',
-      customerName: pkg.customerName || '',
-      estimateDate: pkg.estimateDate || new Date().toISOString().split('T')[0],
-      serviceType: pkg.serviceType || 'amc',
-      services: pkg.services || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
+  const handleEditEstimate = (estimate) => {
+    setEditingEstimate(estimate);
+    setEstimateForm({
+      propertyId: estimate.propertyId || '',
+      propertyName: estimate.propertyName || '',
+      blockTower: estimate.blockTower || '',
+      flatUnit: estimate.flatUnit || '',
+      customerName: estimate.customerName || '',
+      estimateDate: estimate.estimateDate || new Date().toISOString().split('T')[0]
     });
     
-    // Check for locked estimate
-    const existingEstimate = amcPackages.find(
-      p => p.propertyId === pkg.propertyId && p.status === 'generated' && p.packageId !== pkg.packageId
-    );
-    setLockedEstimate(existingEstimate || null);
+    // Restore selected package
+    if (estimate.packageId) {
+      const pkg = amcPackages.find(p => p.packageId === estimate.packageId);
+      setSelectedPackage(pkg || null);
+    }
+    
+    // Restore selected addons
+    if (estimate.addons && estimate.addons.length > 0) {
+      const restoredAddons = estimate.addons.map(a => 
+        availableAddons.find(addon => addon.addonId === a.addonId)
+      ).filter(Boolean);
+      setSelectedAddons(restoredAddons);
+    }
+    
+    // Restore discount
+    setDiscount(estimate.discount?.toString() || '');
   };
 
-  const handleDeleteAMC = (packageId) => {
+  const handleDeleteEstimate = (packageId) => {
     deleteAMCPackage(packageId);
-    showToast('AMC Estimate deleted');
+    showToast('Estimate deleted');
     loadData();
-  };
-
-  const addServiceRow = () => {
-    setAMCForm({
-      ...amcForm,
-      services: [...amcForm.services, { name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
-    });
-  };
-
-  const removeServiceRow = (index) => {
-    if (amcForm.services.length > 1) {
-      setAMCForm({
-        ...amcForm,
-        services: amcForm.services.filter((_, i) => i !== index)
-      });
-    }
-  };
-
-  const updateServiceRow = (index, field, value) => {
-    const newServices = [...amcForm.services];
-    newServices[index] = { ...newServices[index], [field]: value };
-    // Ensure GST stays at 2% by default when adding new services
-    if (field === 'name' && !newServices[index].gst) {
-      newServices[index].gst = 2;
-    }
-    setAMCForm({ ...amcForm, services: newServices });
   };
 
   const handlePropertySelect = (propertyId) => {
     if (!propertyId) {
-      setAMCForm({
-        ...amcForm,
+      setEstimateForm({
+        ...estimateForm,
         propertyId: '',
         propertyName: '',
         blockTower: '',
         flatUnit: '',
         customerName: ''
       });
-      setLockedEstimate(null);
       return;
     }
 
@@ -212,54 +248,19 @@ const AMCPackage = ({ showToast }) => {
         flatUnit = totalUnits > 0 ? `${totalUnits} Units` : '';
       }
       
-      // Get customer name from association contacts
-      const customerName = property.associationContacts?.[0]?.name || '';
+      // Get customer name from contacts
+      const customerName = property.contacts?.[0]?.name || property.associationContacts?.[0]?.name || '';
       
-      setAMCForm({
-        ...amcForm,
+      setEstimateForm({
+        ...estimateForm,
         propertyId: property.propertyId,
-        propertyName: property.communityName || '',
+        propertyName: property.communityName || property.name || '',
         blockTower,
         flatUnit,
         customerName
       });
-
-      // Check for existing locked estimate for this property
-      const existingEstimate = amcPackages.find(
-        pkg => pkg.propertyId === propertyId && pkg.status === 'generated'
-      );
-      
-      if (existingEstimate) {
-        setLockedEstimate(existingEstimate);
-      } else {
-        setLockedEstimate(null);
-      }
     } else {
-      setAMCForm({ ...amcForm, propertyId });
-      setLockedEstimate(null);
-    }
-  };
-
-  const handleServiceTypeChange = (serviceType) => {
-    setAMCForm({ ...amcForm, serviceType });
-    
-    // If there's a locked estimate and user selects AMC, pre-fill with estimate data
-    if (serviceType === 'amc' && lockedEstimate) {
-      setAMCForm({
-        ...amcForm,
-        serviceType,
-        services: lockedEstimate.services?.map(s => ({
-          ...s,
-          gst: s.gst || 2
-        })) || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '', gst: 2 }]
-      });
-    }
-  };
-
-  const handleAddNewService = (serviceName) => {
-    if (serviceName.trim()) {
-      addService(serviceName.trim());
-      setServices(getServices());
+      setEstimateForm({ ...estimateForm, propertyId });
     }
   };
 
@@ -267,14 +268,15 @@ const AMCPackage = ({ showToast }) => {
     <div className="space-y-6">
       {/* Section Header */}
       <div className="mb-2">
-        <h2 className="text-xl font-semibold text-blue-600">2. AMC (Annual Maintenance Contract)</h2>
+        <h2 className="text-xl font-semibold text-blue-600">Property-Based Estimate</h2>
+        <p className="text-sm text-gray-500">Select an AMC Package and customize with add-ons</p>
       </div>
 
-      {/* AMC Form */}
+      {/* Estimate Form */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        {/* Estimate Details Header */}
+        {/* Property Details Header */}
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-800">Estimate Details</h3>
+          <h3 className="text-sm font-semibold text-gray-800">Property Details</h3>
         </div>
         
         <div className="px-6 py-4">
@@ -286,7 +288,7 @@ const AMCPackage = ({ showToast }) => {
               </label>
               <div className="relative">
                 <select
-                  value={amcForm.propertyId}
+                  value={estimateForm.propertyId}
                   onChange={(e) => handlePropertySelect(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
                 >
@@ -304,7 +306,7 @@ const AMCPackage = ({ showToast }) => {
               <label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label>
               <input
                 type="text"
-                value={amcForm.propertyName}
+                value={estimateForm.propertyName}
                 readOnly
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
                 placeholder="Auto-filled"
@@ -316,7 +318,7 @@ const AMCPackage = ({ showToast }) => {
               <label className="block text-xs font-medium text-gray-600 mb-1">Block / Tower</label>
               <input
                 type="text"
-                value={amcForm.blockTower}
+                value={estimateForm.blockTower}
                 readOnly
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
                 placeholder="Auto-filled"
@@ -328,7 +330,7 @@ const AMCPackage = ({ showToast }) => {
               <label className="block text-xs font-medium text-gray-600 mb-1">Flat / Unit No.</label>
               <input
                 type="text"
-                value={amcForm.flatUnit}
+                value={estimateForm.flatUnit}
                 readOnly
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
                 placeholder="Auto-filled"
@@ -340,7 +342,7 @@ const AMCPackage = ({ showToast }) => {
               <label className="block text-xs font-medium text-gray-600 mb-1">Customer Name</label>
               <input
                 type="text"
-                value={amcForm.customerName}
+                value={estimateForm.customerName}
                 readOnly
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-700"
                 placeholder="Auto-filled"
@@ -349,183 +351,200 @@ const AMCPackage = ({ showToast }) => {
           </div>
 
           {/* Estimate Date */}
-          <div className="mb-4">
+          <div className="mb-4 max-w-xs">
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Estimate Date <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <input
-                type="date"
-                value={amcForm.estimateDate}
-                onChange={(e) => setAMCForm({ ...amcForm, estimateDate: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-              />
-            </div>
+            <input
+              type="date"
+              value={estimateForm.estimateDate}
+              onChange={(e) => setEstimateForm({ ...estimateForm, estimateDate: e.target.value })}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+            />
           </div>
+        </div>
 
-          {/* Service Type - Wide dropdown */}
+        {/* AMC Package Selection Section */}
+        <div className="px-6 py-4 border-t border-gray-200">
+          <h3 className="text-sm font-semibold text-blue-600 mb-4">AMC Package</h3>
+          
+          {/* AMC Package Dropdown */}
           <div className="mb-4">
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Service Type <span className="text-red-500">*</span>
+              Select AMC Package <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
+            <div className="relative max-w-md">
               <select
-                value={amcForm.serviceType}
-                onChange={(e) => handleServiceTypeChange(e.target.value)}
+                value={selectedPackage?.packageId || ''}
+                onChange={(e) => handlePackageSelect(e.target.value)}
                 className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
               >
-                <option value="">Select Service Type</option>
-                <option value="amc">AMC (Annual Maintenance Contract)</option>
-                <option value="one-time">One-Time Service</option>
-                <option value="repair">Repair Service</option>
-                <option value="inspection">Inspection Service</option>
+                <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                {amcPackages.map(pkg => (
+                  <option key={pkg.packageId} value={pkg.packageId}>
+                    {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
+                  </option>
+                ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
             
-            {/* Show locked estimate info if available */}
-            {lockedEstimate && amcForm.serviceType === 'amc' && (
-              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <div className="flex items-center gap-2 text-blue-700">
-                  <Lock className="w-4 h-4" />
-                  <span className="text-sm font-medium">Locked Estimate Found</span>
-                </div>
-                <p className="text-xs text-blue-600 mt-1">
-                  Estimate ID: {lockedEstimate.packageId} | Total: ₹{(lockedEstimate.totalPrice || 0).toLocaleString()} | 
-                  Services: {lockedEstimate.services?.length || 0}
-                </p>
-                <p className="text-xs text-blue-500 mt-1">
-                  The form has been pre-filled with the locked estimate details.
-                </p>
-              </div>
+            {amcPackages.length === 0 && (
+              <p className="text-xs text-amber-600 mt-1">
+                No packages available. Create packages in AMC Package Manager first.
+              </p>
             )}
           </div>
+
+          {/* Selected Package Details */}
+          {selectedPackage && (
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Package className="w-5 h-5 text-blue-600" />
+                  <span className="font-semibold text-blue-800">{selectedPackage.packageName}</span>
+                  <span className="text-xs text-blue-600">({selectedPackage.packageId})</span>
+                </div>
+                <span className="text-lg font-bold text-blue-700">₹{getPackagePrice().toLocaleString()}</span>
+              </div>
+              {selectedPackage.services && (
+                <div className="text-sm text-blue-700">
+                  <span className="font-medium">Services: </span>
+                  {typeof selectedPackage.services === 'string' 
+                    ? selectedPackage.services 
+                    : Array.isArray(selectedPackage.services) 
+                      ? selectedPackage.services.map(s => s.name || s).join(', ')
+                      : ''}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* AMC Services Section */}
+        {/* Add-ons Section */}
         <div className="px-6 py-4 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-blue-600 mb-4">AMC Services</h3>
+          <h3 className="text-sm font-semibold text-green-600 mb-4">Add Services (from Add-ons)</h3>
           
-          {/* Table Header */}
-          <div className="grid grid-cols-12 gap-2 mb-2 px-2">
-            <div className="col-span-1 text-xs font-medium text-gray-600">#</div>
-            <div className="col-span-5 text-xs font-medium text-gray-600">
-              Service <span className="text-red-500">*</span>
+          {/* Add-on Dropdown */}
+          <div className="flex gap-3 mb-4">
+            <div className="relative flex-1 max-w-md">
+              <select
+                onChange={(e) => {
+                  handleAddAddon(e.target.value);
+                  e.target.value = ''; // Reset dropdown after selection
+                }}
+                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-200 focus:border-green-500 appearance-none bg-white"
+              >
+                <option value="">+ Add Service from Add-ons</option>
+                {availableAddons
+                  .filter(addon => !selectedAddons.find(a => a.addonId === addon.addonId))
+                  .map(addon => (
+                    <option key={addon.addonId} value={addon.addonId}>
+                      {addon.addonId} - {addon.services?.map(s => s.name).join(', ')} (₹{(addon.totalPrice || 0).toLocaleString()})
+                    </option>
+                  ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
-            <div className="col-span-1 text-xs font-medium text-gray-600">
-              Frequency
-            </div>
-            <div className="col-span-2 text-xs font-medium text-gray-600">
-              Frequency Type
-            </div>
-            <div className="col-span-2 text-xs font-medium text-gray-600">
-              Price (₹)
-            </div>
-            <div className="col-span-1 text-xs font-medium text-gray-600">Total</div>
-            <div className="col-span-0"></div>
           </div>
 
-          {/* Service Rows */}
-          <div className="space-y-2">
-            {amcForm.services.map((service, index) => (
-              <div key={index} className="grid grid-cols-12 gap-2 items-center bg-gray-50 rounded-md p-2">
-                <div className="col-span-1 text-sm text-gray-600 font-medium pl-2">
-                  {index + 1}
-                </div>
-                <div className="col-span-5">
-                  <select
-                    value={service.name}
-                    onChange={(e) => {
-                      if (e.target.value === '__add_new__') {
-                        const newService = prompt('Enter new service name:');
-                        if (newService) {
-                          handleAddNewService(newService);
-                          updateServiceRow(index, 'name', newService);
-                        }
-                      } else {
-                        updateServiceRow(index, 'name', e.target.value);
-                      }
-                    }}
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  >
-                    <option value="">Select Service</option>
-                    {services.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                    <option value="__add_new__">+ Add New Service</option>
-                  </select>
-                </div>
-                <div className="col-span-1">
-                  <input
-                    type="number"
-                    min="1"
-                    value={service.frequency}
-                    onChange={(e) => updateServiceRow(index, 'frequency', parseInt(e.target.value) || 1)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 text-center"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <select
-                    value={service.frequencyType}
-                    onChange={(e) => updateServiceRow(index, 'frequencyType', e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
-                  >
-                    {FREQUENCY_TYPES.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <input
-                    type="number"
-                    min="0"
-                    value={service.price}
-                    onChange={(e) => updateServiceRow(index, 'price', e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
-                    placeholder="0"
-                  />
-                </div>
-                <div className="col-span-1 text-sm text-gray-800 font-medium">
-                  {calculateServiceTotal(service).toLocaleString()}
-                </div>
-                <div className="col-span-0"></div>
-              </div>
-            ))}
-          </div>
+          {availableAddons.length === 0 && (
+            <p className="text-xs text-amber-600 mb-4">
+              No add-ons available. Create add-ons in the Add-ons section first.
+            </p>
+          )}
 
-          {/* Add Service Button */}
-          <button
-            type="button"
-            onClick={addServiceRow}
-            className="mt-4 flex items-center gap-2 px-4 py-2 text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Service
-          </button>
+          {/* Selected Add-ons List */}
+          {selectedAddons.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-600 mb-2">Selected Add-ons:</p>
+              {selectedAddons.map((addon) => (
+                <div key={addon.addonId} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <PlusCircle className="w-4 h-4 text-green-600" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{addon.addonId}</p>
+                      <p className="text-xs text-gray-600">
+                        {addon.services?.map(s => `${s.name} (${s.frequency}x ${s.frequencyType})`).join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium text-green-700">₹{(addon.totalPrice || 0).toLocaleString()}</span>
+                    <button
+                      onClick={() => handleRemoveAddon(addon.addonId)}
+                      className="p-1.5 text-red-500 hover:bg-red-100 rounded-md transition-colors"
+                      title="Remove Add-on"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Summary and Actions - Calculation on Right, Buttons Below */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        {/* Dynamic Summary Section */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
+          <h3 className="text-sm font-semibold text-gray-800 mb-4">Price Summary</h3>
+          
           <div className="flex justify-end">
-            <div className="w-80">
-              {/* Calculation Section */}
-              <div className="text-right space-y-2 mb-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Sub Total (₹)</span>
-                  <span className="font-medium text-gray-800">{calculateSubTotal().toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">GST (₹)</span>
-                  <span className="font-medium text-gray-800">{calculateGST().toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm bg-blue-100 px-3 py-2 rounded-md">
-                  <span className="font-semibold text-blue-700">Total Amount (₹)</span>
-                  <span className="font-bold text-blue-700">{calculateTotal().toLocaleString()}</span>
-                </div>
+            <div className="w-96">
+              {/* Package Price */}
+              <div className="flex justify-between text-sm py-2 border-b border-gray-200">
+                <span className="text-gray-600">
+                  AMC Package: <span className="font-medium">{selectedPackage?.packageName || 'Not selected'}</span>
+                </span>
+                <span className="font-medium text-gray-800">₹{getPackagePrice().toLocaleString()}</span>
               </div>
+              
+              {/* Add-ons Total */}
+              <div className="flex justify-between text-sm py-2 border-b border-gray-200">
+                <span className="text-gray-600">
+                  Add-ons ({selectedAddons.length})
+                </span>
+                <span className="font-medium text-gray-800">₹{getAddonsTotal().toLocaleString()}</span>
+              </div>
+              
+              {/* Subtotal */}
+              <div className="flex justify-between text-sm py-2 border-b border-gray-200">
+                <span className="text-gray-600">Sub Total</span>
+                <span className="font-medium text-gray-800">₹{calculateSubTotal().toLocaleString()}</span>
+              </div>
+              
+              {/* GST */}
+              <div className="flex justify-between text-sm py-2 border-b border-gray-200">
+                <span className="text-gray-600">GST (2%)</span>
+                <span className="font-medium text-gray-800">₹{calculateGST().toLocaleString()}</span>
+              </div>
+              
+              {/* Discount */}
+              <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                <span className="text-gray-600">Discount (₹)</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  placeholder="0"
+                  className="w-28 px-3 py-1.5 text-sm text-right border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+              
+              {/* Total */}
+              <div className="flex justify-between text-base py-3 bg-blue-100 px-3 rounded-md mt-2">
+                <span className="font-semibold text-blue-700">Total Amount</span>
+                <span className="font-bold text-blue-700">₹{calculateTotal().toLocaleString()}</span>
+              </div>
+              
+              {/* Formula Note */}
+              <p className="text-xs text-gray-500 mt-2 text-right">
+                Formula: (Package + Add-ons) + GST - Discount
+              </p>
 
-              {/* Action Buttons - Only Save and Cancel */}
-              <div className="flex gap-3 justify-end">
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-end mt-4">
                 <button
                   onClick={resetForm}
                   className="px-6 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
@@ -533,10 +552,10 @@ const AMCPackage = ({ showToast }) => {
                   Cancel
                 </button>
                 <button
-                  onClick={handleSaveAMC}
+                  onClick={handleSaveEstimate}
                   className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
                 >
-                  Save
+                  Save Estimate
                 </button>
               </div>
             </div>
@@ -546,28 +565,28 @@ const AMCPackage = ({ showToast }) => {
         {/* Footer Note */}
         <div className="px-6 py-3 border-t border-gray-200 bg-white">
           <p className="text-xs text-gray-500">
-            * Currency: INR (₹) | GST Default: 2% for all services | Fields marked with * are mandatory
+            * Currency: INR (₹) | GST: 2% applied on total | Fields marked with * are mandatory
           </p>
         </div>
       </div>
 
-      {/* AMC Packages List */}
+      {/* All Property-Based Estimates List */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800">All AMC Estimates</h3>
+          <h3 className="text-lg font-semibold text-gray-800">All Property-Based Estimates</h3>
         </div>
-        {amcPackages.length === 0 ? (
+        {amcPackages.filter(p => p.propertyId).length === 0 ? (
           <div className="p-12 text-center">
             <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">No AMC estimates yet</p>
-            <p className="text-sm text-gray-400">Create your first AMC estimate above</p>
+            <p className="text-gray-500">No property-based estimates yet</p>
+            <p className="text-sm text-gray-400">Create your first estimate above</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {amcPackages.map((pkg) => {
-              const Icon = PROPERTY_ICONS[pkg.propertyType] || Package;
+            {amcPackages.filter(p => p.propertyId).map((estimate) => {
+              const Icon = PROPERTY_ICONS[estimate.propertyType] || Package;
               return (
-                <div key={pkg.packageId} className="p-4 hover:bg-gray-50">
+                <div key={estimate.packageId} className="p-4 hover:bg-gray-50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -576,22 +595,23 @@ const AMCPackage = ({ showToast }) => {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-gray-800">
-                            {pkg.propertyId} {pkg.propertyName && `- ${pkg.propertyName}`}
+                            {estimate.propertyId} {estimate.propertyName && `- ${estimate.propertyName}`}
                           </p>
-                          {pkg.status === 'draft' && (
-                            <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded">Draft</span>
+                          {estimate.packageName && (
+                            <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                              {estimate.packageName}
+                            </span>
                           )}
-                          {pkg.status === 'generated' && (
+                          {estimate.status === 'generated' && (
                             <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded flex items-center gap-1">
-                              <Lock className="w-3 h-3" /> Locked
+                              <Lock className="w-3 h-3" /> Active
                             </span>
                           )}
                         </div>
                         <p className="text-sm text-gray-500">
-                          {pkg.customerName && `${pkg.customerName} • `}
-                          {pkg.blockTower && `Block: ${pkg.blockTower} • `}
-                          {pkg.flatUnit && `Unit: ${pkg.flatUnit} • `}
-                          {pkg.services?.length || 0} services
+                          {estimate.customerName && `${estimate.customerName} • `}
+                          {estimate.addons?.length > 0 && `${estimate.addons.length} add-on(s) • `}
+                          {estimate.discount > 0 && `Discount: ₹${estimate.discount}`}
                         </p>
                       </div>
                     </div>
@@ -599,19 +619,19 @@ const AMCPackage = ({ showToast }) => {
                       <div className="text-right">
                         <p className="text-sm text-gray-500">Total Amount</p>
                         <p className="font-semibold text-gray-800">
-                          ₹{(pkg.totalPrice || 0).toLocaleString()}
+                          ₹{(estimate.totalPrice || 0).toLocaleString()}
                         </p>
                       </div>
                       <div className="flex gap-1">
                         <button
-                          onClick={() => handleEditAMC(pkg)}
+                          onClick={() => handleEditEstimate(estimate)}
                           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
                           title="Edit"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteAMC(pkg.packageId)}
+                          onClick={() => handleDeleteEstimate(estimate.packageId)}
                           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
                           title="Delete"
                         >
@@ -620,20 +640,6 @@ const AMCPackage = ({ showToast }) => {
                       </div>
                     </div>
                   </div>
-                  {pkg.services && pkg.services.length > 0 && (
-                    <div className="mt-3 ml-14">
-                      <div className="flex flex-wrap gap-2">
-                        {pkg.services.map((service, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
-                          >
-                            {service.name} ({service.frequency}x {service.frequencyType})
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}

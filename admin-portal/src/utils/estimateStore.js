@@ -6,6 +6,7 @@ const AMC_PACKAGES_KEY = 'xland_amc_packages';
 const ADDONS_KEY = 'xland_addons';
 const SERVICES_KEY = 'xland_services';
 const ESTIMATE_COUNTER_KEY = 'xland_estimate_counter';
+const GST_CONFIG_KEY = 'xland_gst_config';
 
 // Default services list
 const DEFAULT_SERVICES = [
@@ -554,4 +555,29 @@ export const linkAMCToProperty = (packageId, propertyId) => {
     return packages[index];
   }
   return null;
+};
+
+// ============================================
+// GST Configuration
+// ============================================
+
+// Default GST rate is 2%
+const DEFAULT_GST_RATE = 2;
+
+export const getGSTConfig = () => {
+  try {
+    const stored = localStorage.getItem(GST_CONFIG_KEY);
+    return stored ? parseFloat(stored) : DEFAULT_GST_RATE;
+  } catch {
+    return DEFAULT_GST_RATE;
+  }
+};
+
+export const setGSTConfig = (rate) => {
+  try {
+    localStorage.setItem(GST_CONFIG_KEY, rate.toString());
+    return true;
+  } catch {
+    return false;
+  }
 };
