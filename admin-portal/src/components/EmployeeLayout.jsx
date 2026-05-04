@@ -58,7 +58,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const estimatesSubItems = [
     { path: '/employee/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/employee/estimates/list', icon: List, label: 'All Estimates' },
-    { path: '/employee/estimates/amc-manager', icon: Package, label: 'AMC Package Manager' },
+    { path: '/employee/estimates/amc-manager', icon: Package, label: 'AMC Packages' },
     { path: '/employee/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
     { path: '/employee/estimates/archived', icon: Archive, label: 'Archived' },
   ];

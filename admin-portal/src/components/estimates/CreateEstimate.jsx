@@ -713,7 +713,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                   
                   {availablePackages.length === 0 && (
                     <p className="text-xs text-amber-600 mt-2">
-                      No packages available. Create packages in AMC Package Manager first.
+                      No packages available. Create packages in AMC Packages first.
                     </p>
                   )}
                 </div>

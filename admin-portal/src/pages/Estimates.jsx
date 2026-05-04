@@ -17,7 +17,7 @@ import {
 const TAB_TITLES = {
   'create': 'Create Estimate',
   'list': 'All Estimates',
-  'amc-manager': 'AMC Package Manager',
+  'amc-manager': 'AMC Packages',
   'addons': 'Add-ons',
   'archived': 'Archived Estimates'
 };
