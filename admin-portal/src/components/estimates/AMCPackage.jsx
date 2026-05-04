@@ -19,7 +19,7 @@ const GST_RATE = 0.02; // 2% GST applied at estimate level only
 
 const AMCPackage = ({ showToast }) => {
   // Core data
-  const [amcPackages, setAmcPackages] = useState([]); // Created AMC Packages from AMC Package Manager
+  const [amcPackages, setAmcPackages] = useState([]); // Created AMC Packages
   const [availableAddons, setAvailableAddons] = useState([]); // Add-ons from Add-ons Manager
   const [properties, setProperties] = useState([]);
   const [savedEstimates, setSavedEstimates] = useState([]); // Property-based estimates list
@@ -393,7 +393,7 @@ const AMCPackage = ({ showToast }) => {
             
             {amcPackages.length === 0 && (
               <p className="text-xs text-amber-600 mt-1">
-                No packages available. Create packages in AMC Package Manager first.
+                No packages available. Create packages in AMC Packages first.
               </p>
             )}
           </div>
