@@ -3,7 +3,7 @@ import { Edit, Trash2, PlusCircle, DollarSign } from 'lucide-react';
 import ServiceRows from './ServiceRows';
 import {
   getAddons, createAddon, updateAddon, deleteAddon,
-  getServices, calculateEstimateTotal
+  getServices, calculateEstimateTotal, seedTestData
 } from '../../utils/estimateStore';
 
 const AddonsManager = ({ showToast }) => {
@@ -19,6 +19,8 @@ const AddonsManager = ({ showToast }) => {
   }, []);
 
   const loadData = () => {
+    // Seed test data if none exists
+    seedTestData();
     setAddons(getAddons());
     setServices(getServices());
   };
@@ -93,13 +95,24 @@ const AddonsManager = ({ showToast }) => {
   return (
     <div className="space-y-6">
       {/* Add-on Form */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          {editingAddon ? 'Edit Add-on' : 'Create Add-on'}
-        </h3>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Header */}
+        <div className="px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+              <PlusCircle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">
+                {editingAddon ? 'Edit Add-on' : 'Create Add-on'}
+              </h3>
+              <p className="text-sm text-gray-500">Define optional services that can be added to AMC packages</p>
+            </div>
+          </div>
+        </div>
 
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Services</label>
+        {/* Form Content */}
+        <div className="p-6">
           <ServiceRows
             services={addonForm.services}
             onUpdate={updateServiceRow}
@@ -110,28 +123,34 @@ const AddonsManager = ({ showToast }) => {
           />
         </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div>
-            <p className="text-sm text-gray-500">Total Add-on Value</p>
-            <p className="text-2xl font-bold text-gray-800">
-              ₹{calculateEstimateTotal({ services: addonForm.services }).toLocaleString()}
-            </p>
-          </div>
-          <div className="flex gap-3">
-            {editingAddon && (
+        {/* Footer with Total and Actions */}
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="px-4 py-2 bg-white rounded-lg border border-gray-200">
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Total Add-on Value</p>
+                <p className="text-2xl font-bold text-green-600">
+                  ₹{calculateEstimateTotal({ services: addonForm.services }).toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              {editingAddon && (
+                <button
+                  onClick={resetForm}
+                  className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
               <button
-                onClick={resetForm}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                onClick={handleSaveAddon}
+                className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center gap-2"
               >
-                Cancel
+                <PlusCircle className="w-4 h-4" />
+                {editingAddon ? 'Update Add-on' : 'Save Add-on'}
               </button>
-            )}
-            <button
-              onClick={handleSaveAddon}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-            >
-              {editingAddon ? 'Update Add-on' : 'Create Add-on'}
-            </button>
+            </div>
           </div>
         </div>
       </div>

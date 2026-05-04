@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Edit, Trash2, Package, Plus, ChevronDown, Home, LayoutGrid, Layers, TreePine, Map, Briefcase, Lock, X, PlusCircle } from 'lucide-react';
 import {
   getAMCPackages, createAMCPackage, updateAMCPackage, deleteAMCPackage,
-  getAddons, FREQUENCY_TYPES, createEstimate
+  getAddons, FREQUENCY_TYPES, createEstimate, seedTestData
 } from '../../utils/estimateStore';
 import { getProperties } from '../../utils/propertyStore';
 
@@ -44,6 +44,8 @@ const AMCPackage = ({ showToast }) => {
   }, []);
 
   const loadData = async () => {
+    // Seed test data if none exists
+    seedTestData();
     setAmcPackages(getAMCPackages());
     setAvailableAddons(getAddons());
     const props = await getProperties();
