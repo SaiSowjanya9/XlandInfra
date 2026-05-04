@@ -581,3 +581,121 @@ export const setGSTConfig = (rate) => {
     return false;
   }
 };
+
+// ============================================
+// Seed Test Data
+// ============================================
+
+export const seedTestData = () => {
+  // Check if data already exists
+  const existingPackages = getStorageData(AMC_PACKAGES_KEY);
+  const existingAddons = getStorageData(ADDONS_KEY);
+  
+  // Only seed if no packages exist
+  if (existingPackages.length === 0) {
+    // Create sample AMC Packages
+    const samplePackages = [
+      {
+        packageId: 'AMC-GOLD-001',
+        packageName: 'Gold Package',
+        services: 'Lawn Mowing, Pool Maintenance, Cleaning, Security, HVAC Maintenance',
+        rate: 50000,
+        billingDuration: 'yearly',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        packageId: 'AMC-SILVER-002',
+        packageName: 'Silver Package',
+        services: 'Lawn Mowing, Cleaning, Pest Control, General Maintenance',
+        rate: 25000,
+        billingDuration: 'half-yearly',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        packageId: 'AMC-PLATINUM-003',
+        packageName: 'Platinum Package',
+        services: 'Full Maintenance, 24/7 Security, HVAC, Pool, Landscaping, Housekeeping, Electrical, Plumbing',
+        rate: 100000,
+        billingDuration: 'yearly',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        packageId: 'AMC-BASIC-004',
+        packageName: 'Basic Package',
+        services: 'Cleaning, General Maintenance',
+        rate: 10000,
+        billingDuration: 'monthly',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    ];
+    
+    setStorageData(AMC_PACKAGES_KEY, samplePackages);
+  }
+  
+  // Only seed addons if none exist
+  if (existingAddons.length === 0) {
+    // Create sample Add-ons
+    const sampleAddons = [
+      {
+        addonId: 'ADDON-SEC-001',
+        services: [
+          { name: 'Security Service', frequency: 1, frequencyType: 'Monthly', price: 5000 }
+        ],
+        totalPrice: 5000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        addonId: 'ADDON-PEST-002',
+        services: [
+          { name: 'Pest Control', frequency: 1, frequencyType: 'Quarterly', price: 2500 }
+        ],
+        totalPrice: 2500,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        addonId: 'ADDON-WIN-003',
+        services: [
+          { name: 'Window Cleaning', frequency: 1, frequencyType: 'Monthly', price: 3000 }
+        ],
+        totalPrice: 3000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        addonId: 'ADDON-HVAC-004',
+        services: [
+          { name: 'HVAC Deep Cleaning', frequency: 1, frequencyType: 'Quarterly', price: 8000 }
+        ],
+        totalPrice: 8000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        addonId: 'ADDON-PAINT-005',
+        services: [
+          { name: 'Touch-up Painting', frequency: 1, frequencyType: 'Yearly', price: 15000 }
+        ],
+        totalPrice: 15000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    ];
+    
+    setStorageData(ADDONS_KEY, sampleAddons);
+  }
+  
+  return {
+    packages: getStorageData(AMC_PACKAGES_KEY),
+    addons: getStorageData(ADDONS_KEY)
+  };
+};

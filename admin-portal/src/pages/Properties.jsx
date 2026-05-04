@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { 
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Briefcase, Lock, 
-  ArrowLeft, Download, ExternalLink, Layers, LayoutGrid
+  ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, FileText,
+  Package, Plus, Calendar, DollarSign, Receipt, Tag
 } from 'lucide-react';
 import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
+import { getEstimatesByPropertyId } from '../utils/estimateStore';
 import * as XLSX from 'xlsx';
 
 // Category options for Properties (same as Onboarding)
@@ -58,6 +60,11 @@ const Properties = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  
+  // Property detail view state
+  const [detailTab, setDetailTab] = useState('details'); // 'details' or 'estimates'
+  const [propertyEstimates, setPropertyEstimates] = useState([]);
+  const [selectedEstimate, setSelectedEstimate] = useState(null); // For viewing estimate details
 
   // Load properties from backend API and notifications from localStorage
   const loadData = async () => {
@@ -89,6 +96,24 @@ const Properties = () => {
       showToast('Failed to delete property', 'error');
     }
     setDeleteConfirm(null);
+  };
+
+  // Handle viewing a property - load its estimates
+  const handleViewProperty = (property) => {
+    setViewProperty(property);
+    setDetailTab('details');
+    setSelectedEstimate(null);
+    // Load estimates for this property
+    const estimates = getEstimatesByPropertyId(property.propertyId);
+    setPropertyEstimates(estimates);
+  };
+
+  // Handle closing property view
+  const handleClosePropertyView = () => {
+    setViewProperty(null);
+    setDetailTab('details');
+    setPropertyEstimates([]);
+    setSelectedEstimate(null);
   };
 
   // Mark all notifications as read
@@ -499,7 +524,7 @@ const Properties = () => {
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1">
                           <button
-                            onClick={() => setViewProperty(property)}
+                            onClick={() => handleViewProperty(property)}
                             className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                             title="View details"
                           >
@@ -537,12 +562,12 @@ const Properties = () => {
         )}
       </div>
 
-      {/* View Property Modal */}
-      {viewProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setViewProperty(null)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      {/* View Property Modal - Tabbed Interface */}
+      {viewProperty && !selectedEstimate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleClosePropertyView}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-white">
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-semibold text-gray-900">{viewProperty.name}</h2>
@@ -552,183 +577,300 @@ const Properties = () => {
                 </div>
                 <p className="text-xs font-mono text-gray-500 mt-0.5">{viewProperty.propertyId}</p>
               </div>
-              <button onClick={() => setViewProperty(null)} className="p-2 hover:bg-gray-100 rounded-md transition-colors">
+              <button onClick={handleClosePropertyView} className="p-2 hover:bg-gray-100 rounded-md transition-colors">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
 
-            {/* Modal Content - Form-like layout */}
-            <div className="px-6 py-5 space-y-6">
-              {/* Property Information */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Property Information</h3>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Zone</label>
-                    <p className="text-sm text-gray-900">{viewProperty.zone || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Area Name</label>
-                    <p className="text-sm text-gray-900">{viewProperty.areaName || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Division</label>
-                    <p className="text-sm text-gray-900">{viewProperty.division || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Property Type</label>
-                    <p className="text-sm text-gray-900">{viewProperty.propertyType || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Total Units</label>
-                    <p className="text-sm text-gray-900">{viewProperty.totalUnits || 0}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Created Date</label>
-                    <p className="text-sm text-gray-900">{formatDate(viewProperty.createdAt)}</p>
-                  </div>
-                </div>
+            {/* Tab Navigation */}
+            <div className="border-b border-gray-200 bg-gray-50 px-6">
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setDetailTab('details')}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                    detailTab === 'details'
+                      ? 'border-blue-600 text-blue-700 bg-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Building2 className="w-4 h-4" />
+                  Property Details
+                </button>
+                <button
+                  onClick={() => setDetailTab('estimates')}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                    detailTab === 'estimates'
+                      ? 'border-blue-600 text-blue-700 bg-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  Estimates
+                  {propertyEstimates.length > 0 && (
+                    <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
+                      detailTab === 'estimates' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {propertyEstimates.length}
+                    </span>
+                  )}
+                </button>
               </div>
+            </div>
 
-              {/* Blocks (GC) */}
-              {viewProperty.entryType === 'GC' && viewProperty.unitsPerBlock && Object.keys(viewProperty.unitsPerBlock).length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Block Details</h3>
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-                    {Object.entries(viewProperty.unitsPerBlock).map(([blockNum, units]) => (
-                      <div key={blockNum}>
-                        <label className="block text-xs text-gray-500 mb-1">
-                          {viewProperty.blockNames?.[blockNum] || `Block ${blockNum}`}
-                        </label>
-                        <p className="text-sm text-gray-900">{units} units</p>
+            {/* Tab Content */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Property Details Tab */}
+              {detailTab === 'details' && (
+                <div className="px-6 py-5 space-y-6">
+                  {/* Property Information */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Property Information</h3>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Zone</label>
+                        <p className="text-sm text-gray-900">{viewProperty.zone || '-'}</p>
                       </div>
-                    ))}
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Area Name</label>
+                        <p className="text-sm text-gray-900">{viewProperty.areaName || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Division</label>
+                        <p className="text-sm text-gray-900">{viewProperty.division || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Property Type</label>
+                        <p className="text-sm text-gray-900">{viewProperty.propertyType || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Total Units</label>
+                        <p className="text-sm text-gray-900">{viewProperty.totalUnits || 0}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Created Date</label>
+                        <p className="text-sm text-gray-900">{formatDate(viewProperty.createdAt)}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
 
-              {/* Block Info (APT) */}
-              {viewProperty.entryType === 'APT' && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Block Information</h3>
-                  <p className="text-sm text-gray-900">
-                    {viewProperty.blockNA ? 'N/A' : (viewProperty.blockInfo || '-')}
-                  </p>
-                </div>
-              )}
+                  {/* Blocks (GC) */}
+                  {viewProperty.entryType === 'GC' && viewProperty.unitsPerBlock && Object.keys(viewProperty.unitsPerBlock).length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Block Details</h3>
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                        {Object.entries(viewProperty.unitsPerBlock).map(([blockNum, units]) => (
+                          <div key={blockNum}>
+                            <label className="block text-xs text-gray-500 mb-1">
+                              {viewProperty.blockNames?.[blockNum] || `Block ${blockNum}`}
+                            </label>
+                            <p className="text-sm text-gray-900">{units} units</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-              {/* Villa/Plot/Flat Number */}
-              {(viewProperty.entryType === 'VILLA' || viewProperty.entryType === 'PLOT' || viewProperty.entryType === 'FLAT') && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">
-                    {viewProperty.entryType === 'VILLA' ? 'Villa Details' : viewProperty.entryType === 'PLOT' ? 'Plot Details' : 'Flat Details'}
-                  </h3>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      {viewProperty.entryType === 'VILLA' ? 'Villa Number' : viewProperty.entryType === 'PLOT' ? 'Plot Number' : 'Flat Number'}
-                    </label>
-                    <p className="text-sm text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
-                  </div>
-                </div>
-              )}
+                  {/* Block Info (APT) */}
+                  {viewProperty.entryType === 'APT' && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Block Information</h3>
+                      <p className="text-sm text-gray-900">
+                        {viewProperty.blockNA ? 'N/A' : (viewProperty.blockInfo || '-')}
+                      </p>
+                    </div>
+                  )}
 
-              {/* Address */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Address</h3>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                  <div className="col-span-2">
-                    <label className="block text-xs text-gray-500 mb-1">Street Address</label>
-                    <p className="text-sm text-gray-900">{viewProperty.address || '-'}</p>
-                  </div>
+                  {/* Villa/Plot/Flat Number */}
+                  {(viewProperty.entryType === 'VILLA' || viewProperty.entryType === 'PLOT' || viewProperty.entryType === 'FLAT') && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">
+                        {viewProperty.entryType === 'VILLA' ? 'Villa Details' : viewProperty.entryType === 'PLOT' ? 'Plot Details' : 'Flat Details'}
+                      </h3>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          {viewProperty.entryType === 'VILLA' ? 'Villa Number' : viewProperty.entryType === 'PLOT' ? 'Plot Number' : 'Flat Number'}
+                        </label>
+                        <p className="text-sm text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Address */}
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Apt/Suite</label>
-                    <p className="text-sm text-gray-900">
-                      {viewProperty.aptSuiteNA ? 'N/A' : (viewProperty.aptSuiteUnit || '-')}
-                    </p>
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Address</h3>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                      <div className="col-span-2">
+                        <label className="block text-xs text-gray-500 mb-1">Street Address</label>
+                        <p className="text-sm text-gray-900">{viewProperty.address || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Apt/Suite</label>
+                        <p className="text-sm text-gray-900">
+                          {viewProperty.aptSuiteNA ? 'N/A' : (viewProperty.aptSuiteUnit || '-')}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">City</label>
+                        <p className="text-sm text-gray-900">{viewProperty.city || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">State/Province</label>
+                        <p className="text-sm text-gray-900">{viewProperty.state || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">ZIP/Postal Code</label>
+                        <p className="text-sm text-gray-900">{viewProperty.postalCode || '-'}</p>
+                      </div>
+                      {viewProperty.landmark && (
+                        <div className="col-span-2">
+                          <label className="block text-xs text-gray-500 mb-1">Landmark</label>
+                          <p className="text-sm text-gray-900">{viewProperty.landmark}</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">City</label>
-                    <p className="text-sm text-gray-900">{viewProperty.city || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">State/Province</label>
-                    <p className="text-sm text-gray-900">{viewProperty.state || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">ZIP/Postal Code</label>
-                    <p className="text-sm text-gray-900">{viewProperty.postalCode || '-'}</p>
-                  </div>
-                  {viewProperty.landmark && (
-                    <div className="col-span-2">
-                      <label className="block text-xs text-gray-500 mb-1">Landmark</label>
-                      <p className="text-sm text-gray-900">{viewProperty.landmark}</p>
+
+                  {/* Map Location */}
+                  {viewProperty.mapLocation?.lat && viewProperty.mapLocation?.lng && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Map Location</h3>
+                      <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
+                        {viewProperty.mapLocation.address && (
+                          <p className="text-sm text-gray-700 mb-3">{viewProperty.mapLocation.address}</p>
+                        )}
+                        <a
+                          href={`https://www.google.com/maps?q=${viewProperty.mapLocation.lat},${viewProperty.mapLocation.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          Open in Maps
+                        </a>
+                        <p className="text-xs text-gray-500 mt-2 font-mono">
+                          {viewProperty.mapLocation.lat.toFixed(6)}, {viewProperty.mapLocation.lng.toFixed(6)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Contacts */}
+                  {viewProperty.contacts && viewProperty.contacts.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Contact Information</h3>
+                      <div className="space-y-3">
+                        {viewProperty.contacts.map((c, i) => (
+                          <div key={i} className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded-md">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Name</label>
+                              <p className="text-sm text-gray-900">{c.name}</p>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Email</label>
+                              <p className="text-sm text-gray-900">{c.email}</p>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Phone</label>
+                              <p className="text-sm text-gray-900">{c.countryCode || '+91'} {c.phone}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {viewProperty.notes && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Notes</h3>
+                      <p className="text-sm text-gray-700">{viewProperty.notes}</p>
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Map Location with clickable link */}
-              {viewProperty.mapLocation?.lat && viewProperty.mapLocation?.lng && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Map Location</h3>
-                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
-                    {viewProperty.mapLocation.address && (
-                      <p className="text-sm text-gray-700 mb-3">{viewProperty.mapLocation.address}</p>
-                    )}
-                    <a
-                      href={`https://www.google.com/maps?q=${viewProperty.mapLocation.lat},${viewProperty.mapLocation.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Open in Maps
-                    </a>
-                    <p className="text-xs text-gray-500 mt-2 font-mono">
-                      {viewProperty.mapLocation.lat.toFixed(6)}, {viewProperty.mapLocation.lng.toFixed(6)}
-                    </p>
-                  </div>
-                </div>
               )}
 
-              {/* Contacts */}
-              {viewProperty.contacts && viewProperty.contacts.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Contact Information</h3>
-                  <div className="space-y-3">
-                    {viewProperty.contacts.map((c, i) => (
-                      <div key={i} className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded-md">
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Name</label>
-                          <p className="text-sm text-gray-900">{c.name}</p>
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Email</label>
-                          <p className="text-sm text-gray-900">{c.email}</p>
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Phone</label>
-                          <p className="text-sm text-gray-900">{c.countryCode || '+91'} {c.phone}</p>
-                        </div>
-                      </div>
-                    ))}
+              {/* Estimates Tab */}
+              {detailTab === 'estimates' && (
+                <div className="px-6 py-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-gray-800">Property Estimates</h3>
+                    <span className="text-xs text-gray-500">
+                      {propertyEstimates.length} estimate{propertyEstimates.length !== 1 ? 's' : ''} linked
+                    </span>
                   </div>
-                </div>
-              )}
 
-              {/* Notes */}
-              {viewProperty.notes && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Notes</h3>
-                  <p className="text-sm text-gray-700">{viewProperty.notes}</p>
+                  {propertyEstimates.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500 font-medium">No estimates linked</p>
+                      <p className="text-gray-400 text-sm mt-1">
+                        Create a Property-Based Estimate from the Estimates module to link it here.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {propertyEstimates.map((estimate) => (
+                        <div
+                          key={estimate.estimateId}
+                          onClick={() => setSelectedEstimate(estimate)}
+                          className="p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm cursor-pointer transition-all"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <Package className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {estimate.packageName || 'Custom Estimate'}
+                                </p>
+                                <p className="text-xs font-mono text-gray-500 mt-0.5">
+                                  {estimate.estimateId}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-gray-900">
+                                ₹{(estimate.totalPrice || 0).toLocaleString()}
+                              </p>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mt-1 ${
+                                estimate.status === 'Draft' ? 'bg-gray-100 text-gray-600' :
+                                estimate.status === 'Sent' ? 'bg-blue-100 text-blue-700' :
+                                estimate.status === 'Accepted' ? 'bg-green-100 text-green-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {estimate.status}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5" />
+                              {formatDate(estimate.createdAt)}
+                            </span>
+                            {estimate.addons && estimate.addons.length > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Plus className="w-3.5 h-3.5" />
+                                {estimate.addons.length} add-on{estimate.addons.length !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1 ml-auto text-blue-600 font-medium">
+                              <Eye className="w-3.5 h-3.5" />
+                              View Details
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center sticky bottom-0">
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
               <button
-                onClick={() => { setDeleteConfirm(viewProperty); setViewProperty(null); }}
+                onClick={() => { setDeleteConfirm(viewProperty); handleClosePropertyView(); }}
                 className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-md text-sm font-medium transition-colors"
               >
                 <Trash2 className="w-4 h-4" /> Delete
@@ -741,12 +883,183 @@ const Properties = () => {
                   <Download className="w-4 h-4" /> Export
                 </button>
                 <button
-                  onClick={() => setViewProperty(null)}
+                  onClick={handleClosePropertyView}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors"
                 >
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Estimate Detail View Modal (Read-Only) */}
+      {selectedEstimate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedEstimate(null)}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Estimate Header */}
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSelectedEstimate(null)}
+                    className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-white/70" />
+                      <h2 className="text-lg font-semibold text-white">
+                        {selectedEstimate.packageName || 'Estimate Details'}
+                      </h2>
+                    </div>
+                    <p className="text-xs text-white/70 font-mono mt-0.5">{selectedEstimate.estimateId}</p>
+                  </div>
+                </div>
+                <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium ${
+                  selectedEstimate.status === 'Draft' ? 'bg-white/20 text-white' :
+                  selectedEstimate.status === 'Sent' ? 'bg-blue-200 text-blue-800' :
+                  selectedEstimate.status === 'Accepted' ? 'bg-green-200 text-green-800' :
+                  'bg-red-200 text-red-800'
+                }`}>
+                  {selectedEstimate.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Estimate Content - Read Only */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+              {/* Metadata */}
+              <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Created</label>
+                  <p className="text-sm text-gray-900 font-medium">{formatDate(selectedEstimate.createdAt)}</p>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Property ID</label>
+                  <p className="text-sm text-gray-900 font-mono">{selectedEstimate.propertyId}</p>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Estimate Type</label>
+                  <p className="text-sm text-gray-900">{selectedEstimate.estimateType || 'Property-Based'}</p>
+                </div>
+              </div>
+
+              
+              {/* Add-ons */}
+              {selectedEstimate.addons && selectedEstimate.addons.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100 flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-green-600" />
+                    Add-ons ({selectedEstimate.addons.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedEstimate.addons.map((addon, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">
+                            {addon.services?.map(s => s.name).join(', ') || `Add-on ${idx + 1}`}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {addon.services?.map(s => s.frequencyType).join(', ')}
+                          </p>
+                        </div>
+                        <p className="font-semibold text-green-700">₹{(addon.totalPrice || 0).toLocaleString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Pricing Breakdown */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100 flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-purple-600" />
+                  Pricing Breakdown
+                </h3>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Package Price</span>
+                    <span className="font-medium text-gray-800">₹{(selectedEstimate.packageRate || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Add-ons Total</span>
+                    <span className="font-medium text-gray-800">₹{(selectedEstimate.addonsTotal || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
+                    <span className="text-gray-600">Sub Total</span>
+                    <span className="font-medium text-gray-800">₹{(selectedEstimate.subTotal || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">GST (2%)</span>
+                    <span className="font-medium text-gray-800">₹{(selectedEstimate.gst || 0).toLocaleString()}</span>
+                  </div>
+                  {selectedEstimate.discount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Discount</span>
+                      <span className="font-medium text-red-600">-₹{(selectedEstimate.discount || 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-base font-bold border-t border-gray-300 pt-3 mt-2">
+                    <span className="text-gray-800">Final Total</span>
+                    <span className="text-blue-700">₹{(selectedEstimate.totalPrice || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-right">
+                  Formula: (Package + Add-ons) + GST - Discount
+                </p>
+              </div>
+
+              {/* Customer Info if available */}
+              {(selectedEstimate.customerName || selectedEstimate.customerEmail || selectedEstimate.customerPhone) && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Customer Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedEstimate.customerName && (
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Name</label>
+                        <p className="text-sm text-gray-900">{selectedEstimate.customerName}</p>
+                      </div>
+                    )}
+                    {selectedEstimate.customerEmail && (
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Email</label>
+                        <p className="text-sm text-gray-900">{selectedEstimate.customerEmail}</p>
+                      </div>
+                    )}
+                    {selectedEstimate.customerPhone && (
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Phone</label>
+                        <p className="text-sm text-gray-900">{selectedEstimate.customerPhone}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedEstimate.notes && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Notes</h3>
+                  <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">{selectedEstimate.notes}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Lock className="w-3.5 h-3.5" />
+                <span>Read-only view</span>
+              </div>
+              <button
+                onClick={() => setSelectedEstimate(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
