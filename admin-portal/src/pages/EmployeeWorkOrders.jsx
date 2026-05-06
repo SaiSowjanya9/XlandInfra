@@ -132,13 +132,23 @@ const EmployeeWorkOrders = ({ admin }) => {
     setSelectedProperty(property);
     setPropertySearch(property.propertyId);
     setShowPropertyDropdown(false);
+    
+    // Auto-populate customer details from property's contacts (backend returns 'contacts')
+    const contact = property.contacts?.[0] || property.associationContacts?.[0] || {};
+    const customerName = contact.name || property.communityName || property.name || '';
+    const customerEmail = contact.email || '';
+    const customerPhone = contact.phone ? `${contact.countryCode || '+91'} ${contact.phone}` : '';
+    
     setFormData(prev => ({
       ...prev,
       propertyId: property.propertyId,
+      customerName: customerName,
+      customerEmail: customerEmail,
+      customerPhone: customerPhone,
       block: '',
       flatNumber: ''
     }));
-    setFormErrors(prev => ({ ...prev, propertyId: '' }));
+    setFormErrors(prev => ({ ...prev, propertyId: '', customerName: '' }));
   };
 
   const filteredProperties = properties.filter(p =>

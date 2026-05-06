@@ -237,6 +237,53 @@ export const getAMCPackageById = (packageId) => {
   return packages.find(pkg => pkg.packageId === packageId);
 };
 
+// Get AMC package by property type (IC, Villa, Apt, Plot, Flat)
+export const getAMCPackageByPropertyType = (propertyType) => {
+  const packages = getStorageData(AMC_PACKAGES_KEY);
+  // Map various property type formats to standardized types
+  const typeMapping = {
+    'IC': 'IC',
+    'Independent House': 'IC',
+    'Villa': 'Villa',
+    'Villas': 'Villa',
+    'Apt': 'Apt',
+    'APT': 'Apt',
+    'Apartment': 'Apt',
+    'Plot': 'Plot',
+    'Plots': 'Plot',
+    'Flat': 'Flat',
+    'Flats': 'Flat',
+    'GC': 'Apt', // Gated Community maps to Apartment
+    'Commercial': 'Commercial'
+  };
+  
+  const normalizedType = typeMapping[propertyType] || propertyType;
+  return packages.find(pkg => pkg.propertyType === normalizedType);
+};
+
+// Get all AMC packages for a specific property type
+export const getAMCPackagesByPropertyType = (propertyType) => {
+  const packages = getStorageData(AMC_PACKAGES_KEY);
+  const typeMapping = {
+    'IC': 'IC',
+    'Independent House': 'IC',
+    'Villa': 'Villa',
+    'Villas': 'Villa',
+    'Apt': 'Apt',
+    'APT': 'Apt',
+    'Apartment': 'Apt',
+    'Plot': 'Plot',
+    'Plots': 'Plot',
+    'Flat': 'Flat',
+    'Flats': 'Flat',
+    'GC': 'Apt',
+    'Commercial': 'Commercial'
+  };
+  
+  const normalizedType = typeMapping[propertyType] || propertyType;
+  return packages.filter(pkg => pkg.propertyType === normalizedType);
+};
+
 export const createAMCPackage = (packageData) => {
   const packages = getStorageData(AMC_PACKAGES_KEY);
   const packageId = `AMC-${Date.now()}`;
@@ -583,6 +630,45 @@ export const setGSTConfig = (rate) => {
 };
 
 // ============================================
+// Migrate existing packages to add serviceRows
+// ============================================
+
+export const migratePackagesToServiceRows = () => {
+  const packages = getStorageData(AMC_PACKAGES_KEY);
+  let migrated = false;
+  
+  const updatedPackages = packages.map(pkg => {
+    // Skip if already has serviceRows
+    if (pkg.serviceRows && pkg.serviceRows.length > 0) {
+      return pkg;
+    }
+    
+    // Parse services string and create serviceRows with default frequency
+    if (pkg.services && typeof pkg.services === 'string') {
+      migrated = true;
+      const serviceNames = pkg.services.split(',').map(s => s.trim()).filter(s => s);
+      return {
+        ...pkg,
+        serviceRows: serviceNames.map(name => ({
+          service: name,
+          frequencyCount: 1,
+          frequencyType: 'Monthly'
+        })),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    return pkg;
+  });
+  
+  if (migrated) {
+    setStorageData(AMC_PACKAGES_KEY, updatedPackages);
+  }
+  
+  return migrated;
+};
+
+// ============================================
 // Seed Test Data
 // ============================================
 
@@ -593,11 +679,19 @@ export const seedTestData = () => {
   
   // Only seed if no packages exist
   if (existingPackages.length === 0) {
-    // Create sample AMC Packages
+    // Create sample AMC Packages with serviceRows including frequency data
     const samplePackages = [
       {
         packageId: 'AMC-GOLD-001',
         packageName: 'Gold Package',
+        propertyType: 'GC',
+        serviceRows: [
+          { service: 'Lawn Mowing', frequencyCount: 1, frequencyType: 'Monthly' },
+          { service: 'Pool Maintenance', frequencyCount: 1, frequencyType: 'Monthly' },
+          { service: 'Cleaning', frequencyCount: 1, frequencyType: 'Monthly' },
+          { service: 'Security', frequencyCount: 1, frequencyType: 'Monthly' },
+          { service: 'HVAC Maintenance', frequencyCount: 1, frequencyType: 'Monthly' }
+        ],
         services: 'Lawn Mowing, Pool Maintenance, Cleaning, Security, HVAC Maintenance',
         rate: 50000,
         billingDuration: 'yearly',
@@ -608,6 +702,13 @@ export const seedTestData = () => {
       {
         packageId: 'AMC-SILVER-002',
         packageName: 'Silver Package',
+        propertyType: 'APT',
+        serviceRows: [
+          { service: 'Lawn Mowing', frequencyCount: 2, frequencyType: 'Monthly' },
+          { service: 'Cleaning', frequencyCount: 1, frequencyType: 'Monthly' },
+          { service: 'Pest Control', frequencyCount: 1, frequencyType: 'Quarterly' },
+          { service: 'General Maintenance', frequencyCount: 1, frequencyType: 'Monthly' }
+        ],
         services: 'Lawn Mowing, Cleaning, Pest Control, General Maintenance',
         rate: 25000,
         billingDuration: 'half-yearly',
@@ -618,6 +719,17 @@ export const seedTestData = () => {
       {
         packageId: 'AMC-PLATINUM-003',
         packageName: 'Platinum Package',
+        propertyType: 'Villa',
+        serviceRows: [
+          { service: 'Full Maintenance', frequencyCount: 1, frequencyType: 'Monthly' },
+          { service: '24/7 Security', frequencyCount: 1, frequencyType: 'Monthly' },
+          { service: 'HVAC', frequencyCount: 1, frequencyType: 'Quarterly' },
+          { service: 'Pool', frequencyCount: 2, frequencyType: 'Monthly' },
+          { service: 'Landscaping', frequencyCount: 1, frequencyType: 'Monthly' },
+          { service: 'Housekeeping', frequencyCount: 4, frequencyType: 'Monthly' },
+          { service: 'Electrical', frequencyCount: 1, frequencyType: 'Quarterly' },
+          { service: 'Plumbing', frequencyCount: 1, frequencyType: 'Quarterly' }
+        ],
         services: 'Full Maintenance, 24/7 Security, HVAC, Pool, Landscaping, Housekeeping, Electrical, Plumbing',
         rate: 100000,
         billingDuration: 'yearly',
@@ -628,6 +740,11 @@ export const seedTestData = () => {
       {
         packageId: 'AMC-BASIC-004',
         packageName: 'Basic Package',
+        propertyType: 'Flat',
+        serviceRows: [
+          { service: 'Cleaning', frequencyCount: 2, frequencyType: 'Monthly' },
+          { service: 'General Maintenance', frequencyCount: 1, frequencyType: 'Monthly' }
+        ],
         services: 'Cleaning, General Maintenance',
         rate: 10000,
         billingDuration: 'monthly',

@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Edit, Trash2, PlusCircle, DollarSign } from 'lucide-react';
-import ServiceRows from './ServiceRows';
+import { Trash2, PlusCircle, DollarSign, ChevronDown, Plus } from 'lucide-react';
 import {
-  getAddons, createAddon, updateAddon, deleteAddon,
-  getServices, calculateEstimateTotal, seedTestData
+  getAddons, createAddon, deleteAddon,
+  getServices, calculateEstimateTotal, seedTestData, FREQUENCY_TYPES
 } from '../../utils/estimateStore';
 
 const AddonsManager = ({ showToast }) => {
   const [addons, setAddons] = useState([]);
   const [services, setServices] = useState([]);
-  const [editingAddon, setEditingAddon] = useState(null);
   const [addonForm, setAddonForm] = useState({
-    services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
+    serviceName: '',
+    frequencyCount: 1,
+    frequencyType: 'Monthly',
+    price: ''
   });
 
   useEffect(() => {
@@ -19,146 +20,161 @@ const AddonsManager = ({ showToast }) => {
   }, []);
 
   const loadData = () => {
-    // Seed test data if none exists
     seedTestData();
     setAddons(getAddons());
     setServices(getServices());
   };
 
   const handleSaveAddon = () => {
-    const validServices = addonForm.services.filter(s => s.name.trim() && s.price);
-    if (validServices.length === 0) {
-      showToast('At least one service with price is required', 'error');
+    if (!addonForm.serviceName.trim()) {
+      showToast('Please select or enter a service name', 'error');
+      return;
+    }
+    if (!addonForm.price || parseFloat(addonForm.price) <= 0) {
+      showToast('Please enter a valid price', 'error');
       return;
     }
 
     const addonData = {
-      services: validServices,
-      totalPrice: calculateEstimateTotal({ services: validServices })
+      services: [{
+        name: addonForm.serviceName.trim(),
+        frequency: parseInt(addonForm.frequencyCount) || 1,
+        frequencyType: addonForm.frequencyType,
+        price: parseFloat(addonForm.price)
+      }],
+      totalPrice: parseFloat(addonForm.price)
     };
 
-    if (editingAddon) {
-      updateAddon(editingAddon.addonId, addonData);
-      showToast('Add-on updated!');
-      setEditingAddon(null);
-    } else {
-      createAddon(addonData);
-      showToast('Add-on created!');
-    }
-
+    createAddon(addonData);
+    showToast('Add-on created!');
     resetForm();
     loadData();
   };
 
   const resetForm = () => {
     setAddonForm({
-      services: [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
-    });
-    setEditingAddon(null);
-  };
-
-  const handleEditAddon = (addon) => {
-    setEditingAddon(addon);
-    setAddonForm({
-      services: addon.services || [{ name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
+      serviceName: '',
+      frequencyCount: 1,
+      frequencyType: 'Monthly',
+      price: ''
     });
   };
 
   const handleDeleteAddon = (addonId) => {
-    deleteAddon(addonId);
-    showToast('Add-on deleted');
-    loadData();
-  };
-
-  const addServiceRow = () => {
-    setAddonForm({
-      ...addonForm,
-      services: [...addonForm.services, { name: '', frequency: 1, frequencyType: 'Monthly', price: '' }]
-    });
-  };
-
-  const removeServiceRow = (index) => {
-    if (addonForm.services.length > 1) {
-      setAddonForm({
-        ...addonForm,
-        services: addonForm.services.filter((_, i) => i !== index)
-      });
+    if (window.confirm('Are you sure you want to delete this add-on?')) {
+      deleteAddon(addonId);
+      showToast('Add-on deleted');
+      loadData();
     }
-  };
-
-  const updateServiceRow = (index, field, value) => {
-    const newServices = [...addonForm.services];
-    newServices[index] = { ...newServices[index], [field]: value };
-    setAddonForm({ ...addonForm, services: newServices });
   };
 
   return (
     <div className="space-y-6">
-      {/* Add-on Form */}
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center">
+          <PlusCircle className="w-5 h-5 text-stone-600" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Add-ons</h1>
+          <p className="text-sm text-gray-500">Create optional services for AMC packages</p>
+        </div>
+      </div>
+
+      {/* Add-on Form - Simple Layout */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-              <PlusCircle className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800">
-                {editingAddon ? 'Edit Add-on' : 'Create Add-on'}
-              </h3>
-              <p className="text-sm text-gray-500">Define optional services that can be added to AMC packages</p>
-            </div>
-          </div>
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800">Create Add-on</h3>
         </div>
 
-        {/* Form Content */}
         <div className="p-6">
-          <ServiceRows
-            services={addonForm.services}
-            onUpdate={updateServiceRow}
-            onAdd={addServiceRow}
-            onRemove={removeServiceRow}
-            availableServices={services}
-            onServicesUpdate={setServices}
-          />
-        </div>
+          {/* Single Row Layout: Select Service | Frequency Count | Frequency Type | Price | Save */}
+          <div className="grid grid-cols-12 gap-4 items-end">
+            {/* Select Service - First */}
+            <div className="col-span-4">
+              <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Select Service</label>
+              <input
+                type="text"
+                list="service-options"
+                value={addonForm.serviceName}
+                onChange={(e) => setAddonForm({ ...addonForm, serviceName: e.target.value })}
+                placeholder="Select or type service name"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400"
+              />
+              <datalist id="service-options">
+                {services.map((service, idx) => (
+                  <option key={idx} value={service} />
+                ))}
+              </datalist>
+            </div>
 
-        {/* Footer with Total and Actions */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="px-4 py-2 bg-white rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Total Add-on Value</p>
-                <p className="text-2xl font-bold text-green-600">
-                  ₹{calculateEstimateTotal({ services: addonForm.services }).toLocaleString()}
-                </p>
+            {/* Frequency Count */}
+            <div className="col-span-2">
+              <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency Count</label>
+              <input
+                type="number"
+                min="1"
+                value={addonForm.frequencyCount}
+                onChange={(e) => setAddonForm({ ...addonForm, frequencyCount: e.target.value })}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400"
+              />
+            </div>
+
+            {/* Frequency Type */}
+            <div className="col-span-2">
+              <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency Type</label>
+              <div className="relative">
+                <select
+                  value={addonForm.frequencyType}
+                  onChange={(e) => setAddonForm({ ...addonForm, frequencyType: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 bg-white appearance-none"
+                >
+                  {FREQUENCY_TYPES.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <div className="flex gap-3">
-              {editingAddon && (
-                <button
-                  onClick={resetForm}
-                  className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-              )}
+
+            {/* Price */}
+            <div className="col-span-2">
+              <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (₹)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={addonForm.price}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    setAddonForm({ ...addonForm, price: value });
+                  }}
+                  placeholder="0"
+                  className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="col-span-2">
               <button
                 onClick={handleSaveAddon}
-                className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center gap-2"
+                className="w-full px-4 py-2.5 bg-stone-700 text-white rounded-lg hover:bg-stone-800 font-medium transition-colors flex items-center justify-center gap-2"
               >
-                <PlusCircle className="w-4 h-4" />
-                {editingAddon ? 'Update Add-on' : 'Save Add-on'}
+                <Plus className="w-4 h-4" />
+                Save
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Add-ons List */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+      {/* All Add-ons List */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800">All Add-ons</h3>
+          <p className="text-sm text-gray-500">{addons.length} add-on(s) available</p>
         </div>
         {addons.length === 0 ? (
           <div className="p-12 text-center">
@@ -169,58 +185,38 @@ const AddonsManager = ({ showToast }) => {
         ) : (
           <div className="divide-y divide-gray-100">
             {addons.map((addon) => (
-              <div key={addon.addonId} className="p-4 hover:bg-gray-50">
+              <div key={addon.addonId} className="p-4 hover:bg-stone-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <PlusCircle className="w-5 h-5 text-green-600" />
+                    <div className="w-10 h-10 bg-stone-100 rounded-lg flex items-center justify-center">
+                      <PlusCircle className="w-5 h-5 text-stone-600" />
                     </div>
                     <div>
                       <p className="font-medium text-gray-800">
-                        {addon.addonId}
+                        {addon.services?.[0]?.name || addon.addonId}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {addon.services?.length || 0} services • Created {new Date(addon.createdAt).toLocaleDateString()}
+                        {addon.services?.[0]?.frequency || 1}x {addon.services?.[0]?.frequencyType || 'Monthly'}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="text-sm text-gray-500">Total Value</p>
-                      <p className="font-semibold text-gray-800">
-                        ₹{(addon.totalPrice || calculateEstimateTotal(addon)).toLocaleString()}
+                      <p className="text-xs text-gray-500 uppercase">Price</p>
+                      <p className="text-lg font-semibold text-stone-700">
+                        ₹{(addon.totalPrice || addon.services?.[0]?.price || 0).toLocaleString()}
                       </p>
                     </div>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleEditAddon(addon)}
-                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteAddon(addon.addonId)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {/* Only Delete button - NO Edit button */}
+                    <button
+                      onClick={() => handleDeleteAddon(addon.addonId)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
-                {addon.services && addon.services.length > 0 && (
-                  <div className="mt-3 ml-14">
-                    <div className="flex flex-wrap gap-2">
-                      {addon.services.map((service, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
-                        >
-                          {service.name} - ₹{service.price}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
           </div>

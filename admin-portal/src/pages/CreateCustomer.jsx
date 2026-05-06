@@ -60,36 +60,31 @@ const ENTRY_TYPES = [
     id: 'GC', 
     name: 'Gated Community', 
     icon: Building2, 
-    color: 'bg-gradient-to-br from-blue-500 to-blue-600',
-    description: 'Multiple blocks & units'
+    color: 'bg-gradient-to-br from-blue-500 to-blue-600'
   },
   { 
     id: 'APT', 
     name: 'Apartment', 
     icon: Home, 
-    color: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
-    description: 'Building with units'
+    color: 'bg-gradient-to-br from-emerald-500 to-emerald-600'
   },
   { 
     id: 'VILLA', 
     name: 'Villa', 
     icon: TreePine, 
-    color: 'bg-gradient-to-br from-amber-500 to-amber-600',
-    description: 'Individual villa'
+    color: 'bg-gradient-to-br from-amber-500 to-amber-600'
   },
   { 
     id: 'FLAT', 
     name: 'Flat', 
     icon: LayoutGrid, 
-    color: 'bg-gradient-to-br from-cyan-500 to-cyan-600',
-    description: 'Individual flat'
+    color: 'bg-gradient-to-br from-cyan-500 to-cyan-600'
   },
   { 
     id: 'PLOT', 
     name: 'Plot', 
     icon: Map, 
-    color: 'bg-gradient-to-br from-rose-500 to-rose-600',
-    description: 'Residential/commercial plot'
+    color: 'bg-gradient-to-br from-rose-500 to-rose-600'
   }
 ];
 
@@ -161,7 +156,6 @@ const CATEGORIES = [
     name: 'Residential',
     icon: Home,
     color: 'bg-emerald-500',
-    description: 'Residential properties including gated communities, apartments, and villas',
     locked: false
   },
   {
@@ -169,7 +163,6 @@ const CATEGORIES = [
     name: 'Commercial',
     icon: Store,
     color: 'bg-blue-500',
-    description: 'Commercial properties and office spaces',
     locked: true
   },
   {
@@ -177,7 +170,6 @@ const CATEGORIES = [
     name: 'Vendor',
     icon: Truck,
     color: 'bg-purple-500',
-    description: 'Vendor and service provider management',
     locked: true
   }
 ];
@@ -727,46 +719,108 @@ const CreateCustomer = ({ admin }) => {
 
   // Category Selection Screen (first layer)
   if (!selectedCategory) {
+    // Define gradient colors for each category
+    const categoryStyles = {
+      residential: {
+        bg: 'bg-gradient-to-br from-emerald-50 via-white to-teal-50 group-hover:from-emerald-100 group-hover:to-teal-100',
+        border: 'border-emerald-200 group-hover:border-emerald-400',
+        icon: 'bg-gradient-to-br from-emerald-500 to-teal-600 group-hover:shadow-emerald-200',
+        arrow: 'text-emerald-600'
+      },
+      commercial: {
+        bg: 'bg-gradient-to-br from-blue-50 via-white to-indigo-50',
+        border: 'border-blue-200',
+        icon: 'bg-gradient-to-br from-blue-500 to-indigo-600',
+        arrow: 'text-blue-600'
+      },
+      vendor: {
+        bg: 'bg-gradient-to-br from-purple-50 via-white to-violet-50',
+        border: 'border-purple-200',
+        icon: 'bg-gradient-to-br from-purple-500 to-violet-600',
+        arrow: 'text-purple-600'
+      }
+    };
+
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-            <p className="text-gray-600 mt-1">Customer Creation Module</p>
+            <p className="text-gray-500 mt-1">Customer Creation Module</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Category</h2>
-          <p className="text-gray-600 mb-8">Choose the customer category to proceed</p>
+        {/* Category Selection Card */}
+        <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl shadow-sm border border-gray-100 p-10">
+          <div className="text-center mb-10">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Category</h2>
+            <p className="text-gray-500 text-sm">Choose the customer category to proceed</p>
+          </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {CATEGORIES.map((category) => {
               const Icon = category.icon;
+              const styles = categoryStyles[category.id] || categoryStyles.residential;
               return (
                 <button
                   key={category.id}
                   onClick={() => !category.locked && setSelectedCategory(category.id)}
                   disabled={category.locked}
-                  className={`group relative p-6 bg-white border-2 rounded-xl transition-all duration-200 text-left ${
+                  className={`group relative overflow-hidden rounded-2xl transition-all duration-300 text-left ${
                     category.locked
-                      ? 'border-gray-200 opacity-60 cursor-not-allowed'
-                      : 'border-gray-200 hover:border-primary-500 hover:shadow-lg'
+                      ? 'cursor-not-allowed'
+                      : 'hover:shadow-xl hover:-translate-y-1 cursor-pointer'
                   }`}
                 >
-                  {category.locked && (
-                    <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
-                      <Lock className="w-3 h-3 text-gray-500" />
-                      <span className="text-xs font-medium text-gray-500">Coming Soon</span>
+                  {/* Card Background */}
+                  <div className={`absolute inset-0 ${
+                    category.locked 
+                      ? 'bg-gradient-to-br from-gray-50 to-gray-100' 
+                      : styles.bg
+                  } transition-all duration-300`} />
+                  
+                  {/* Border */}
+                  <div className={`absolute inset-0 rounded-2xl border-2 ${
+                    category.locked 
+                      ? 'border-gray-200' 
+                      : styles.border
+                  } transition-colors duration-300`} />
+                  
+                  {/* Content */}
+                  <div className="relative p-8">
+                    {/* Coming Soon Badge */}
+                    {category.locked && (
+                      <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 bg-white/80 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
+                        <Lock className="w-3 h-3 text-gray-400" />
+                        <span className="text-xs font-medium text-gray-500">Coming Soon</span>
+                      </div>
+                    )}
+                    
+                    {/* Icon */}
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-5 shadow-lg ${
+                      category.locked 
+                        ? 'bg-gradient-to-br from-gray-300 to-gray-400' 
+                        : `${styles.icon} group-hover:scale-110`
+                    } transition-all duration-300`}>
+                      <Icon className="w-8 h-8 text-white" />
                     </div>
-                  )}
-                  <div className={`w-14 h-14 ${category.color} rounded-xl flex items-center justify-center mb-4 ${
-                    category.locked ? '' : 'group-hover:scale-110'
-                  } transition-transform`}>
-                    <Icon className="w-7 h-7 text-white" />
+                    
+                    {/* Text */}
+                    <h3 className={`text-xl font-semibold ${
+                      category.locked ? 'text-gray-400' : 'text-gray-900'
+                    }`}>{category.name}</h3>
+                    
+                    {/* Subtle arrow indicator for active cards */}
+                    {!category.locked && (
+                      <div className={`mt-4 flex items-center text-sm font-medium ${styles.arrow} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}>
+                        <span>Get Started</span>
+                        <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{category.name}</h3>
-                  <p className="text-sm text-gray-600">{category.description}</p>
                 </button>
               );
             })}
@@ -812,7 +866,6 @@ const CreateCustomer = ({ admin }) => {
                     <Icon className="w-7 h-7 text-white" />
                   </div>
                   <h3 className="text-sm font-semibold text-gray-800 whitespace-nowrap">{type.name}</h3>
-                  <p className="text-[11px] text-gray-500 mt-1">{type.description}</p>
                 </button>
               );
             })}

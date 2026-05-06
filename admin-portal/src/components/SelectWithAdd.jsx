@@ -29,7 +29,14 @@ const SelectWithAdd = ({
       return;
     }
 
-    if (options.includes(newOption.trim())) {
+    // Check for duplicates - handle both string and object options
+    const isDuplicate = options.some(opt => {
+      const isObject = typeof opt === 'object' && opt !== null;
+      const optLabel = isObject ? opt.label : opt;
+      return optLabel.toLowerCase() === newOption.trim().toLowerCase();
+    });
+
+    if (isDuplicate) {
       setAddError('This option already exists');
       return;
     }
@@ -82,11 +89,16 @@ const SelectWithAdd = ({
             } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
           >
             <option value="">{placeholder}</option>
-            {options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
+            {options.map((option) => {
+              const isObject = typeof option === 'object' && option !== null;
+              const optionValue = isObject ? option.value : option;
+              const optionLabel = isObject ? option.label : option;
+              return (
+                <option key={optionValue} value={optionValue}>
+                  {optionLabel}
+                </option>
+              );
+            })}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         </div>
@@ -175,14 +187,19 @@ const SelectWithAdd = ({
                 <p className="text-xs text-gray-500 mb-2">Current options ({options.length}):</p>
                 <div className="max-h-32 overflow-y-auto bg-gray-50 rounded-lg p-2">
                   <div className="flex flex-wrap gap-1">
-                    {options.slice(0, 10).map((opt) => (
-                      <span 
-                        key={opt}
-                        className="inline-flex items-center px-2 py-1 bg-white border border-gray-200 rounded text-xs text-gray-600"
-                      >
-                        {opt}
-                      </span>
-                    ))}
+                    {options.slice(0, 10).map((opt) => {
+                      const isObject = typeof opt === 'object' && opt !== null;
+                      const optLabel = isObject ? opt.label : opt;
+                      const optKey = isObject ? opt.value : opt;
+                      return (
+                        <span 
+                          key={optKey}
+                          className="inline-flex items-center px-2 py-1 bg-white border border-gray-200 rounded text-xs text-gray-600"
+                        >
+                          {optLabel}
+                        </span>
+                      );
+                    })}
                     {options.length > 10 && (
                       <span className="inline-flex items-center px-2 py-1 text-xs text-gray-400">
                         +{options.length - 10} more
