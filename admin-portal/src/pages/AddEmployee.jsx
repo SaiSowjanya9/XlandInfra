@@ -8,13 +8,10 @@ import {
   AlertCircle,
   Loader2,
   ArrowLeft,
-  Globe,
   MapPin,
-  Check,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { createEmployee, checkDuplicateEmployee, getAvailableZonesForEmployee } from '../utils/employeeStore';
-import { getZones } from '../utils/zoneStore';
+import { createEmployee, checkDuplicateEmployee } from '../utils/employeeStore';
 
 const COUNTRY_CODES = [
   { code: '+91', flag: '🇮🇳', label: 'India' },
@@ -30,8 +27,6 @@ const initialFormState = {
   countryCode: '+91',
   email: '',
   aadhaar: '',
-  selectedZones: [],
-  assignAllZones: false,
 };
 
 const AddEmployee = ({ admin }) => {
@@ -41,52 +36,6 @@ const AddEmployee = ({ admin }) => {
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
   const [createdEmployee, setCreatedEmployee] = useState(null);
-  const [allZones, setAllZones] = useState([]);
-  const [availableZones, setAvailableZones] = useState([]);
-
-  useEffect(() => {
-    loadZones();
-  }, []);
-
-  const loadZones = () => {
-    const zones = getZones('active');
-    setAllZones(zones);
-    const available = getAvailableZonesForEmployee(zones);
-    setAvailableZones(available);
-  };
-
-  const handleZoneToggle = (zoneName) => {
-    const currentZones = formData.selectedZones;
-    if (currentZones.includes(zoneName)) {
-      setFormData({
-        ...formData,
-        selectedZones: currentZones.filter(z => z !== zoneName),
-        assignAllZones: false
-      });
-    } else {
-      setFormData({
-        ...formData,
-        selectedZones: [...currentZones, zoneName],
-        assignAllZones: false
-      });
-    }
-  };
-
-  const handleAssignAllZones = () => {
-    if (formData.assignAllZones) {
-      setFormData({
-        ...formData,
-        selectedZones: [],
-        assignAllZones: false
-      });
-    } else {
-      setFormData({
-        ...formData,
-        selectedZones: availableZones.map(z => z.name),
-        assignAllZones: true
-      });
-    }
-  };
 
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -170,7 +119,7 @@ const AddEmployee = ({ admin }) => {
         countryCode: formData.countryCode,
         email: formData.email.trim().toLowerCase(),
         aadhaar: formData.aadhaar.replace(/\s/g, ''),
-        assignedZones: formData.assignAllZones ? 'all' : formData.selectedZones,
+        assignedZones: [], // Zones are assigned separately in Employee Zone Management
         createdBy: admin?.username || 'system',
       };
 
@@ -208,23 +157,33 @@ const AddEmployee = ({ admin }) => {
           <p className="text-gray-500 mb-2">
             Employee ID: <span className="font-mono text-emerald-600">{createdEmployee.employeeId}</span>
           </p>
-          <p className="text-gray-500 mb-6">
+          <p className="text-gray-500 mb-2">
             {createdEmployee.name} has been registered in the system.
+          </p>
+          <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-6">
+            <MapPin className="w-4 h-4 inline mr-1" />
+            Zone assignment can be done in <strong>Employee Zone Management</strong>
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
-              onClick={() => navigate('/employee/employee-details')}
+              onClick={() => navigate('/employee/employee-zone-management')}
               className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+            >
+              Assign Zones
+            </button>
+            <button
+              onClick={() => navigate('/employee/employee-details')}
+              className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
             >
               View Employee Details
             </button>
-            <button
-              onClick={handleReset}
-              className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-            >
-              Add Another Employee
-            </button>
           </div>
+          <button
+            onClick={handleReset}
+            className="px-6 py-2.5 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors"
+          >
+            + Add Another Employee
+          </button>
         </div>
       </div>
     );
@@ -349,95 +308,19 @@ const AddEmployee = ({ admin }) => {
           </div>
         </div>
 
-        {/* Zone Assignment Section */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-emerald-600" />
+        {/* Zone Assignment Info */}
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <MapPin className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Zone Assignment</h2>
-              <p className="text-sm text-gray-500">Assign zones to this employee (only unassigned zones are shown)</p>
-            </div>
-          </div>
-
-          {availableZones.length === 0 ? (
-            <div className="text-center py-8 bg-gray-50 rounded-lg">
-              <MapPin className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500 font-medium">No zones available</p>
-              <p className="text-sm text-gray-400 mt-1">
-                All zones are already assigned to other employees or no zones exist.
+              <h3 className="font-medium text-amber-800">Zone Assignment</h3>
+              <p className="text-sm text-amber-700 mt-0.5">
+                Zones can be assigned after employee creation in the <strong>Employee Zone Management</strong> section.
               </p>
             </div>
-          ) : (
-            <>
-              {/* All Zones Option */}
-              <div className="mb-4">
-                <button
-                  type="button"
-                  onClick={handleAssignAllZones}
-                  className={`w-full p-4 rounded-lg border-2 transition-all flex items-center justify-between ${
-                    formData.assignAllZones
-                      ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-gray-200 hover:border-emerald-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      formData.assignAllZones ? 'bg-emerald-600' : 'bg-gray-200'
-                    }`}>
-                      <Check className={`w-5 h-5 ${formData.assignAllZones ? 'text-white' : 'text-gray-400'}`} />
-                    </div>
-                    <div className="text-left">
-                      <p className={`font-medium ${formData.assignAllZones ? 'text-emerald-700' : 'text-gray-700'}`}>
-                        All Zones
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Assign this employee to all available zones ({availableZones.length} zones)
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-
-              {/* Individual Zone Selection */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {availableZones.map((zone) => (
-                  <button
-                    key={zone.id}
-                    type="button"
-                    onClick={() => handleZoneToggle(zone.name)}
-                    className={`p-3 rounded-lg border-2 transition-all text-left ${
-                      formData.selectedZones.includes(zone.name)
-                        ? 'border-emerald-500 bg-emerald-50'
-                        : 'border-gray-200 hover:border-emerald-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-5 h-5 rounded flex items-center justify-center ${
-                        formData.selectedZones.includes(zone.name) ? 'bg-emerald-600' : 'bg-gray-200'
-                      }`}>
-                        {formData.selectedZones.includes(zone.name) && (
-                          <Check className="w-3 h-3 text-white" />
-                        )}
-                      </div>
-                      <span className={`font-medium text-sm ${
-                        formData.selectedZones.includes(zone.name) ? 'text-emerald-700' : 'text-gray-700'
-                      }`}>
-                        {zone.name}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {formData.selectedZones.length > 0 && !formData.assignAllZones && (
-                <p className="mt-3 text-sm text-emerald-600">
-                  {formData.selectedZones.length} zone(s) selected
-                </p>
-              )}
-            </>
-          )}
+          </div>
         </div>
 
         {/* Submit Buttons */}

@@ -16,8 +16,9 @@ import {
   CreditCard,
   Calendar,
   UserX,
-  RefreshCw,
+  ExternalLink,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
   getEmployees,
   updateEmployee,
@@ -30,6 +31,7 @@ import {
 import { getZones } from '../utils/zoneStore';
 
 const EmployeeDetails = () => {
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
   const [zones, setZones] = useState([]);
   const [statusFilter, setStatusFilter] = useState('active');
@@ -39,9 +41,6 @@ const EmployeeDetails = () => {
   const [viewEmployee, setViewEmployee] = useState(null);
   const [editEmployee, setEditEmployee] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [reassignZonesEmployee, setReassignZonesEmployee] = useState(null);
-  const [selectedZones, setSelectedZones] = useState([]);
-  const [zoneAssignmentType, setZoneAssignmentType] = useState('all');
 
   useEffect(() => {
     loadData();
@@ -84,41 +83,13 @@ const EmployeeDetails = () => {
     loadData();
   };
 
-  const openReassignZones = (employee) => {
-    setReassignZonesEmployee(employee);
-    if (employee.assignedZones === 'all') {
-      setZoneAssignmentType('all');
-      setSelectedZones([]);
-    } else {
-      setZoneAssignmentType('selected');
-      setSelectedZones(employee.assignedZones || []);
-    }
+  const goToZoneManagement = () => {
+    navigate('/employee/employee-zone-management');
   };
 
-  const handleReassignZones = () => {
-    const newZones = zoneAssignmentType === 'all' ? 'all' : selectedZones;
-    
-    if (zoneAssignmentType === 'selected' && selectedZones.length === 0) {
-      showToast('Please select at least one zone', 'error');
-      return;
-    }
-
-    const result = updateEmployee(reassignZonesEmployee.id, { assignedZones: newZones });
-    if (result.success) {
-      showToast('Zones reassigned successfully');
-      setReassignZonesEmployee(null);
-      loadData();
-    } else {
-      showToast(result.message, 'error');
-    }
-  };
-
-  const toggleZone = (zoneName) => {
-    setSelectedZones(prev =>
-      prev.includes(zoneName)
-        ? prev.filter(z => z !== zoneName)
-        : [...prev, zoneName]
-    );
+  const hasZonesAssigned = (employee) => {
+    return employee.assignedZones === 'all' || 
+      (Array.isArray(employee.assignedZones) && employee.assignedZones.length > 0);
   };
 
   const formatDate = (iso) => {
@@ -287,16 +258,26 @@ const EmployeeDetails = () => {
                       {employee.aadhaar?.replace(/(\d{4})/g, '$1 ').trim()}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        employee.assignedZones === 'all'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {employee.assignedZones === 'all' 
-                          ? 'All Zones' 
-                          : `${employee.assignedZones?.length || 0} Zones`
-                        }
-                      </span>
+                      {hasZonesAssigned(employee) ? (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          employee.assignedZones === 'all'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {employee.assignedZones === 'all' 
+                            ? 'All Zones' 
+                            : `${employee.assignedZones?.length || 0} Zones`
+                          }
+                        </span>
+                      ) : (
+                        <button
+                          onClick={goToZoneManagement}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                        >
+                          <MapPin className="w-3 h-3" />
+                          Assign Zones
+                        </button>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                       {formatDate(employee.createdAt)}
@@ -318,13 +299,6 @@ const EmployeeDetails = () => {
                           title="View details"
                         >
                           <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => openReassignZones(employee)}
-                          className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
-                          title="Reassign zones"
-                        >
-                          <RefreshCw className="w-4 h-4" />
                         </button>
                         {employee.status === 'active' ? (
                           <button
@@ -419,14 +393,36 @@ const EmployeeDetails = () => {
                   </div>
                 </div>
               </div>
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <MapPin className="w-5 h-5 text-gray-400" />
-                  <p className="text-xs text-gray-500">Assigned Zones</p>
+              <div className={`p-3 rounded-lg ${
+                hasZonesAssigned(viewEmployee) ? 'bg-emerald-50 border border-emerald-100' : 'bg-amber-50 border border-amber-100'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <MapPin className={`w-5 h-5 ${hasZonesAssigned(viewEmployee) ? 'text-emerald-500' : 'text-amber-500'}`} />
+                    <p className={`text-xs ${hasZonesAssigned(viewEmployee) ? 'text-emerald-600' : 'text-amber-600'}`}>Assigned Zones</p>
+                  </div>
+                  <button
+                    onClick={() => { setViewEmployee(null); goToZoneManagement(); }}
+                    className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                  >
+                    Manage <ExternalLink className="w-3 h-3" />
+                  </button>
                 </div>
-                <p className="text-sm font-medium text-gray-900">
-                  {formatZones(viewEmployee.assignedZones)}
-                </p>
+                {hasZonesAssigned(viewEmployee) ? (
+                  <p className="text-sm font-medium text-emerald-700">
+                    {formatZones(viewEmployee.assignedZones)}
+                  </p>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-amber-700">No zones assigned</p>
+                    <button
+                      onClick={() => { setViewEmployee(null); goToZoneManagement(); }}
+                      className="px-3 py-1 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Assign Zones
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span className="text-sm text-gray-600">Status</span>
@@ -438,87 +434,6 @@ const EmployeeDetails = () => {
                   {viewEmployee.status === 'active' ? 'Active' : 'Inactive'}
                 </span>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reassign Zones Modal */}
-      {reassignZonesEmployee && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setReassignZonesEmployee(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Reassign Zones</h2>
-                <p className="text-sm text-gray-500">{reassignZonesEmployee.name}</p>
-              </div>
-              <button onClick={() => setReassignZonesEmployee(null)} className="p-2 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="flex gap-3">
-                <label className="flex-1 flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:border-purple-300 transition-colors">
-                  <input
-                    type="radio"
-                    name="zoneType"
-                    checked={zoneAssignmentType === 'all'}
-                    onChange={() => setZoneAssignmentType('all')}
-                    className="w-4 h-4 text-purple-600"
-                  />
-                  <span className="text-sm font-medium text-gray-700">All Zones</span>
-                </label>
-                <label className="flex-1 flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:border-purple-300 transition-colors">
-                  <input
-                    type="radio"
-                    name="zoneType"
-                    checked={zoneAssignmentType === 'selected'}
-                    onChange={() => setZoneAssignmentType('selected')}
-                    className="w-4 h-4 text-purple-600"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Selected Zones</span>
-                </label>
-              </div>
-
-              {zoneAssignmentType === 'selected' && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Select Zones</label>
-                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                    {zones.map((zone) => (
-                      <label
-                        key={zone.id}
-                        className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-colors ${
-                          selectedZones.includes(zone.name)
-                            ? 'border-purple-500 bg-purple-50'
-                            : 'border-gray-200 hover:border-purple-300'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedZones.includes(zone.name)}
-                          onChange={() => toggleZone(zone.name)}
-                          className="w-4 h-4 text-purple-600 rounded"
-                        />
-                        <span className="text-sm text-gray-700">{zone.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={() => setReassignZonesEmployee(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReassignZones}
-                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
-              >
-                Save Changes
-              </button>
             </div>
           </div>
         </div>

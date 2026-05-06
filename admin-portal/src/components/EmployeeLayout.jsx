@@ -22,7 +22,8 @@ import {
   Package,
   PlusCircle,
   Archive,
-  Shield
+  Shield,
+  MapPin,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -40,7 +41,8 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
   const [employeeOpen, setEmployeeOpen] = useState(
     location.pathname.startsWith('/employee/add-employee') ||
-    location.pathname.startsWith('/employee/employee-details')
+    location.pathname.startsWith('/employee/employee-details') ||
+    location.pathname.startsWith('/employee/employee-zone-management')
   );
 
   const navItems = [
@@ -74,6 +76,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const employeeSubItems = [
     { path: '/employee/add-employee', icon: UserPlus, label: 'Add Employee' },
     { path: '/employee/employee-details', icon: Users, label: 'Employee Details' },
+    { path: '/employee/employee-zone-management', icon: MapPin, label: 'Employee Zone Management' },
   ];
 
   const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
