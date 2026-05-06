@@ -8,7 +8,8 @@ import PhoneInput from '../common/PhoneInput';
 import { 
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
   getAMCPackageByPropertyId, addService, FREQUENCY_TYPES,
-  getAMCPackages, getAddons, seedTestData
+  getAMCPackages, getAddons, seedTestData, getAMCPackageByPropertyType,
+  migratePackagesToServiceRows
 } from '../../utils/estimateStore';
 import { getProperties } from '../../utils/propertyStore';
 
@@ -34,6 +35,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
   const [showEmailConfirm, setShowEmailConfirm] = useState(false);
   const [lastCreatedEstimate, setLastCreatedEstimate] = useState(null);
   const [lockedServices, setLockedServices] = useState([]); // Services from existing AMC package (locked/read-only)
+  const [hasStartedTyping, setHasStartedTyping] = useState(false); // Track if user started typing in ID field
   
   // New state for AMC Package selection and Add-ons
   const [availablePackages, setAvailablePackages] = useState([]); // AMC Packages from manager
@@ -75,6 +77,8 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
   const loadData = async () => {
     // Seed test data if none exists
     seedTestData();
+    // Migrate existing packages to include serviceRows with frequency data
+    migratePackagesToServiceRows();
     const props = await getProperties();
     setProperties(props);
     setAvailableServices(getServices());
@@ -94,6 +98,11 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     setPropertyIdInput(value);
     setShowPropertySuggestions(true);
     
+    // Mark that user has started typing - hide estimate type selection
+    if (value.length > 0 && !hasStartedTyping) {
+      setHasStartedTyping(true);
+    }
+    
     // Try to find exact match
     const exactMatch = properties.find(
       p => p.propertyId?.toLowerCase() === value.toLowerCase()
@@ -111,6 +120,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     setSelectedProperty(property);
     setPropertyIdInput(property.propertyId);
     setShowPropertySuggestions(false);
+    setHasStartedTyping(true); // Ensure estimate type selection is hidden
     
     // Extract block/tower info
     let blockTower = '';
@@ -137,6 +147,16 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     
     // Get customer details from contacts (backend returns 'contacts', not 'associationContacts')
     const primaryContact = property.contacts?.[0] || {};
+    
+    // Auto-select AMC package based on property type
+    const propertyType = property.entryType || property.propertyType;
+    if (propertyType) {
+      const matchingPackage = getAMCPackageByPropertyType(propertyType);
+      if (matchingPackage) {
+        setSelectedPackage(matchingPackage);
+        showToast?.(`Auto-selected "${matchingPackage.packageName}" package for ${propertyType}`, 'success');
+      }
+    }
     
     // Check for AMC package and auto-populate locked services
     const existingAMC = getAMCPackageByPropertyId(property.propertyId);
@@ -400,6 +420,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     setSelectedPackage(null);
     setSelectedAddons([]);
     setDiscount('');
+    setHasStartedTyping(false); // Reset typing state
     setEstimateForm({
       propertyId: '',
       propertyName: '',
@@ -454,43 +475,45 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
 
   return (
     <div className="space-y-6">
-      {/* Estimate Type Selection */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Estimate Type</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            onClick={() => { setEstimateType('property'); resetForm(); setEstimateType('property'); }}
-            className={`p-6 rounded-xl border-2 transition-all ${
-              estimateType === 'property'
-                ? 'border-indigo-500 bg-indigo-50'
-                : 'border-gray-200 hover:border-indigo-200'
-            }`}
-          >
-            <Building2 className={`w-8 h-8 mx-auto mb-3 ${estimateType === 'property' ? 'text-indigo-600' : 'text-gray-400'}`} />
-            <p className="font-medium text-gray-800">Property-Based Estimate</p>
-            <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
-          </button>
-          <button
-            onClick={() => { setEstimateType('direct'); resetForm(); setEstimateType('direct'); }}
-            className={`p-6 rounded-xl border-2 transition-all ${
-              estimateType === 'direct'
-                ? 'border-indigo-500 bg-indigo-50'
-                : 'border-gray-200 hover:border-indigo-200'
-            }`}
-          >
-            <User className={`w-8 h-8 mx-auto mb-3 ${estimateType === 'direct' ? 'text-indigo-600' : 'text-gray-400'}`} />
-            <p className="font-medium text-gray-800">Direct-Based Estimate</p>
-            <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
-          </button>
+      {/* Estimate Type Selection - Hidden after user starts typing/interacting */}
+      {!hasStartedTyping && (
+        <div className={`bg-white rounded-xl p-6 shadow-sm border border-gray-100 transition-all duration-300 ${estimateType ? 'opacity-100' : 'opacity-100'}`}>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Estimate Type</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => { setEstimateType('property'); }}
+              className={`p-6 rounded-xl border-2 transition-all ${
+                estimateType === 'property'
+                  ? 'border-gray-400 bg-gray-50'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <Building2 className={`w-8 h-8 mx-auto mb-3 ${estimateType === 'property' ? 'text-gray-700' : 'text-gray-400'}`} />
+              <p className="font-medium text-gray-800">Property-Based Estimate</p>
+              <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
+            </button>
+            <button
+              onClick={() => { setEstimateType('direct'); setHasStartedTyping(true); }}
+              className={`p-6 rounded-xl border-2 transition-all ${
+                estimateType === 'direct'
+                  ? 'border-gray-400 bg-gray-50'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <User className={`w-8 h-8 mx-auto mb-3 ${estimateType === 'direct' ? 'text-gray-700' : 'text-gray-400'}`} />
+              <p className="font-medium text-gray-800">Direct-Based Estimate</p>
+              <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Property-based Estimate Form */}
       {estimateType === 'property' && (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
           {/* Estimate Details Header */}
-          <div className="px-6 py-3 bg-blue-600">
-            <h3 className="text-base font-semibold text-white">Estimate Details</h3>
+          <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
+            <h3 className="text-base font-semibold text-gray-800">Estimate Details</h3>
           </div>
           
           <div className="px-6 py-4">
@@ -505,10 +528,13 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                   type="text"
                   value={propertyIdInput}
                   onChange={(e) => handlePropertyIdChange(e.target.value)}
-                  onFocus={() => setShowPropertySuggestions(true)}
+                  onFocus={() => {
+                    setShowPropertySuggestions(true);
+                    setHasStartedTyping(true); // Hide estimate type selection on focus
+                  }}
                   onBlur={() => setTimeout(() => setShowPropertySuggestions(false), 200)}
                   placeholder="Type Property ID (e.g., GC-2024-001)"
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500"
                 />
                 
                 {showPropertySuggestions && propertyIdInput && filteredProperties.length > 0 && (
@@ -685,8 +711,8 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
           {/* AMC Package Selection Section */}
           {selectedProperty && (
             <>
-              <div className="px-6 py-3 bg-blue-600">
-                <h3 className="text-base font-semibold text-white">AMC Package</h3>
+              <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
+                <h3 className="text-base font-semibold text-gray-800">AMC Package</h3>
               </div>
               
               <div className="px-6 py-4">
@@ -729,31 +755,48 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                       </div>
                       <span className="text-lg font-bold text-blue-700">₹{getPackagePrice().toLocaleString()}</span>
                     </div>
-                    {selectedPackage.services && (
-                      <div className="text-sm text-blue-700 bg-white p-3 rounded border border-blue-100">
-                        <span className="font-medium text-gray-600">Services Included: </span>
-                        <span className="text-gray-800">
-                          {typeof selectedPackage.services === 'string' 
-                            ? selectedPackage.services 
-                            : Array.isArray(selectedPackage.services) 
-                              ? selectedPackage.services.map(s => s.name || s).join(', ')
-                              : ''}
-                        </span>
-                      </div>
-                    )}
+                    {/* Services with Frequency Details */}
+                    <div className="bg-white p-3 rounded border border-blue-100 space-y-2">
+                      <p className="font-medium text-gray-600 text-sm mb-2">Services Included:</p>
+                      {/* If serviceRows exists, use it */}
+                      {selectedPackage.serviceRows && selectedPackage.serviceRows.length > 0 ? (
+                        selectedPackage.serviceRows.filter(s => s.service?.trim()).map((service, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-100 last:border-0">
+                            <span className="text-gray-800 font-medium">{service.service}</span>
+                            <span className="text-blue-600 text-xs bg-blue-100 px-2 py-0.5 rounded">
+                              {service.frequencyCount || 1}x {service.frequencyType || 'Monthly'}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        /* Fallback: Parse services string into individual items */
+                        (typeof selectedPackage.services === 'string' ? selectedPackage.services.split(',') : 
+                         Array.isArray(selectedPackage.services) ? selectedPackage.services.map(s => s.name || s) : []
+                        ).filter(s => s?.trim()).map((serviceName, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-100 last:border-0">
+                            <span className="text-gray-800 font-medium">{serviceName.trim()}</span>
+                            <span className="text-gray-400 text-xs bg-gray-100 px-2 py-0.5 rounded">
+                              Frequency not set
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
                     {selectedPackage.billingDuration && (
                       <p className="text-xs text-blue-600 mt-2">
-                        Billing: {selectedPackage.billingDuration.charAt(0).toUpperCase() + selectedPackage.billingDuration.slice(1)}
+                        Billing Cycle: {selectedPackage.billingDuration.charAt(0).toUpperCase() + selectedPackage.billingDuration.slice(1)}
                       </p>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Add Services (Add-ons) Section */}
-              <div className="px-6 py-3 bg-green-600">
-                <h3 className="text-base font-semibold text-white">Add Services (from Add-ons)</h3>
+              {/* Add Services (Add-ons) Section - Conditionally render */}
+              {selectedAddons.length > 0 && (
+              <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
+                <h3 className="text-base font-semibold text-gray-800">Additional Services</h3>
               </div>
+              )}
               
               <div className="px-6 py-4">
                 {/* Add-on Dropdown */}
@@ -802,8 +845,8 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                             <p className="text-sm font-medium text-gray-800">
                               {addon.services?.map(s => s.name).join(', ') || addon.addonId}
                             </p>
-                            <p className="text-xs text-gray-500">
-                              {addon.services?.map(s => `${s.frequencyType}`).join(', ')}
+                            <p className="text-xs text-green-600 mt-0.5">
+                              {addon.services?.map(s => `${s.frequency || 1}x ${s.frequencyType || 'Monthly'}`).join(' • ')}
                             </p>
                           </div>
                         </div>
@@ -877,7 +920,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     </div>
                     
                     {/* Total */}
-                    <div className="flex justify-between text-base py-3 bg-blue-600 text-white px-3 rounded-md mt-2">
+                    <div className="flex justify-between text-base py-3 bg-gray-700 text-white px-3 rounded-md mt-2">
                       <span className="font-semibold">Total Amount</span>
                       <span className="font-bold">₹{calculateTotal().toLocaleString()}</span>
                     </div>
@@ -897,7 +940,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                       </button>
                       <button
                         onClick={handleSave}
-                        className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                        className="px-6 py-2.5 text-sm font-medium text-white bg-gray-700 rounded-md hover:bg-gray-800 transition-colors"
                       >
                         Save
                       </button>
@@ -921,8 +964,8 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       {estimateType === 'direct' && (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
           {/* Customer Information Header */}
-          <div className="px-6 py-3 bg-blue-600">
-            <h3 className="text-base font-semibold text-white">Customer Information</h3>
+          <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
+            <h3 className="text-base font-semibold text-gray-800">Customer Information</h3>
           </div>
           
           <div className="px-6 py-4">
@@ -975,8 +1018,8 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
           </div>
 
           {/* Property Details Header */}
-          <div className="px-6 py-3 bg-indigo-600">
-            <h3 className="text-base font-semibold text-white">Property Details</h3>
+          <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
+            <h3 className="text-base font-semibold text-gray-800">Property Details</h3>
           </div>
           
           <div className="px-6 py-4">
@@ -1085,7 +1128,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
             )}
 
             {(estimateForm.propertyType === 'APT' || estimateForm.propertyType === 'FLAT') && (
-              <div className="grid grid-cols-4 gap-4 mb-4 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+              <div className="grid grid-cols-4 gap-4 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Tower/Building Name</label>
                   <input
@@ -1198,8 +1241,8 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
 
           {/* AMC Services Section */}
           <>
-            <div className="px-6 py-3 bg-blue-600">
-              <h3 className="text-base font-semibold text-white">AMC Services</h3>
+            <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
+              <h3 className="text-base font-semibold text-gray-800">AMC Services</h3>
             </div>
             
             <div className="px-6 py-4">
@@ -1342,7 +1385,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     </button>
                     <button
                       onClick={handleSave}
-                      className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                      className="px-6 py-2.5 text-sm font-medium text-white bg-gray-700 rounded-md hover:bg-gray-800 transition-colors"
                     >
                       Save to Archive
                     </button>
