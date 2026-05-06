@@ -31,6 +31,7 @@ import AssignedVendors from './pages/AssignedVendors';
 
 import AddEmployee from './pages/AddEmployee';
 import EmployeeDetails from './pages/EmployeeDetails';
+import EmployeeZoneManagement from './pages/EmployeeZoneManagement';
 import Estimates from './pages/Estimates';
 import UserManagement from './pages/UserManagement';
 
@@ -122,6 +123,7 @@ function App() {
             <Route path="/employee/assigned-vendors" element={<AssignedVendors />} />
             <Route path="/employee/add-employee" element={<AddEmployee admin={user} />} />
             <Route path="/employee/employee-details" element={<EmployeeDetails />} />
+            <Route path="/employee/employee-zone-management" element={<EmployeeZoneManagement />} />
             <Route path="/employee/user-management" element={<UserManagement />} />
             <Route path="/employee/estimates" element={<Navigate to="/employee/estimates/list" replace />} />
             <Route path="/employee/estimates/create" element={<Estimates admin={user} defaultTab="create" />} />
