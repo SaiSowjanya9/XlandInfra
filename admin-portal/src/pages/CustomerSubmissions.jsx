@@ -683,7 +683,6 @@ const CustomerSubmissions = () => {
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Address</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">City</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Contacts</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">AMC</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created By</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Status</th>
@@ -729,25 +728,6 @@ const CustomerSubmissions = () => {
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
                         {property.contacts?.length || 0}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {(() => {
-                          const amcPackage = getAMCPackageByPropertyId(property.propertyId);
-                          return amcPackage ? (
-                            <button
-                              onClick={() => setViewAMCDetails({ property, amcPackage })}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors cursor-pointer"
-                              title="Click to view AMC details"
-                            >
-                              <Package className="w-3 h-3" />
-                              View AMC
-                            </button>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
-                              None
-                            </span>
-                          );
-                        })()}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         Manager
