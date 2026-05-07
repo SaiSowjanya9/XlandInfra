@@ -77,6 +77,14 @@ const CustomerSubmissions = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [vendorSearchTerm, setVendorSearchTerm] = useState('');
   const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
+  
+  // Enhanced Assign Vendor Modal states
+  const [selectedServiceType, setSelectedServiceType] = useState('');
+  const [selectedFrequencyType, setSelectedFrequencyType] = useState('Monthly');
+  
+  // Service Types for vendor assignment
+  const SERVICE_TYPES = ['Plumbing', 'Electrical', 'HVAC', 'Cleaning', 'Security', 'Pest Control', 'Landscaping', 'General Maintenance'];
+  const FREQUENCY_TYPES = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Half-yearly', 'Yearly'];
   const [propertyAssignments, setPropertyAssignments] = useState({});
   const [propertyEstimates, setPropertyEstimates] = useState([]);
   const [viewAMCDetails, setViewAMCDetails] = useState(null); // AMC package details modal
@@ -145,6 +153,8 @@ const CustomerSubmissions = () => {
     setAssignVendorModal(property);
     setSelectedVendor(null);
     setVendorSearchTerm('');
+    setSelectedServiceType('');
+    setSelectedFrequencyType('Monthly');
     try {
       const vendorList = await getVendors('active');
       setVendors(vendorList);
@@ -169,13 +179,18 @@ const CustomerSubmissions = () => {
   // Handle vendor assignment
   const handleAssignVendor = () => {
     if (!selectedVendor || !assignVendorModal) return;
+    if (!selectedServiceType) {
+      showToast('Please select a service type', 'error');
+      return;
+    }
     
     const result = assignVendorToProperty({
       vendorId: selectedVendor.vendorId,
       vendorName: selectedVendor.ownerName,
       vendorPhone: selectedVendor.ownerMobile,
       vendorEmail: selectedVendor.ownerEmail,
-      serviceType: selectedVendor.serviceType,
+      serviceType: selectedServiceType,
+      frequencyType: selectedFrequencyType,
       propertyId: assignVendorModal.propertyId,
       propertyName: assignVendorModal.name,
       propertyZone: assignVendorModal.zone,
@@ -183,9 +198,11 @@ const CustomerSubmissions = () => {
     });
 
     if (result.success) {
-      showToast(`${selectedVendor.ownerName} assigned to ${assignVendorModal.name}`);
+      showToast(`${selectedVendor.ownerName} assigned for ${selectedServiceType} (${selectedFrequencyType})`);
       setAssignVendorModal(null);
       setSelectedVendor(null);
+      setSelectedServiceType('');
+      setSelectedFrequencyType('Monthly');
     } else {
       showToast(result.message, 'error');
     }
@@ -215,8 +232,11 @@ const CustomerSubmissions = () => {
     }
   };
 
-  // Filter vendors by search term
+  // Filter vendors by search term and selected service type
   const filteredVendors = vendors.filter(v => {
+    // Filter by selected service type first
+    if (selectedServiceType && v.serviceType !== selectedServiceType) return false;
+    // Then filter by search term
     if (!vendorSearchTerm) return true;
     const q = vendorSearchTerm.toLowerCase();
     return (
@@ -1119,79 +1139,184 @@ const CustomerSubmissions = () => {
         </div>
       )}
 
-      {/* Assign Vendor Modal */}
+      {/* Enhanced Assign Vendor Modal with 3 Blocks */}
       {assignVendorModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setAssignVendorModal(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Assign Vendor</h2>
-                <p className="text-sm text-gray-500">Select a vendor for {assignVendorModal.name}</p>
-              </div>
-              <button onClick={() => setAssignVendorModal(null)} className="p-2 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-4 border-b border-gray-100">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search vendors by name, ID, or service type..."
-                  value={vendorSearchTerm}
-                  onChange={(e) => setVendorSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 outline-none"
-                />
-              </div>
-            </div>
-            <div className="overflow-y-auto max-h-[400px] p-4">
-              {filteredVendors.length === 0 ? (
-                <div className="py-8 text-center">
-                  <Hammer className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">No vendors found</p>
-                  <p className="text-gray-400 text-xs mt-1">Add vendors from Vendor Management</p>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <Hammer className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Assign Vendor</h2>
+                    <p className="text-sm text-gray-600">Property: <span className="font-medium">{assignVendorModal.name}</span></p>
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {filteredVendors.map((vendor) => (
+                <button onClick={() => setAssignVendorModal(null)} className="p-2 hover:bg-amber-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-y-auto max-h-[calc(90vh-180px)]">
+              {/* Block 1: Service Type Selection */}
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                  <h3 className="font-semibold text-gray-800">Select Service Type</h3>
+                  <span className="text-red-500">*</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {SERVICE_TYPES.map((service) => (
                     <button
-                      key={vendor.vendorId}
-                      onClick={() => setSelectedVendor(vendor)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
-                        selectedVendor?.vendorId === vendor.vendorId
-                          ? 'border-amber-500 bg-amber-50'
-                          : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50/50'
+                      key={service}
+                      type="button"
+                      onClick={() => {
+                        setSelectedServiceType(service);
+                        setSelectedVendor(null); // Reset vendor when service changes
+                      }}
+                      className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-2 ${
+                        selectedServiceType === service
+                          ? 'bg-amber-100 border-amber-500 text-amber-700'
+                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-amber-300 hover:bg-amber-50'
                       }`}
                     >
-                      <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Hammer className="w-5 h-5 text-amber-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{vendor.ownerName}</p>
-                        <p className="text-xs text-gray-500">{vendor.vendorId} • {vendor.serviceType}</p>
-                      </div>
-                      {selectedVendor?.vendorId === vendor.vendorId && (
-                        <Check className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                      )}
+                      {service}
                     </button>
                   ))}
                 </div>
-              )}
+              </div>
+
+              {/* Block 2: Frequency Type Selection */}
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                  <h3 className="font-semibold text-gray-800">Select Frequency</h3>
+                  <span className="text-red-500">*</span>
+                </div>
+                <div className="grid grid-cols-6 gap-2">
+                  {FREQUENCY_TYPES.map((freq) => (
+                    <button
+                      key={freq}
+                      type="button"
+                      onClick={() => setSelectedFrequencyType(freq)}
+                      className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all border-2 ${
+                        selectedFrequencyType === freq
+                          ? 'bg-blue-100 border-blue-500 text-blue-700'
+                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50'
+                      }`}
+                    >
+                      {freq}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Block 3: Vendor Selection */}
+              <div className="p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                  <h3 className="font-semibold text-gray-800">Select Vendor</h3>
+                  <span className="text-red-500">*</span>
+                  {selectedServiceType && (
+                    <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
+                      Filtered by: {selectedServiceType}
+                    </span>
+                  )}
+                </div>
+
+                {/* Search */}
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search vendors by name or ID..."
+                    value={vendorSearchTerm}
+                    onChange={(e) => setVendorSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 outline-none"
+                  />
+                </div>
+
+                {/* Vendor List */}
+                <div className="max-h-[250px] overflow-y-auto border border-gray-200 rounded-lg">
+                  {!selectedServiceType ? (
+                    <div className="py-8 text-center">
+                      <Hammer className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">Please select a service type first</p>
+                      <p className="text-gray-400 text-xs mt-1">Vendors will be filtered based on service type</p>
+                    </div>
+                  ) : filteredVendors.length === 0 ? (
+                    <div className="py-8 text-center">
+                      <Hammer className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">No vendors found for {selectedServiceType}</p>
+                      <p className="text-gray-400 text-xs mt-1">Add vendors from Vendor Management</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gray-100">
+                      {filteredVendors.map((vendor) => (
+                        <button
+                          key={vendor.vendorId}
+                          onClick={() => setSelectedVendor(vendor)}
+                          className={`w-full flex items-center gap-3 p-3 transition-all text-left ${
+                            selectedVendor?.vendorId === vendor.vendorId
+                              ? 'bg-amber-50'
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            selectedVendor?.vendorId === vendor.vendorId
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-amber-100 text-amber-600'
+                          }`}>
+                            <Hammer className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{vendor.ownerName}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs text-gray-500">{vendor.vendorId}</span>
+                              <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">{vendor.serviceType}</span>
+                              {vendor.zone && <span className="text-xs text-gray-400">{vendor.zone}</span>}
+                            </div>
+                          </div>
+                          {selectedVendor?.vendorId === vendor.vendorId && (
+                            <Check className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={() => setAssignVendorModal(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAssignVendor}
-                disabled={!selectedVendor}
-                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Assign Vendor
-              </button>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                {selectedServiceType && selectedFrequencyType && selectedVendor && (
+                  <span className="text-amber-700 font-medium">
+                    {selectedVendor.ownerName} → {selectedServiceType} ({selectedFrequencyType})
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setAssignVendorModal(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAssignVendor}
+                  disabled={!selectedVendor || !selectedServiceType}
+                  className="px-5 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  Assign Vendor
+                </button>
+              </div>
             </div>
           </div>
         </div>

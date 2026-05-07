@@ -44,8 +44,7 @@ const AMCPackage = ({ showToast }) => {
   }, []);
 
   const loadData = async () => {
-    // Seed test data if none exists
-    seedTestData();
+    // Don't call seedTestData here - it can cause deleted items to reappear
     setAmcPackages(getAMCPackages());
     setAvailableAddons(getAddons());
     const props = await getProperties();
@@ -205,9 +204,12 @@ const AMCPackage = ({ showToast }) => {
   };
 
   const handleDeleteEstimate = (packageId) => {
-    deleteAMCPackage(packageId);
-    showToast('Estimate deleted');
-    loadData();
+    if (window.confirm('Are you sure you want to delete this estimate?')) {
+      deleteAMCPackage(packageId);
+      // Update local state immediately (without calling loadData to avoid any re-seeding)
+      setAmcPackages(prevPackages => prevPackages.filter(pkg => pkg.packageId !== packageId));
+      showToast('Estimate deleted');
+    }
   };
 
   const handlePropertySelect = (propertyId) => {

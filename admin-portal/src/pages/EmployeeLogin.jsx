@@ -20,16 +20,14 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
 
   const roleCards = [
     { role: 'Admin', icon: Shield, gradient: 'from-red-500 to-rose-600', bgGlow: 'bg-red-500/20' },
-    { role: 'Manager', icon: Briefcase, gradient: 'from-blue-500 to-indigo-600', bgGlow: 'bg-blue-500/20' },
-    { role: 'Supervisor', icon: UserCheck, gradient: 'from-emerald-500 to-green-600', bgGlow: 'bg-emerald-500/20' },
-    { role: 'Executive', icon: Users, gradient: 'from-purple-500 to-violet-600', bgGlow: 'bg-purple-500/20' },
+    { role: 'Operations Manager', icon: Briefcase, gradient: 'from-blue-500 to-indigo-600', bgGlow: 'bg-blue-500/20' },
+    { role: 'Franchise Partner', icon: UserCheck, gradient: 'from-emerald-500 to-green-600', bgGlow: 'bg-emerald-500/20' },
   ];
 
   const quickLogins = [
     { username: 'admin', password: 'admin123', role: 'Admin', name: 'System Administrator' },
-    { username: 'manager1', password: 'manager123', role: 'Manager', name: 'Rahul Sharma' },
-    { username: 'supervisor1', password: 'super123', role: 'Supervisor', name: 'Priya Patel' },
-    { username: 'executive1', password: 'exec123', role: 'Executive', name: 'Amit Kumar' },
+    { username: 'opsmanager1', password: 'ops123', role: 'Operations Manager', name: 'Rahul Sharma' },
+    { username: 'franchise1', password: 'franchise123', role: 'Franchise Partner', name: 'Priya Patel' },
   ];
 
   const handleSubmit = async (e) => {
@@ -124,7 +122,7 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
                       </div>
                       <div>
                         <p className="font-semibold text-white">{role}</p>
-                        <p className="text-xs text-slate-400">{USER_ROLES[role].description}</p>
+                        <p className="text-xs text-slate-400">{USER_ROLES[role]?.description || 'User role'}</p>
                       </div>
                     </div>
                     

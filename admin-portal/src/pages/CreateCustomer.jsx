@@ -26,7 +26,8 @@ import {
   Globe,
   Building,
   Hash,
-  LayoutGrid
+  LayoutGrid,
+  X
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -326,7 +327,7 @@ const MapLocationPicker = ({ value, onChange }) => {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <label className="block text-sm font-medium text-gray-700">
-          Location on Map <span className="text-red-500">*</span>
+          Google Map Location <span className="text-red-500">*</span>
         </label>
         {/* Live Location Button */}
         <button
@@ -524,6 +525,7 @@ const CreateCustomer = ({ admin }) => {
   const [areaSuggestions, setAreaSuggestions] = useState([]);
   const [showZoneDropdown, setShowZoneDropdown] = useState(false);
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
+  const [showAddressDetails, setShowAddressDetails] = useState(false);
 
   useEffect(() => {
     // Fetch zones from both backend API and local zoneStore, merge them
@@ -1370,113 +1372,167 @@ const CreateCustomer = ({ admin }) => {
           </div>
         )}
 
-        {/* Address Section */}
+        {/* Address Section - Collapsible Landmark */}
         <div className="p-8 border-b border-gray-200">
           <h2 className="text-xl font-medium text-gray-800 mb-6">Address</h2>
           
           <div className="space-y-5">
-            {/* Street Address */}
+            {/* Landmark - Collapsible Header */}
             <div>
-              <label className="block text-sm text-gray-700 mb-1.5">
-                Street Address <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.address}
-                onChange={(e) => updateFormData('address', e.target.value)}
-                className={inputClass(hasError && !formData.address.trim())}
-                placeholder="Enter street address"
-              />
-              <FieldError show={hasError && !formData.address.trim()} message="Address is required" />
-            </div>
+              <button
+                type="button"
+                onClick={() => setShowAddressDetails(!showAddressDetails)}
+                className={`w-full flex items-center justify-between p-4 border rounded-lg transition-all duration-200 ${
+                  showAddressDetails 
+                    ? 'bg-blue-50 border-blue-300' 
+                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <MapPin className={`w-5 h-5 ${showAddressDetails ? 'text-blue-600' : 'text-gray-500'}`} />
+                  <div className="text-left">
+                    <span className={`font-medium ${showAddressDetails ? 'text-blue-700' : 'text-gray-700'}`}>
+                      Address Details
+                    </span>
+                    <span className="text-red-500 ml-1">*</span>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {showAddressDetails ? 'Click to collapse' : 'Click to enter Street, City, State, Postal Code'}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className={`w-5 h-5 transition-transform duration-200 ${
+                  showAddressDetails ? 'rotate-90 text-blue-600' : 'text-gray-400'
+                }`} />
+              </button>
 
-            {/* Apt/Suite */}
-            <div>
-              <label className="block text-sm text-gray-700 mb-1.5">
-                Apt/Suite
-              </label>
-              <div className="flex items-center gap-3 mb-2">
-                <input
-                  type="checkbox"
-                  id="aptSuiteNA"
-                  checked={formData.aptSuiteNA}
-                  onChange={(e) => updateFormData('aptSuiteNA', e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="aptSuiteNA" className="text-sm text-gray-600">Not Applicable</label>
-              </div>
-              {!formData.aptSuiteNA && (
-                <input
-                  type="text"
-                  value={formData.aptSuiteUnit}
-                  onChange={(e) => updateFormData('aptSuiteUnit', e.target.value)}
-                  className={inputClass(hasError && !formData.aptSuiteNA && !formData.aptSuiteUnit.trim())}
-                  placeholder="Apt 4B, Suite 100, Unit 5"
-                />
+              {/* Expanded Address Fields */}
+              {showAddressDetails && (
+                <div className="mt-4 p-5 bg-white border border-gray-200 rounded-lg space-y-5 animate-in slide-in-from-top-2">
+                  {/* Collapse/Cancel Button */}
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddressDetails(false)}
+                      className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                    >
+                      <X className="w-4 h-4" />
+                      Collapse
+                    </button>
+                  </div>
+
+                  {/* Street Address */}
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1.5">
+                      Street Address <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.address}
+                      onChange={(e) => updateFormData('address', e.target.value)}
+                      className={inputClass(hasError && !formData.address.trim())}
+                      placeholder="Enter street address"
+                    />
+                    <FieldError show={hasError && !formData.address.trim()} message="Address is required" />
+                  </div>
+
+                  {/* Apt/Suite */}
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1.5">
+                      Apt / Suite <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex items-center gap-3 mb-2">
+                      <input
+                        type="checkbox"
+                        id="aptSuiteNA"
+                        checked={formData.aptSuiteNA}
+                        onChange={(e) => updateFormData('aptSuiteNA', e.target.checked)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="aptSuiteNA" className="text-sm text-gray-600">Not Applicable</label>
+                    </div>
+                    {!formData.aptSuiteNA && (
+                      <input
+                        type="text"
+                        value={formData.aptSuiteUnit}
+                        onChange={(e) => updateFormData('aptSuiteUnit', e.target.value)}
+                        className={inputClass(hasError && !formData.aptSuiteNA && !formData.aptSuiteUnit.trim())}
+                        placeholder="Apt 4B, Suite 100, Unit 5"
+                      />
+                    )}
+                  </div>
+
+                  {/* City */}
+                  <div className="max-w-sm">
+                    <label className="block text-sm text-gray-700 mb-1.5">
+                      City <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => updateFormData('city', e.target.value)}
+                      className={inputClass(hasError && !formData.city.trim())}
+                      placeholder="City name"
+                    />
+                    <FieldError show={hasError && !formData.city.trim()} message="City is required" />
+                  </div>
+
+                  {/* State/Province and ZIP/Postal Code side by side */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-1.5">
+                        State <span className="text-red-500">*</span>
+                      </label>
+                      <StateSelect
+                        value={formData.state}
+                        onChange={(val) => updateFormData('state', val)}
+                        className={hasError && !formData.state.trim() ? 'ring-1 ring-red-300' : ''}
+                        placeholder="Select or type state"
+                        required
+                      />
+                      <FieldError show={hasError && !formData.state.trim()} message="State is required" />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-1.5">
+                        Postal Code <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.postalCode}
+                        onChange={(e) => updateFormData('postalCode', e.target.value)}
+                        className={inputClass(hasError && !formData.postalCode.trim())}
+                        placeholder="Postal code"
+                      />
+                      <FieldError show={hasError && !formData.postalCode.trim()} message="Postal code is required" />
+                    </div>
+                  </div>
+
+                  {/* Landmark Reference (Optional) */}
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1.5">
+                      Landmark Reference <span className="text-gray-400 text-xs">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.landmark}
+                      onChange={(e) => updateFormData('landmark', e.target.value)}
+                      className={inputClass(false)}
+                      placeholder="Near Central Park, Behind Mall, etc."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Show validation error if address fields not filled */}
+              {hasError && !showAddressDetails && (!formData.address.trim() || !formData.city.trim() || !formData.state.trim() || !formData.postalCode.trim()) && (
+                <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Please expand and fill in the address details
+                </p>
               )}
             </div>
 
-            {/* City */}
-            <div className="max-w-sm">
-              <label className="block text-sm text-gray-700 mb-1.5">
-                City <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.city}
-                onChange={(e) => updateFormData('city', e.target.value)}
-                className={inputClass(hasError && !formData.city.trim())}
-                placeholder="City name"
-              />
-              <FieldError show={hasError && !formData.city.trim()} message="City is required" />
-            </div>
-
-            {/* State/Province and ZIP/Postal Code side by side */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
-              <div>
-                <label className="block text-sm text-gray-700 mb-1.5">
-                  State/Province <span className="text-red-500">*</span>
-                </label>
-                <StateSelect
-                  value={formData.state}
-                  onChange={(val) => updateFormData('state', val)}
-                  className={hasError && !formData.state.trim() ? 'ring-1 ring-red-300' : ''}
-                  placeholder="Select or type state"
-                  required
-                />
-                <FieldError show={hasError && !formData.state.trim()} message="State is required" />
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-700 mb-1.5">
-                  ZIP/Postal Code <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.postalCode}
-                  onChange={(e) => updateFormData('postalCode', e.target.value)}
-                  className={inputClass(hasError && !formData.postalCode.trim())}
-                  placeholder="Postal code"
-                />
-                <FieldError show={hasError && !formData.postalCode.trim()} message="Postal code is required" />
-              </div>
-            </div>
-
-            {/* Landmark (Optional) */}
-            <div>
-              <label className="block text-sm text-gray-700 mb-1.5">
-                Landmark <span className="text-gray-400 text-xs">(Optional)</span>
-              </label>
-              <input
-                type="text"
-                value={formData.landmark}
-                onChange={(e) => updateFormData('landmark', e.target.value)}
-                className={inputClass(false)}
-                placeholder="Near Central Park, Behind Mall, etc."
-              />
-            </div>
-
-            {/* Map Location Picker */}
+            {/* Google Map Location Picker */}
             <div className="pt-4">
               <MapLocationPicker
                 value={formData.mapLocation}
