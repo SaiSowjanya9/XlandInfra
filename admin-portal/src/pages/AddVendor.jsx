@@ -45,7 +45,6 @@ const initialFormState = {
   serviceVerified: false,
   zone: '',
   areaName: '',
-  division: '',
   ownerName: '',
   ownerMobile: '',
   ownerEmail: '',
@@ -108,7 +107,6 @@ const AddVendor = ({ admin }) => {
     if (!formData.serviceType) newErrors.serviceType = 'Service type is required';
     if (!formData.zone) newErrors.zone = 'Zone is required';
     if (!formData.areaName.trim()) newErrors.areaName = 'Area name is required';
-    if (!formData.division) newErrors.division = 'Division is required';
     
     if (!formData.ownerName.trim()) newErrors.ownerName = 'Owner name is required';
     if (!formData.ownerMobile.trim()) newErrors.ownerMobile = 'Owner mobile is required';
@@ -354,18 +352,6 @@ const AddVendor = ({ admin }) => {
               {errors.areaName && <p className="text-xs text-red-500 mt-1">{errors.areaName}</p>}
             </div>
 
-            {/* Division */}
-            <SelectWithAdd
-              label="Division"
-              value={formData.division}
-              onChange={(value) => updateField('division', value)}
-              options={getDivisions()}
-              onAddOption={(value) => addDivision(value)}
-              placeholder="Select division..."
-              required
-              error={errors.division}
-              addPlaceholder="Enter new division (e.g., Division L)"
-            />
           </div>
         </div>
 

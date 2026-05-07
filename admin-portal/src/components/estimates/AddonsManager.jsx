@@ -1,17 +1,53 @@
 import { useState, useEffect } from 'react';
-import { Trash2, PlusCircle, DollarSign, ChevronDown, Plus } from 'lucide-react';
+import { Trash2, PlusCircle, ChevronDown, Plus, Layers, Edit2, X } from 'lucide-react';
 import {
-  getAddons, createAddon, deleteAddon,
-  getServices, calculateEstimateTotal, seedTestData, FREQUENCY_TYPES
+  getAddons, createAddon, deleteAddon, updateAddon,
+  getServices, FREQUENCY_TYPES
 } from '../../utils/estimateStore';
 
+// Property Type options for Add-ons (simple style matching other sections)
+const PROPERTY_TYPE_OPTIONS = [
+  { id: 'GC', label: 'Gated Community' },
+  { id: 'Apt', label: 'Apartment' },
+  { id: 'Villa', label: 'Villa' },
+  { id: 'Flat', label: 'Flat' },
+  { id: 'Plot', label: 'Plot' },
+];
+
+// Auto-calculate frequency count based on frequency type
+const FREQUENCY_COUNT_MAP = {
+  'Monthly': 1,
+  'Quarterly': 3,
+  'Half-yearly': 6,
+  'Yearly': 12,
+  'Custom Months': null // User enters manually
+};
+
 const AddonsManager = ({ showToast }) => {
+  const [activeTab, setActiveTab] = useState('create'); // 'create' or 'all-addons'
   const [addons, setAddons] = useState([]);
   const [services, setServices] = useState([]);
+  const [selectedPropertyType, setSelectedPropertyType] = useState(null);
+  const [filterPropertyType, setFilterPropertyType] = useState('all'); // Filter for All Add-ons tab
   const [addonForm, setAddonForm] = useState({
     serviceName: '',
     frequencyCount: 1,
     frequencyType: 'Monthly',
+    billingCycle: 'Monthly',
+    price: ''
+  });
+
+  // Billing cycle options
+  const BILLING_CYCLES = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'];
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAddon, setEditingAddon] = useState(null);
+  const [editForm, setEditForm] = useState({
+    serviceName: '',
+    frequencyCount: 1,
+    frequencyType: 'Monthly',
+    billingCycle: 'Monthly',
     price: ''
   });
 
@@ -20,12 +56,22 @@ const AddonsManager = ({ showToast }) => {
   }, []);
 
   const loadData = () => {
-    seedTestData();
-    setAddons(getAddons());
+    // Don't call seedTestData here - it causes deleted items to reappear
+    const currentAddons = getAddons();
+    setAddons(currentAddons);
     setServices(getServices());
   };
 
+  // Filter addons by selected property type
+  const filteredAddons = selectedPropertyType 
+    ? addons.filter(addon => addon.propertyType === selectedPropertyType)
+    : addons;
+
   const handleSaveAddon = () => {
+    if (!selectedPropertyType) {
+      showToast('Please select a property type', 'error');
+      return;
+    }
     if (!addonForm.serviceName.trim()) {
       showToast('Please select or enter a service name', 'error');
       return;
@@ -36,12 +82,15 @@ const AddonsManager = ({ showToast }) => {
     }
 
     const addonData = {
+      propertyType: selectedPropertyType,
+      propertyTypeName: PROPERTY_TYPE_OPTIONS.find(t => t.id === selectedPropertyType)?.label || selectedPropertyType,
       services: [{
         name: addonForm.serviceName.trim(),
         frequency: parseInt(addonForm.frequencyCount) || 1,
         frequencyType: addonForm.frequencyType,
         price: parseFloat(addonForm.price)
       }],
+      billingCycle: addonForm.billingCycle,
       totalPrice: parseFloat(addonForm.price)
     };
 
@@ -56,172 +105,628 @@ const AddonsManager = ({ showToast }) => {
       serviceName: '',
       frequencyCount: 1,
       frequencyType: 'Monthly',
+      billingCycle: 'Monthly',
       price: ''
     });
   };
 
   const handleDeleteAddon = (addonId) => {
     if (window.confirm('Are you sure you want to delete this add-on?')) {
+      // Delete from storage
       deleteAddon(addonId);
+      // Update local state immediately (without calling loadData to avoid any re-seeding)
+      setAddons(prevAddons => prevAddons.filter(addon => addon.addonId !== addonId));
       showToast('Add-on deleted');
-      loadData();
     }
+  };
+
+  // Open edit modal with addon data
+  const handleEditAddon = (addon) => {
+    setEditingAddon(addon);
+    setEditForm({
+      serviceName: addon.services?.[0]?.name || '',
+      frequencyCount: addon.services?.[0]?.frequency || 1,
+      frequencyType: addon.services?.[0]?.frequencyType || 'Monthly',
+      billingCycle: addon.billingCycle || 'Monthly',
+      price: addon.services?.[0]?.price?.toString() || addon.totalPrice?.toString() || ''
+    });
+    setShowEditModal(true);
+  };
+
+  // Save edited addon
+  const handleUpdateAddon = () => {
+    if (!editForm.serviceName.trim()) {
+      showToast('Please enter a service name', 'error');
+      return;
+    }
+    if (!editForm.price || parseFloat(editForm.price) <= 0) {
+      showToast('Please enter a valid price', 'error');
+      return;
+    }
+
+    const updates = {
+      services: [{
+        name: editForm.serviceName.trim(),
+        frequency: parseInt(editForm.frequencyCount) || 1,
+        frequencyType: editForm.frequencyType,
+        price: parseFloat(editForm.price)
+      }],
+      billingCycle: editForm.billingCycle,
+      totalPrice: parseFloat(editForm.price)
+    };
+
+    updateAddon(editingAddon.addonId, updates);
+    
+    // Update local state
+    setAddons(prevAddons => prevAddons.map(addon => 
+      addon.addonId === editingAddon.addonId 
+        ? { ...addon, ...updates }
+        : addon
+    ));
+    
+    setShowEditModal(false);
+    setEditingAddon(null);
+    showToast('Add-on updated successfully');
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center">
-          <PlusCircle className="w-5 h-5 text-stone-600" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Add-ons</h1>
-          <p className="text-sm text-gray-500">Create optional services for AMC packages</p>
-        </div>
-      </div>
-
-      {/* Add-on Form - Simple Layout */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800">Create Add-on</h3>
-        </div>
-
-        <div className="p-6">
-          {/* Single Row Layout: Select Service | Frequency Count | Frequency Type | Price | Save */}
-          <div className="grid grid-cols-12 gap-4 items-end">
-            {/* Select Service - First */}
-            <div className="col-span-4">
-              <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Select Service</label>
-              <input
-                type="text"
-                list="service-options"
-                value={addonForm.serviceName}
-                onChange={(e) => setAddonForm({ ...addonForm, serviceName: e.target.value })}
-                placeholder="Select or type service name"
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400"
-              />
-              <datalist id="service-options">
-                {services.map((service, idx) => (
-                  <option key={idx} value={service} />
-                ))}
-              </datalist>
-            </div>
-
-            {/* Frequency Count */}
-            <div className="col-span-2">
-              <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency Count</label>
-              <input
-                type="number"
-                min="1"
-                value={addonForm.frequencyCount}
-                onChange={(e) => setAddonForm({ ...addonForm, frequencyCount: e.target.value })}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400"
-              />
-            </div>
-
-            {/* Frequency Type */}
-            <div className="col-span-2">
-              <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency Type</label>
-              <div className="relative">
-                <select
-                  value={addonForm.frequencyType}
-                  onChange={(e) => setAddonForm({ ...addonForm, frequencyType: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 bg-white appearance-none"
-                >
-                  {FREQUENCY_TYPES.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Price */}
-            <div className="col-span-2">
-              <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (₹)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={addonForm.price}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^0-9]/g, '');
-                    setAddonForm({ ...addonForm, price: value });
-                  }}
-                  placeholder="0"
-                  className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 font-medium"
-                />
-              </div>
-            </div>
-
-            {/* Save Button */}
-            <div className="col-span-2">
-              <button
-                onClick={handleSaveAddon}
-                className="w-full px-4 py-2.5 bg-stone-700 text-white rounded-lg hover:bg-stone-800 font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Save
-              </button>
-            </div>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center">
+            <PlusCircle className="w-5 h-5 text-stone-600" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Add-ons</h1>
+            <p className="text-sm text-gray-500">Create optional services for AMC packages by property type</p>
           </div>
         </div>
       </div>
 
-      {/* All Add-ons List */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800">All Add-ons</h3>
-          <p className="text-sm text-gray-500">{addons.length} add-on(s) available</p>
-        </div>
-        {addons.length === 0 ? (
-          <div className="p-12 text-center">
-            <PlusCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">No add-ons yet</p>
-            <p className="text-sm text-gray-400">Create your first add-on above</p>
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit mb-6">
+        <button
+          onClick={() => setActiveTab('create')}
+          className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
+            activeTab === 'create'
+              ? 'bg-white text-stone-700 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Create Add-on
           </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {addons.map((addon) => (
-              <div key={addon.addonId} className="p-4 hover:bg-stone-50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-stone-100 rounded-lg flex items-center justify-center">
-                      <PlusCircle className="w-5 h-5 text-stone-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-800">
-                        {addon.services?.[0]?.name || addon.addonId}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {addon.services?.[0]?.frequency || 1}x {addon.services?.[0]?.frequencyType || 'Monthly'}
-                      </p>
+        </button>
+        <button
+          onClick={() => setActiveTab('all-addons')}
+          className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
+            activeTab === 'all-addons'
+              ? 'bg-white text-stone-700 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4" />
+            All Add-ons
+            {addons.length > 0 && (
+              <span className="px-1.5 py-0.5 bg-stone-600 text-white rounded-full text-xs">
+                {addons.length}
+              </span>
+            )}
+          </div>
+        </button>
+      </div>
+
+      {/* Create Add-on Tab */}
+      {activeTab === 'create' && (
+        <div className="space-y-6">
+          {/* Property Type Selection - Evenly distributed layout */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h2>
+            <p className="text-sm text-gray-500 mb-4">Choose the property type this package will be configured for</p>
+            
+            <div className="grid grid-cols-5 gap-4">
+              {PROPERTY_TYPE_OPTIONS.map((type) => {
+                const isSelected = selectedPropertyType === type.id;
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => setSelectedPropertyType(type.id)}
+                    className={`px-4 py-3 rounded-lg border transition-all duration-200 text-sm font-medium text-center ${
+                      isSelected 
+                        ? 'border-slate-400 bg-slate-100 text-slate-800 shadow-sm' 
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {type.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Add-on Form - Show only after property type selection */}
+          {selectedPropertyType && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Create Add-on</h3>
+                  <p className="text-sm text-gray-500">
+                    For: <span className="font-medium text-gray-700">
+                      {PROPERTY_TYPE_OPTIONS.find(t => t.id === selectedPropertyType)?.label}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6">
+                {/* Single Row Layout: Select Service | Frequency Type | Frequency Count | Billing | Price | Save */}
+                <div className="grid grid-cols-12 gap-3 items-start">
+                  {/* Select Service */}
+                  <div className="col-span-3">
+                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Select Service</label>
+                    <input
+                      type="text"
+                      list="service-options"
+                      value={addonForm.serviceName}
+                      onChange={(e) => setAddonForm({ ...addonForm, serviceName: e.target.value })}
+                      placeholder="Select or type service"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400"
+                    />
+                    <datalist id="service-options">
+                      {services.map((service, idx) => (
+                        <option key={idx} value={service} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  {/* Frequency Type */}
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency Type</label>
+                    <div className="relative">
+                      <select
+                        value={addonForm.frequencyType}
+                        onChange={(e) => {
+                          const newType = e.target.value;
+                          const autoCount = FREQUENCY_COUNT_MAP[newType];
+                          setAddonForm({ 
+                            ...addonForm, 
+                            frequencyType: newType,
+                            frequencyCount: autoCount !== null ? autoCount : ''
+                          });
+                        }}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 bg-white appearance-none"
+                      >
+                        {FREQUENCY_TYPES.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500 uppercase">Price</p>
-                      <p className="text-lg font-semibold text-stone-700">
-                        ₹{(addon.totalPrice || addon.services?.[0]?.price || 0).toLocaleString()}
-                      </p>
+
+                  {/* Frequency Count */}
+                  <div className="col-span-1 relative">
+                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Count</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={addonForm.frequencyCount}
+                      onChange={(e) => setAddonForm({ ...addonForm, frequencyCount: e.target.value })}
+                      placeholder={addonForm.frequencyType === 'Custom Months' ? '#' : ''}
+                      readOnly={addonForm.frequencyType !== 'Custom Months'}
+                      className={`w-full px-2 py-2.5 border rounded-lg text-sm text-center focus:ring-2 focus:ring-stone-200 focus:border-stone-400 ${
+                        addonForm.frequencyType === 'Custom Months' 
+                          ? 'border-blue-300 bg-blue-50' 
+                          : 'border-gray-300 bg-gray-100 cursor-not-allowed'
+                      }`}
+                    />
+                    {addonForm.frequencyType === 'Custom Months' && (
+                      <p className="absolute left-0 top-full mt-1 text-xs text-blue-600 whitespace-nowrap">Enter manually</p>
+                    )}
+                  </div>
+
+                  {/* Billing Cycle */}
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Billing</label>
+                    <div className="relative">
+                      <select
+                        value={addonForm.billingCycle}
+                        onChange={(e) => setAddonForm({ ...addonForm, billingCycle: e.target.value })}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 bg-white appearance-none"
+                      >
+                        {BILLING_CYCLES.map(cycle => (
+                          <option key={cycle} value={cycle}>{cycle}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     </div>
-                    {/* Only Delete button - NO Edit button */}
+                  </div>
+
+                  {/* Price */}
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (₹)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={addonForm.price}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9]/g, '');
+                          setAddonForm({ ...addonForm, price: value });
+                        }}
+                        placeholder="0"
+                        className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-transparent mb-2 block uppercase tracking-wider">Action</label>
                     <button
-                      onClick={() => handleDeleteAddon(addon.addonId)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Delete"
+                      onClick={handleSaveAddon}
+                      className="w-full px-4 py-2.5 bg-stone-700 text-white rounded-lg hover:bg-stone-800 font-medium transition-colors flex items-center justify-center gap-2"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Plus className="w-4 h-4" />
+                      Save
                     </button>
                   </div>
                 </div>
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Add-ons for Selected Property Type */}
+          {selectedPropertyType && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Add-ons for {PROPERTY_TYPE_OPTIONS.find(t => t.id === selectedPropertyType)?.label}
+                </h3>
+                <p className="text-sm text-gray-500">{filteredAddons.length} add-on(s) available</p>
+              </div>
+              {filteredAddons.length === 0 ? (
+                <div className="p-12 text-center">
+                  <PlusCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-500">No add-ons for this property type yet</p>
+                  <p className="text-sm text-gray-400">Create your first add-on above</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {filteredAddons.map((addon) => (
+                    <div key={addon.addonId} className="p-4 hover:bg-stone-50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-stone-100 rounded-lg flex items-center justify-center">
+                            <PlusCircle className="w-5 h-5 text-stone-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-800">
+                              {addon.services?.[0]?.name || addon.addonId}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {addon.services?.[0]?.frequency || 1}x {addon.services?.[0]?.frequencyType || 'Monthly'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right mr-2">
+                            <p className="text-xs text-gray-500 uppercase">Price</p>
+                            <p className="text-lg font-semibold text-stone-700">
+                              ₹{(addon.totalPrice || addon.services?.[0]?.price || 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleEditAddon(addon)}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAddon(addon.addonId)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* All Add-ons Tab - With Property Type Filter and Table Layout */}
+      {activeTab === 'all-addons' && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">All Add-ons</h3>
+                <p className="text-sm text-gray-500">
+                  {filterPropertyType === 'all' 
+                    ? `${addons.length} add-on(s) available` 
+                    : `${addons.filter(a => a.propertyType === filterPropertyType).length} add-on(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
+                </p>
+              </div>
+            </div>
+            
+            {/* Property Type Filter */}
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setFilterPropertyType('all')}
+                className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
+                  filterPropertyType === 'all'
+                    ? 'bg-slate-700 text-white border-slate-700'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                All
+              </button>
+              {PROPERTY_TYPE_OPTIONS.map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => setFilterPropertyType(type.id)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
+                    filterPropertyType === type.id
+                      ? 'bg-slate-700 text-white border-slate-700'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
+          
+          {addons.length === 0 ? (
+            <div className="p-12 text-center">
+              <PlusCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500">No add-ons yet</p>
+              <p className="text-sm text-gray-400 mb-4">Create your first add-on in the Create tab</p>
+              <button
+                onClick={() => setActiveTab('create')}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+              >
+                Create Add-on
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Filtered Add-ons - Table Layout */}
+              {(() => {
+                const filteredAddons = filterPropertyType === 'all' 
+                  ? addons 
+                  : addons.filter(a => a.propertyType === filterPropertyType);
+                
+                if (filteredAddons.length === 0) {
+                  return (
+                    <div className="p-8 text-center">
+                      <p className="text-gray-500">No add-ons found for this property type</p>
+                      <button
+                        onClick={() => setFilterPropertyType('all')}
+                        className="mt-2 text-sm text-blue-600 hover:underline"
+                      >
+                        Show all add-ons
+                      </button>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      {/* Table Header */}
+                      <thead className="bg-slate-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                            Add-on Name
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                            Property Type
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                            Frequency
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                            Count
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                            Total Rate
+                          </th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      {/* Table Body */}
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredAddons.map((addon) => (
+                          <tr key={addon.addonId} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4">
+                              <span className="font-medium text-gray-900">
+                                {addon.services?.[0]?.name || addon.addonId}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">
+                                {PROPERTY_TYPE_OPTIONS.find(t => t.id === addon.propertyType)?.label || addon.propertyType || '-'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+                                {addon.services?.[0]?.frequencyType || 'Monthly'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-sm text-gray-600">
+                              {addon.services?.[0]?.frequency || 1}x
+                            </td>
+                            <td className="px-4 py-4 text-right">
+                              <span className="text-lg font-bold text-slate-800">
+                                ₹{(addon.totalPrice || addon.services?.[0]?.price || 0).toLocaleString()}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => handleEditAddon(addon)}
+                                  className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                  title="Edit"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteAddon(addon.addonId)}
+                                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Edit Add-on Modal */}
+      {showEditModal && editingAddon && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Edit Add-on</h3>
+              <button
+                onClick={() => { setShowEditModal(false); setEditingAddon(null); }}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Service Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Service Name *</label>
+                <input
+                  type="text"
+                  list="edit-service-options"
+                  value={editForm.serviceName}
+                  onChange={(e) => setEditForm({ ...editForm, serviceName: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
+                  placeholder="Service name"
+                />
+                <datalist id="edit-service-options">
+                  {services.map((service, idx) => (
+                    <option key={idx} value={service} />
+                  ))}
+                </datalist>
+              </div>
+
+              {/* Frequency Type & Count */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Frequency Type</label>
+                  <select
+                    value={editForm.frequencyType}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      const autoCount = FREQUENCY_COUNT_MAP[newType];
+                      setEditForm({ 
+                        ...editForm, 
+                        frequencyType: newType,
+                        frequencyCount: autoCount !== null ? autoCount : editForm.frequencyCount
+                      });
+                    }}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
+                  >
+                    {FREQUENCY_TYPES.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Frequency Count</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editForm.frequencyCount}
+                    onChange={(e) => setEditForm({ ...editForm, frequencyCount: e.target.value })}
+                    readOnly={editForm.frequencyType !== 'Custom Months'}
+                    className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-stone-500 outline-none ${
+                      editForm.frequencyType === 'Custom Months' 
+                        ? 'border-blue-300 bg-blue-50' 
+                        : 'border-gray-200 bg-gray-100'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {/* Billing Cycle & Price */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Billing Cycle</label>
+                  <select
+                    value={editForm.billingCycle}
+                    onChange={(e) => setEditForm({ ...editForm, billingCycle: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
+                  >
+                    {BILLING_CYCLES.map(cycle => (
+                      <option key={cycle} value={cycle}>{cycle}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹) *</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={editForm.price}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      setEditForm({ ...editForm, price: value });
+                    }}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  onClick={() => { setShowEditModal(false); setEditingAddon(null); }}
+                  className="px-4 py-2.5 text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateAddon}
+                  className="px-4 py-2.5 bg-stone-700 text-white rounded-xl hover:bg-stone-800"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

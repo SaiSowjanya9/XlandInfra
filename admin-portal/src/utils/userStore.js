@@ -1,5 +1,5 @@
 // User Store - Manages user authentication and roles
-// Roles: Admin, Manager, Supervisor, Executive
+// Roles: Admin, Operations Manager, Franchise Partner
 
 const USER_STORAGE_KEY = 'pm_users';
 const CURRENT_USER_KEY = 'pm_current_user';
@@ -21,42 +21,29 @@ const DEFAULT_USERS = [
   },
   {
     id: 'usr_002',
-    username: 'manager1',
-    password: 'manager123',
+    username: 'opsmanager1',
+    password: 'ops123',
     name: 'Rahul Sharma',
     email: 'rahul.sharma@propertymanagement.com',
-    role: 'Manager',
+    role: 'Operations Manager',
     phone: '+91 9876543211',
     status: 'active',
     createdAt: new Date().toISOString(),
     avatar: null,
-    permissions: ['view_properties', 'manage_vendors', 'manage_employees', 'view_reports']
+    permissions: ['view_properties', 'manage_vendors', 'manage_employees', 'view_reports', 'manage_work_orders']
   },
   {
     id: 'usr_003',
-    username: 'supervisor1',
-    password: 'super123',
+    username: 'franchise1',
+    password: 'franchise123',
     name: 'Priya Patel',
     email: 'priya.patel@propertymanagement.com',
-    role: 'Supervisor',
+    role: 'Franchise Partner',
     phone: '+91 9876543212',
     status: 'active',
     createdAt: new Date().toISOString(),
     avatar: null,
-    permissions: ['view_properties', 'manage_work_orders', 'view_vendors']
-  },
-  {
-    id: 'usr_004',
-    username: 'executive1',
-    password: 'exec123',
-    name: 'Amit Kumar',
-    email: 'amit.kumar@propertymanagement.com',
-    role: 'Executive',
-    phone: '+91 9876543213',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    avatar: null,
-    permissions: ['view_properties', 'create_work_orders']
+    permissions: ['view_properties', 'view_reports', 'view_vendors']
   }
 ];
 
@@ -70,37 +57,37 @@ export const USER_ROLES = {
     borderColor: 'border-red-200',
     description: 'Full system access with all permissions'
   },
-  Manager: {
-    label: 'Manager',
+  'Operations Manager': {
+    label: 'Operations Manager',
     color: 'bg-blue-500',
     textColor: 'text-blue-600',
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-200',
-    description: 'Manage properties, vendors, and employees'
+    description: 'Manage operations, vendors, and employees'
   },
-  Supervisor: {
-    label: 'Supervisor',
+  'Franchise Partner': {
+    label: 'Franchise Partner',
     color: 'bg-green-500',
     textColor: 'text-green-600',
     bgColor: 'bg-green-50',
     borderColor: 'border-green-200',
-    description: 'Supervise work orders and vendors'
-  },
-  Executive: {
-    label: 'Executive',
-    color: 'bg-purple-500',
-    textColor: 'text-purple-600',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-200',
-    description: 'Execute and manage daily operations'
+    description: 'Partner with limited access to view operations'
   }
 };
 
+// Version key to track role structure changes
+const USER_VERSION_KEY = 'pm_users_version';
+const CURRENT_VERSION = '2'; // Increment this when roles change
+
 // Initialize users in localStorage
 export const initializeUsers = () => {
+  const storedVersion = localStorage.getItem(USER_VERSION_KEY);
   const existingUsers = localStorage.getItem(USER_STORAGE_KEY);
-  if (!existingUsers) {
+  
+  // Reset users if version changed or no users exist
+  if (!existingUsers || storedVersion !== CURRENT_VERSION) {
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
+    localStorage.setItem(USER_VERSION_KEY, CURRENT_VERSION);
   }
 };
 
@@ -259,9 +246,8 @@ export const getRoleStats = () => {
     active: users.filter(u => u.status === 'active').length,
     byRole: {
       Admin: users.filter(u => u.role === 'Admin').length,
-      Manager: users.filter(u => u.role === 'Manager').length,
-      Supervisor: users.filter(u => u.role === 'Supervisor').length,
-      Executive: users.filter(u => u.role === 'Executive').length
+      'Operations Manager': users.filter(u => u.role === 'Operations Manager').length,
+      'Franchise Partner': users.filter(u => u.role === 'Franchise Partner').length
     }
   };
 };

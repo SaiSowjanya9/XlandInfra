@@ -31,7 +31,7 @@ const DEFAULT_SERVICES = [
 export const PROPERTY_TYPES = ['APT', 'Flats', 'GC', 'Villas', 'Plots', 'Commercial'];
 
 // Frequency types
-export const FREQUENCY_TYPES = ['Monthly', 'Months', 'Half-yearly', 'Quarterly', 'Yearly'];
+export const FREQUENCY_TYPES = ['Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'Custom Months'];
 
 // Billing duration options with multipliers
 export const BILLING_DURATIONS = [

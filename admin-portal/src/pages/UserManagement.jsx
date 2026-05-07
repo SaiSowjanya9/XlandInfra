@@ -29,7 +29,7 @@ const UserManagement = () => {
     name: '',
     email: '',
     phone: '',
-    role: 'Executive'
+    role: 'Operations Manager'
   });
 
   useEffect(() => {
@@ -81,7 +81,7 @@ const UserManagement = () => {
       name: '',
       email: '',
       phone: '',
-      role: 'Executive'
+      role: 'Operations Manager'
     });
     setEditingUser(null);
     setShowPassword(false);
@@ -162,8 +162,8 @@ const UserManagement = () => {
   const getRoleIcon = (role) => {
     switch (role) {
       case 'Admin': return Shield;
-      case 'Manager': return Briefcase;
-      case 'Supervisor': return UserCheck;
+      case 'Operations Manager': return Briefcase;
+      case 'Franchise Partner': return UserCheck;
       default: return Users;
     }
   };
@@ -212,7 +212,13 @@ const UserManagement = () => {
             </div>
           </div>
           {Object.entries(stats.byRole).map(([role, count]) => {
-            const roleInfo = USER_ROLES[role];
+            const roleInfo = USER_ROLES[role] || {
+              label: role,
+              color: 'bg-gray-500',
+              textColor: 'text-gray-600',
+              bgColor: 'bg-gray-50',
+              borderColor: 'border-gray-200'
+            };
             const Icon = getRoleIcon(role);
             return (
               <div key={role} className={`bg-white rounded-xl p-5 border ${roleInfo.borderColor} shadow-sm`}>
@@ -253,9 +259,8 @@ const UserManagement = () => {
             >
               <option value="all">All Roles</option>
               <option value="Admin">Admin</option>
-              <option value="Manager">Manager</option>
-              <option value="Supervisor">Supervisor</option>
-              <option value="Executive">Executive</option>
+              <option value="Operations Manager">Operations Manager</option>
+              <option value="Franchise Partner">Franchise Partner</option>
             </select>
             <select
               value={statusFilter}
@@ -284,7 +289,14 @@ const UserManagement = () => {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filteredUsers.map((user) => {
-              const roleInfo = USER_ROLES[user.role];
+              const roleInfo = USER_ROLES[user.role] || {
+                label: user.role,
+                color: 'bg-gray-500',
+                textColor: 'text-gray-600',
+                bgColor: 'bg-gray-50',
+                borderColor: 'border-gray-200',
+                description: 'User role'
+              };
               const Icon = getRoleIcon(user.role);
               return (
                 <tr key={user.id} className="hover:bg-gray-50 transition-colors">

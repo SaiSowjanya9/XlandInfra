@@ -9,9 +9,22 @@ import {
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
   getAMCPackageByPropertyId, addService, FREQUENCY_TYPES,
   getAMCPackages, getAddons, seedTestData, getAMCPackageByPropertyType,
-  migratePackagesToServiceRows
+  migratePackagesToServiceRows, getAMCPackagesByPropertyType
 } from '../../utils/estimateStore';
+
 import { getProperties } from '../../utils/propertyStore';
+
+// Subcategory options for services
+const SUBCATEGORIES = ['Maintenance', 'Cleaning', 'Security', 'Landscaping', 'Utilities', 'Other'];
+
+// Auto-calculate frequency count based on frequency type
+const FREQUENCY_COUNT_MAP = {
+  'Monthly': 1,
+  'Quarterly': 3,
+  'Half-yearly': 6,
+  'Yearly': 12,
+  'Custom Months': null // User enters manually
+};
 
 const PROPERTY_ICONS = {
   APT: Home,
@@ -21,8 +34,6 @@ const PROPERTY_ICONS = {
   Plots: Map,
   Commercial: Briefcase
 };
-
-const GST_RATE = 0.02; // 2% GST - calculated in backend, not shown in UI
 
 const CreateEstimate = ({ onSuccess, showToast }) => {
   const [estimateType, setEstimateType] = useState(null);
@@ -42,7 +53,9 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
   const [availableAddons, setAvailableAddons] = useState([]); // Add-ons from Add-ons manager
   const [selectedPackage, setSelectedPackage] = useState(null); // Selected AMC Package
   const [selectedAddons, setSelectedAddons] = useState([]); // Selected add-ons
-  const [discount, setDiscount] = useState(''); // Discount amount
+  const [discount, setDiscount] = useState(''); // Discount percentage
+  const [gstRate, setGstRate] = useState('18'); // GST percentage - customizable
+  const [subcategories, setSubcategories] = useState(SUBCATEGORIES); // Dynamic subcategories
   const [estimateForm, setEstimateForm] = useState({
     // Property-based auto-populated fields
     propertyId: '',
@@ -122,27 +135,44 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     setShowPropertySuggestions(false);
     setHasStartedTyping(true); // Ensure estimate type selection is hidden
     
-    // Extract block/tower info
+    // Dynamic auto-population based on property type
+    const entryType = property.entryType?.toUpperCase();
     let blockTower = '';
-    if (property.blockInfo) {
-      blockTower = property.blockInfo;
-    } else if (property.blockNames && Object.keys(property.blockNames).length > 0) {
-      blockTower = Object.values(property.blockNames).join(', ');
-    } else if (property.numberOfBlocks) {
-      blockTower = `${property.numberOfBlocks} Block(s)`;
-    }
-    
-    // Extract flat/unit info
     let flatUnit = '';
-    if (property.villaPlotNumber) {
-      flatUnit = property.villaPlotNumber;
-    } else if (property.aptSuiteUnit) {
-      flatUnit = property.aptSuiteUnit;
-    } else if (property.numberOfUnits) {
-      flatUnit = `${property.numberOfUnits} Units`;
-    } else if (property.unitsPerBlock) {
-      const totalUnits = Object.values(property.unitsPerBlock).reduce((sum, u) => sum + (parseInt(u) || 0), 0);
-      flatUnit = totalUnits > 0 ? `${totalUnits} Units` : '';
+    let numberOfUnits = '';
+    
+    if (entryType === 'GC') {
+      // Gated Community: Block Name + Number of Units
+      if (property.blockNames && typeof property.blockNames === 'object') {
+        const blockKeys = Object.keys(property.blockNames);
+        if (blockKeys.length > 0) {
+          // Get all block names (e.g., "A, B, C")
+          blockTower = Object.values(property.blockNames).filter(Boolean).join(', ');
+        }
+      }
+      // Calculate total units from unitsPerBlock
+      if (property.unitsPerBlock && typeof property.unitsPerBlock === 'object') {
+        const totalUnits = Object.values(property.unitsPerBlock).reduce((sum, u) => sum + (parseInt(u) || 0), 0);
+        numberOfUnits = totalUnits > 0 ? totalUnits : '';
+      }
+    } else if (entryType === 'APT') {
+      // Apartment: Block Information + Number of Units
+      if (property.blockInfo && typeof property.blockInfo === 'string') {
+        blockTower = property.blockInfo.trim();
+      }
+      numberOfUnits = property.numberOfUnits || '';
+    } else if (entryType === 'VILLA' || entryType === 'VILLAS') {
+      // Villa: Villa Number
+      flatUnit = property.villaPlotNumber || '';
+    } else if (entryType === 'PLOT' || entryType === 'PLOTS') {
+      // Plot: Plot Number
+      flatUnit = property.villaPlotNumber || '';
+    } else if (entryType === 'FLAT' || entryType === 'FLATS') {
+      // Flat: Flat Number (and optional block info)
+      flatUnit = property.villaPlotNumber || '';
+      if (property.blockInfo && typeof property.blockInfo === 'string') {
+        blockTower = property.blockInfo.trim();
+      }
     }
     
     // Get customer details from contacts (backend returns 'contacts', not 'associationContacts')
@@ -195,9 +225,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       areaName: property.areaName || '',
       division: property.division || '',
       propertyType: property.propertyType || '',
-      numberOfUnits: property.numberOfUnits || property.unitsPerBlock ? 
-        (typeof property.numberOfUnits === 'number' ? property.numberOfUnits : 
-          Object.values(property.unitsPerBlock || {}).reduce((sum, u) => sum + (parseInt(u) || 0), 0)) : '',
+      numberOfUnits: numberOfUnits, // Using computed value based on property type
       address: fullAddress,
       city: property.city || '',
       blockTower,
@@ -247,18 +275,27 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     return lockedTotal + newTotal;
   };
 
-  const calculateGST = () => {
-    return Math.round(calculateSubTotal() * GST_RATE);
-  };
-
-  // Get discount amount
+  // Get discount amount (percentage of subtotal)
   const getDiscountAmount = () => {
-    return parseFloat(discount) || 0;
+    const discountPercent = parseFloat(discount) || 0;
+    const subtotal = calculateSubTotal();
+    return Math.round(subtotal * (discountPercent / 100));
   };
 
-  // Final total: (Package + Add-ons) + GST - Discount
+  // Calculate GST on (Subtotal - Discount)
+  const calculateGST = () => {
+    const gstPercent = parseFloat(gstRate) || 0;
+    const subtotal = calculateSubTotal();
+    const discountAmt = getDiscountAmount();
+    return Math.round((subtotal - discountAmt) * (gstPercent / 100));
+  };
+
+  // Final total: (Subtotal - Discount) + GST
   const calculateTotal = () => {
-    return calculateSubTotal() + calculateGST() - getDiscountAmount();
+    const subtotal = calculateSubTotal();
+    const discountAmt = getDiscountAmount();
+    const gst = calculateGST();
+    return subtotal - discountAmt + gst;
   };
 
   // Handle AMC Package selection
@@ -469,7 +506,19 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
 
   const updateServiceRow = (index, field, value) => {
     const newServices = [...estimateForm.services];
-    newServices[index] = { ...newServices[index], [field]: value };
+    
+    // If frequency type changes, auto-set frequency count
+    if (field === 'frequencyType') {
+      const autoCount = FREQUENCY_COUNT_MAP[value];
+      newServices[index] = { 
+        ...newServices[index], 
+        [field]: value,
+        frequency: autoCount !== null ? autoCount : ''
+      };
+    } else {
+      newServices[index] = { ...newServices[index], [field]: value };
+    }
+    
     setEstimateForm({ ...estimateForm, services: newServices });
   };
 
@@ -692,6 +741,197 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                   </div>
                 </div>
 
+                {/* Dynamic Property-Specific Fields based on Entry Type */}
+                <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg mb-4">
+                  <h4 className="text-sm font-semibold text-indigo-800 mb-3 flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Unit Details
+                    <span className="text-xs font-normal text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded">
+                      {estimateForm.entryType || 'Property'}
+                    </span>
+                  </h4>
+                  
+                  {/* Apartment (APT) - Block Information + Number of Units */}
+                  {estimateForm.entryType === 'APT' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Block Information <span className="text-green-600 text-xs">(Auto-populated)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={estimateForm.blockTower}
+                          readOnly
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Number of Units <span className="text-green-600 text-xs">(Auto-populated)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={estimateForm.numberOfUnits ? `${estimateForm.numberOfUnits} Units` : '-'}
+                          readOnly
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Flats - Flat Number (Auto-populated) */}
+                  {(estimateForm.entryType === 'Flats' || estimateForm.entryType === 'FLAT') && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Flat Number <span className="text-green-600 text-xs">(Auto-populated)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={estimateForm.flatUnit}
+                          readOnly
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                      {estimateForm.blockTower && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Block Info <span className="text-green-600 text-xs">(Auto-populated)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={estimateForm.blockTower}
+                            readOnly
+                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Villa - Villa Number (Auto-populated) */}
+                  {(estimateForm.entryType === 'Villas' || estimateForm.entryType === 'VILLA') && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Villa Number <span className="text-green-600 text-xs">(Auto-populated)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={estimateForm.flatUnit}
+                          readOnly
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Plot - Plot Number (Auto-populated) */}
+                  {(estimateForm.entryType === 'Plots' || estimateForm.entryType === 'PLOT') && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Plot Number <span className="text-green-600 text-xs">(Auto-populated)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={estimateForm.flatUnit}
+                          readOnly
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Commercial/Factory - Block No + Flat/Unit No */}
+                  {(estimateForm.entryType === 'Commercial' || estimateForm.entryType === 'Factory') && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Block No <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={estimateForm.blockTower}
+                          onChange={(e) => setEstimateForm({ ...estimateForm, blockTower: e.target.value })}
+                          placeholder="e.g., Block-A, Building-1"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Flat/Unit No <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={estimateForm.flatUnit}
+                          onChange={(e) => setEstimateForm({ ...estimateForm, flatUnit: e.target.value })}
+                          placeholder="e.g., Unit-101, Shop-1"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Gated Community (GC) - Block Name + Number of Units */}
+                  {estimateForm.entryType === 'GC' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Block Name <span className="text-green-600 text-xs">(Auto-populated)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={estimateForm.blockTower}
+                          readOnly
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Number of Units <span className="text-green-600 text-xs">(Auto-populated)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={estimateForm.numberOfUnits ? `${estimateForm.numberOfUnits} Units` : '-'}
+                          readOnly
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-indigo-50 text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Default for other/unknown types */}
+                  {!['APT', 'Flats', 'Villas', 'Plots', 'Commercial', 'Factory', 'GC'].includes(estimateForm.entryType) && estimateForm.entryType && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Block/Section
+                        </label>
+                        <input
+                          type="text"
+                          value={estimateForm.blockTower}
+                          onChange={(e) => setEstimateForm({ ...estimateForm, blockTower: e.target.value })}
+                          placeholder="Block/Section"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Unit No
+                        </label>
+                        <input
+                          type="text"
+                          value={estimateForm.flatUnit}
+                          onChange={(e) => setEstimateForm({ ...estimateForm, flatUnit: e.target.value })}
+                          placeholder="Unit No"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* AMC Package Info */}
                 {lockedServices.length > 0 && (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-md mb-4">
@@ -716,10 +956,15 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
               </div>
               
               <div className="px-6 py-4">
-                {/* AMC Package Dropdown */}
+                {/* AMC Package Dropdown - Filtered by Property Type */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select AMC Package <span className="text-red-500">*</span>
+                    {selectedProperty?.entryType && (
+                      <span className="ml-2 text-xs font-normal text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                        Filtered for: {selectedProperty.entryType}
+                      </span>
+                    )}
                   </label>
                   <div className="relative max-w-md">
                     <select
@@ -728,11 +973,56 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                       className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
                     >
                       <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
-                      {availablePackages.map(pkg => (
-                        <option key={pkg.packageId} value={pkg.packageId}>
-                          {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
-                        </option>
-                      ))}
+                      {/* Show packages filtered by property type first, then all packages */}
+                      {(() => {
+                        const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType;
+                        const filteredPkgs = propertyType 
+                          ? availablePackages.filter(pkg => {
+                              const pkgType = pkg.propertyType?.toUpperCase();
+                              const searchType = propertyType.toUpperCase();
+                              return pkgType === searchType || 
+                                     (pkgType === 'GC' && searchType === 'GC') ||
+                                     (pkgType === 'APT' && (searchType === 'APT' || searchType === 'APARTMENT')) ||
+                                     (pkgType === 'VILLA' && (searchType === 'VILLA' || searchType === 'VILLAS')) ||
+                                     (pkgType === 'FLAT' && (searchType === 'FLAT' || searchType === 'FLATS')) ||
+                                     (pkgType === 'PLOT' && (searchType === 'PLOT' || searchType === 'PLOTS'));
+                            })
+                          : availablePackages;
+                        
+                        const remainingPkgs = propertyType 
+                          ? availablePackages.filter(pkg => !filteredPkgs.includes(pkg))
+                          : [];
+                        
+                        return (
+                          <>
+                            {filteredPkgs.length > 0 && (
+                              <optgroup label={`Recommended for ${propertyType}`}>
+                                {filteredPkgs.map(pkg => (
+                                  <option key={pkg.packageId} value={pkg.packageId}>
+                                    {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {remainingPkgs.length > 0 && (
+                              <optgroup label="Other Packages">
+                                {remainingPkgs.map(pkg => (
+                                  <option key={pkg.packageId} value={pkg.packageId}>
+                                    {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {filteredPkgs.length === 0 && remainingPkgs.length === 0 && (
+                              availablePackages.map(pkg => (
+                                <option key={pkg.packageId} value={pkg.packageId}>
+                                  {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
+                                </option>
+                              ))
+                            )}
+                          </>
+                        );
+                      })()}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   </div>
@@ -747,40 +1037,44 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                 {/* Selected Package Details - Auto-populated */}
                 {selectedPackage && (
                   <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Package className="w-5 h-5 text-blue-600" />
-                        <span className="font-semibold text-blue-800">{selectedPackage.packageName}</span>
-                        <span className="text-xs bg-blue-200 text-blue-700 px-2 py-0.5 rounded">{selectedPackage.packageId}</span>
-                      </div>
-                      <span className="text-lg font-bold text-blue-700">₹{getPackagePrice().toLocaleString()}</span>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Package className="w-5 h-5 text-blue-600" />
+                      <span className="font-semibold text-blue-800">{selectedPackage.packageName}</span>
+                      <span className="text-xs bg-blue-200 text-blue-700 px-2 py-0.5 rounded">{selectedPackage.packageId}</span>
                     </div>
-                    {/* Services with Frequency Details */}
-                    <div className="bg-white p-3 rounded border border-blue-100 space-y-2">
-                      <p className="font-medium text-gray-600 text-sm mb-2">Services Included:</p>
-                      {/* If serviceRows exists, use it */}
+                    {/* Services Table - Without individual Price column */}
+                    <div className="bg-white rounded border border-blue-100 overflow-hidden">
+                      {/* Table Header */}
+                      <div className="grid grid-cols-10 gap-2 px-3 py-2 bg-blue-100/50 border-b border-blue-200">
+                        <div className="col-span-6 text-xs font-semibold text-blue-800 uppercase">Service</div>
+                        <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency Type</div>
+                        <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Count</div>
+                      </div>
+                      {/* Table Body */}
                       {selectedPackage.serviceRows && selectedPackage.serviceRows.length > 0 ? (
                         selectedPackage.serviceRows.filter(s => s.service?.trim()).map((service, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-100 last:border-0">
-                            <span className="text-gray-800 font-medium">{service.service}</span>
-                            <span className="text-blue-600 text-xs bg-blue-100 px-2 py-0.5 rounded">
-                              {service.frequencyCount || 1}x {service.frequencyType || 'Monthly'}
-                            </span>
+                          <div key={idx} className="grid grid-cols-10 gap-2 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                            <div className="col-span-6 text-sm font-medium text-gray-800">{service.service}</div>
+                            <div className="col-span-2 text-sm text-gray-600">{service.frequencyType || 'Monthly'}</div>
+                            <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequencyCount || 1}</div>
                           </div>
                         ))
                       ) : (
-                        /* Fallback: Parse services string into individual items */
                         (typeof selectedPackage.services === 'string' ? selectedPackage.services.split(',') : 
                          Array.isArray(selectedPackage.services) ? selectedPackage.services.map(s => s.name || s) : []
                         ).filter(s => s?.trim()).map((serviceName, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-100 last:border-0">
-                            <span className="text-gray-800 font-medium">{serviceName.trim()}</span>
-                            <span className="text-gray-400 text-xs bg-gray-100 px-2 py-0.5 rounded">
-                              Frequency not set
-                            </span>
+                          <div key={idx} className="grid grid-cols-10 gap-2 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                            <div className="col-span-6 text-sm font-medium text-gray-800">{serviceName.trim()}</div>
+                            <div className="col-span-2 text-sm text-gray-400">Monthly</div>
+                            <div className="col-span-2 text-sm text-gray-400 text-center">1</div>
                           </div>
                         ))
                       )}
+                      {/* Total Row - Only shows Total Package Price */}
+                      <div className="flex justify-between px-3 py-2.5 bg-blue-50 border-t border-blue-200">
+                        <span className="text-sm font-semibold text-blue-800">Total Package Price</span>
+                        <span className="text-sm font-bold text-blue-700">₹{getPackagePrice().toLocaleString()}</span>
+                      </div>
                     </div>
                     {selectedPackage.billingDuration && (
                       <p className="text-xs text-blue-600 mt-2">
@@ -791,39 +1085,31 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                 )}
               </div>
 
-              {/* Add Services (Add-ons) Section - Conditionally render */}
-              {selectedAddons.length > 0 && (
-              <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
-                <h3 className="text-base font-semibold text-gray-800">Additional Services</h3>
-              </div>
-              )}
-              
-              <div className="px-6 py-4">
-                {/* Add-on Dropdown */}
+              {/* Additional Services Section - Blue themed, attached under AMC Package */}
+              <div className="px-6 py-4 border-t border-gray-100">
+                {/* Add-on Dropdown - Reduced width */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Add Service from Add-ons
                   </label>
-                  <div className="flex gap-3">
-                    <div className="relative flex-1 max-w-md">
-                      <select
-                        onChange={(e) => {
-                          handleAddAddon(e.target.value);
-                          e.target.value = '';
-                        }}
-                        className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-200 focus:border-green-500 appearance-none bg-white"
-                      >
-                        <option value="">+ Select Add-on to add</option>
-                        {availableAddons
-                          .filter(addon => !selectedAddons.find(a => a.addonId === addon.addonId))
-                          .map(addon => (
-                            <option key={addon.addonId} value={addon.addonId}>
-                              {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
-                            </option>
-                          ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    </div>
+                  <div className="relative max-w-sm">
+                    <select
+                      onChange={(e) => {
+                        handleAddAddon(e.target.value);
+                        e.target.value = '';
+                      }}
+                      className="w-full px-4 py-2.5 text-sm border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 appearance-none bg-white"
+                    >
+                      <option value="">+ Select Add-on to add</option>
+                      {availableAddons
+                        .filter(addon => !selectedAddons.find(a => a.addonId === addon.addonId))
+                        .map(addon => (
+                          <option key={addon.addonId} value={addon.addonId}>
+                            {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
+                          </option>
+                        ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 pointer-events-none" />
                   </div>
                   
                   {availableAddons.length === 0 && (
@@ -833,40 +1119,51 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                   )}
                 </div>
 
-                {/* Selected Add-ons List */}
+                {/* Selected Add-ons Table - Blue theme */}
                 {selectedAddons.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Selected Add-ons:</p>
+                  <div className="bg-blue-50/50 border border-blue-200 rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-blue-100/60 border-b border-blue-200">
+                      <p className="text-sm font-semibold text-blue-800">Additional Services (Add-ons)</p>
+                    </div>
+                    {/* Table Header */}
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-white border-b border-blue-100">
+                      <div className="col-span-4 text-xs font-semibold text-blue-800 uppercase">Service</div>
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Freq. Type</div>
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Count</div>
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-right">Price</div>
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Action</div>
+                    </div>
+                    {/* Table Body */}
                     {selectedAddons.map((addon) => (
-                      <div key={addon.addonId} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Plus className="w-4 h-4 text-green-600" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-800">
-                              {addon.services?.map(s => s.name).join(', ') || addon.addonId}
-                            </p>
-                            <p className="text-xs text-green-600 mt-0.5">
-                              {addon.services?.map(s => `${s.frequency || 1}x ${s.frequencyType || 'Monthly'}`).join(' • ')}
-                            </p>
+                      addon.services?.map((service, sIdx) => (
+                        <div key={`${addon.addonId}-${sIdx}`} className="grid grid-cols-12 gap-2 px-3 py-2.5 bg-white border-b border-gray-100 last:border-0 hover:bg-blue-50/30">
+                          <div className="col-span-4 text-sm font-medium text-gray-800">{service.name}</div>
+                          <div className="col-span-2 text-sm text-gray-600">{service.frequencyType || 'Monthly'}</div>
+                          <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequency || 1}</div>
+                          <div className="col-span-2 text-sm font-medium text-blue-700 text-right">₹{(service.price || 0).toLocaleString()}</div>
+                          <div className="col-span-2 text-center">
+                            <button
+                              onClick={() => handleRemoveAddon(addon.addonId)}
+                              className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
+                              title="Remove"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-semibold text-green-700">₹{(addon.totalPrice || 0).toLocaleString()}</span>
-                          <button
-                            onClick={() => handleRemoveAddon(addon.addonId)}
-                            className="p-1.5 text-red-500 hover:bg-red-100 rounded-md transition-colors"
-                            title="Remove Add-on"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
+                      ))
                     ))}
+                    {/* Total Row */}
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2.5 bg-blue-50 border-t border-blue-200">
+                      <div className="col-span-8 text-sm font-semibold text-blue-800">Total Add-ons</div>
+                      <div className="col-span-2 text-sm font-bold text-blue-700 text-right">₹{getAddonsTotal().toLocaleString()}</div>
+                      <div className="col-span-2"></div>
+                    </div>
                   </div>
                 )}
 
                 {selectedAddons.length === 0 && (
-                  <div className="p-4 text-center text-gray-400 border border-dashed border-gray-300 rounded-lg">
+                  <div className="p-3 text-center text-gray-400 border border-dashed border-blue-200 rounded-lg bg-blue-50/30">
                     <p className="text-sm">No add-ons selected. Use the dropdown above to add services.</p>
                   </div>
                 )}
@@ -878,45 +1175,44 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                 
                 <div className="flex justify-end">
                   <div className="w-96">
-                    {/* Package Price */}
-                    <div className="flex justify-between text-sm py-2 border-b border-gray-200">
-                      <span className="text-gray-600">
-                        AMC Package: <span className="font-medium">{selectedPackage?.packageName || 'Not selected'}</span>
-                      </span>
-                      <span className="font-medium text-gray-800">₹{getPackagePrice().toLocaleString()}</span>
-                    </div>
-                    
-                    {/* Add-ons Total */}
-                    <div className="flex justify-between text-sm py-2 border-b border-gray-200">
-                      <span className="text-gray-600">
-                        Add-ons ({selectedAddons.length})
-                      </span>
-                      <span className="font-medium text-gray-800">₹{getAddonsTotal().toLocaleString()}</span>
-                    </div>
-                    
-                    {/* Subtotal */}
+                    {/* Sub Total (Package + Add-ons) */}
                     <div className="flex justify-between text-sm py-2 border-b border-gray-200">
                       <span className="text-gray-600">Sub Total</span>
                       <span className="font-medium text-gray-800">₹{calculateSubTotal().toLocaleString()}</span>
                     </div>
                     
-                    {/* GST */}
-                    <div className="flex justify-between text-sm py-2 border-b border-gray-200">
-                      <span className="text-gray-600">GST (2%)</span>
-                      <span className="font-medium text-gray-800">₹{calculateGST().toLocaleString()}</span>
+                    {/* Discount (Percentage) */}
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                      <span className="text-gray-600">Discount (%)</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={discount}
+                          onChange={(e) => setDiscount(e.target.value)}
+                          placeholder="0"
+                          className="w-20 px-3 py-1.5 text-sm text-right border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                        />
+                        <span className="text-sm text-gray-500 w-24 text-right">- ₹{getDiscountAmount().toLocaleString()}</span>
+                      </div>
                     </div>
                     
-                    {/* Discount */}
+                    {/* GST (Customizable) */}
                     <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                      <span className="text-gray-600">Discount (₹)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={discount}
-                        onChange={(e) => setDiscount(e.target.value)}
-                        placeholder="0"
-                        className="w-28 px-3 py-1.5 text-sm text-right border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
-                      />
+                      <span className="text-gray-600">GST (%)</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={gstRate}
+                          onChange={(e) => setGstRate(e.target.value)}
+                          placeholder="18"
+                          className="w-20 px-3 py-1.5 text-sm text-right border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                        />
+                        <span className="text-sm text-gray-500 w-24 text-right">+ ₹{calculateGST().toLocaleString()}</span>
+                      </div>
                     </div>
                     
                     {/* Total */}
@@ -927,7 +1223,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     
                     {/* Formula Note */}
                     <p className="text-xs text-gray-500 mt-2 text-right">
-                      Formula: (Package + Add-ons) + GST - Discount
+                      Formula: (Subtotal - Discount%) + GST%
                     </p>
 
                     {/* Action Buttons */}
@@ -1249,19 +1545,22 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
               {/* Table Header */}
               <div className="grid grid-cols-12 gap-2 mb-2 px-2 py-2 bg-gray-100 rounded-t-md">
                 <div className="col-span-1 text-xs font-semibold text-gray-700">#</div>
-                <div className="col-span-3 text-xs font-semibold text-gray-700">
-                  Service <span className="text-red-500">*</span>
+                <div className="col-span-2 text-xs font-semibold text-gray-700">
+                  Subcategory
                 </div>
                 <div className="col-span-2 text-xs font-semibold text-gray-700">
-                  Frequency (Visits) <span className="text-red-500">*</span>
+                  Service <span className="text-red-500">*</span>
                 </div>
                 <div className="col-span-2 text-xs font-semibold text-gray-700">
                   Frequency Type <span className="text-red-500">*</span>
                 </div>
                 <div className="col-span-2 text-xs font-semibold text-gray-700">
+                  Frequency Count <span className="text-red-500">*</span>
+                </div>
+                <div className="col-span-1 text-xs font-semibold text-gray-700">
                   Price (₹) <span className="text-red-500">*</span>
                 </div>
-                <div className="col-span-1 text-xs font-semibold text-gray-700">Total (₹)</div>
+                <div className="col-span-1 text-xs font-semibold text-gray-700">Total</div>
                 <div className="col-span-1 text-xs font-semibold text-gray-700 text-center">Action</div>
               </div>
 
@@ -1272,7 +1571,32 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     <div className="col-span-1 text-sm text-gray-600 font-medium pl-2">
                       {index + 1}
                     </div>
-                    <div className="col-span-3">
+                    {/* Subcategory Dropdown with + Add */}
+                    <div className="col-span-2">
+                      <select
+                        value={service.subcategory || ''}
+                        onChange={(e) => {
+                          if (e.target.value === '__add_subcategory__') {
+                            const newSubcat = prompt('Enter new subcategory:');
+                            if (newSubcat && newSubcat.trim()) {
+                              setSubcategories(prev => [...prev, newSubcat.trim()]);
+                              updateServiceRow(index, 'subcategory', newSubcat.trim());
+                            }
+                          } else {
+                            updateServiceRow(index, 'subcategory', e.target.value);
+                          }
+                        }}
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                      >
+                        <option value="">Select</option>
+                        {subcategories.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                        <option value="__add_subcategory__" className="text-blue-600 font-medium">+ Add</option>
+                      </select>
+                    </div>
+                    {/* Service Dropdown */}
+                    <div className="col-span-2">
                       <select
                         value={service.name}
                         onChange={(e) => {
@@ -1286,7 +1610,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                             updateServiceRow(index, 'name', e.target.value);
                           }
                         }}
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
                       >
                         <option value="">Select Service</option>
                         {availableServices.map(s => (
@@ -1295,18 +1619,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                         <option value="__add_new__">+ Add New Service</option>
                       </select>
                     </div>
-                    <div className="col-span-2">
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          min="1"
-                          value={service.frequency}
-                          onChange={(e) => updateServiceRow(index, 'frequency', parseInt(e.target.value) || 1)}
-                          className="w-16 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 text-center"
-                        />
-                        <span className="text-xs text-gray-500">(Visits per Drop Down)</span>
-                      </div>
-                    </div>
+                    {/* Frequency Type - First to trigger auto-calculation */}
                     <div className="col-span-2">
                       <select
                         value={service.frequencyType}
@@ -1318,7 +1631,24 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                         ))}
                       </select>
                     </div>
+                    {/* Frequency Count - Auto-set based on type, manual only for 'Custom Months' */}
                     <div className="col-span-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={service.frequency}
+                        onChange={(e) => updateServiceRow(index, 'frequency', parseInt(e.target.value) || 1)}
+                        placeholder={service.frequencyType === 'Custom Months' ? 'Enter months' : ''}
+                        readOnly={service.frequencyType !== 'Custom Months'}
+                        title={service.frequencyType === 'Custom Months' ? 'Enter the number of months manually' : `Auto-set to ${FREQUENCY_COUNT_MAP[service.frequencyType] || 1}`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-200 text-center ${
+                          service.frequencyType === 'Custom Months' 
+                            ? 'border-blue-300 bg-blue-50' 
+                            : 'border-gray-300 bg-gray-100 cursor-not-allowed'
+                        }`}
+                      />
+                    </div>
+                    <div className="col-span-1">
                       <input
                         type="number"
                         min="0"

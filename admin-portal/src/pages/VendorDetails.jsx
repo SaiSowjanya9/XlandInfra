@@ -377,7 +377,6 @@ const VendorDetails = () => {
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Owner</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Zone</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Area</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Division</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Rate/Visit</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Coverage/Day</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created By</th>
@@ -406,9 +405,6 @@ const VendorDetails = () => {
                     </td>
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                       {vendor.areaName || '-'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                      {vendor.division || '-'}
                     </td>
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                       ₹{vendor.ratePerVisit}
@@ -504,11 +500,10 @@ const VendorDetails = () => {
               </div>
               {/* Location */}
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-3">Location & Division</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <h3 className="text-sm font-medium text-gray-500 mb-3">Location</h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div><span className="text-xs text-gray-400">Zone</span><p className="text-sm font-medium text-gray-900">{viewVendor.zone || '-'}</p></div>
                   <div><span className="text-xs text-gray-400">Area</span><p className="text-sm font-medium text-gray-900">{viewVendor.areaName || '-'}</p></div>
-                  <div><span className="text-xs text-gray-400">Division</span><p className="text-sm font-medium text-gray-900">{viewVendor.division || '-'}</p></div>
                 </div>
               </div>
               {/* Owner */}

@@ -21,6 +21,7 @@ const COUNTRY_CODES = [
   { code: '+971', flag: '🇦🇪', label: 'UAE' },
 ];
 
+
 const initialFormState = {
   name: '',
   phone: '',

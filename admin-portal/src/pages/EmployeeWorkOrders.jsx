@@ -139,16 +139,56 @@ const EmployeeWorkOrders = ({ admin }) => {
     const customerEmail = contact.email || '';
     const customerPhone = contact.phone ? `${contact.countryCode || '+91'} ${contact.phone}` : '';
     
+    // Auto-populate block/flat based on property type and available data
+    let blockValue = '';
+    let flatValue = '';
+    
+    const entryType = property.entryType?.toUpperCase();
+    
+    if (entryType === 'GC') {
+      // For Gated Community: blockNames is object like { "1": "A", "2": "B" }
+      if (property.blockNames && typeof property.blockNames === 'object') {
+        const blockKeys = Object.keys(property.blockNames);
+        if (blockKeys.length > 0) {
+          // Get first block name value (e.g., "A")
+          blockValue = property.blockNames[blockKeys[0]] || '';
+        }
+      }
+    } else if (entryType === 'APT') {
+      // For Apartment: blockInfo is a string like "Block A, Tower 1"
+      if (property.blockInfo && typeof property.blockInfo === 'string') {
+        blockValue = property.blockInfo.trim();
+      }
+    } else if (entryType === 'FLAT' || entryType === 'FLATS') {
+      // For Flat: Check blockInfo first, then blockNames
+      if (property.blockInfo && typeof property.blockInfo === 'string') {
+        blockValue = property.blockInfo.trim();
+      } else if (property.blockNames && typeof property.blockNames === 'object') {
+        const blockKeys = Object.keys(property.blockNames);
+        if (blockKeys.length > 0) {
+          blockValue = property.blockNames[blockKeys[0]] || '';
+        }
+      }
+      // Flat number from villaPlotNumber
+      flatValue = property.villaPlotNumber || '';
+    } else if (entryType === 'VILLA' || entryType === 'VILLAS') {
+      // For Villa: Use villaPlotNumber
+      flatValue = property.villaPlotNumber || '';
+    } else if (entryType === 'PLOT' || entryType === 'PLOTS') {
+      // For Plot: Use villaPlotNumber
+      flatValue = property.villaPlotNumber || '';
+    }
+    
     setFormData(prev => ({
       ...prev,
       propertyId: property.propertyId,
       customerName: customerName,
       customerEmail: customerEmail,
       customerPhone: customerPhone,
-      block: '',
-      flatNumber: ''
+      block: blockValue,
+      flatNumber: flatValue
     }));
-    setFormErrors(prev => ({ ...prev, propertyId: '', customerName: '' }));
+    setFormErrors(prev => ({ ...prev, propertyId: '', customerName: '', block: '', flatNumber: '' }));
   };
 
   const filteredProperties = properties.filter(p =>
@@ -156,16 +196,39 @@ const EmployeeWorkOrders = ({ admin }) => {
     p.name?.toLowerCase().includes(propertySearch.toLowerCase())
   );
 
-  const needsBlockFlat = selectedProperty &&
-    (selectedProperty.entryType === 'APT' || selectedProperty.entryType === 'GC');
+  // Get dynamic field requirements based on property type
+  const getPropertyFieldConfig = (entryType) => {
+    switch (entryType?.toUpperCase()) {
+      case 'GC':
+        return { showBlock: true, showFlat: true, blockLabel: 'Block Number', flatLabel: 'Flat Number' };
+      case 'APT':
+        return { showBlock: true, showFlat: true, blockLabel: 'Block', flatLabel: 'Apartment/Unit No' };
+      case 'VILLA':
+      case 'VILLAS':
+        return { showBlock: false, showFlat: true, blockLabel: '', flatLabel: 'Villa Number' };
+      case 'PLOT':
+      case 'PLOTS':
+        return { showBlock: false, showFlat: true, blockLabel: '', flatLabel: 'Plot Number' };
+      case 'FLAT':
+      case 'FLATS':
+        return { showBlock: true, showFlat: true, blockLabel: 'Block', flatLabel: 'Flat Number' };
+      default:
+        return { showBlock: false, showFlat: false, blockLabel: '', flatLabel: '' };
+    }
+  };
+
+  const propertyFieldConfig = selectedProperty ? getPropertyFieldConfig(selectedProperty.entryType) : null;
 
   const getPropertyTypeLabel = (entryType) => {
-    switch (entryType) {
+    switch (entryType?.toUpperCase()) {
       case 'APT': return 'Apartment';
       case 'GC': return 'Gated Community';
-      case 'VILLA': return 'Villa';
-      case 'PLOT': return 'Plot';
-      case 'FLAT': return 'Flat';
+      case 'VILLA':
+      case 'VILLAS': return 'Villa';
+      case 'PLOT':
+      case 'PLOTS': return 'Plot';
+      case 'FLAT':
+      case 'FLATS': return 'Flat';
       default: return entryType;
     }
   };
@@ -652,52 +715,98 @@ const EmployeeWorkOrders = ({ admin }) => {
                 )}
               </div>
 
-              {/* Auto-detected Property Type */}
+              {/* Auto-detected Property Type with Auto-populated Details */}
               {selectedProperty && (
-                <div className="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-                  <p className="text-xs text-indigo-500 uppercase tracking-wider font-medium mb-1">Detected Property Type</p>
-                  <p className="text-sm font-semibold text-indigo-800">{getPropertyTypeLabel(selectedProperty.entryType)}</p>
-                  <p className="text-xs text-indigo-600 mt-0.5">{selectedProperty.name}</p>
+                <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                  <p className="text-xs text-indigo-500 uppercase tracking-wider font-medium mb-2">Detected Property Type</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-indigo-800">{getPropertyTypeLabel(selectedProperty.entryType)}</p>
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Auto-populated</span>
+                  </div>
+                  <p className="text-xs text-indigo-600">{selectedProperty.name}</p>
+                  
+                  {/* Show additional auto-populated info based on property type */}
+                  {(selectedProperty.entryType === 'GC' || selectedProperty.entryType === 'APT') && (
+                    <div className="mt-3 pt-3 border-t border-indigo-200 grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500">
+                          {selectedProperty.entryType === 'GC' ? 'Block Name' : 'Block Info'}
+                        </p>
+                        <p className="text-sm font-medium text-gray-800">
+                          {selectedProperty.entryType === 'GC' 
+                            ? (selectedProperty.blockNames ? Object.values(selectedProperty.blockNames).filter(Boolean).join(', ') : '-')
+                            : (selectedProperty.blockInfo || '-')
+                          }
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Number of Units</p>
+                        <p className="text-sm font-medium text-gray-800">
+                          {selectedProperty.entryType === 'GC' 
+                            ? (selectedProperty.unitsPerBlock 
+                                ? Object.values(selectedProperty.unitsPerBlock).reduce((sum, u) => sum + (parseInt(u) || 0), 0) + ' Units'
+                                : '-')
+                            : (selectedProperty.numberOfUnits ? selectedProperty.numberOfUnits + ' Units' : '-')
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Villa/Plot/Flat: Show the unit number */}
+                  {(selectedProperty.entryType === 'VILLA' || selectedProperty.entryType === 'PLOT' || selectedProperty.entryType === 'FLAT') && selectedProperty.villaPlotNumber && (
+                    <div className="mt-3 pt-3 border-t border-indigo-200">
+                      <p className="text-xs text-gray-500">
+                        {selectedProperty.entryType === 'VILLA' ? 'Villa Number' : 
+                         selectedProperty.entryType === 'PLOT' ? 'Plot Number' : 'Flat Number'}
+                      </p>
+                      <p className="text-sm font-medium text-gray-800">{selectedProperty.villaPlotNumber}</p>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Block & Flat Number — only for Apartment / Gated Community */}
-              {needsBlockFlat && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Block <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.block}
-                      onChange={(e) => setFormData(prev => ({ ...prev, block: e.target.value }))}
-                      placeholder="e.g. Block A"
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:outline-none transition-all ${
-                        formErrors.block ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-indigo-200 focus:border-indigo-400'
-                      }`}
-                    />
-                    {formErrors.block && (
-                      <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.block}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Flat Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.flatNumber}
-                      onChange={(e) => setFormData(prev => ({ ...prev, flatNumber: e.target.value }))}
-                      placeholder="e.g. 101"
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:outline-none transition-all ${
-                        formErrors.flatNumber ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-indigo-200 focus:border-indigo-400'
-                      }`}
-                    />
-                    {formErrors.flatNumber && (
-                      <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.flatNumber}</p>
-                    )}
-                  </div>
+              {/* Dynamic Property Fields based on Property Type */}
+              {propertyFieldConfig && (propertyFieldConfig.showBlock || propertyFieldConfig.showFlat) && (
+                <div className={`grid grid-cols-1 ${propertyFieldConfig.showBlock && propertyFieldConfig.showFlat ? 'md:grid-cols-2' : ''} gap-4 mt-4`}>
+                  {propertyFieldConfig.showBlock && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {propertyFieldConfig.blockLabel} <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.block}
+                        onChange={(e) => setFormData(prev => ({ ...prev, block: e.target.value }))}
+                        placeholder={`e.g. ${propertyFieldConfig.blockLabel === 'Block Number' ? 'Block A' : 'A'}`}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:outline-none transition-all ${
+                          formErrors.block ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-indigo-200 focus:border-indigo-400'
+                        }`}
+                      />
+                      {formErrors.block && (
+                        <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.block}</p>
+                      )}
+                    </div>
+                  )}
+                  {propertyFieldConfig.showFlat && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {propertyFieldConfig.flatLabel} <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.flatNumber}
+                        onChange={(e) => setFormData(prev => ({ ...prev, flatNumber: e.target.value }))}
+                        placeholder={`e.g. ${propertyFieldConfig.flatLabel.includes('Villa') ? 'V-101' : propertyFieldConfig.flatLabel.includes('Plot') ? 'P-25' : '101'}`}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:outline-none transition-all ${
+                          formErrors.flatNumber ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-indigo-200 focus:border-indigo-400'
+                        }`}
+                      />
+                      {formErrors.flatNumber && (
+                        <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.flatNumber}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -214,7 +214,47 @@ The application is fully responsive and works on:
 - Tablets
 - Mobile phones
 
-## Recent Updates (April 2026)
+## Recent Updates (May 2026)
+
+### Estimates & Add-ons UI Enhancements
+- **Table Layout for All Add-ons**: Converted card layout to structured table with columns:
+  - Add-on Name, Property Type, Frequency, Count, Total Rate, Actions
+- **Table Layout for All AMC Packages**: Consistent table format with columns:
+  - Package Name, Property Type, Billing, Services Included, Total Rate, Actions
+- **Property Type Filters**: Added filter buttons (All, GC, Apt, Villa, Flat, Plot) for both sections
+- **Blue Theme Consistency**: All add-ons now use blue color palette matching AMC packages
+
+### Create Estimate Improvements
+- **Removed Individual Price Column**: AMC Package services table no longer shows individual "-" prices
+- **Total Package Price Only**: Summary shows only the final total, no redundant individual prices
+- **Customizable GST**: GST field is now editable (default 18%), similar to Discount field
+- **Percentage-Based Discount**: Discount now works as percentage of subtotal before GST
+- **Price Summary Formula**: Sub Total → Discount (%) → GST (%) → Total Amount
+
+### Dynamic Auto-Population by Property Type
+Implemented throughout Create Estimate and Create Work Order sections:
+
+| Property Type | Auto-Populated Fields |
+|--------------|----------------------|
+| **Gated Community (GC)** | Block Name, Number of Units |
+| **Apartment (APT)** | Block Information, Number of Units |
+| **Villa** | Villa Number |
+| **Plot** | Plot Number |
+| **Flat** | Flat Number |
+
+- Fields display with green "(Auto-populated)" labels
+- Read-only styling with `bg-indigo-50` background
+- Real-time update when property is selected
+
+### Create Work Order Enhancements
+- **Dynamic Property Fields**: Block/Flat fields adapt based on property type
+- **Auto-Fill Block Number**: First block name auto-populates for GC properties
+- **Property Details Panel**: Shows Block Name, Number of Units for GC/APT
+- **Villa/Plot/Flat Display**: Shows respective unit number when available
+
+---
+
+## Previous Updates (April 2026)
 
 ### AMC Package Manager Enhancements
 - **Property Type Selection**: Select GC, APT, VILLA, FLAT, or PLOT before creating AMC package

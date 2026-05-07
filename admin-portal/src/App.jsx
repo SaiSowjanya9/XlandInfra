@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { seedTestData } from './utils/estimateStore';
 
 import PortalSelector from './pages/PortalSelector';
 import EmployeeLogin from './pages/EmployeeLogin';
@@ -41,6 +42,9 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Initialize seed data once on app load (only creates if none exists)
+    seedTestData();
+    
     try {
       const savedUser = localStorage.getItem('adminUser');
       const savedPortal = localStorage.getItem('activePortal');
