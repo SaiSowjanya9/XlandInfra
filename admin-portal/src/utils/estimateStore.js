@@ -672,6 +672,182 @@ export const migratePackagesToServiceRows = () => {
 // Seed Test Data
 // ============================================
 
+// Seed test estimate for a property (for testing vendor assignments)
+// Uses Platinum Package configuration with proper frequency values
+export const seedTestEstimateForProperty = (propertyId, propertyName, zone) => {
+  const estimates = getStorageData(ESTIMATES_KEY);
+  
+  // Check if estimate already exists for this property
+  const existing = estimates.find(e => e.propertyId === propertyId);
+  if (existing) {
+    return existing;
+  }
+  
+  // Create a test estimate matching the Platinum Package structure
+  // with accurate frequency counts and types as configured
+  const estimateId = generateEstimateId();
+  
+  // Service rows with proper frequency configuration (matches AMC Package)
+  const serviceRows = [
+    { service: 'HVAC', frequencyCount: 1, frequencyType: 'Quarterly', price: 8000 },
+    { service: 'Pool', frequencyCount: 2, frequencyType: 'Monthly', price: 6000 },
+    { service: 'Full Maintenance', frequencyCount: 1, frequencyType: 'Monthly', price: 15000 },
+    { service: 'Housekeeping', frequencyCount: 4, frequencyType: 'Monthly', price: 3000 },
+    { service: 'Security', frequencyCount: 1, frequencyType: 'Monthly', price: 20000 },
+    { service: 'Electrical', frequencyCount: 1, frequencyType: 'Quarterly', price: 4000 },
+    { service: 'Plumbing', frequencyCount: 1, frequencyType: 'Quarterly', price: 4000 },
+    { service: 'Landscaping', frequencyCount: 2, frequencyType: 'Monthly', price: 5000 }
+  ];
+  
+  const testEstimate = {
+    estimateId,
+    propertyId,
+    propertyName: propertyName || 'Test Property',
+    estimateType: 'property-based',
+    packageId: 'AMC-PLATINUM-003',
+    packageName: 'Platinum Package',
+    packageRate: 96849,
+    status: 'Draft',
+    // Include serviceRows for direct access (primary source)
+    serviceRows: serviceRows,
+    // Also include services array for backward compatibility
+    services: serviceRows.map(sr => ({
+      name: sr.service,
+      frequency: sr.frequencyCount,
+      frequencyCount: sr.frequencyCount,
+      frequencyType: sr.frequencyType,
+      price: sr.price
+    })),
+    addons: [],
+    subTotal: serviceRows.reduce((sum, sr) => sum + sr.price, 0),
+    gst: Math.round(serviceRows.reduce((sum, sr) => sum + sr.price, 0) * 0.18),
+    discount: 0,
+    totalPrice: 96849,
+    addonsTotal: 0,
+    zone: zone || 'North',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  };
+  
+  estimates.unshift(testEstimate);
+  setStorageData(ESTIMATES_KEY, estimates);
+  
+  return testEstimate;
+};
+
+// Seed multiple test estimates for testing
+export const seedMultipleTestEstimates = () => {
+  const estimates = getStorageData(ESTIMATES_KEY);
+  const properties = JSON.parse(localStorage.getItem('xland_properties') || '[]');
+  
+  if (properties.length === 0) {
+    console.warn('No properties found to create estimates for');
+    return [];
+  }
+  
+  const createdEstimates = [];
+  
+  // Create estimates for up to 4 properties
+  const propsToUse = properties.slice(0, 4);
+  
+  // Package configs with serviceRows for proper frequency data
+  const packageConfigs = [
+    {
+      packageName: 'Platinum Package',
+      packageId: 'AMC-PLATINUM-003',
+      packageRate: 96849,
+      serviceRows: [
+        { service: 'HVAC', frequencyCount: 1, frequencyType: 'Quarterly', price: 15000 },
+        { service: 'Plumbing', frequencyCount: 1, frequencyType: 'Quarterly', price: 8000 },
+        { service: 'Security', frequencyCount: 1, frequencyType: 'Monthly', price: 25000 },
+        { service: 'Housekeeping', frequencyCount: 4, frequencyType: 'Monthly', price: 12000 },
+        { service: 'Landscaping', frequencyCount: 2, frequencyType: 'Monthly', price: 8000 },
+        { service: 'Pool', frequencyCount: 2, frequencyType: 'Monthly', price: 6000 }
+      ]
+    },
+    {
+      packageName: 'Gold Package',
+      packageId: 'AMC-GOLD-001',
+      packageRate: 65000,
+      serviceRows: [
+        { service: 'HVAC', frequencyCount: 1, frequencyType: 'Quarterly', price: 10000 },
+        { service: 'Security', frequencyCount: 1, frequencyType: 'Monthly', price: 20000 },
+        { service: 'Cleaning', frequencyCount: 2, frequencyType: 'Monthly', price: 8000 },
+        { service: 'Landscaping', frequencyCount: 2, frequencyType: 'Monthly', price: 10000 }
+      ]
+    },
+    {
+      packageName: 'Silver Package',
+      packageId: 'AMC-SILVER-002',
+      packageRate: 45000,
+      serviceRows: [
+        { service: 'Plumbing', frequencyCount: 1, frequencyType: 'Quarterly', price: 6000 },
+        { service: 'Cleaning', frequencyCount: 1, frequencyType: 'Monthly', price: 7000 },
+        { service: 'Security', frequencyCount: 1, frequencyType: 'Monthly', price: 15000 },
+        { service: 'Electrical', frequencyCount: 1, frequencyType: 'Half-yearly', price: 5000 }
+      ]
+    },
+    {
+      packageName: 'Basic Package',
+      packageId: 'AMC-BASIC-004',
+      packageRate: 30000,
+      serviceRows: [
+        { service: 'Cleaning', frequencyCount: 2, frequencyType: 'Monthly', price: 5000 },
+        { service: 'Landscaping', frequencyCount: 1, frequencyType: 'Monthly', price: 5000 }
+      ]
+    }
+  ];
+  
+  propsToUse.forEach((prop, idx) => {
+    // Skip if estimate already exists for this property
+    if (estimates.find(e => e.propertyId === prop.propertyId)) {
+      return;
+    }
+    
+    const config = packageConfigs[idx % packageConfigs.length];
+    const estimateId = generateEstimateId();
+    const totalPrice = config.serviceRows.reduce((sum, sr) => sum + sr.price, 0);
+    
+    const newEstimate = {
+      estimateId,
+      propertyId: prop.propertyId,
+      propertyName: prop.name || prop.communityName || 'Property',
+      estimateType: 'property-based',
+      packageId: config.packageId,
+      packageName: config.packageName,
+      packageRate: config.packageRate,
+      status: 'Draft',
+      // Include serviceRows for direct frequency access
+      serviceRows: config.serviceRows,
+      // Include services array for backward compatibility
+      services: config.serviceRows.map(sr => ({
+        name: sr.service,
+        frequency: sr.frequencyCount,
+        frequencyCount: sr.frequencyCount,
+        frequencyType: sr.frequencyType,
+        price: sr.price
+      })),
+      addons: [],
+      subTotal: totalPrice,
+      gst: Math.round(totalPrice * 0.18),
+      discount: 0,
+      totalPrice: totalPrice + Math.round(totalPrice * 0.18),
+      addonsTotal: 0,
+      zone: prop.zone || 'North',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    };
+    
+    estimates.unshift(newEstimate);
+    createdEstimates.push(newEstimate);
+  });
+  
+  setStorageData(ESTIMATES_KEY, estimates);
+  return createdEstimates;
+};
+
 export const seedTestData = () => {
   // Check if data already exists
   const existingPackages = getStorageData(AMC_PACKAGES_KEY);
