@@ -196,29 +196,6 @@ const EmployeeWorkOrders = ({ admin }) => {
     p.name?.toLowerCase().includes(propertySearch.toLowerCase())
   );
 
-  // Get dynamic field requirements based on property type
-  const getPropertyFieldConfig = (entryType) => {
-    switch (entryType?.toUpperCase()) {
-      case 'GC':
-        return { showBlock: true, showFlat: true, blockLabel: 'Block Number', flatLabel: 'Flat Number' };
-      case 'APT':
-        return { showBlock: true, showFlat: true, blockLabel: 'Block', flatLabel: 'Apartment/Unit No' };
-      case 'VILLA':
-      case 'VILLAS':
-        return { showBlock: false, showFlat: true, blockLabel: '', flatLabel: 'Villa Number' };
-      case 'PLOT':
-      case 'PLOTS':
-        return { showBlock: false, showFlat: true, blockLabel: '', flatLabel: 'Plot Number' };
-      case 'FLAT':
-      case 'FLATS':
-        return { showBlock: true, showFlat: true, blockLabel: 'Block', flatLabel: 'Flat Number' };
-      default:
-        return { showBlock: false, showFlat: false, blockLabel: '', flatLabel: '' };
-    }
-  };
-
-  const propertyFieldConfig = selectedProperty ? getPropertyFieldConfig(selectedProperty.entryType) : null;
-
   const getPropertyTypeLabel = (entryType) => {
     switch (entryType?.toUpperCase()) {
       case 'APT': return 'Apartment';
@@ -387,8 +364,6 @@ const EmployeeWorkOrders = ({ admin }) => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.propertyId) newErrors.propertyId = 'Please select a property';
-    if (needsBlockFlat && !formData.block.trim()) newErrors.block = 'Block is required';
-    if (needsBlockFlat && !formData.flatNumber.trim()) newErrors.flatNumber = 'Flat number is required';
     if (!formData.customerName.trim()) newErrors.customerName = 'Customer name is required';
     if (!formData.customerPhone.trim()) newErrors.customerPhone = 'Phone number is required';
     if (!formData.categoryId) newErrors.categoryId = 'Please select a category';
@@ -721,7 +696,6 @@ const EmployeeWorkOrders = ({ admin }) => {
                   <p className="text-xs text-indigo-500 uppercase tracking-wider font-medium mb-2">Detected Property Type</p>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-semibold text-indigo-800">{getPropertyTypeLabel(selectedProperty.entryType)}</p>
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Auto-populated</span>
                   </div>
                   <p className="text-xs text-indigo-600">{selectedProperty.name}</p>
                   
@@ -766,49 +740,6 @@ const EmployeeWorkOrders = ({ admin }) => {
                 </div>
               )}
 
-              {/* Dynamic Property Fields based on Property Type */}
-              {propertyFieldConfig && (propertyFieldConfig.showBlock || propertyFieldConfig.showFlat) && (
-                <div className={`grid grid-cols-1 ${propertyFieldConfig.showBlock && propertyFieldConfig.showFlat ? 'md:grid-cols-2' : ''} gap-4 mt-4`}>
-                  {propertyFieldConfig.showBlock && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {propertyFieldConfig.blockLabel} <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.block}
-                        onChange={(e) => setFormData(prev => ({ ...prev, block: e.target.value }))}
-                        placeholder={`e.g. ${propertyFieldConfig.blockLabel === 'Block Number' ? 'Block A' : 'A'}`}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:outline-none transition-all ${
-                          formErrors.block ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-indigo-200 focus:border-indigo-400'
-                        }`}
-                      />
-                      {formErrors.block && (
-                        <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.block}</p>
-                      )}
-                    </div>
-                  )}
-                  {propertyFieldConfig.showFlat && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {propertyFieldConfig.flatLabel} <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.flatNumber}
-                        onChange={(e) => setFormData(prev => ({ ...prev, flatNumber: e.target.value }))}
-                        placeholder={`e.g. ${propertyFieldConfig.flatLabel.includes('Villa') ? 'V-101' : propertyFieldConfig.flatLabel.includes('Plot') ? 'P-25' : '101'}`}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:outline-none transition-all ${
-                          formErrors.flatNumber ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-indigo-200 focus:border-indigo-400'
-                        }`}
-                      />
-                      {formErrors.flatNumber && (
-                        <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.flatNumber}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Customer Details */}
