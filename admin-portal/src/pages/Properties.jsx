@@ -140,7 +140,6 @@ const Properties = () => {
       'Zone': p.zone || '',
       'Area Name': p.areaName || '',
       'Division': p.division || '',
-      'Property Type': p.propertyType || '',
       'Total Units': p.totalUnits || 0,
       'Number of Blocks': p.numberOfBlocks || '',
       'Block Info': p.blockNA ? 'N/A' : (p.blockInfo || ''),
@@ -475,7 +474,6 @@ const Properties = () => {
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Zone</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Area</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Division</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Property Type</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Units</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Address</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">City</th>
@@ -508,9 +506,6 @@ const Properties = () => {
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         {property.division || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {property.propertyType || '-'}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
                         {property.totalUnits || 0}
@@ -676,10 +671,6 @@ const Properties = () => {
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Division</label>
                         <p className="text-sm text-gray-900">{viewProperty.division || '-'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Property Type</label>
-                        <p className="text-sm text-gray-900">{viewProperty.propertyType || '-'}</p>
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Total Units</label>

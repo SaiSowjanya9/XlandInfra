@@ -1392,11 +1392,11 @@ const CreateCustomer = ({ admin }) => {
                   <MapPin className={`w-5 h-5 ${showAddressDetails ? 'text-blue-600' : 'text-gray-500'}`} />
                   <div className="text-left">
                     <span className={`font-medium ${showAddressDetails ? 'text-blue-700' : 'text-gray-700'}`}>
-                      Address Details
+                      Street, City, State, Postal Code
                     </span>
                     <span className="text-red-500 ml-1">*</span>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {showAddressDetails ? 'Click to collapse' : 'Click to enter Street, City, State, Postal Code'}
+                      {showAddressDetails ? 'Click to collapse' : 'Click to expand and enter details'}
                     </p>
                   </div>
                 </div>
