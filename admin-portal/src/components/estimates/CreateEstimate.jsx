@@ -756,8 +756,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Block Information <span className="text-green-600 text-xs">(Auto-populated)</span>
-                        </label>
+                          Block Information                         </label>
                         <input
                           type="text"
                           value={estimateForm.blockTower}
@@ -767,8 +766,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Number of Units <span className="text-green-600 text-xs">(Auto-populated)</span>
-                        </label>
+                          Number of Units                         </label>
                         <input
                           type="text"
                           value={estimateForm.numberOfUnits ? `${estimateForm.numberOfUnits} Units` : '-'}
@@ -784,8 +782,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Flat Number <span className="text-green-600 text-xs">(Auto-populated)</span>
-                        </label>
+                          Flat Number                         </label>
                         <input
                           type="text"
                           value={estimateForm.flatUnit}
@@ -796,8 +793,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                       {estimateForm.blockTower && (
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Block Info <span className="text-green-600 text-xs">(Auto-populated)</span>
-                          </label>
+                            Block Info                           </label>
                           <input
                             type="text"
                             value={estimateForm.blockTower}
@@ -814,8 +810,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Villa Number <span className="text-green-600 text-xs">(Auto-populated)</span>
-                        </label>
+                          Villa Number                         </label>
                         <input
                           type="text"
                           value={estimateForm.flatUnit}
@@ -831,8 +826,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Plot Number <span className="text-green-600 text-xs">(Auto-populated)</span>
-                        </label>
+                          Plot Number                         </label>
                         <input
                           type="text"
                           value={estimateForm.flatUnit}
@@ -878,8 +872,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Block Name <span className="text-green-600 text-xs">(Auto-populated)</span>
-                        </label>
+                          Block Name                         </label>
                         <input
                           type="text"
                           value={estimateForm.blockTower}
@@ -889,8 +882,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Number of Units <span className="text-green-600 text-xs">(Auto-populated)</span>
-                        </label>
+                          Number of Units                         </label>
                         <input
                           type="text"
                           value={estimateForm.numberOfUnits ? `${estimateForm.numberOfUnits} Units` : '-'}
@@ -901,8 +893,8 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     </div>
                   )}
 
-                  {/* Default for other/unknown types */}
-                  {!['APT', 'Flats', 'Villas', 'Plots', 'Commercial', 'Factory', 'GC'].includes(estimateForm.entryType) && estimateForm.entryType && (
+                  {/* Default for other/unknown types - exclude all known property types including uppercase variants */}
+                  {!['APT', 'Flats', 'FLAT', 'Villas', 'VILLA', 'Plots', 'PLOT', 'Commercial', 'Factory', 'GC'].includes(estimateForm.entryType) && estimateForm.entryType && (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">

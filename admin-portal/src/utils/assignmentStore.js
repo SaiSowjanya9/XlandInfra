@@ -191,3 +191,128 @@ export const clearAllAssignments = () => {
   localStorage.removeItem(VENDOR_ASSIGNMENT_KEY);
   localStorage.removeItem(EMPLOYEE_ASSIGNMENT_KEY);
 };
+
+// ============================================
+// Service-Wise Vendor Assignments (for Estimates)
+// ============================================
+
+const SERVICE_VENDOR_ASSIGNMENT_KEY = 'xland_service_vendor_assignments';
+
+// Get all service-wise vendor assignments
+export const getServiceVendorAssignments = (status = 'active') => {
+  try {
+    const data = localStorage.getItem(SERVICE_VENDOR_ASSIGNMENT_KEY);
+    const assignments = data ? JSON.parse(data) : [];
+    if (status === 'all') return assignments;
+    return assignments.filter(a => a.status === status);
+  } catch {
+    return [];
+  }
+};
+
+// Get service vendor assignments by property and estimate
+export const getServiceVendorAssignmentsByEstimate = (propertyId, estimateId) => {
+  return getServiceVendorAssignments('active').filter(
+    a => a.propertyId === propertyId && a.estimateId === estimateId
+  );
+};
+
+// Get service vendor assignments by property
+export const getServiceVendorAssignmentsByProperty = (propertyId) => {
+  return getServiceVendorAssignments('active').filter(a => a.propertyId === propertyId);
+};
+
+// Get service vendor assignments by vendor
+export const getServiceVendorAssignmentsByVendor = (vendorId) => {
+  return getServiceVendorAssignments('active').filter(a => a.vendorId === vendorId);
+};
+
+// Save service-wise vendor assignments for an estimate
+// This saves/updates all service assignments for a property-estimate combination at once
+export const saveServiceVendorAssignments = (propertyId, estimateId, serviceAssignments, propertyInfo = {}) => {
+  try {
+    let assignments = getServiceVendorAssignments('all');
+    
+    // Remove existing active assignments for this property-estimate combination
+    assignments = assignments.map(a => {
+      if (a.propertyId === propertyId && a.estimateId === estimateId && a.status === 'active') {
+        return { ...a, status: 'replaced', replacedAt: new Date().toISOString() };
+      }
+      return a;
+    });
+    
+    // Add new assignments
+    const timestamp = new Date().toISOString();
+    const newAssignments = serviceAssignments
+      .filter(sa => sa.vendorId) // Only save services with assigned vendors
+      .map((sa, index) => ({
+        id: `sva_${Date.now()}_${index}`,
+        propertyId,
+        estimateId,
+        propertyName: propertyInfo.propertyName || '',
+        propertyZone: propertyInfo.propertyZone || '',
+        // Service info
+        serviceType: sa.serviceType,
+        frequencyCount: sa.frequencyCount,
+        frequencyType: sa.frequencyType,
+        // Vendor info
+        vendorId: sa.vendorId,
+        vendorName: sa.vendorName,
+        vendorZone: sa.vendorZone,
+        vendorServiceType: sa.vendorServiceType,
+        // Metadata
+        assignedBy: propertyInfo.assignedBy || 'system',
+        assignedDate: timestamp,
+        status: 'active'
+      }));
+    
+    assignments = [...assignments, ...newAssignments];
+    localStorage.setItem(SERVICE_VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
+    
+    return { 
+      success: true, 
+      data: newAssignments,
+      message: `${newAssignments.length} service(s) assigned to vendors`
+    };
+  } catch (error) {
+    console.error('Error saving service vendor assignments:', error);
+    return { success: false, message: 'Failed to save assignments' };
+  }
+};
+
+// Remove a single service vendor assignment
+export const removeServiceVendorAssignment = (assignmentId) => {
+  const assignments = getServiceVendorAssignments('all');
+  const index = assignments.findIndex(a => a.id === assignmentId);
+  
+  if (index === -1) {
+    return { success: false, message: 'Assignment not found' };
+  }
+  
+  assignments[index].status = 'removed';
+  assignments[index].removedAt = new Date().toISOString();
+  localStorage.setItem(SERVICE_VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
+  
+  return { success: true };
+};
+
+// Check if property has any vendor assignments
+export const hasVendorAssignments = (propertyId) => {
+  const assignments = getServiceVendorAssignmentsByProperty(propertyId);
+  return assignments.length > 0;
+};
+
+// Get assignment summary for a property
+export const getPropertyAssignmentSummary = (propertyId) => {
+  const assignments = getServiceVendorAssignmentsByProperty(propertyId);
+  const estimateIds = [...new Set(assignments.map(a => a.estimateId))];
+  
+  return {
+    totalAssignments: assignments.length,
+    estimatesWithAssignments: estimateIds.length,
+    assignmentsByEstimate: estimateIds.map(estId => ({
+      estimateId: estId,
+      assignments: assignments.filter(a => a.estimateId === estId)
+    }))
+  };
+};

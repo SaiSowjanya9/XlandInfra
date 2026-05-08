@@ -3,10 +3,12 @@ import {
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Briefcase, Lock, 
   ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, FileText,
-  Package, Plus, Calendar, DollarSign, Receipt, Tag
+  Package, Plus, Calendar, DollarSign, Receipt, Tag, Users, UserCheck
 } from 'lucide-react';
 import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
 import { getEstimatesByPropertyId } from '../utils/estimateStore';
+import { hasVendorAssignments, getServiceVendorAssignmentsByProperty } from '../utils/assignmentStore';
+import VendorAssignmentModal from '../components/VendorAssignmentModal';
 import * as XLSX from 'xlsx';
 
 // Category options for Properties (same as Onboarding)
@@ -65,6 +67,9 @@ const Properties = () => {
   const [detailTab, setDetailTab] = useState('details'); // 'details' or 'estimates'
   const [propertyEstimates, setPropertyEstimates] = useState([]);
   const [selectedEstimate, setSelectedEstimate] = useState(null); // For viewing estimate details
+  
+  // Vendor assignment modal state
+  const [vendorAssignmentProperty, setVendorAssignmentProperty] = useState(null);
 
   // Load properties from backend API and notifications from localStorage
   const loadData = async () => {
@@ -121,6 +126,7 @@ const Properties = () => {
     markAllNotificationsRead();
     setNotifications(getNotifications());
   };
+
 
   // Export single property to Excel
   const handleExportProperty = (property) => {
@@ -531,6 +537,21 @@ const Properties = () => {
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
+                            onClick={() => setVendorAssignmentProperty(property)}
+                            className={`p-1.5 rounded transition-colors ${
+                              hasVendorAssignments(property.propertyId)
+                                ? 'text-green-500 hover:text-green-700 hover:bg-green-50'
+                                : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'
+                            }`}
+                            title={hasVendorAssignments(property.propertyId) ? "View/Edit Vendor Assignments" : "Assign Vendors"}
+                          >
+                            {hasVendorAssignments(property.propertyId) ? (
+                              <UserCheck className="w-4 h-4" />
+                            ) : (
+                              <Users className="w-4 h-4" />
+                            )}
+                          </button>
+                          <button
                             onClick={() => handleExportProperty(property)}
                             className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                             title="Export to Excel"
@@ -611,6 +632,24 @@ const Properties = () => {
                       detailTab === 'estimates' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'
                     }`}>
                       {propertyEstimates.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setDetailTab('vendors')}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                    detailTab === 'vendors'
+                      ? 'border-blue-600 text-blue-700 bg-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  Vendor Assignments
+                  {hasVendorAssignments(viewProperty.propertyId) && (
+                    <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
+                      detailTab === 'vendors' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-600'
+                    }`}>
+                      <UserCheck className="w-3 h-3" />
                     </span>
                   )}
                 </button>
@@ -865,6 +904,95 @@ const Properties = () => {
                   )}
                 </div>
               )}
+
+              {/* Vendor Assignments Tab */}
+              {detailTab === 'vendors' && (
+                <div className="px-6 py-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-gray-800">Vendor Assignments</h3>
+                    <button
+                      onClick={() => {
+                        handleClosePropertyView();
+                        setVendorAssignmentProperty(viewProperty);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Assign Vendors
+                    </button>
+                  </div>
+
+                  {(() => {
+                    const assignments = getServiceVendorAssignmentsByProperty(viewProperty.propertyId);
+                    
+                    if (assignments.length === 0) {
+                      return (
+                        <div className="py-12 text-center">
+                          <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-gray-500 font-medium">No vendor assignments yet</p>
+                          <p className="text-gray-400 text-sm mt-1">
+                            Click "Assign Vendors" to assign vendors to estimate services.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    // Group assignments by estimate
+                    const estimateIds = [...new Set(assignments.map(a => a.estimateId))];
+                    
+                    return (
+                      <div className="space-y-4">
+                        {estimateIds.map(estimateId => {
+                          const estAssignments = assignments.filter(a => a.estimateId === estimateId);
+                          return (
+                            <div key={estimateId} className="border border-gray-200 rounded-lg overflow-hidden">
+                              <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+                                <span className="text-xs font-mono text-gray-600">{estimateId}</span>
+                              </div>
+                              <table className="w-full text-sm">
+                                <thead className="bg-gray-50 border-b border-gray-100">
+                                  <tr>
+                                    <th className="px-4 py-2 text-left font-medium text-gray-600 text-xs">Service</th>
+                                    <th className="px-4 py-2 text-center font-medium text-gray-600 text-xs">Frequency</th>
+                                    <th className="px-4 py-2 text-left font-medium text-gray-600 text-xs">Vendor</th>
+                                    <th className="px-4 py-2 text-left font-medium text-gray-600 text-xs">Zone</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                  {estAssignments.map((assignment, idx) => (
+                                    <tr key={idx} className="hover:bg-gray-50">
+                                      <td className="px-4 py-2 font-medium text-gray-900">{assignment.serviceType}</td>
+                                      <td className="px-4 py-2 text-center">
+                                        <span className="text-xs text-gray-600">
+                                          {assignment.frequencyCount}x {assignment.frequencyType}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-2">
+                                        <div className="flex items-center gap-1.5">
+                                          <UserCheck className="w-3.5 h-3.5 text-green-500" />
+                                          <span className="text-gray-800">{assignment.vendorName}</span>
+                                        </div>
+                                      </td>
+                                      <td className="px-4 py-2">
+                                        <span className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">
+                                          {assignment.vendorZone || 'N/A'}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        })}
+                        <p className="text-xs text-gray-500 text-right mt-2">
+                          Total: {assignments.length} service assignment(s) across {estimateIds.length} estimate(s)
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}
@@ -1092,6 +1220,18 @@ const Properties = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Vendor Assignment Modal */}
+      {vendorAssignmentProperty && (
+        <VendorAssignmentModal
+          property={vendorAssignmentProperty}
+          onClose={() => setVendorAssignmentProperty(null)}
+          onSuccess={(message) => {
+            showToast(message, 'success');
+            setVendorAssignmentProperty(null);
+          }}
+        />
       )}
     </div>
   );
