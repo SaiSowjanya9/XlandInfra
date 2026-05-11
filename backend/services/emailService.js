@@ -206,9 +206,170 @@ const sendRegistrationNotification = async (userData) => {
   }
 };
 
+// Send customer account activation email
+const sendCustomerActivationEmail = async (customerData) => {
+  const { email, firstName, tempPassword, activationLink, propertyName } = customerData;
+  
+  const mailOptions = {
+    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `Welcome to XLAND INFRA Customer Portal - Activate Your Account`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+          <!-- Header -->
+          <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%); border-radius: 16px 16px 0 0; border: 1px solid #D8B25C33; border-bottom: none;">
+            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 300; letter-spacing: 2px;">
+              XLAND<span style="color: #D8B25C;">INFRA</span>
+            </h1>
+            <p style="margin: 5px 0 0 0; color: #888; font-size: 11px; letter-spacing: 3px;">PRIVATE LIMITED</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none;">
+            <h2 style="color: #D8B25C; margin: 0 0 20px 0; font-size: 24px; font-weight: 400;">Welcome, ${firstName || 'Valued Customer'}!</h2>
+            
+            <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 25px 0;">
+              Your customer account has been created for the <strong style="color: #D8B25C;">${propertyName || 'XLAND INFRA'}</strong> property portal. 
+              Please activate your account to access your personalized dashboard.
+            </p>
+            
+            <!-- Credentials Box -->
+            <div style="background: #0D0D0D; border: 1px solid #D8B25C44; border-radius: 12px; padding: 25px; margin: 30px 0;">
+              <h3 style="color: #D8B25C; margin: 0 0 20px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Your Login Credentials</h3>
+              
+              <div style="margin-bottom: 15px;">
+                <p style="color: #888; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;">Registered Email</p>
+                <p style="color: #ffffff; font-size: 16px; margin: 0; font-family: monospace; background: #1a1a1a; padding: 12px 15px; border-radius: 8px; border: 1px solid #333;">${email}</p>
+              </div>
+              
+              <div>
+                <p style="color: #888; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;">Temporary Password</p>
+                <p style="color: #D8B25C; font-size: 20px; margin: 0; font-family: monospace; background: #1a1a1a; padding: 12px 15px; border-radius: 8px; border: 1px solid #D8B25C44; letter-spacing: 3px; font-weight: bold;">${tempPassword}</p>
+              </div>
+            </div>
+            
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${activationLink}" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
+                ACTIVATE YOUR ACCOUNT
+              </a>
+            </div>
+            
+            <p style="color: #888; font-size: 13px; text-align: center; margin: 25px 0 0 0;">
+              Or copy and paste this link in your browser:<br>
+              <a href="${activationLink}" style="color: #D8B25C; word-break: break-all; font-size: 12px;">${activationLink}</a>
+            </p>
+            
+            <!-- Warning -->
+            <div style="background: #2a1a0a; border: 1px solid #D8B25C44; border-radius: 8px; padding: 15px 20px; margin-top: 30px;">
+              <p style="color: #D8B25C; font-size: 13px; margin: 0; line-height: 1.6;">
+                ⚠️ <strong>Important:</strong> This activation link will expire in <strong>72 hours</strong>. 
+                Please activate your account and set a new password before the link expires.
+              </p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #0D0D0D; padding: 25px 30px; border-radius: 0 0 16px 16px; border: 1px solid #D8B25C33; border-top: 2px solid #D8B25C;">
+            <p style="color: #666; font-size: 12px; margin: 0 0 10px 0; text-align: center;">
+              If you did not request this account, please ignore this email or contact our support team.
+            </p>
+            <p style="color: #444; font-size: 11px; margin: 0; text-align: center;">
+              © ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`📧 Customer activation email sent to ${email} (Message ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error sending customer activation email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send password reset confirmation email
+const sendPasswordResetConfirmation = async (customerData) => {
+  const { email, firstName } = customerData;
+  
+  const mailOptions = {
+    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `Account Activated Successfully - XLAND INFRA Customer Portal`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+          <!-- Header -->
+          <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%); border-radius: 16px 16px 0 0; border: 1px solid #D8B25C33; border-bottom: none;">
+            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 300; letter-spacing: 2px;">
+              XLAND<span style="color: #D8B25C;">INFRA</span>
+            </h1>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none; text-align: center;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); border-radius: 50%; margin: 0 auto 25px auto; display: flex; align-items: center; justify-content: center;">
+              <span style="font-size: 40px;">✓</span>
+            </div>
+            
+            <h2 style="color: #D8B25C; margin: 0 0 20px 0; font-size: 24px; font-weight: 400;">Account Activated!</h2>
+            
+            <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 30px 0;">
+              Hi ${firstName || 'Valued Customer'}, your account has been successfully activated. 
+              You can now log in to your Customer Portal using your email and the password you just created.
+            </p>
+            
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px;">
+              LOGIN TO YOUR PORTAL
+            </a>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #0D0D0D; padding: 25px 30px; border-radius: 0 0 16px 16px; border: 1px solid #D8B25C33; border-top: 2px solid #D8B25C;">
+            <p style="color: #444; font-size: 11px; margin: 0; text-align: center;">
+              © ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`📧 Account activation confirmation sent to ${email}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending confirmation email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWorkOrderNotification,
   sendContactNotification,
   sendRegistrationNotification,
+  sendCustomerActivationEmail,
+  sendPasswordResetConfirmation,
   NOTIFICATION_EMAIL
 };

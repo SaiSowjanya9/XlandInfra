@@ -8,6 +8,7 @@ import {
   searchEstimates, updateEstimate, deleteEstimate, calculateEstimateTotal,
   PROPERTY_TYPES, ESTIMATE_STATUSES
 } from '../../utils/estimateStore';
+import { exportEstimateToPDF } from '../../utils/pdfExport';
 
 const PROPERTY_ICONS = {
   APT: Home,
@@ -29,6 +30,7 @@ const STATUS_STYLES = {
 
 const EstimatesList = ({ onRefresh, showToast }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [exportingId, setExportingId] = useState(null);
   const [filters, setFilters] = useState({
     estimateType: 'all',
     status: 'all',
@@ -55,42 +57,25 @@ const EstimatesList = ({ onRefresh, showToast }) => {
     setDeleteConfirm(null);
   };
 
-  const handleDownloadPDF = (estimate) => {
-    const content = `ESTIMATE
-${'='.repeat(40)}
-Estimate ID: ${estimate.estimateId}
-Type: ${estimate.estimateType}
-Date: ${new Date(estimate.createdAt).toLocaleDateString()}
-Status: ${estimate.status}
-
-${estimate.estimateType === 'property-based' 
-  ? `Property ID: ${estimate.propertyId}
-Property Type: ${estimate.propertyType}
-Client: ${estimate.clientName}
-Community: ${estimate.communityName || 'N/A'}`
-  : `Customer: ${estimate.customerName}
-Phone: ${estimate.phone || 'N/A'}
-Email: ${estimate.email || 'N/A'}`}
-
-SERVICES
-${'-'.repeat(40)}
-${estimate.services?.map(s => 
-  `${s.name} - Frequency: ${s.frequency} ${s.frequencyType} - Price: ₹${s.price}`
-).join('\n')}
-
-${'-'.repeat(40)}
-TOTAL: ₹${estimate.totalPrice || calculateEstimateTotal(estimate)}
-${'='.repeat(40)}
-${estimate.notes ? `\nNotes: ${estimate.notes}` : ''}`;
-
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${estimate.estimateId}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Estimate downloaded');
+  const handleDownloadPDF = (e, estimate) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (exportingId) return;
+    setExportingId(estimate.estimateId);
+    showToast('Generating PDF...');
+    
+    setTimeout(() => {
+      try {
+        const success = exportEstimateToPDF(estimate);
+        if (success) {
+          showToast('PDF downloaded successfully!');
+        }
+      } catch (err) {
+        console.error('PDF Error:', err);
+      } finally {
+        setExportingId(null);
+      }
+    }, 100);
   };
 
   const clearFilters = () => {
@@ -273,8 +258,9 @@ ${estimate.notes ? `\nNotes: ${estimate.notes}` : ''}`;
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDownloadPDF(estimate)}
-                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"
+                          onClick={(e) => handleDownloadPDF(e, estimate)}
+                          disabled={exportingId === estimate.estimateId}
+                          className={`p-2 rounded-lg ${exportingId === estimate.estimateId ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
                           title="Download"
                         >
                           <Download className="w-4 h-4" />

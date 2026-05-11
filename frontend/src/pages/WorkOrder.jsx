@@ -153,11 +153,18 @@ const WorkOrder = ({ user }) => {
       submitData.append('entryNotes', formData.entryNotes);
       submitData.append('hasPet', formData.hasPet);
       submitData.append('priority', formData.priority);
-      // Add user property information
+      // Add user and property information
       if (user) {
-        submitData.append('residentId', user.id);
-        submitData.append('propertyId', user.propertyId);
-        submitData.append('unitId', user.unitId);
+        submitData.append('residentId', user.id || '');
+        submitData.append('propertyId', user.propertyId || '');
+        submitData.append('unitId', user.unitId || '');
+        submitData.append('customerName', `${user.firstName || ''} ${user.lastName || ''}`.trim());
+        submitData.append('customerEmail', user.email || '');
+        submitData.append('customerPhone', user.phone || '');
+        submitData.append('propertyName', user.propertyName || '');
+        submitData.append('propertyCode', user.propertyCode || '');
+        submitData.append('block', user.block || '');
+        submitData.append('flatNumber', user.unitNumber || user.flatNumber || '');
       }
       
       formData.attachments.forEach(attachment => {

@@ -37,8 +37,8 @@ const AddonsManager = ({ showToast }) => {
     price: ''
   });
 
-  // Billing cycle options
-  const BILLING_CYCLES = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'];
+  // Service period options
+  const SERVICE_PERIODS = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'];
 
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -48,7 +48,8 @@ const AddonsManager = ({ showToast }) => {
     frequencyCount: 1,
     frequencyType: 'Monthly',
     billingCycle: 'Monthly',
-    price: ''
+    price: '',
+    propertyType: ''
   });
 
   useEffect(() => {
@@ -128,7 +129,8 @@ const AddonsManager = ({ showToast }) => {
       frequencyCount: addon.services?.[0]?.frequency || 1,
       frequencyType: addon.services?.[0]?.frequencyType || 'Monthly',
       billingCycle: addon.billingCycle || 'Monthly',
-      price: addon.services?.[0]?.price?.toString() || addon.totalPrice?.toString() || ''
+      price: addon.services?.[0]?.price?.toString() || addon.totalPrice?.toString() || '',
+      propertyType: addon.propertyType || 'GC'
     });
     setShowEditModal(true);
   };
@@ -145,6 +147,8 @@ const AddonsManager = ({ showToast }) => {
     }
 
     const updates = {
+      propertyType: editForm.propertyType,
+      propertyTypeName: PROPERTY_TYPE_OPTIONS.find(t => t.id === editForm.propertyType)?.label || editForm.propertyType,
       services: [{
         name: editForm.serviceName.trim(),
         frequency: parseInt(editForm.frequencyCount) || 1,
@@ -329,17 +333,17 @@ const AddonsManager = ({ showToast }) => {
                     )}
                   </div>
 
-                  {/* Billing Cycle */}
+                  {/* Service Period */}
                   <div className="col-span-2">
-                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Billing</label>
+                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Period</label>
                     <div className="relative">
                       <select
                         value={addonForm.billingCycle}
                         onChange={(e) => setAddonForm({ ...addonForm, billingCycle: e.target.value })}
                         className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 bg-white appearance-none"
                       >
-                        {BILLING_CYCLES.map(cycle => (
-                          <option key={cycle} value={cycle}>{cycle}</option>
+                        {SERVICE_PERIODS.map(period => (
+                          <option key={period} value={period}>{period}</option>
                         ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -678,17 +682,31 @@ const AddonsManager = ({ showToast }) => {
                 </div>
               </div>
 
-              {/* Billing Cycle & Price */}
+              {/* Property Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property Type *</label>
+                <select
+                  value={editForm.propertyType}
+                  onChange={(e) => setEditForm({ ...editForm, propertyType: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
+                >
+                  {PROPERTY_TYPE_OPTIONS.map(type => (
+                    <option key={type.id} value={type.id}>{type.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Service Period & Price */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Billing Cycle</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Service Period</label>
                   <select
                     value={editForm.billingCycle}
                     onChange={(e) => setEditForm({ ...editForm, billingCycle: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
                   >
-                    {BILLING_CYCLES.map(cycle => (
-                      <option key={cycle} value={cycle}>{cycle}</option>
+                    {SERVICE_PERIODS.map(period => (
+                      <option key={period} value={period}>{period}</option>
                     ))}
                   </select>
                 </div>

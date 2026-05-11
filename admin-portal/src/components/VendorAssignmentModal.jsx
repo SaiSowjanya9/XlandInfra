@@ -238,12 +238,15 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       }
       setEstimates(propertyEstimates || []);
       
-      // Auto-select first estimate if available, OR initialize with default services
+      // Auto-select first estimate if available
+      // If no estimate exists, do NOT show default services - user must create estimate first
       if (propertyEstimates && propertyEstimates.length > 0) {
         handleEstimateSelect(propertyEstimates[0], vendorData);
       } else {
-        // No estimate exists - initialize with default services for vendor assignment
-        initializeDefaultServices(vendorData);
+        // No estimate exists - keep serviceAssignments empty
+        // Vendor assignment is only enabled after estimate is created and linked
+        setServiceAssignments([]);
+        console.log('[DEBUG] No estimate found - vendor assignment disabled until estimate is created');
       }
     } catch (err) {
       console.error('Error loading data:', err);
@@ -337,49 +340,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     { vendorId: 'VND-Z4-009', ownerName: 'Zone4 PipePro', serviceType: 'Plumbing', zone: 'Zone 4', areaName: 'Zone 4 Area' },
   ];
 
-  // Default services for properties without estimates
-  const DEFAULT_PROPERTY_SERVICES = [
-    { serviceType: 'HVAC', frequencyCount: 1, frequencyType: 'Quarterly' },
-    { serviceType: 'Security', frequencyCount: 1, frequencyType: 'Monthly' },
-    { serviceType: 'Housekeeping', frequencyCount: 2, frequencyType: 'Monthly' },
-    { serviceType: 'Landscaping', frequencyCount: 1, frequencyType: 'Monthly' },
-    { serviceType: 'Plumbing', frequencyCount: 1, frequencyType: 'Quarterly' },
-    { serviceType: 'Electrical', frequencyCount: 1, frequencyType: 'Quarterly' },
-    { serviceType: 'Cleaning', frequencyCount: 2, frequencyType: 'Monthly' },
-    { serviceType: 'Pool', frequencyCount: 1, frequencyType: 'Monthly' },
-  ];
-
-  // Initialize default services when no estimate exists
-  const initializeDefaultServices = (vendorList = vendors) => {
-    const propZoneNormalized = normalizeZone(property?.zone);
-    
-    console.log('[InitDefault] No estimate found - initializing with default services');
-    console.log('[InitDefault] Property Zone:', property?.zone, '→', propZoneNormalized);
-    
-    // Map default services with auto-matched vendors
-    const mappedServices = DEFAULT_PROPERTY_SERVICES.map(service => {
-      const normalizedService = normalizeServiceType(service.serviceType);
-      const matchingVendor = vendorList.find(v => {
-        const vendorServiceNormalized = normalizeServiceType(v.serviceType);
-        const vendorZoneNormalized = normalizeZone(v.zone);
-        return vendorServiceNormalized === normalizedService && vendorZoneNormalized === propZoneNormalized;
-      });
-      
-      console.log(`[InitDefault] Service "${service.serviceType}" → Vendor: ${matchingVendor?.ownerName || 'None'}`);
-      
-      return {
-        ...service,
-        vendorId: matchingVendor?.vendorId || '',
-        vendorName: matchingVendor?.ownerName || '',
-        vendorZone: matchingVendor?.zone || '',
-        vendorServiceType: matchingVendor?.serviceType || ''
-      };
-    });
-    
-    setServiceAssignments(mappedServices);
-  };
-
-  // Handle estimate selection - auto-assign matching vendors
+  // Handle estimate selection - auto-assign matching vendors based on AMC package services
   const handleEstimateSelect = (estimate, vendorList = vendors) => {
     setSelectedEstimate(estimate);
     
@@ -594,8 +555,14 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     });
   };
 
-  // Save all assignments
+  // Save all assignments - ONLY when estimate exists
   const handleSave = async () => {
+    // Validate estimate exists
+    if (!selectedEstimate?.estimateId) {
+      setError('Cannot save assignments without a linked estimate. Please create an estimate first.');
+      return;
+    }
+    
     if (assignedCount === 0) {
       setError('Please assign at least one vendor');
       return;
@@ -605,20 +572,29 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     setError(null);
     
     try {
-      // Use existing estimate ID or generate a direct assignment ID
-      const estimateId = selectedEstimate?.estimateId || `DIRECT-${property.propertyId}-${Date.now()}`;
+      // Log the data being saved for debugging
+      console.log('[VendorAssignmentModal] Saving assignments:', {
+        propertyId: property.propertyId,
+        estimateId: selectedEstimate.estimateId,
+        serviceAssignments: serviceAssignments.filter(s => s.vendorId),
+        propertyInfo: {
+          propertyName: property.name || property.communityName,
+          propertyZone: property.zone
+        }
+      });
       
       const result = saveServiceVendorAssignments(
         property.propertyId,
-        estimateId,
+        selectedEstimate.estimateId,
         serviceAssignments,
         {
           propertyName: property.name || property.communityName,
           propertyZone: property.zone,
-          assignedBy: 'admin',
-          isDirect: !selectedEstimate // Flag for direct assignments without estimate
+          assignedBy: 'admin'
         }
       );
+      
+      console.log('[VendorAssignmentModal] Save result:', result);
       
       if (result.success) {
         onSuccess?.(`Vendor assignments saved successfully! ${result.message}`);
@@ -685,7 +661,8 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
           ) : (
             <div className="p-6 space-y-6">
               {/* Linked Estimate Info - show if estimate exists */}
-              {selectedEstimate ? (
+              {/* Show estimate info only when estimate exists */}
+              {selectedEstimate && (
                 <div className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-lg">
                   <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center">
                     <Package className="w-5 h-5 text-slate-600" />
@@ -697,18 +674,6 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                       <span>•</span>
                       <span className="font-medium text-slate-700">₹{(selectedEstimate.totalPrice || 0).toLocaleString()}</span>
                     </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                    <AlertCircle className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">Direct Vendor Assignment</p>
-                    <p className="text-sm text-amber-700 mt-0.5">
-                      No estimate found. Assigning vendors to default services for this property.
-                    </p>
                   </div>
                 </div>
               )}
@@ -807,14 +772,18 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                 </div>
               )}
 
-              {/* No services message */}
-              {serviceAssignments.length === 0 && (
-                <div className="py-8 text-center">
-                  <AlertCircle className="w-10 h-10 text-amber-400 mx-auto mb-3" />
-                  <p className="text-gray-600 font-medium">No services available</p>
-                  <p className="text-gray-400 text-sm mt-1">
-                    Unable to load services for vendor assignment.
-                  </p>
+              {/* No Estimate Disclaimer - Show when no estimate is linked */}
+              {!selectedEstimate && serviceAssignments.length === 0 && (
+                <div className="py-10">
+                  <div className="flex flex-col items-center text-center max-w-md mx-auto">
+                    <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                      <Package className="w-8 h-8 text-amber-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">No Estimate Linked</h3>
+                    <p className="text-gray-600 leading-relaxed">
+                      No estimate is linked to this property yet. Please create an estimate first to assign vendors based on AMC package services.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -824,36 +793,42 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
         {/* Footer */}
         <div className="px-6 py-4 bg-slate-50 border-t border-gray-200 flex items-center justify-between">
           <div className="text-xs text-gray-500">
-            Vendor assignments are auto-matched by service type
+            {selectedEstimate 
+              ? 'Vendor assignments are auto-matched by service type and zone'
+              : 'Create an estimate first to enable vendor assignments'
+            }
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
             >
-              Cancel
+              {selectedEstimate ? 'Cancel' : 'Close'}
             </button>
-            <button
-              onClick={handleSave}
-              disabled={saving || assignedCount === 0}
-              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                saving || assignedCount === 0
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-slate-700 text-white hover:bg-slate-800'
-              }`}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Save Assignments
-                </>
-              )}
-            </button>
+            {/* Only show Save button when estimate exists and services are available */}
+            {selectedEstimate && serviceAssignments.length > 0 && (
+              <button
+                onClick={handleSave}
+                disabled={saving || assignedCount === 0}
+                className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  saving || assignedCount === 0
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-slate-700 text-white hover:bg-slate-800'
+                }`}
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Assignments
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import SelectWithAdd from '../components/SelectWithAdd';
 import { getCategories, addCategory, getSubcategories, addSubcategory } from '../utils/fieldOptionsStore';
+import { extractBlockNames, extractTotalUnits, extractUnitNumber } from '../utils/propertyStore';
 
 const API_BASE = '/api';
 
@@ -46,6 +47,8 @@ const EmployeeWorkOrders = ({ admin }) => {
   const [propertyLoading, setPropertyLoading] = useState(false);
   const [formData, setFormData] = useState({
     propertyId: '',
+    propertyName: '',
+    propertyType: '',
     block: '',
     flatNumber: '',
     customerName: '',
@@ -139,49 +142,21 @@ const EmployeeWorkOrders = ({ admin }) => {
     const customerEmail = contact.email || '';
     const customerPhone = contact.phone ? `${contact.countryCode || '+91'} ${contact.phone}` : '';
     
-    // Auto-populate block/flat based on property type and available data
-    let blockValue = '';
-    let flatValue = '';
+    // Use helper functions for consistent block/unit extraction
+    const blockValue = extractBlockNames(property);
+    const flatValue = extractUnitNumber(property);
     
-    const entryType = property.entryType?.toUpperCase();
-    
-    if (entryType === 'GC') {
-      // For Gated Community: blockNames is object like { "1": "A", "2": "B" }
-      if (property.blockNames && typeof property.blockNames === 'object') {
-        const blockKeys = Object.keys(property.blockNames);
-        if (blockKeys.length > 0) {
-          // Get first block name value (e.g., "A")
-          blockValue = property.blockNames[blockKeys[0]] || '';
-        }
-      }
-    } else if (entryType === 'APT') {
-      // For Apartment: blockInfo is a string like "Block A, Tower 1"
-      if (property.blockInfo && typeof property.blockInfo === 'string') {
-        blockValue = property.blockInfo.trim();
-      }
-    } else if (entryType === 'FLAT' || entryType === 'FLATS') {
-      // For Flat: Check blockInfo first, then blockNames
-      if (property.blockInfo && typeof property.blockInfo === 'string') {
-        blockValue = property.blockInfo.trim();
-      } else if (property.blockNames && typeof property.blockNames === 'object') {
-        const blockKeys = Object.keys(property.blockNames);
-        if (blockKeys.length > 0) {
-          blockValue = property.blockNames[blockKeys[0]] || '';
-        }
-      }
-      // Flat number from villaPlotNumber
-      flatValue = property.villaPlotNumber || '';
-    } else if (entryType === 'VILLA' || entryType === 'VILLAS') {
-      // For Villa: Use villaPlotNumber
-      flatValue = property.villaPlotNumber || '';
-    } else if (entryType === 'PLOT' || entryType === 'PLOTS') {
-      // For Plot: Use villaPlotNumber
-      flatValue = property.villaPlotNumber || '';
-    }
+    // Debug log for property data
+    console.log('[WorkOrders] Property ID:', property.propertyId);
+    console.log('[WorkOrders] Entry Type:', property.entryType);
+    console.log('[WorkOrders] Extracted Block:', blockValue);
+    console.log('[WorkOrders] Extracted Unit:', flatValue);
     
     setFormData(prev => ({
       ...prev,
       propertyId: property.propertyId,
+      propertyName: property.communityName || property.name || '',
+      propertyType: property.entryType || '',
       customerName: customerName,
       customerEmail: customerEmail,
       customerPhone: customerPhone,
@@ -382,6 +357,8 @@ const EmployeeWorkOrders = ({ admin }) => {
     try {
       const submitData = new FormData();
       submitData.append('propertyId', formData.propertyId);
+      submitData.append('propertyName', formData.propertyName);
+      submitData.append('propertyType', formData.propertyType);
       if (formData.block) submitData.append('block', formData.block);
       if (formData.flatNumber) submitData.append('flatNumber', formData.flatNumber);
       submitData.append('customerName', formData.customerName);
@@ -413,6 +390,8 @@ const EmployeeWorkOrders = ({ admin }) => {
         setPropertySearch('');
         setFormData({
           propertyId: '',
+          propertyName: '',
+          propertyType: '',
           block: '',
           flatNumber: '',
           customerName: '',
@@ -707,34 +686,26 @@ const EmployeeWorkOrders = ({ admin }) => {
                           {selectedProperty.entryType === 'GC' ? 'Block Name' : 'Block Info'}
                         </p>
                         <p className="text-sm font-medium text-gray-800">
-                          {selectedProperty.entryType === 'GC' 
-                            ? (selectedProperty.blockNames ? Object.values(selectedProperty.blockNames).filter(Boolean).join(', ') : '-')
-                            : (selectedProperty.blockInfo || '-')
-                          }
+                          {extractBlockNames(selectedProperty) || '-'}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">Number of Units</p>
                         <p className="text-sm font-medium text-gray-800">
-                          {selectedProperty.entryType === 'GC' 
-                            ? (selectedProperty.unitsPerBlock 
-                                ? Object.values(selectedProperty.unitsPerBlock).reduce((sum, u) => sum + (parseInt(u) || 0), 0) + ' Units'
-                                : '-')
-                            : (selectedProperty.numberOfUnits ? selectedProperty.numberOfUnits + ' Units' : '-')
-                          }
+                          {extractTotalUnits(selectedProperty) ? `${extractTotalUnits(selectedProperty)} Units` : '-'}
                         </p>
                       </div>
                     </div>
                   )}
                   
                   {/* Villa/Plot/Flat: Show the unit number */}
-                  {(selectedProperty.entryType === 'VILLA' || selectedProperty.entryType === 'PLOT' || selectedProperty.entryType === 'FLAT') && selectedProperty.villaPlotNumber && (
+                  {(selectedProperty.entryType === 'VILLA' || selectedProperty.entryType === 'PLOT' || selectedProperty.entryType === 'FLAT') && extractUnitNumber(selectedProperty) && (
                     <div className="mt-3 pt-3 border-t border-indigo-200">
                       <p className="text-xs text-gray-500">
                         {selectedProperty.entryType === 'VILLA' ? 'Villa Number' : 
                          selectedProperty.entryType === 'PLOT' ? 'Plot Number' : 'Flat Number'}
                       </p>
-                      <p className="text-sm font-medium text-gray-800">{selectedProperty.villaPlotNumber}</p>
+                      <p className="text-sm font-medium text-gray-800">{extractUnitNumber(selectedProperty)}</p>
                     </div>
                   )}
                 </div>

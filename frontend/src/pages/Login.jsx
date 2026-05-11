@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, ArrowLeft, Mail, Info } from 'lucide-react';
 import Logo from '../assets/LOGO 2.png';
 
 const Login = ({ onLogin }) => {
@@ -8,32 +8,89 @@ const Login = ({ onLogin }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [notActivated, setNotActivated] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
+  const [emailResent, setEmailResent] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setNotActivated(false);
+    setEmailResent(false);
     setLoading(true);
 
     try {
-      const response = await fetch('/api/residents/login', {
+      // First try customer accounts API
+      const customerResponse = await fetch('/api/customers/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
 
-      const result = await response.json();
+      const customerResult = await customerResponse.json();
 
-      if (result.success) {
-        onLogin(result.data);
+      if (customerResult.success) {
+        // Store token and customer data
+        localStorage.setItem('customerToken', customerResult.data.token);
+        onLogin(customerResult.data.customer);
+        navigate('/dashboard');
+        return;
+      }
+
+      // Check if account not activated
+      if (customerResult.notActivated) {
+        setNotActivated(true);
+        setError(customerResult.message);
+        setLoading(false);
+        return;
+      }
+
+      // If customer login failed, try legacy residents API
+      const residentsResponse = await fetch('/api/residents/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const residentsResult = await residentsResponse.json();
+
+      if (residentsResult.success) {
+        onLogin(residentsResult.data);
         navigate('/dashboard');
       } else {
-        setError(result.message || 'Invalid email or password');
+        // Show the more specific error message
+        setError(customerResult.message || residentsResult.message || 'Invalid email or password');
       }
     } catch (error) {
       setError('Unable to connect to server. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendActivation = async () => {
+    setResendingEmail(true);
+    try {
+      const response = await fetch('/api/customers/resend-activation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setEmailResent(true);
+        setNotActivated(false);
+        setError('');
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      setError('Failed to resend activation email. Please try again.');
+    } finally {
+      setResendingEmail(false);
     }
   };
 
@@ -94,7 +151,40 @@ const Login = ({ onLogin }) => {
               </div>
             </div>
 
-            {error && (
+            {/* Email Resent Success */}
+            {emailResent && (
+              <div className="p-3 bg-green-900/30 border border-green-500/50 rounded-lg flex items-start space-x-2 text-green-400">
+                <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium">Activation email sent!</p>
+                  <p className="text-green-400/80">Check your inbox for the activation link.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Not Activated Warning */}
+            {notActivated && (
+              <div className="p-3 bg-amber-900/30 border border-amber-500/50 rounded-lg">
+                <div className="flex items-start space-x-2 text-amber-400">
+                  <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm flex-1">
+                    <p className="font-medium mb-1">Account Not Activated</p>
+                    <p className="text-amber-400/80 mb-3">{error}</p>
+                    <button
+                      type="button"
+                      onClick={handleResendActivation}
+                      disabled={resendingEmail}
+                      className="text-amber-300 hover:text-amber-200 font-medium underline underline-offset-2"
+                    >
+                      {resendingEmail ? 'Sending...' : 'Resend Activation Email'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* General Error */}
+            {error && !notActivated && !emailResent && (
               <div className="p-3 bg-red-900/30 border border-red-500/50 rounded-lg flex items-center space-x-2 text-red-400">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 <span className="text-sm">{error}</span>

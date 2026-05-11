@@ -542,10 +542,6 @@ const AMCPackage = ({ showToast }) => {
                 <span className="font-bold text-blue-700">₹{calculateTotal().toLocaleString()}</span>
               </div>
               
-              {/* Formula Note */}
-              <p className="text-xs text-gray-500 mt-2 text-right">
-                Formula: (Package + Add-ons) + GST - Discount
-              </p>
 
               {/* Action Buttons */}
               <div className="flex gap-3 justify-end mt-4">

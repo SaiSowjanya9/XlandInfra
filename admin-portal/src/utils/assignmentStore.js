@@ -229,50 +229,81 @@ export const getServiceVendorAssignmentsByVendor = (vendorId) => {
 
 // Save service-wise vendor assignments for an estimate
 // This saves/updates all service assignments for a property-estimate combination at once
+// Prevents duplicates by checking Property ID + Estimate ID + Service Type
 export const saveServiceVendorAssignments = (propertyId, estimateId, serviceAssignments, propertyInfo = {}) => {
   try {
     let assignments = getServiceVendorAssignments('all');
+    const timestamp = new Date().toISOString();
+    const newAssignments = [];
+    const updatedAssignments = [];
     
-    // Remove existing active assignments for this property-estimate combination
-    assignments = assignments.map(a => {
-      if (a.propertyId === propertyId && a.estimateId === estimateId && a.status === 'active') {
-        return { ...a, status: 'replaced', replacedAt: new Date().toISOString() };
+    // Process each service assignment
+    serviceAssignments.forEach((sa, index) => {
+      if (!sa.vendorId) return; // Skip services without assigned vendors
+      
+      // Check if this exact combination already exists (Property + Estimate + ServiceType)
+      const existingIndex = assignments.findIndex(a => 
+        a.propertyId === propertyId && 
+        a.estimateId === estimateId && 
+        a.serviceType === sa.serviceType &&
+        a.status === 'active'
+      );
+      
+      if (existingIndex !== -1) {
+        // Update existing assignment
+        assignments[existingIndex] = {
+          ...assignments[existingIndex],
+          vendorId: sa.vendorId,
+          vendorName: sa.vendorName,
+          vendorZone: sa.vendorZone,
+          vendorServiceType: sa.vendorServiceType,
+          frequencyCount: sa.frequencyCount,
+          frequencyType: sa.frequencyType,
+          updatedAt: timestamp,
+          updatedBy: propertyInfo.assignedBy || 'system'
+        };
+        updatedAssignments.push(assignments[existingIndex]);
+      } else {
+        // Create new assignment
+        const newAssignment = {
+          id: `sva_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`,
+          propertyId,
+          estimateId,
+          propertyName: propertyInfo.propertyName || '',
+          propertyZone: propertyInfo.propertyZone || '',
+          // Service info
+          serviceType: sa.serviceType,
+          frequencyCount: sa.frequencyCount || 1,
+          frequencyType: sa.frequencyType || 'Monthly',
+          // Vendor info
+          vendorId: sa.vendorId,
+          vendorName: sa.vendorName,
+          vendorZone: sa.vendorZone,
+          vendorServiceType: sa.vendorServiceType,
+          // Metadata
+          assignedBy: propertyInfo.assignedBy || 'system',
+          assignedDate: timestamp,
+          status: 'active'
+        };
+        assignments.push(newAssignment);
+        newAssignments.push(newAssignment);
       }
-      return a;
     });
     
-    // Add new assignments
-    const timestamp = new Date().toISOString();
-    const newAssignments = serviceAssignments
-      .filter(sa => sa.vendorId) // Only save services with assigned vendors
-      .map((sa, index) => ({
-        id: `sva_${Date.now()}_${index}`,
-        propertyId,
-        estimateId,
-        propertyName: propertyInfo.propertyName || '',
-        propertyZone: propertyInfo.propertyZone || '',
-        // Service info
-        serviceType: sa.serviceType,
-        frequencyCount: sa.frequencyCount,
-        frequencyType: sa.frequencyType,
-        // Vendor info
-        vendorId: sa.vendorId,
-        vendorName: sa.vendorName,
-        vendorZone: sa.vendorZone,
-        vendorServiceType: sa.vendorServiceType,
-        // Metadata
-        assignedBy: propertyInfo.assignedBy || 'system',
-        assignedDate: timestamp,
-        status: 'active'
-      }));
-    
-    assignments = [...assignments, ...newAssignments];
+    // Save to localStorage
     localStorage.setItem(SERVICE_VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
+    
+    // Log for debugging
+    console.log('[AssignmentStore] Saved assignments:', {
+      new: newAssignments.length,
+      updated: updatedAssignments.length,
+      total: assignments.filter(a => a.status === 'active').length
+    });
     
     return { 
       success: true, 
-      data: newAssignments,
-      message: `${newAssignments.length} service(s) assigned to vendors`
+      data: [...newAssignments, ...updatedAssignments],
+      message: `${newAssignments.length} new, ${updatedAssignments.length} updated`
     };
   } catch (error) {
     console.error('Error saving service vendor assignments:', error);
@@ -294,6 +325,33 @@ export const removeServiceVendorAssignment = (assignmentId) => {
   localStorage.setItem(SERVICE_VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
   
   return { success: true };
+};
+
+// Update a single service vendor assignment
+export const updateServiceVendorAssignment = (assignmentId, updates) => {
+  try {
+    const assignments = getServiceVendorAssignments('all');
+    const index = assignments.findIndex(a => a.id === assignmentId);
+    
+    if (index === -1) {
+      return { success: false, message: 'Assignment not found' };
+    }
+    
+    assignments[index] = {
+      ...assignments[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    localStorage.setItem(SERVICE_VENDOR_ASSIGNMENT_KEY, JSON.stringify(assignments));
+    
+    console.log('[AssignmentStore] Updated assignment:', assignments[index]);
+    
+    return { success: true, data: assignments[index] };
+  } catch (error) {
+    console.error('Error updating assignment:', error);
+    return { success: false, message: 'Failed to update assignment' };
+  }
 };
 
 // Check if property has any vendor assignments
