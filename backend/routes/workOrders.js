@@ -114,7 +114,9 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
       flatNumber,
       customerName,
       customerEmail,
-      customerPhone
+      customerPhone,
+      propertyName,
+      propertyType
     } = req.body;
 
     // Validate required fields
@@ -167,14 +169,14 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
           work_order_id, resident_id, property_id, unit_id,
           category_id, subcategory_id, category_name, subcategory_name,
           description, permission_to_enter, entry_notes, has_pet, priority,
-          customer_name, customer_email, customer_phone, block, flat_number,
+          customer_name, customer_email, customer_phone, property_name, property_type, block, flat_number,
           status, source, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'customer', NOW())`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'customer', NOW())`,
         [
           orderNumber,
-          residentId || null,
-          propertyId || null,
-          unitId || null,
+          residentId && residentId !== 'undefined' ? residentId : null,
+          propertyId && propertyId !== 'undefined' ? propertyId : null,
+          unitId && unitId !== 'undefined' && !isNaN(parseInt(unitId)) ? parseInt(unitId) : null,
           parseInt(categoryId),
           parseInt(subcategoryId),
           category.name,
@@ -187,6 +189,8 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
           customerName || null,
           customerEmail || null,
           customerPhone || null,
+          propertyName || null,
+          propertyType || null,
           block || null,
           flatNumber || null
         ]
@@ -455,7 +459,9 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
       flatNumber,
       customerName,
       customerEmail,
-      customerPhone
+      customerPhone,
+      propertyName,
+      propertyType
     } = req.body;
 
     if (!categoryId || !subcategoryId) {
@@ -491,14 +497,14 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
           work_order_id, resident_id, property_id, unit_id,
           category_id, subcategory_id, category_name, subcategory_name,
           description, permission_to_enter, entry_notes, has_pet,
-          customer_name, customer_email, customer_phone, block, flat_number,
+          customer_name, customer_email, customer_phone, property_name, property_type, block, flat_number,
           status, priority, source, created_by, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 'admin', ?, NOW())`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 'admin', ?, NOW())`,
         [
           orderNumber,
-          residentId || null,
-          propertyId || null,
-          unitId || null,
+          residentId && residentId !== 'undefined' ? residentId : null,
+          propertyId && propertyId !== 'undefined' ? propertyId : null,
+          unitId && unitId !== 'undefined' && !isNaN(parseInt(unitId)) ? parseInt(unitId) : null,
           parseInt(categoryId),
           parseInt(subcategoryId),
           category.name,
@@ -510,6 +516,8 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
           customerName || null,
           customerEmail || null,
           customerPhone || null,
+          propertyName || null,
+          propertyType || null,
           block || null,
           flatNumber || null,
           priority || 'medium',

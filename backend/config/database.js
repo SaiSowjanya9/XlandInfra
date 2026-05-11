@@ -289,10 +289,13 @@ const initOnboardingTables = async () => {
         customer_name VARCHAR(200),
         customer_email VARCHAR(255),
         customer_phone VARCHAR(20),
+        property_name VARCHAR(255),
+        property_type VARCHAR(50),
         block VARCHAR(50),
         flat_number VARCHAR(50),
         status ENUM('pending', 'assigned', 'in_progress', 'completed', 'closed') DEFAULT 'pending',
         source ENUM('customer', 'admin', 'system') DEFAULT 'customer',
+        created_by VARCHAR(50) DEFAULT NULL,
         assigned_vendor_id INT DEFAULT NULL,
         assigned_at TIMESTAMP NULL,
         completed_at TIMESTAMP NULL,
@@ -335,6 +338,42 @@ const initOnboardingTables = async () => {
       )
     `);
     console.log('  ✅ Work order attachments & history tables initialized');
+
+    // Create customer_accounts table for customer portal
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS customer_accounts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        customer_id VARCHAR(50) UNIQUE NOT NULL,
+        property_contact_id INT,
+        property_id INT,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        temp_password_hash VARCHAR(255),
+        password_hash VARCHAR(255),
+        activation_token VARCHAR(255) UNIQUE,
+        activation_expires TIMESTAMP NULL,
+        is_activated BOOLEAN DEFAULT FALSE,
+        activated_at TIMESTAMP NULL,
+        first_name VARCHAR(100),
+        last_name VARCHAR(100),
+        phone VARCHAR(20),
+        country_code VARCHAR(10) DEFAULT '+91',
+        property_name VARCHAR(255),
+        property_code VARCHAR(50),
+        is_active BOOLEAN DEFAULT TRUE,
+        last_login TIMESTAMP NULL,
+        login_attempts INT DEFAULT 0,
+        locked_until TIMESTAMP NULL,
+        created_by VARCHAR(100) DEFAULT 'admin',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_customer_accounts_email (email),
+        INDEX idx_customer_accounts_token (activation_token),
+        INDEX idx_customer_accounts_active (is_active),
+        INDEX idx_customer_accounts_activated (is_activated),
+        INDEX idx_customer_accounts_property (property_id)
+      )
+    `);
+    console.log('  ✅ Customer accounts table initialized');
 
     conn.release();
     console.log('✅ Onboarding tables initialized (properties & vendors)');

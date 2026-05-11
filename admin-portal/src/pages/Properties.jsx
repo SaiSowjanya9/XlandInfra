@@ -790,18 +790,20 @@ const Properties = () => {
                       <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Contact Information</h3>
                       <div className="space-y-3">
                         {viewProperty.contacts.map((c, i) => (
-                          <div key={i} className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded-md">
-                            <div>
-                              <label className="block text-xs text-gray-500 mb-1">Name</label>
-                              <p className="text-sm text-gray-900">{c.name}</p>
-                            </div>
-                            <div>
-                              <label className="block text-xs text-gray-500 mb-1">Email</label>
-                              <p className="text-sm text-gray-900">{c.email}</p>
-                            </div>
-                            <div>
-                              <label className="block text-xs text-gray-500 mb-1">Phone</label>
-                              <p className="text-sm text-gray-900">{c.countryCode || '+91'} {c.phone}</p>
+                          <div key={i} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                              <div className="min-w-0">
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                                <p className="text-sm font-medium text-gray-900">{c.name || 'N/A'}</p>
+                              </div>
+                              <div className="min-w-0 sm:col-span-1">
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                                <p className="text-sm text-gray-900 truncate" title={c.email}>{c.email || 'N/A'}</p>
+                              </div>
+                              <div className="min-w-0">
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
+                                <p className="text-sm text-gray-900">{c.countryCode || '+91'} {c.phone || 'N/A'}</p>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -1126,9 +1128,6 @@ const Properties = () => {
                     <span className="text-blue-700">₹{(selectedEstimate.totalPrice || 0).toLocaleString()}</span>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-2 text-right">
-                  Formula: (Package + Add-ons) + GST - Discount
-                </p>
               </div>
 
               {/* Customer Info if available */}

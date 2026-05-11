@@ -27,6 +27,9 @@ const generateVendorId = (serviceType) => {
   return `${prefix}-${random}-${date}`;
 };
 
+// Helper to convert undefined to null for MySQL
+const toNull = (val) => (val === undefined || val === '') ? null : val;
+
 // ============================================
 // POST /api/vendors/onboarding  — Create a new vendor
 // ============================================
@@ -75,26 +78,26 @@ router.post('/', async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         vendorId,
-        serviceType,
+        serviceType || 'General',
         serviceVerified ? 1 : 0,
-        zone,
-        areaName,
-        division,
-        ownerName,
-        ownerMobile,
-        ownerEmail,
-        ownerAadhar,
+        toNull(zone),
+        toNull(areaName),
+        toNull(division),
+        ownerName || 'Unknown',
+        toNull(ownerMobile),
+        toNull(ownerEmail),
+        toNull(ownerAadhar),
         ownerCountryCode || '+91',
-        managerName || null,
-        managerMobile || null,
-        managerEmail || null,
+        toNull(managerName),
+        toNull(managerMobile),
+        toNull(managerEmail),
         managerCountryCode || '+91',
-        pocName || null,
-        pocMobile || null,
-        pocEmail || null,
+        toNull(pocName),
+        toNull(pocMobile),
+        toNull(pocEmail),
         pocCountryCode || '+91',
-        ratePerVisit || 0,
-        coveragePerDay || 0,
+        parseFloat(ratePerVisit) || 0,
+        parseInt(coveragePerDay) || 0,
         createdBy || 'Manager'
       ]
     );

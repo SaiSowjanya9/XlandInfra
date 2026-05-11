@@ -4,9 +4,9 @@ import {
   ArrowLeft, Download, RefreshCw, Wrench, Zap, Wind, 
   Sparkles, Shield, TreePine, Bug, Paintbrush, Hammer,
   Settings, Flame, ArrowUpDown, Droplets, Trash, Waves,
-  FileCheck
+  FileCheck, Edit3, Save
 } from 'lucide-react';
-import { getVendors, deleteVendor, getVendorNotifications, markAllVendorNotificationsRead } from '../utils/vendorStore';
+import { getVendors, deleteVendor, updateVendor, getVendorNotifications, markAllVendorNotificationsRead } from '../utils/vendorStore';
 import * as XLSX from 'xlsx';
 
 // Service Type Tabs (like Client Submissions tabs)
@@ -29,6 +29,9 @@ const VendorDetails = () => {
   const [zoneFilter, setZoneFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
   const [viewVendor, setViewVendor] = useState(null);
+  const [editVendor, setEditVendor] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -75,6 +78,52 @@ const VendorDetails = () => {
   const handleMarkAllRead = () => {
     markAllVendorNotificationsRead();
     setNotifications(getVendorNotifications());
+  };
+
+  const handleOpenEdit = (vendor) => {
+    setEditVendor(vendor);
+    setEditForm({
+      serviceType: vendor.serviceType || '',
+      serviceVerified: vendor.serviceVerified || false,
+      zone: vendor.zone || '',
+      areaName: vendor.areaName || '',
+      division: vendor.division || '',
+      ownerName: vendor.ownerName || '',
+      ownerMobile: vendor.ownerMobile || '',
+      ownerEmail: vendor.ownerEmail || '',
+      ownerAadhar: vendor.ownerAadhar || '',
+      ownerCountryCode: vendor.ownerCountryCode || '+91',
+      managerName: vendor.managerName || '',
+      managerMobile: vendor.managerMobile || '',
+      managerEmail: vendor.managerEmail || '',
+      managerCountryCode: vendor.managerCountryCode || '+91',
+      pocName: vendor.pocName || '',
+      pocMobile: vendor.pocMobile || '',
+      pocEmail: vendor.pocEmail || '',
+      pocCountryCode: vendor.pocCountryCode || '+91',
+      ratePerVisit: vendor.ratePerVisit || 0,
+      coveragePerDay: vendor.coveragePerDay || 0,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editVendor) return;
+    setSaving(true);
+    try {
+      await updateVendor(editVendor.vendorId, editForm);
+      showToast('Vendor updated successfully');
+      setEditVendor(null);
+      await loadData();
+    } catch (error) {
+      console.error('Error updating vendor:', error);
+      showToast('Failed to update vendor', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditFormChange = (field, value) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
   };
 
   const handleExportVendor = (vendor) => {
@@ -437,6 +486,13 @@ const VendorDetails = () => {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => handleOpenEdit(vendor)}
+                          className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                          title="Modify vendor"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleExportVendor(vendor)}
                           className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                           title="Export to Excel"
@@ -554,10 +610,310 @@ const VendorDetails = () => {
                 Cancel
               </button>
               <button
-                onClick={() => handleDelete(deleteConfirm.id)}
+                onClick={() => handleDelete(deleteConfirm.vendorId)}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Vendor Modal */}
+      {editVendor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditVendor(null)}>
+          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-amber-50 to-orange-50">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-amber-600" />
+                  Modify Vendor
+                </h2>
+                <p className="text-sm text-gray-500 font-mono mt-1">{editVendor.vendorId}</p>
+              </div>
+              <button onClick={() => setEditVendor(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Service Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <Wrench className="w-4 h-4 text-amber-600" />
+                  Service Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Service Type</label>
+                    <select
+                      value={editForm.serviceType}
+                      onChange={(e) => handleEditFormChange('serviceType', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                    >
+                      <option value="">Select Service</option>
+                      <option value="Plumbing">Plumbing</option>
+                      <option value="Electrical">Electrical</option>
+                      <option value="HVAC">HVAC</option>
+                      <option value="Cleaning">Cleaning</option>
+                      <option value="Security">Security</option>
+                      <option value="Landscaping">Landscaping</option>
+                      <option value="Pest Control">Pest Control</option>
+                      <option value="Painting">Painting</option>
+                      <option value="Carpentry">Carpentry</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Division</label>
+                    <select
+                      value={editForm.division}
+                      onChange={(e) => handleEditFormChange('division', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                    >
+                      <option value="">Select Division</option>
+                      <option value="Residential">Residential</option>
+                      <option value="Commercial">Commercial</option>
+                      <option value="Industrial">Industrial</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-3 pt-5">
+                    <input
+                      type="checkbox"
+                      id="serviceVerified"
+                      checked={editForm.serviceVerified}
+                      onChange={(e) => handleEditFormChange('serviceVerified', e.target.checked)}
+                      className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
+                    />
+                    <label htmlFor="serviceVerified" className="text-sm text-gray-700">Service Verified</label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-amber-600" />
+                  Location
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Zone</label>
+                    <select
+                      value={editForm.zone}
+                      onChange={(e) => handleEditFormChange('zone', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                    >
+                      <option value="">Select Zone</option>
+                      <option value="North">North</option>
+                      <option value="South">South</option>
+                      <option value="East">East</option>
+                      <option value="West">West</option>
+                      <option value="Central">Central</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Area Name</label>
+                    <input
+                      type="text"
+                      value={editForm.areaName}
+                      onChange={(e) => handleEditFormChange('areaName', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="Enter area name"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Owner Details */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-amber-600" />
+                  Owner Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Owner Name *</label>
+                    <input
+                      type="text"
+                      value={editForm.ownerName}
+                      onChange={(e) => handleEditFormChange('ownerName', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="Enter owner name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Owner Mobile *</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={editForm.ownerCountryCode}
+                        onChange={(e) => handleEditFormChange('ownerCountryCode', e.target.value)}
+                        className="w-20 px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      >
+                        <option value="+91">+91</option>
+                        <option value="+1">+1</option>
+                        <option value="+44">+44</option>
+                      </select>
+                      <input
+                        type="tel"
+                        value={editForm.ownerMobile}
+                        onChange={(e) => handleEditFormChange('ownerMobile', e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                        placeholder="Enter mobile number"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Owner Email</label>
+                    <input
+                      type="email"
+                      value={editForm.ownerEmail}
+                      onChange={(e) => handleEditFormChange('ownerEmail', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="Enter email address"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Owner Aadhar</label>
+                    <input
+                      type="text"
+                      value={editForm.ownerAadhar}
+                      onChange={(e) => handleEditFormChange('ownerAadhar', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="XXXX-XXXX-XXXX"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Manager Details */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">Manager Details (Optional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Manager Name</label>
+                    <input
+                      type="text"
+                      value={editForm.managerName}
+                      onChange={(e) => handleEditFormChange('managerName', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="Enter manager name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Manager Mobile</label>
+                    <input
+                      type="tel"
+                      value={editForm.managerMobile}
+                      onChange={(e) => handleEditFormChange('managerMobile', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="Enter mobile number"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Manager Email</label>
+                    <input
+                      type="email"
+                      value={editForm.managerEmail}
+                      onChange={(e) => handleEditFormChange('managerEmail', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="Enter email address"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* POC Details */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">Point of Contact (Optional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">POC Name</label>
+                    <input
+                      type="text"
+                      value={editForm.pocName}
+                      onChange={(e) => handleEditFormChange('pocName', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="Enter POC name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">POC Mobile</label>
+                    <input
+                      type="tel"
+                      value={editForm.pocMobile}
+                      onChange={(e) => handleEditFormChange('pocMobile', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="Enter mobile number"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">POC Email</label>
+                    <input
+                      type="email"
+                      value={editForm.pocEmail}
+                      onChange={(e) => handleEditFormChange('pocEmail', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="Enter email address"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Rate & Coverage */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">Rate & Coverage</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Rate Per Visit (₹)</label>
+                    <input
+                      type="number"
+                      value={editForm.ratePerVisit}
+                      onChange={(e) => handleEditFormChange('ratePerVisit', parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="Enter rate per visit"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Coverage Per Day</label>
+                    <input
+                      type="number"
+                      value={editForm.coveragePerDay}
+                      onChange={(e) => handleEditFormChange('coveragePerDay', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="Enter coverage per day"
+                      min="0"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => setEditVendor(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={saving || !editForm.ownerName || !editForm.ownerMobile}
+                className="flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Changes
+                  </>
+                )}
               </button>
             </div>
           </div>

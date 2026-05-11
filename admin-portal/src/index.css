@@ -54,3 +54,142 @@ body {
     @apply px-4 py-3 text-sm text-gray-700;
   }
 }
+/* Custom Scrollbar Styles */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Dashboard specific animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Smooth transitions for dashboard cards */
+.dashboard-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Glassmorphism effect */
+.glass {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Chart container styles */
+.recharts-wrapper {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+/* Premium shadow effects */
+.shadow-premium {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 
+              0 10px 15px -3px rgba(0, 0, 0, 0.05),
+              0 20px 25px -5px rgba(0, 0, 0, 0.03);
+}
+
+/* Employee Login Premium Background */
+.employee-login-bg {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #0f172a 50%, #1e293b 75%, #0f172a 100%);
+  background-size: 400% 400%;
+  position: relative;
+}
+
+.employee-login-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(71, 85, 105, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(51, 65, 85, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 30% at 0% 100%, rgba(71, 85, 105, 0.08) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.employee-login-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+}
+
+/* Override browser autofill styles for employee login */
+.employee-login-bg input:-webkit-autofill,
+.employee-login-bg input:-webkit-autofill:hover,
+.employee-login-bg input:-webkit-autofill:focus,
+.employee-login-bg input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #1e293b inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 0 0 30px #1e293b inset !important;
+  caret-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.employee-login-bg select:-webkit-autofill,
+.employee-login-bg select:-webkit-autofill:hover,
+.employee-login-bg select:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px #1e293b inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 0 0 30px #1e293b inset !important;
+}
+
+/* Style select dropdown options */
+.employee-login-bg select {
+  background-color: #1e293b;
+}
+
+.employee-login-bg select option {
+  background-color: #1e293b;
+  color: #f1f5f9;
+  padding: 12px 16px;
+}
+
+.employee-login-bg select option:hover,
+.employee-login-bg select option:focus,
+.employee-login-bg select option:checked {
+  background-color: #334155;
+  color: #ffffff;
+}
+
+.employee-login-bg select option:disabled {
+  color: #64748b;
+  background-color: #0f172a;
+}

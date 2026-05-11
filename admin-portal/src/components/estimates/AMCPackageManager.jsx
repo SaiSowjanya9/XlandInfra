@@ -25,6 +25,7 @@ import {
   seedTestData,
   getAMCPackageByPropertyType,
 } from '../../utils/estimateStore';
+import { exportPackageToPDF } from '../../utils/pdfExport';
 import { Home, Building, TreePine, Map, Layers as LayersIcon } from 'lucide-react';
 
 // Property Types for AMC Package Configuration (simple style)
@@ -49,6 +50,7 @@ const AMCPackageManager = ({ showToast }) => {
   const [activeTab, setActiveTab] = useState('create'); // 'create' or 'all-packages'
   const [amcPackages, setAmcPackages] = useState([]);
   const [filterPropertyType, setFilterPropertyType] = useState('all'); // Filter for All Packages tab
+  const [exportingId, setExportingId] = useState(null); // Track PDF export state
   
   // Edit Modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -225,9 +227,27 @@ const AMCPackageManager = ({ showToast }) => {
     setEditingPackage(null);
   };
 
-  // Export to PDF (placeholder)
-  const handleExportPDF = (pkg) => {
-    showToast?.('PDF export feature coming soon!', 'info');
+  // Export to PDF - Single download only
+  const handleExportPDF = (e, pkg) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (exportingId) return;
+    setExportingId(pkg.packageId);
+    showToast?.('Generating PDF...', 'info');
+    
+    // Use setTimeout to ensure single execution
+    setTimeout(() => {
+      try {
+        const success = exportPackageToPDF(pkg);
+        if (success) {
+          showToast?.('PDF downloaded successfully!', 'success');
+        }
+      } catch (err) {
+        console.error('PDF Error:', err);
+      } finally {
+        setExportingId(null);
+      }
+    }, 100);
   };
 
   // Email package (placeholder)
@@ -437,8 +457,9 @@ const AMCPackageManager = ({ showToast }) => {
                                     <Edit className="w-4 h-4" />
                                   </button>
                                   <button
-                                    onClick={() => handleExportPDF(pkg)}
-                                    className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                    onClick={(e) => handleExportPDF(e, pkg)}
+                                    disabled={exportingId === pkg.packageId}
+                                    className={`p-2 rounded-lg transition-colors ${exportingId === pkg.packageId ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
                                     title="Export PDF"
                                   >
                                     <Download className="w-4 h-4" />
@@ -642,9 +663,9 @@ const AMCPackageManager = ({ showToast }) => {
                       </div>
                     </div>
                     
-                    {/* Billing Cycle */}
+                    {/* Service Period */}
                     <div className="mb-6">
-                      <label className="text-gray-600 text-xs mb-2 block font-medium">Billing Cycle</label>
+                      <label className="text-gray-600 text-xs mb-2 block font-medium">Service Period</label>
                       <div className="relative">
                         <select
                           value={amcForm.billingDuration}
@@ -794,7 +815,7 @@ const AMCPackageManager = ({ showToast }) => {
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                       <Calendar className="w-4 h-4 text-slate-500" />
-                      Billing Cycle
+                      Service Period
                     </label>
                     <select
                       value={amcForm.billingDuration}

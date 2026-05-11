@@ -1,4 +1,4 @@
-import { Users, Briefcase, Truck, ArrowRight, Sparkles, Shield, Clock } from 'lucide-react';
+import { Users, Briefcase, Truck, ArrowRight, Sparkles, Shield, Clock, Lock } from 'lucide-react';
 
 const PortalSelector = ({ onSelectPortal }) => {
   return (
@@ -88,22 +88,27 @@ const PortalSelector = ({ onSelectPortal }) => {
             <div className="hidden sm:block w-px h-10 bg-zinc-700/50" />
             <div className="sm:hidden w-16 h-px bg-zinc-700/50" />
 
-            {/* Vendor Portal Link */}
-            <button
-              onClick={() => onSelectPortal('vendor')}
-              className="group flex items-center gap-3 px-6 py-3 bg-zinc-900/60 backdrop-blur-sm border border-zinc-700/50 hover:border-amber-500/50 rounded-full transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10"
+            {/* Vendor Portal Link - Coming Soon */}
+            <div
+              className="relative group flex items-center gap-3 px-6 py-3 bg-zinc-900/40 backdrop-blur-sm border border-zinc-800/50 rounded-full cursor-not-allowed opacity-70"
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/20">
-                <Truck className="w-5 h-5 text-black" />
+              {/* Lock overlay badge */}
+              <div className="absolute -top-2 -right-2 flex items-center gap-1 px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded-full">
+                <Lock className="w-3 h-3 text-amber-500" />
+                <span className="text-[10px] font-medium text-amber-400 uppercase tracking-wider">Coming Soon</span>
+              </div>
+              
+              <div className="w-10 h-10 bg-gradient-to-br from-zinc-600 to-zinc-700 rounded-full flex items-center justify-center shadow-lg">
+                <Truck className="w-5 h-5 text-zinc-400" />
               </div>
               <div className="text-left">
-                <span className="block text-sm font-medium text-white group-hover:text-amber-50 transition-colors">
+                <span className="block text-sm font-medium text-zinc-500">
                   Vendor Portal
                 </span>
-                <span className="block text-xs text-zinc-500">Manage contracts & assignments</span>
+                <span className="block text-xs text-zinc-600">Manage contracts & assignments</span>
               </div>
-              <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-1 transition-all ml-2" />
-            </button>
+              <Lock className="w-4 h-4 text-zinc-600 ml-2" />
+            </div>
           </div>
         </div>
       </div>

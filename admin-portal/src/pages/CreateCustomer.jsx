@@ -19,32 +19,19 @@ import {
   Truck,
   Map,
   AlertCircle,
-  Search,
-  Navigation,
   Loader2,
-  MapPinned,
   Globe,
   Building,
   Hash,
   LayoutGrid,
   X
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import { saveProperty } from '../utils/propertyStore';
 import SelectWithAdd from '../components/SelectWithAdd';
 import StateSelect from '../components/common/StateSelect';
+import LocationPicker from '../components/common/LocationPicker';
 import { getDivisions, addDivision } from '../utils/fieldOptionsStore';
 import { getZoneNames, createZone } from '../utils/zoneStore';
-
-// Fix Leaflet default marker icon (broken in bundlers like Vite)
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
 
 // Property Type options
 const PROPERTY_TYPES = {
@@ -188,260 +175,6 @@ const COUNTRY_CODES = [
   { code: '+49', flag: '🇩🇪', label: 'Germany' },
   { code: '+33', flag: '🇫🇷', label: 'France' },
 ];
-
-// Map sub-components (must be children of MapContainer)
-const MapClickHandler = ({ onLocationSelect }) => {
-  useMapEvents({
-    click: async (e) => {
-      const { lat, lng } = e.latlng;
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-        );
-        const data = await res.json();
-        const addr = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-        onLocationSelect({ lat, lng, address: addr });
-      } catch {
-        onLocationSelect({ lat, lng, address: `${lat.toFixed(6)}, ${lng.toFixed(6)}` });
-      }
-    }
-  });
-  return null;
-};
-
-const FlyToLocation = ({ position }) => {
-  const map = useMap();
-  useEffect(() => {
-    if (position) {
-      map.flyTo(position, 16, { duration: 1.2 });
-    }
-  }, [position?.[0], position?.[1]]);
-  return null;
-};
-
-// Interactive map location picker with debounced autocomplete and live location
-const MapLocationPicker = ({ value, onChange }) => {
-  const [searchQuery, setSearchQuery] = useState(value?.address || '');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [gettingLocation, setGettingLocation] = useState(false);
-  const [locationError, setLocationError] = useState('');
-
-  // Debounced autocomplete: fires search after 400ms of inactivity
-  useEffect(() => {
-    if (searchQuery.trim().length < 3) {
-      setSearchResults([]);
-      setShowResults(false);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&addressdetails=1`
-        );
-        const data = await res.json();
-        setSearchResults(data);
-        setShowResults(data.length > 0);
-      } catch (err) {
-        console.error('Autocomplete error:', err);
-      }
-      setSearching(false);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  const selectResult = (result) => {
-    const lat = parseFloat(result.lat);
-    const lng = parseFloat(result.lon);
-    setSearchQuery(result.display_name);
-    setShowResults(false);
-    setSearchResults([]);
-    onChange({ lat, lng, address: result.display_name });
-  };
-
-  const handleMapClick = (location) => {
-    setSearchQuery(location.address);
-    setShowResults(false);
-    onChange(location);
-  };
-
-  // Live location functionality using browser Geolocation API
-  const handleGetLiveLocation = async () => {
-    setLocationError('');
-    setGettingLocation(true);
-
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by your browser');
-      setGettingLocation(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude: lat, longitude: lng } = position.coords;
-        
-        // Update map marker position
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-          );
-          const data = await res.json();
-          const addr = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-          setSearchQuery(addr);
-          onChange({ lat, lng, address: addr });
-        } catch {
-          onChange({ lat, lng, address: `${lat.toFixed(6)}, ${lng.toFixed(6)}` });
-        }
-        setGettingLocation(false);
-      },
-      (error) => {
-        let errorMessage = 'Unable to get your location';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = 'Location access denied. Please allow location access in your browser settings.';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Location information is unavailable.';
-            break;
-          case error.TIMEOUT:
-            errorMessage = 'Location request timed out.';
-            break;
-        }
-        setLocationError(errorMessage);
-        setGettingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    );
-  };
-
-  const markerPosition = value?.lat && value?.lng ? [value.lat, value.lng] : null;
-  const mapCenter = markerPosition || [20.5937, 78.9629];
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-gray-700">
-          Google Map Location <span className="text-red-500">*</span>
-        </label>
-        {/* Live Location Button */}
-        <button
-          type="button"
-          onClick={handleGetLiveLocation}
-          disabled={gettingLocation}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {gettingLocation ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Getting Location...
-            </>
-          ) : (
-            <>
-              <Navigation className="w-4 h-4" />
-              Use Live Location
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Location Error */}
-      {locationError && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          {locationError}
-        </div>
-      )}
-
-      {/* Search bar with autocomplete */}
-      <div className="relative">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => { if (searchResults.length > 0) setShowResults(true); }}
-            className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-200 focus:border-primary-500 focus:outline-none"
-            placeholder="Start typing an address, city, or place..."
-          />
-          {searching && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-        </div>
-
-        {/* Autocomplete dropdown */}
-        {showResults && searchResults.length > 0 && (
-          <div className="absolute z-[1000] mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
-            {searchResults.map((result, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => selectResult(result)}
-                className="w-full text-left px-4 py-3 hover:bg-primary-50 border-b border-gray-50 last:border-0 transition-colors"
-              >
-                <div className="flex items-start gap-2.5">
-                  <MapPin className="w-3.5 h-3.5 text-primary-500 mt-0.5 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm text-gray-800 leading-snug truncate">{result.display_name}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
-                      {parseFloat(result.lat).toFixed(4)}, {parseFloat(result.lon).toFixed(4)}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Map */}
-      <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: '320px' }}>
-        <MapContainer
-          center={mapCenter}
-          zoom={markerPosition ? 16 : 5}
-          style={{ height: '100%', width: '100%' }}
-          className="z-0"
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {markerPosition && <Marker position={markerPosition} />}
-          <MapClickHandler onLocationSelect={handleMapClick} />
-          <FlyToLocation position={markerPosition} />
-        </MapContainer>
-      </div>
-
-      {/* Pinned location info */}
-      {value?.address && (
-        <div className="flex items-start gap-2.5 p-3 bg-green-50 border border-green-200 rounded-xl">
-          <MapPinned className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-green-700">Pinned Location</p>
-            <p className="text-xs text-green-600 mt-0.5 break-words">{value.address}</p>
-            {value.lat && (
-              <p className="text-[10px] text-green-500 mt-0.5 font-mono">
-                {value.lat.toFixed(6)}, {value.lng.toFixed(6)}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      <p className="text-[11px] text-gray-400">
-        Click "Use Live Location" to automatically pin your current location, search for an address, or click directly on the map.
-      </p>
-    </div>
-  );
-};
 
 const CreateCustomer = ({ admin }) => {
   const navigate = useNavigate();
@@ -941,6 +674,44 @@ const CreateCustomer = ({ admin }) => {
                   <p className="text-sm font-semibold text-gray-800">{createdProperty.totalUnits}</p>
                 </div>
               </div>
+
+              {/* Customer Portal Accounts Section */}
+              {createdProperty.customerAccounts && createdProperty.customerAccounts.length > 0 && (
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Users className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-2">Customer Portal Activation</h4>
+                      <div className="space-y-2">
+                        {createdProperty.customerAccounts.map((account, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm">
+                            {account.success ? (
+                              <>
+                                <Check className="w-4 h-4 text-green-600" />
+                                <span className="text-gray-700">
+                                  Activation email sent to <strong className="text-gray-900">{account.email}</strong>
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <AlertCircle className="w-4 h-4 text-amber-500" />
+                                <span className="text-gray-600">
+                                  {account.email}: {account.message}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-blue-700 mt-3">
+                        Customers will receive an email with a temporary password and activation link valid for 72 hours.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1532,11 +1303,26 @@ const CreateCustomer = ({ admin }) => {
               )}
             </div>
 
-            {/* Google Map Location Picker */}
+            {/* Location Picker */}
             <div className="pt-4">
-              <MapLocationPicker
+              <LocationPicker
                 value={formData.mapLocation}
                 onChange={(loc) => updateFormData('mapLocation', loc)}
+                onAddressComponentsChange={(components) => {
+                  // Auto-populate address fields from location selection
+                  if (components.city && !formData.city) {
+                    updateFormData('city', components.city);
+                  }
+                  if (components.state && !formData.state) {
+                    updateFormData('state', components.state);
+                  }
+                  if (components.postalCode && !formData.postalCode) {
+                    updateFormData('postalCode', components.postalCode);
+                  }
+                  if (components.addressLine1 && !formData.addressLine1) {
+                    updateFormData('addressLine1', components.addressLine1);
+                  }
+                }}
               />
             </div>
           </div>

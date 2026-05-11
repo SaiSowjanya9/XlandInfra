@@ -12,7 +12,7 @@ import {
   migratePackagesToServiceRows, getAMCPackagesByPropertyType
 } from '../../utils/estimateStore';
 
-import { getProperties } from '../../utils/propertyStore';
+import { getProperties, getPropertyById, extractBlockNames, extractTotalUnits, extractUnitNumber } from '../../utils/propertyStore';
 
 // Subcategory options for services
 const SUBCATEGORIES = ['Maintenance', 'Cleaning', 'Security', 'Landscaping', 'Utilities', 'Other'];
@@ -135,45 +135,18 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
     setShowPropertySuggestions(false);
     setHasStartedTyping(true); // Ensure estimate type selection is hidden
     
-    // Dynamic auto-population based on property type
-    const entryType = property.entryType?.toUpperCase();
-    let blockTower = '';
-    let flatUnit = '';
-    let numberOfUnits = '';
+    // Use helper functions for consistent extraction across the app
+    const blockTower = extractBlockNames(property);
+    const numberOfUnits = extractTotalUnits(property);
+    const flatUnit = extractUnitNumber(property);
     
-    if (entryType === 'GC') {
-      // Gated Community: Block Name + Number of Units
-      if (property.blockNames && typeof property.blockNames === 'object') {
-        const blockKeys = Object.keys(property.blockNames);
-        if (blockKeys.length > 0) {
-          // Get all block names (e.g., "A, B, C")
-          blockTower = Object.values(property.blockNames).filter(Boolean).join(', ');
-        }
-      }
-      // Calculate total units from unitsPerBlock
-      if (property.unitsPerBlock && typeof property.unitsPerBlock === 'object') {
-        const totalUnits = Object.values(property.unitsPerBlock).reduce((sum, u) => sum + (parseInt(u) || 0), 0);
-        numberOfUnits = totalUnits > 0 ? totalUnits : '';
-      }
-    } else if (entryType === 'APT') {
-      // Apartment: Block Information + Number of Units
-      if (property.blockInfo && typeof property.blockInfo === 'string') {
-        blockTower = property.blockInfo.trim();
-      }
-      numberOfUnits = property.numberOfUnits || '';
-    } else if (entryType === 'VILLA' || entryType === 'VILLAS') {
-      // Villa: Villa Number
-      flatUnit = property.villaPlotNumber || '';
-    } else if (entryType === 'PLOT' || entryType === 'PLOTS') {
-      // Plot: Plot Number
-      flatUnit = property.villaPlotNumber || '';
-    } else if (entryType === 'FLAT' || entryType === 'FLATS') {
-      // Flat: Flat Number (and optional block info)
-      flatUnit = property.villaPlotNumber || '';
-      if (property.blockInfo && typeof property.blockInfo === 'string') {
-        blockTower = property.blockInfo.trim();
-      }
-    }
+    // Debug log for property data
+    console.log('[PropertySelect] Property ID:', property.propertyId);
+    console.log('[PropertySelect] Entry Type:', property.entryType);
+    console.log('[PropertySelect] Block Names (raw):', property.blockNames);
+    console.log('[PropertySelect] Block Info (raw):', property.blockInfo);
+    console.log('[PropertySelect] Extracted Block Tower:', blockTower);
+    console.log('[PropertySelect] Extracted Units:', numberOfUnits);
     
     // Get customer details from contacts (backend returns 'contacts', not 'associationContacts')
     const primaryContact = property.contacts?.[0] || {};
@@ -235,6 +208,11 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       customerEmail: primaryContact.email || '',
       services: [] // Start with empty new services
     }));
+    
+    // Show message if block data is missing
+    if (!blockTower && ['GC', 'APT'].includes(property.entryType?.toUpperCase())) {
+      showToast?.('Block information not available for this property', 'info');
+    }
   };
 
   const calculateServiceTotal = (service) => {
@@ -952,11 +930,6 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select AMC Package <span className="text-red-500">*</span>
-                    {selectedProperty?.entryType && (
-                      <span className="ml-2 text-xs font-normal text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
-                        Filtered for: {selectedProperty.entryType}
-                      </span>
-                    )}
                   </label>
                   <div className="relative max-w-md">
                     <select
@@ -1070,7 +1043,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     </div>
                     {selectedPackage.billingDuration && (
                       <p className="text-xs text-blue-600 mt-2">
-                        Billing Cycle: {selectedPackage.billingDuration.charAt(0).toUpperCase() + selectedPackage.billingDuration.slice(1)}
+                        Service Period: {selectedPackage.billingDuration.charAt(0).toUpperCase() + selectedPackage.billingDuration.slice(1)}
                       </p>
                     )}
                   </div>
@@ -1120,7 +1093,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     {/* Table Header */}
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-white border-b border-blue-100">
                       <div className="col-span-4 text-xs font-semibold text-blue-800 uppercase">Service</div>
-                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Freq. Type</div>
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency Type</div>
                       <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Count</div>
                       <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-right">Price</div>
                       <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Action</div>
@@ -1213,10 +1186,6 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                       <span className="font-bold">₹{calculateTotal().toLocaleString()}</span>
                     </div>
                     
-                    {/* Formula Note */}
-                    <p className="text-xs text-gray-500 mt-2 text-right">
-                      Formula: (Subtotal - Discount%) + GST%
-                    </p>
 
                     {/* Action Buttons */}
                     <div className="flex gap-3 justify-end mt-4">

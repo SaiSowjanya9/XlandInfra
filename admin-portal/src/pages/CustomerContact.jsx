@@ -14,7 +14,7 @@ import {
   FileText,
   Lock
 } from 'lucide-react';
-import { getProperties } from '../utils/propertyStore';
+import { getProperties, extractBlockNames, extractTotalUnits, extractUnitNumber } from '../utils/propertyStore';
 import {
   getAMCPackages,
   createAMCPackage,
@@ -105,6 +105,7 @@ const CustomerContact = ({ user }) => {
         propertyName: '',
         blockTower: '',
         flatUnit: '',
+        numberOfUnits: '',
         customerName: '',
         customerPhone: '',
         customerEmail: '',
@@ -116,33 +117,19 @@ const CustomerContact = ({ user }) => {
 
     const property = properties.find(p => p.propertyId === propertyId);
     if (property) {
-      // Auto-fill fields from property data
-      let blockTower = '';
-      let flatUnit = '';
+      // Use shared helper functions for consistent extraction
+      const blockTower = extractBlockNames(property);
+      const numberOfUnits = extractTotalUnits(property);
+      const flatUnit = extractUnitNumber(property);
       
-      // Extract block/tower info
-      if (property.blockInfo) {
-        blockTower = property.blockInfo;
-      } else if (property.blockNames && Object.keys(property.blockNames).length > 0) {
-        blockTower = Object.values(property.blockNames).join(', ');
-      } else if (property.numberOfBlocks) {
-        blockTower = `${property.numberOfBlocks} Block(s)`;
-      }
+      // Debug log for property data
+      console.log('[CustomerContact] Property ID:', property.propertyId);
+      console.log('[CustomerContact] Entry Type:', property.entryType);
+      console.log('[CustomerContact] Extracted Block:', blockTower);
+      console.log('[CustomerContact] Extracted Units:', numberOfUnits);
       
-      // Extract flat/unit info
-      if (property.villaPlotNumber) {
-        flatUnit = property.villaPlotNumber;
-      } else if (property.aptSuiteUnit) {
-        flatUnit = property.aptSuiteUnit;
-      } else if (property.numberOfUnits) {
-        flatUnit = `${property.numberOfUnits} Units`;
-      } else if (property.unitsPerBlock) {
-        const totalUnits = Object.values(property.unitsPerBlock).reduce((sum, u) => sum + (parseInt(u) || 0), 0);
-        flatUnit = totalUnits > 0 ? `${totalUnits} Units` : '';
-      }
-      
-      // Get customer details from association contacts
-      const primaryContact = property.associationContacts?.[0] || {};
+      // Get customer details from contacts (backend returns 'contacts', not 'associationContacts')
+      const primaryContact = property.contacts?.[0] || property.associationContacts?.[0] || {};
       const customerName = primaryContact.name || '';
       const customerPhone = primaryContact.phone || primaryContact.mobile || '';
       const customerEmail = primaryContact.email || '';
@@ -163,9 +150,11 @@ const CustomerContact = ({ user }) => {
       setAMCForm({
         ...amcForm,
         propertyId: property.propertyId,
-        propertyName: property.communityName || '',
+        propertyName: property.communityName || property.name || '',
+        entryType: property.entryType || '',
         blockTower,
         flatUnit,
+        numberOfUnits: numberOfUnits ? `${numberOfUnits} Units` : '',
         customerName,
         customerPhone,
         customerEmail,
