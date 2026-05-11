@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { 
-  Eye, EyeOff, AlertCircle, ArrowLeft, Building2, ChevronDown, User, Lock
+  Eye, EyeOff, AlertCircle, ArrowLeft, Building2, ChevronDown, User, Lock, Play
 } from 'lucide-react';
-import { authenticateUser, initializeUsers } from '../utils/userStore';
+import { authenticateUser, initializeUsers, demoLoginByRole } from '../utils/userStore';
 
 const EmployeeLogin = ({ onLogin, onBack }) => {
   const [formData, setFormData] = useState({ username: '', password: '', role: '' });
@@ -25,16 +25,34 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
     setError('');
     setLoading(true);
     
-    setTimeout(() => {
-      const result = authenticateUser(formData.username, formData.password);
+    try {
+      const result = await authenticateUser(formData.username, formData.password);
       
       if (result.success) {
         onLogin({ ...result.user, portal: 'employee' });
       } else {
         setError(result.message || 'Invalid credentials');
       }
+    } catch (err) {
+      setError('Authentication failed. Please try again.');
+    } finally {
       setLoading(false);
-    }, 600);
+    }
+  };
+
+  const handleDemoLogin = (role) => {
+    setError('');
+    setLoading(true);
+    
+    setTimeout(() => {
+      const result = demoLoginByRole(role);
+      if (result.success) {
+        onLogin({ ...result.user, portal: 'employee' });
+      } else {
+        setError(result.message || 'Demo login failed');
+      }
+      setLoading(false);
+    }, 300);
   };
 
   return (
@@ -149,6 +167,40 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
               )}
             </button>
           </form>
+
+          {/* Demo Access Section */}
+          <div className="mt-6 pt-6 border-t border-slate-700/50">
+            <p className="text-xs text-slate-500 text-center mb-3">Quick Demo Access</p>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('Admin')}
+                disabled={loading}
+                className="flex items-center justify-center gap-1 px-2 py-2 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/30 rounded-lg text-xs text-slate-300 transition-colors disabled:opacity-50"
+              >
+                <Play className="w-3 h-3" />
+                Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('Operations Manager')}
+                disabled={loading}
+                className="flex items-center justify-center gap-1 px-2 py-2 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/30 rounded-lg text-xs text-slate-300 transition-colors disabled:opacity-50"
+              >
+                <Play className="w-3 h-3" />
+                Ops Mgr
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('Franchise Partner')}
+                disabled={loading}
+                className="flex items-center justify-center gap-1 px-2 py-2 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/30 rounded-lg text-xs text-slate-300 transition-colors disabled:opacity-50"
+              >
+                <Play className="w-3 h-3" />
+                Partner
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

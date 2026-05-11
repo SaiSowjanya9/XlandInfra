@@ -121,10 +121,10 @@ const CustomerLogin = ({ onLogin, onBack }) => {
               </button>
             </form>
 
-            {/* Demo Credentials */}
+            {/* Demo Access Info */}
             <div className="mt-6 p-4 bg-gradient-to-r from-teal-500/10 to-cyan-500/10 border border-teal-500/20 rounded-xl">
               <p className="text-xs text-slate-400 text-center">
-                <span className="text-teal-400 font-semibold">Demo:</span> admin / admin123
+                <span className="text-teal-400 font-semibold">Note:</span> Contact administrator for demo access
               </p>
             </div>
 

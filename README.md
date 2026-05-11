@@ -285,12 +285,15 @@ Implemented throughout Create Estimate and Create Work Order sections:
 
 ### User Management System
 - **Default Roles**:
-  - **Admin**: Full system access (username: admin, password: admin123)
-  - **Manager**: Manage properties, vendors, employees (username: manager1, password: manager123)
-  - **Supervisor**: Supervise work orders, vendors (username: supervisor1, password: super123)
-  - **Executive**: Execute daily operations (username: executive1, password: exec123)
+  - **Admin**: Full system access with all permissions
+  - **Manager**: Manage properties, vendors, employees
+  - **Supervisor**: Supervise work orders, vendors
+  - **Executive**: Execute daily operations
 - **Status Management**: Activate/deactivate users
 - **Flexible Addition**: Easily add new users of any role
+- **Demo Mode**: Role-based demo access available (configured via environment variables)
+
+> **Note**: Demo credentials are configured via environment variables. See `backend/.env.example` for setup instructions.
 
 ## Future Features (Coming Soon)
 
