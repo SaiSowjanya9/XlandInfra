@@ -1,51 +1,53 @@
 // User Store - Manages user authentication and roles
 // Roles: Admin, Operations Manager, Franchise Partner
+// NOTE: In production, authentication should be handled via backend API
 
 const USER_STORAGE_KEY = 'pm_users';
 const CURRENT_USER_KEY = 'pm_current_user';
+const DEMO_MODE_KEY = 'pm_demo_mode';
 
-// Default users with different roles
-const DEFAULT_USERS = [
-  {
-    id: 'usr_001',
-    username: 'admin',
-    password: 'admin123',
-    name: 'System Administrator',
-    email: 'admin@propertymanagement.com',
+// Demo user templates (no passwords stored - demo login is role-based)
+const DEMO_USER_TEMPLATES = {
+  Admin: {
+    id: 'demo_admin',
+    username: 'demo_admin',
+    name: 'Demo Administrator',
+    email: 'demo.admin@example.com',
     role: 'Admin',
-    phone: '+91 9876543210',
+    phone: '+91 0000000000',
     status: 'active',
-    createdAt: new Date().toISOString(),
     avatar: null,
-    permissions: ['all']
+    permissions: ['all'],
+    isDemo: true
   },
-  {
-    id: 'usr_002',
-    username: 'opsmanager1',
-    password: 'ops123',
-    name: 'Rahul Sharma',
-    email: 'rahul.sharma@propertymanagement.com',
+  'Operations Manager': {
+    id: 'demo_ops',
+    username: 'demo_opsmanager',
+    name: 'Demo Operations Manager',
+    email: 'demo.ops@example.com',
     role: 'Operations Manager',
-    phone: '+91 9876543211',
+    phone: '+91 0000000001',
     status: 'active',
-    createdAt: new Date().toISOString(),
     avatar: null,
-    permissions: ['view_properties', 'manage_vendors', 'manage_employees', 'view_reports', 'manage_work_orders']
+    permissions: ['view_properties', 'manage_vendors', 'manage_employees', 'view_reports', 'manage_work_orders'],
+    isDemo: true
   },
-  {
-    id: 'usr_003',
-    username: 'franchise1',
-    password: 'franchise123',
-    name: 'Priya Patel',
-    email: 'priya.patel@propertymanagement.com',
+  'Franchise Partner': {
+    id: 'demo_franchise',
+    username: 'demo_franchise',
+    name: 'Demo Franchise Partner',
+    email: 'demo.franchise@example.com',
     role: 'Franchise Partner',
-    phone: '+91 9876543212',
+    phone: '+91 0000000002',
     status: 'active',
-    createdAt: new Date().toISOString(),
     avatar: null,
-    permissions: ['view_properties', 'view_reports', 'view_vendors']
+    permissions: ['view_properties', 'view_reports', 'view_vendors'],
+    isDemo: true
   }
-];
+};
+
+// Default users array (populated from localStorage or empty for production)
+const DEFAULT_USERS = [];
 
 // Role definitions with colors and icons
 export const USER_ROLES = {
@@ -109,20 +111,66 @@ export const getUserById = (id) => {
   return users.find(user => user.id === id);
 };
 
-// Authenticate user
-export const authenticateUser = (username, password) => {
-  const users = getUsers();
-  const user = users.find(
-    u => (u.username === username || u.email === username) && u.password === password && u.status === 'active'
-  );
-  
-  if (user) {
-    const { password: _, ...userWithoutPassword } = user;
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithoutPassword));
-    return { success: true, user: userWithoutPassword };
+// Authenticate user via backend API
+export const authenticateUser = async (username, password) => {
+  try {
+    // In production, authenticate via backend API
+    const response = await fetch('/api/staff/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      const user = {
+        id: result.data.user?.id || result.data.id,
+        username: result.data.user?.username || result.data.username,
+        name: `${result.data.user?.firstName || result.data.firstName || ''} ${result.data.user?.lastName || result.data.lastName || ''}`.trim(),
+        email: result.data.user?.email || result.data.email,
+        role: result.data.user?.role || result.data.role,
+        status: 'active',
+        permissions: result.data.user?.permissions || ['all']
+      };
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+      return { success: true, user };
+    }
+    
+    return { success: false, message: result.message || 'Invalid credentials' };
+  } catch (error) {
+    // Fallback: check localStorage users (for offline/demo scenarios without backend)
+    const users = getUsers();
+    const user = users.find(
+      u => (u.username === username || u.email === username) && u.status === 'active'
+    );
+    
+    if (user && user.isDemo) {
+      // Demo users don't require password verification in offline mode
+      const { ...userWithoutSensitive } = user;
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithoutSensitive));
+      return { success: true, user: userWithoutSensitive };
+    }
+    
+    return { success: false, message: 'Unable to authenticate. Please check your connection.' };
+  }
+};
+
+// Demo login by role (no password required - for demo/testing purposes only)
+export const demoLoginByRole = (role) => {
+  const demoUser = DEMO_USER_TEMPLATES[role];
+  if (!demoUser) {
+    return { success: false, message: 'Invalid demo role' };
   }
   
-  return { success: false, message: 'Invalid username or password' };
+  const userWithTimestamp = {
+    ...demoUser,
+    createdAt: new Date().toISOString()
+  };
+  
+  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithTimestamp));
+  localStorage.setItem(DEMO_MODE_KEY, 'true');
+  return { success: true, user: userWithTimestamp };
 };
 
 // Get current logged in user
@@ -134,6 +182,12 @@ export const getCurrentUser = () => {
 // Logout user
 export const logoutUser = () => {
   localStorage.removeItem(CURRENT_USER_KEY);
+  localStorage.removeItem(DEMO_MODE_KEY);
+};
+
+// Check if in demo mode
+export const isDemoMode = () => {
+  return localStorage.getItem(DEMO_MODE_KEY) === 'true';
 };
 
 // Add new user

@@ -408,21 +408,21 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 -- INSERT DEFAULT DATA
 -- ============================================
 
--- Insert default admin user (password: admin123)
+-- Insert default users
+-- IMPORTANT: Replace placeholder hashes with real bcrypt hashes before running in production
+-- Generate hash: node -e "console.log(require('bcryptjs').hashSync('YOUR_PASSWORD', 10))"
+
 INSERT INTO users (username, email, password_hash, first_name, last_name, role) VALUES
-('admin', 'admin@pmportal.com', '$2a$10$rQZ5Q5Q5Q5Q5Q5Q5Q5Q5QOE5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5', 'System', 'Admin', 'admin');
+('admin', 'admin@pmportal.com', '$2a$10$PLACEHOLDER_REPLACE_WITH_REAL_HASH', 'System', 'Admin', 'admin');
 
--- Insert sample manager (password: manager123)
 INSERT INTO users (username, email, password_hash, first_name, last_name, role, created_by) VALUES
-('manager1', 'manager@pmportal.com', '$2a$10$rQZ5Q5Q5Q5Q5Q5Q5Q5Q5QOE5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5', 'John', 'Manager', 'manager', 1);
+('manager1', 'manager@pmportal.com', '$2a$10$PLACEHOLDER_REPLACE_WITH_REAL_HASH', 'John', 'Manager', 'manager', 1);
 
--- Insert sample supervisor (password: supervisor123)
 INSERT INTO users (username, email, password_hash, first_name, last_name, role, created_by) VALUES
-('supervisor1', 'supervisor@pmportal.com', '$2a$10$rQZ5Q5Q5Q5Q5Q5Q5Q5Q5QOE5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5', 'Jane', 'Supervisor', 'supervisor', 1);
+('supervisor1', 'supervisor@pmportal.com', '$2a$10$PLACEHOLDER_REPLACE_WITH_REAL_HASH', 'Jane', 'Supervisor', 'supervisor', 1);
 
--- Insert sample executive (password: executive123)
 INSERT INTO users (username, email, password_hash, first_name, last_name, role, created_by) VALUES
-('executive1', 'executive@pmportal.com', '$2a$10$rQZ5Q5Q5Q5Q5Q5Q5Q5Q5QOE5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5', 'Bob', 'Executive', 'executive', 1);
+('executive1', 'executive@pmportal.com', '$2a$10$PLACEHOLDER_REPLACE_WITH_REAL_HASH', 'Bob', 'Executive', 'executive', 1);
 
 -- Insert default priorities
 INSERT INTO priorities (name, code, color, sort_order) VALUES

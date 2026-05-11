@@ -107,8 +107,8 @@ const Login = ({ onLogin }) => {
 
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <p className="text-xs text-gray-500 text-center">
-            <strong>Demo Credentials:</strong><br />
-            Username: admin | Password: admin123
+            <strong>Demo Access:</strong><br />
+            Contact administrator for credentials
           </p>
         </div>
       </div>

@@ -165,10 +165,11 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 -- INSERT DEFAULT DATA
 -- ============================================
 
--- Insert default admin user (password: admin123)
+-- Insert default admin user (use bcrypt to generate password hash: node -e "console.log(require('bcryptjs').hashSync('YOUR_PASSWORD', 10))")
+-- IMPORTANT: Replace placeholder hash with a real bcrypt hash before running in production
 INSERT INTO admin_users (username, email, password_hash, first_name, last_name, role) VALUES
-('admin', 'admin@customerportal.com', '$2b$10$rQZ5Q5Q5Q5Q5Q5Q5Q5Q5QOE5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5', 'System', 'Admin', 'admin'),
-('executive1', 'executive@customerportal.com', '$2b$10$rQZ5Q5Q5Q5Q5Q5Q5Q5Q5QOE5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5', 'John', 'Executive', 'executive');
+('admin', 'admin@customerportal.com', '$2b$10$PLACEHOLDER_REPLACE_WITH_REAL_HASH', 'System', 'Admin', 'admin'),
+('executive1', 'executive@customerportal.com', '$2b$10$PLACEHOLDER_REPLACE_WITH_REAL_HASH', 'John', 'Executive', 'executive');
 
 -- Insert sample property
 INSERT INTO properties (property_id, name, address, city, state, zip_code) VALUES

@@ -4,24 +4,46 @@ node_modules/
 # Build outputs
 dist/
 build/
+**/dist/
+**/build/
 
-# Environment files
+# Environment files - IMPORTANT: Never commit secrets!
 .env
 .env.local
+.env.development
+.env.production
 .env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+**/.env
+**/.env.*
+!**/.env.example
 
 # Logs
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # OS files
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
 
 # IDE
 .vscode/
 .idea/
+*.sublime-*
+
+# Secrets and credentials - Never commit these!
+*.pem
+*.key
+*.crt
+secrets/
+credentials/
 
 # Misc
-*.swp
-*.swo
+coverage/
+.nyc_output/

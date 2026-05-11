@@ -15,13 +15,18 @@ const { ROLE_NAMES } = require('../config/roles');
 // STAFF LOGIN
 // ============================================
 
-// Demo users for when database is unavailable
-const DEMO_USERS = [
-  { id: 1, username: 'admin', email: 'admin@pmportal.com', firstName: 'System', lastName: 'Admin', role: 'admin', password: 'admin123' },
-  { id: 2, username: 'manager1', email: 'manager@pmportal.com', firstName: 'John', lastName: 'Manager', role: 'manager', password: 'manager123' },
-  { id: 3, username: 'supervisor1', email: 'supervisor@pmportal.com', firstName: 'Jane', lastName: 'Supervisor', role: 'supervisor', password: 'supervisor123' },
-  { id: 4, username: 'executive1', email: 'executive@pmportal.com', firstName: 'Bob', lastName: 'Executive', role: 'executive', password: 'executive123' }
-];
+// Demo mode configuration - credentials loaded from environment variables
+const DEMO_MODE_ENABLED = process.env.DEMO_MODE === 'true';
+const DEMO_PASSWORD_HASH = process.env.DEMO_PASSWORD_HASH || '';
+
+// Demo users for when database is unavailable (role-based, no passwords stored)
+// NOTE: Passwords are NOT stored here - they must be set via environment variables
+const DEMO_USERS = DEMO_MODE_ENABLED ? [
+  { id: 1, username: 'demo_admin', email: 'demo.admin@pmportal.com', firstName: 'Demo', lastName: 'Admin', role: 'admin' },
+  { id: 2, username: 'demo_manager', email: 'demo.manager@pmportal.com', firstName: 'Demo', lastName: 'Manager', role: 'manager' },
+  { id: 3, username: 'demo_supervisor', email: 'demo.supervisor@pmportal.com', firstName: 'Demo', lastName: 'Supervisor', role: 'supervisor' },
+  { id: 4, username: 'demo_executive', email: 'demo.executive@pmportal.com', firstName: 'Demo', lastName: 'Executive', role: 'executive' }
+] : [];
 
 // Staff Login
 router.post('/login', async (req, res) => {
@@ -46,17 +51,13 @@ router.post('/login', async (req, res) => {
       if (users.length > 0) {
         user = users[0];
         
-        // Verify password
+        // Verify password against stored hash
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
         if (!isValidPassword) {
-          // For demo, also accept simple passwords
-          const demoUser = DEMO_USERS.find(u => u.username === username || u.email === username);
-          if (!demoUser || demoUser.password !== password) {
-            return res.status(401).json({
-              success: false,
-              message: 'Invalid credentials'
-            });
-          }
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid credentials'
+          });
         }
 
         // Update last login
@@ -69,13 +70,22 @@ router.post('/login', async (req, res) => {
       console.log('Database not available, using demo mode');
     }
 
-    // Fallback to demo users
-    if (!user) {
+    // Fallback to demo users (only if demo mode is enabled)
+    if (!user && DEMO_MODE_ENABLED) {
       const demoUser = DEMO_USERS.find(u => 
-        (u.username === username || u.email === username) && u.password === password
+        u.username === username || u.email === username
       );
       
-      if (!demoUser) {
+      if (!demoUser || !DEMO_PASSWORD_HASH) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
+      }
+
+      // Verify password against environment-stored hash
+      const isDemoPasswordValid = await bcrypt.compare(password, DEMO_PASSWORD_HASH);
+      if (!isDemoPasswordValid) {
         return res.status(401).json({
           success: false,
           message: 'Invalid credentials'
@@ -96,9 +106,17 @@ router.post('/login', async (req, res) => {
             firstName: demoUser.firstName,
             lastName: demoUser.lastName,
             role: demoUser.role,
-            roleName: ROLE_NAMES[demoUser.role]
+            roleName: ROLE_NAMES[demoUser.role],
+            isDemo: true
           }
         }
+      });
+    }
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
       });
     }
 

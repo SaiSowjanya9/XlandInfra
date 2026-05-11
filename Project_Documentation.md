@@ -429,10 +429,12 @@ Authenticate admin user.
 **Request Body:**
 ```json
 {
-  "username": "admin",
-  "password": "admin123"
+  "username": "your_username",
+  "password": "your_password"
 }
 ```
+
+> **Note**: Demo credentials are configured via environment variables. See `backend/.env.example` for setup.
 
 **Response (200):**
 ```json
@@ -701,13 +703,20 @@ Get work orders for a resident.
 
 ### 8.3 Demo Mode
 
-When database is unavailable, the system falls back to demo users:
+When database is unavailable and demo mode is enabled, the system falls back to demo users.
 
-**Admin Portal Demo Users:**
-| Username | Password | Role |
-|----------|----------|------|
-| admin | admin123 | Admin |
-| exec | exec123 | Executive |
+**Configuration:**
+Demo mode must be explicitly enabled via environment variables:
+- Set `DEMO_MODE=true` in your `.env` file
+- Set `DEMO_PASSWORD_HASH` to a bcrypt hash of your demo password
+
+**Demo Users (when enabled):**
+| Username | Role |
+|----------|------|
+| demo_admin | Admin |
+| demo_exec | Executive |
+
+> **Security Note**: Demo credentials are NOT stored in code. They must be configured via environment variables. See `backend/.env.example` for setup instructions.
 
 ### 8.4 Resident Verification
 
