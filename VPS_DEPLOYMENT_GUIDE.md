@@ -1,25 +1,121 @@
 # VPS Deployment Guide - XLand Infra
 
-Complete Ubuntu 24.04 VPS deployment for xlandinfra.com
+**Last Updated:** May 11, 2026  
+**Status:** ✅ Successfully Deployed  
+**VPS Provider:** Hostinger KVM 2  
+**Server IP:** 72.60.204.124
+
+Complete deployment guide for xlandinfra.com
 
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        VPS Server                                │
-├─────────────────────────────────────────────────────────────────┤
-│  Nginx (Reverse Proxy + Static Files)                          │
-│  ├── xlandinfra.com        → /var/www/app/customer/dist        │
-│  ├── admin.xlandinfra.com  → /var/www/app/admin/dist           │
-│  └── api.xlandinfra.com    → localhost:5000 (PM2)              │
-├─────────────────────────────────────────────────────────────────┤
-│  PM2 Process Manager                                            │
-│  └── backend (Node.js/Express on port 5000)                    │
-├─────────────────────────────────────────────────────────────────┤
-│  MySQL Database                                                  │
-│  └── customer_portal                                            │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     Hostinger VPS KVM 2 Server                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                         Nginx Web Server                             │   │
+│  │  ┌─────────────────────────┐  ┌─────────────────────────────────┐  │   │
+│  │  │  xlandinfra.com         │  │  admin.xlandinfra.com           │  │   │
+│  │  │  (Main Website +        │  │  (Employee Portal +             │  │   │
+│  │  │   Customer Portal)      │  │   Vendor & Customer Portals)    │  │   │
+│  │  │                         │  │                                  │  │   │
+│  │  │  /var/www/app/frontend  │  │  /var/www/app/admin              │  │   │
+│  │  └──────────┬──────────────┘  └──────────┬────────────────────────┘  │   │
+│  │             │                            │                            │   │
+│  │             └────────────┬───────────────┘                            │   │
+│  │                          │ /api/* proxy                               │   │
+│  │                          ▼                                            │   │
+│  │              ┌───────────────────────┐                                │   │
+│  │              │  Backend API          │                                │   │
+│  │              │  localhost:5000       │                                │   │
+│  │              │  (PM2 managed)        │                                │   │
+│  │              └───────────┬───────────┘                                │   │
+│  └──────────────────────────│───────────────────────────────────────────┘   │
+│                             │                                                │
+│                             ▼                                                │
+│              ┌───────────────────────────┐                                  │
+│              │  MySQL Database           │                                  │
+│              │  customer_portal          │                                  │
+│              │  (Shared by both portals) │                                  │
+│              └───────────────────────────┘                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+## Domain Structure
+
+| Domain | Purpose | Serves |
+|--------|---------|--------|
+| **xlandinfra.com** | Main website + Customer login | `/var/www/app/frontend/dist` |
+| **admin.xlandinfra.com** | Employee/Admin Portal (Property mgmt, AMC, Vendors, Work Orders) | `/var/www/app/admin/dist` |
+| **Both** → `/api/*` | Shared Backend API | `localhost:5000` (PM2) |
+
+## Folder Structure on VPS
+
+```
+/var/www/app/
+├── frontend/           # Customer Portal (xlandinfra.com)
+│   ├── dist/           # Production build
+│   ├── src/
+│   ├── package.json
+│   └── .env.production
+│
+├── admin/              # Admin Portal (admin.xlandinfra.com)
+│   ├── dist/           # Production build
+│   ├── src/
+│   ├── package.json
+│   └── .env.production
+│
+├── backend/            # Shared API Server
+│   ├── server.js
+│   ├── routes/
+│   ├── config/
+│   ├── middleware/
+│   ├── .env
+│   ├── ecosystem.config.js
+│   └── logs/
+│
+└── uploads/            # Shared uploads directory
+```
+
+---
+
+## Part 0: Hostinger DNS Configuration (Do This First!)
+
+Before deploying, configure DNS in Hostinger to point to your VPS.
+
+### 0.1 Get Your VPS IP Address
+Find your VPS IP in Hostinger hPanel → VPS → Overview
+
+### 0.2 Configure DNS Records in Hostinger
+
+1. Go to **Hostinger hPanel** → **Domains** → **xlandinfra.com** → **DNS / Nameservers**
+2. Add/Update the following **A Records**:
+
+| Type | Host | Points to | TTL |
+|------|------|-----------|-----|
+| A | @ | YOUR_VPS_IP | 14400 |
+| A | www | YOUR_VPS_IP | 14400 |
+| A | admin | YOUR_VPS_IP | 14400 |
+
+**Example:** If your VPS IP is `192.168.1.100`:
+- `@` → `192.168.1.100`
+- `www` → `192.168.1.100`  
+- `admin` → `192.168.1.100`
+
+### 0.3 Wait for DNS Propagation
+- DNS changes take 5-30 minutes (up to 48 hours globally)
+- Check propagation: https://dnschecker.org
+
+### 0.4 Verify DNS
+```bash
+# Run from your local machine or VPS
+dig xlandinfra.com +short
+dig www.xlandinfra.com +short
+dig admin.xlandinfra.com +short
+```
+All should return your VPS IP.
 
 ---
 
@@ -264,11 +360,11 @@ pm2 save
 
 ---
 
-## Part 7: Customer Portal Deployment
+## Part 7: Customer Portal Deployment (xlandinfra.com)
 
-### 7.1 Navigate to Customer Directory
+### 7.1 Navigate to Frontend Directory
 ```bash
-cd /var/www/app/customer
+cd /var/www/app/frontend
 ```
 
 ### 7.2 Install Dependencies
@@ -283,7 +379,9 @@ nano .env.production
 
 **Add:**
 ```env
-VITE_API_URL=https://api.xlandinfra.com
+# Leave empty - API calls use /api/ which Nginx proxies to backend
+VITE_API_URL=
+VITE_APP_NAME=XLand Infra
 ```
 
 ### 7.4 Build for Production
@@ -298,7 +396,7 @@ ls -la dist/
 
 ---
 
-## Part 8: Admin Portal Deployment
+## Part 8: Admin Portal Deployment (admin.xlandinfra.com)
 
 ### 8.1 Navigate to Admin Directory
 ```bash
@@ -317,7 +415,9 @@ nano .env.production
 
 **Add:**
 ```env
-VITE_API_URL=https://api.xlandinfra.com
+# Leave empty - API calls use /api/ which Nginx proxies to backend
+VITE_API_URL=
+VITE_APP_NAME=XLand Infra Admin
 ```
 
 ### 8.4 Build for Production
@@ -351,7 +451,7 @@ server {
     listen [::]:80;
     server_name xlandinfra.com www.xlandinfra.com;
 
-    root /var/www/app/customer/dist;
+    root /var/www/app/frontend/dist;
     index index.html;
 
     # Gzip compression
@@ -477,74 +577,13 @@ server {
 }
 ```
 
-### 9.4 Create API Config (api.xlandinfra.com)
-```bash
-sudo nano /etc/nginx/sites-available/api.xlandinfra.com
-```
-
-**Paste this configuration:**
-```nginx
-server {
-    listen 80;
-    listen [::]:80;
-    server_name api.xlandinfra.com;
-
-    # Security headers
-    add_header X-Frame-Options "DENY" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-
-    # File upload size limit (adjust as needed)
-    client_max_body_size 50M;
-
-    # API proxy to Node.js backend
-    location / {
-        proxy_pass http://localhost:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-        proxy_read_timeout 300s;
-        proxy_connect_timeout 90s;
-        proxy_send_timeout 300s;
-
-        # CORS headers (adjust origins as needed)
-        add_header 'Access-Control-Allow-Origin' '$http_origin' always;
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, PATCH, OPTIONS' always;
-        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
-        add_header 'Access-Control-Allow-Credentials' 'true' always;
-
-        # Handle preflight requests
-        if ($request_method = 'OPTIONS') {
-            add_header 'Access-Control-Allow-Origin' '$http_origin';
-            add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, PATCH, OPTIONS';
-            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization';
-            add_header 'Access-Control-Max-Age' 1728000;
-            add_header 'Content-Type' 'text/plain; charset=utf-8';
-            add_header 'Content-Length' 0;
-            return 204;
-        }
-    }
-
-    # Serve uploaded files
-    location /uploads/ {
-        alias /var/www/app/uploads/;
-        expires 30d;
-        add_header Cache-Control "public";
-    }
-}
-```
-
-### 9.5 Enable All Sites
+### 9.4 Enable All Sites
 ```bash
 sudo ln -s /etc/nginx/sites-available/xlandinfra.com /etc/nginx/sites-enabled/
 sudo ln -s /etc/nginx/sites-available/admin.xlandinfra.com /etc/nginx/sites-enabled/
-sudo ln -s /etc/nginx/sites-available/api.xlandinfra.com /etc/nginx/sites-enabled/
 ```
+
+> **Note:** We're NOT using a separate api.xlandinfra.com subdomain. Both portals proxy `/api/*` requests to the backend through Nginx. This is simpler and avoids CORS issues.
 
 ### 9.6 Test Nginx Configuration
 ```bash
@@ -558,25 +597,25 @@ sudo systemctl reload nginx
 
 ---
 
-## Part 10: DNS Configuration
+## Part 10: DNS Configuration (Already Done in Part 0)
 
-### 10.1 Add DNS Records (at your domain registrar)
+If you followed Part 0, DNS should already be configured in Hostinger.
+
+### 10.1 Required DNS Records
 
 | Type | Host | Value | TTL |
 |------|------|-------|-----|
-| A | @ | YOUR_VPS_IP | 300 |
-| A | www | YOUR_VPS_IP | 300 |
-| A | admin | YOUR_VPS_IP | 300 |
-| A | api | YOUR_VPS_IP | 300 |
-
-**Wait 5-30 minutes for DNS propagation**
+| A | @ | YOUR_VPS_IP | 14400 |
+| A | www | YOUR_VPS_IP | 14400 |
+| A | admin | YOUR_VPS_IP | 14400 |
 
 ### 10.2 Verify DNS
 ```bash
 dig xlandinfra.com +short
+dig www.xlandinfra.com +short
 dig admin.xlandinfra.com +short
-dig api.xlandinfra.com +short
 ```
+All should return your VPS IP address.
 
 ---
 
@@ -584,7 +623,7 @@ dig api.xlandinfra.com +short
 
 ### 11.1 Obtain SSL Certificates
 ```bash
-sudo certbot --nginx -d xlandinfra.com -d www.xlandinfra.com -d admin.xlandinfra.com -d api.xlandinfra.com
+sudo certbot --nginx -d xlandinfra.com -d www.xlandinfra.com -d admin.xlandinfra.com
 ```
 
 - Enter email address
@@ -636,20 +675,22 @@ sudo netstat -tlnp | grep -E '80|443|5000|3306'
 
 ### 13.2 Test Endpoints
 ```bash
-# Test API
-curl https://api.xlandinfra.com/api/admin/dashboard/stats
-
 # Test Customer Portal
 curl -I https://xlandinfra.com
 
 # Test Admin Portal
 curl -I https://admin.xlandinfra.com
+
+# Test API (via Customer Portal)
+curl https://xlandinfra.com/api/health
+
+# Test API (via Admin Portal)
+curl https://admin.xlandinfra.com/api/health
 ```
 
 ### 13.3 Browser Testing
-- https://xlandinfra.com - Customer Portal
-- https://admin.xlandinfra.com - Admin Portal
-- https://api.xlandinfra.com/api/admin/dashboard/stats - API
+- https://xlandinfra.com - Customer Portal (Main Website + Customer Login)
+- https://admin.xlandinfra.com - Admin Portal (Employee, Vendor, Property Management)
 
 ---
 
@@ -773,7 +814,7 @@ chmod 777 /var/www/app/uploads
 | Item | Path |
 |------|------|
 | Backend | `/var/www/app/backend/` |
-| Customer Portal | `/var/www/app/customer/dist/` |
+| Customer Portal | `/var/www/app/frontend/dist/` |
 | Admin Portal | `/var/www/app/admin/dist/` |
 | Uploads | `/var/www/app/uploads/` |
 | Backend .env | `/var/www/app/backend/.env` |
@@ -784,18 +825,126 @@ chmod 777 /var/www/app/uploads
 
 ---
 
+## Security & Route Protection
+
+### Domain Separation
+- **Customer users** can ONLY access `xlandinfra.com`
+- **Admin/Employee users** can ONLY access `admin.xlandinfra.com`
+- Both domains share the same backend API (accessed via `/api/` proxy)
+
+### Authentication Flow
+1. **Customer Portal** (`xlandinfra.com`):
+   - Uses `/api/customers/*` routes
+   - JWT tokens scoped to customer role
+   - Cannot access admin routes (401 Unauthorized)
+
+2. **Admin Portal** (`admin.xlandinfra.com`):
+   - Uses `/api/admin/*`, `/api/staff/*` routes
+   - JWT tokens include role (admin, manager, supervisor, executive)
+   - Role-based access control (RBAC) enforced by backend
+
+### Backend Route Protection (Already Implemented)
+```javascript
+// middleware/rbac.js - Role checks
+adminOnly        // Only admin role
+managerOrAdmin   // Admin or manager
+supervisorOrAbove // Supervisor, manager, admin
+dataEntryRoles   // All staff roles
+```
+
+### Preventing Cross-Portal Access
+- Customer tokens cannot access admin routes (role check fails)
+- Admin routes require authentication middleware
+- Each portal stores tokens in localStorage (domain-isolated)
+
+### CORS Configuration
+Backend only accepts requests from:
+- `https://xlandinfra.com`
+- `https://www.xlandinfra.com`
+- `https://admin.xlandinfra.com`
+
+---
+
 ## Security Checklist
 
-- [ ] Changed default MySQL root password
-- [ ] Created dedicated MySQL user with limited privileges
-- [ ] Set strong JWT_SECRET in .env
-- [ ] DEMO_MODE=false in production
-- [ ] UFW firewall enabled
-- [ ] SSL certificates installed
-- [ ] File permissions set correctly (755 for dirs, 644 for files)
-- [ ] .env file is not in git repository
-- [ ] Sensitive logs are not exposed
+- [x] MySQL uses auth_socket for root (secure)
+- [x] Created dedicated MySQL user `xlandinfra` with limited privileges
+- [x] Set strong JWT_SECRET in .env
+- [x] DEMO_MODE=false in production
+- [ ] UFW firewall enabled (recommended)
+- [x] SSL certificates installed for all domains
+- [x] File permissions set correctly (755 for dirs)
+- [x] .env file is not in git repository
+- [x] Admin portal only accessible via admin.xlandinfra.com
+- [x] Both portals share same backend API securely
+
+---
+
+## Quick Deploy Commands (Copy-Paste Ready)
+
+After uploading files to VPS, run these commands:
+
+```bash
+# 1. Setup Backend
+cd /var/www/app/backend
+npm install --production
+nano .env  # Create and edit with your credentials
+mkdir -p logs
+pm2 start server.js --name backend
+pm2 save
+pm2 startup
+
+# 2. Build Frontend (Customer Portal)
+cd /var/www/app/frontend
+npm install
+echo "VITE_API_URL=" > .env.production
+npm run build
+
+# 3. Build Admin Portal
+cd /var/www/app/admin
+npm install
+echo "VITE_API_URL=" > .env.production
+npm run build
+
+# 4. Setup Nginx & SSL
+nginx -t
+systemctl reload nginx
+certbot --nginx -d xlandinfra.com -d www.xlandinfra.com -d admin.xlandinfra.com
+
+# 5. Verify
+pm2 status
+curl https://xlandinfra.com/api/health
+curl https://admin.xlandinfra.com/api/health
+```
+
+---
+
+## Live URLs
+
+| Portal | URL | Description |
+|--------|-----|-------------|
+| **Customer Portal** | https://xlandinfra.com | Main website + Customer login |
+| **Admin Portal** | https://admin.xlandinfra.com | Employee, Vendor & Property Management |
+| **API Health** | https://xlandinfra.com/api/health | Backend health check |
+
+---
+
+## Server Credentials (Keep Secure!)
+
+| Item | Value |
+|------|-------|
+| VPS IP | `72.60.204.124` |
+| SSH User | `root` |
+| MySQL User | `xlandinfra` |
+| MySQL Database | `customer_portal` |
+| Backend Port | `5000` |
+| PM2 Process | `backend` |
+| SSL Expiry | `2026-08-09` (auto-renews) |
 
 ---
 
 **Deployment Complete! 🚀**
+
+Your XLand Infra platform is now live:
+- **Customers**: https://xlandinfra.com
+- **Employees/Admin**: https://admin.xlandinfra.com

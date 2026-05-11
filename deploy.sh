@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 # XLand Infra Deployment Script
@@ -18,7 +19,7 @@ NC='\033[0m' # No Color
 # Configuration
 APP_DIR="/var/www/app"
 BACKEND_DIR="$APP_DIR/backend"
-CUSTOMER_DIR="$APP_DIR/customer"
+FRONTEND_DIR="$APP_DIR/frontend"
 ADMIN_DIR="$APP_DIR/admin"
 
 # Function to print status
@@ -77,22 +78,26 @@ pm2 save
 
 print_status "Backend deployed successfully!"
 
-# Step 2: Customer Portal Deployment
+# Step 2: Frontend Deployment (xlandinfra.com)
 echo ""
-echo "Step 2: Deploying Customer Portal..."
+echo "Step 2: Deploying Frontend (Customer Portal)..."
 echo "-------------------------------------------"
 
-cd $CUSTOMER_DIR
+cd $FRONTEND_DIR
 
-print_status "Installing customer portal dependencies..."
+print_status "Installing frontend dependencies..."
 npm install
 
-print_status "Building customer portal..."
+# Create production env file
+echo "VITE_API_URL=" > .env.production
+echo "VITE_APP_NAME=XLand Infra" >> .env.production
+
+print_status "Building frontend for production..."
 npm run build
 
-print_status "Customer portal deployed successfully!"
+print_status "Frontend deployed successfully!"
 
-# Step 3: Admin Portal Deployment
+# Step 3: Admin Portal Deployment (admin.xlandinfra.com)
 echo ""
 echo "Step 3: Deploying Admin Portal..."
 echo "-------------------------------------------"
@@ -102,7 +107,11 @@ cd $ADMIN_DIR
 print_status "Installing admin portal dependencies..."
 npm install
 
-print_status "Building admin portal..."
+# Create production env file
+echo "VITE_API_URL=" > .env.production
+echo "VITE_APP_NAME=XLand Infra Admin" >> .env.production
+
+print_status "Building admin portal for production..."
 npm run build
 
 print_status "Admin portal deployed successfully!"
@@ -138,7 +147,6 @@ echo ""
 echo "URLs:"
 echo "  - Customer Portal: https://xlandinfra.com"
 echo "  - Admin Portal:    https://admin.xlandinfra.com"
-echo "  - API:             https://api.xlandinfra.com"
 echo ""
 echo "Commands:"
 echo "  - View logs:    pm2 logs backend"
@@ -148,7 +156,7 @@ echo ""
 
 # Reminder
 print_warning "Don't forget to:"
-echo "  1. Configure .env file if not done"
-echo "  2. Run SSL setup: sudo certbot --nginx"
-echo "  3. Import database schema if needed"
+echo "  1. Configure .env file: nano /var/www/app/backend/.env"
+echo "  2. Run SSL setup: sudo certbot --nginx -d xlandinfra.com -d www.xlandinfra.com -d admin.xlandinfra.com"
+echo "  3. Import database schema: mysql -u xlandinfra -p customer_portal < /var/www/app/backend/database/schema_v3.sql"
 echo ""
