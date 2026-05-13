@@ -56,7 +56,9 @@ const ROLES = {
   MANAGER: 'manager',           // Operations Manager
   SUPERVISOR: 'supervisor',     // Site Supervisor
   EXECUTIVE: 'executive',       // Data Entry Executive
-  VENDOR: 'vendor'
+  VENDOR: 'vendor',
+  FRANCHISE_PARTNER: 'franchise', // Franchise Partner
+  COORDINATOR: 'coordinator'    // Field Coordinator
 };
 
 // Role Display Names (Professional Names)
@@ -65,7 +67,9 @@ const ROLE_NAMES = {
   [ROLES.MANAGER]: 'Operations Manager',
   [ROLES.SUPERVISOR]: 'Site Supervisor',
   [ROLES.EXECUTIVE]: 'Data Entry Executive',
-  [ROLES.VENDOR]: 'Vendor'
+  [ROLES.VENDOR]: 'Vendor',
+  [ROLES.FRANCHISE_PARTNER]: 'Franchise Partner',
+  [ROLES.COORDINATOR]: 'Coordinator'
 };
 
 // Role Descriptions
@@ -74,7 +78,9 @@ const ROLE_DESCRIPTIONS = {
   [ROLES.MANAGER]: 'Main operations handling - Manages work orders, vendors, estimates, and schedules',
   [ROLES.SUPERVISOR]: 'Monitoring and request-raising - Creates work order requests and tracks progress',
   [ROLES.EXECUTIVE]: 'Basic data collection - Adds client and vendor details',
-  [ROLES.VENDOR]: 'External service provider - Accepts and completes assigned work orders'
+  [ROLES.VENDOR]: 'External service provider - Accepts and completes assigned work orders',
+  [ROLES.FRANCHISE_PARTNER]: 'Franchise Partner - Full access to own data with isolation from other partners',
+  [ROLES.COORDINATOR]: 'Field Coordinator - Manages assigned properties, work orders, and field operations'
 };
 
 // Modules in the system
@@ -211,6 +217,40 @@ const MODULE_ACCESS = {
     [MODULES.REPORTS]: ACCESS_LEVELS.NO_ACCESS,
     [MODULES.NOTIFICATIONS]: ACCESS_LEVELS.VIEW_ONLY,
     [MODULES.SETTINGS]: ACCESS_LEVELS.NO_ACCESS
+  },
+  [ROLES.FRANCHISE_PARTNER]: {
+    [MODULES.DASHBOARD]: ACCESS_LEVELS.FULL,             // Full dashboard access (own data only)
+    [MODULES.MASTER_DATA]: ACCESS_LEVELS.NO_ACCESS,      // No access to global master data
+    [MODULES.STAFF_MANAGEMENT]: ACCESS_LEVELS.FULL,      // Manage own staff/users
+    [MODULES.VENDOR_MANAGEMENT]: ACCESS_LEVELS.FULL,     // Full vendor management (own vendors)
+    [MODULES.DATA_ENTRY]: ACCESS_LEVELS.FULL,            // Full data entry (own customers)
+    [MODULES.ESTIMATE]: ACCESS_LEVELS.FULL,              // Full estimate access (own estimates)
+    [MODULES.PRICING]: ACCESS_LEVELS.FULL,               // Full pricing access (own packages)
+    [MODULES.SCHEDULES]: ACCESS_LEVELS.FULL,             // Full schedules access (own schedules)
+    [MODULES.WORK_ORDER_REQUEST]: ACCESS_LEVELS.FULL,    // Full work order request access
+    [MODULES.WORK_ORDERS]: ACCESS_LEVELS.FULL,           // Full work orders (own work orders)
+    [MODULES.ASSIGN_VENDOR]: ACCESS_LEVELS.FULL,         // Can assign vendors to own work orders
+    [MODULES.CLOSE_WORK_ORDER]: ACCESS_LEVELS.FULL,      // Can close own work orders
+    [MODULES.REPORTS]: ACCESS_LEVELS.FULL,               // Full reports (own data)
+    [MODULES.NOTIFICATIONS]: ACCESS_LEVELS.FULL,         // Full notifications
+    [MODULES.SETTINGS]: ACCESS_LEVELS.LIMITED            // Limited settings (own profile only)
+  },
+  [ROLES.COORDINATOR]: {
+    [MODULES.DASHBOARD]: ACCESS_LEVELS.FULL,             // Full dashboard access (assigned data)
+    [MODULES.MASTER_DATA]: ACCESS_LEVELS.NO_ACCESS,      // No access to global master data
+    [MODULES.STAFF_MANAGEMENT]: ACCESS_LEVELS.LIMITED,   // Manage own employees only
+    [MODULES.VENDOR_MANAGEMENT]: ACCESS_LEVELS.LIMITED,  // View assigned + own vendors
+    [MODULES.DATA_ENTRY]: ACCESS_LEVELS.FULL,            // Full data entry (own customers)
+    [MODULES.ESTIMATE]: ACCESS_LEVELS.FULL,              // Full estimate access (own estimates)
+    [MODULES.PRICING]: ACCESS_LEVELS.LIMITED,            // Limited pricing (may be hidden)
+    [MODULES.SCHEDULES]: ACCESS_LEVELS.LIMITED,          // Limited schedules access
+    [MODULES.WORK_ORDER_REQUEST]: ACCESS_LEVELS.FULL,    // Full work order request access
+    [MODULES.WORK_ORDERS]: ACCESS_LEVELS.FULL,           // Full work orders (assigned work orders)
+    [MODULES.ASSIGN_VENDOR]: ACCESS_LEVELS.LIMITED,      // Assign vendors where permitted
+    [MODULES.CLOSE_WORK_ORDER]: ACCESS_LEVELS.LIMITED,   // Close where permitted
+    [MODULES.REPORTS]: ACCESS_LEVELS.LIMITED,            // Limited reports (own data)
+    [MODULES.NOTIFICATIONS]: ACCESS_LEVELS.FULL,         // Full notifications
+    [MODULES.SETTINGS]: ACCESS_LEVELS.NO_ACCESS          // No settings access
   }
 };
 
@@ -283,6 +323,24 @@ const ROLE_PERMISSIONS = {
     [PERMISSIONS.APPROVE]: false,        // No approve access
     [PERMISSIONS.ASSIGN]: false,         // No assign access
     [PERMISSIONS.CLOSE]: false           // No close access
+  },
+  [ROLES.FRANCHISE_PARTNER]: {
+    [PERMISSIONS.VIEW]: 'own_data',      // View own data only
+    [PERMISSIONS.CREATE]: 'own_data',    // Create own data only
+    [PERMISSIONS.EDIT]: 'own_data',      // Edit own data only
+    [PERMISSIONS.DELETE]: 'own_data',    // Delete own data only
+    [PERMISSIONS.APPROVE]: 'own_data',   // Approve own estimates
+    [PERMISSIONS.ASSIGN]: 'own_data',    // Assign vendors to own work orders
+    [PERMISSIONS.CLOSE]: 'own_data'      // Close own work orders
+  },
+  [ROLES.COORDINATOR]: {
+    [PERMISSIONS.VIEW]: 'assigned_data', // View assigned data only
+    [PERMISSIONS.CREATE]: 'own_data',    // Create own data only
+    [PERMISSIONS.EDIT]: 'limited',       // Edit where permitted
+    [PERMISSIONS.DELETE]: 'limited',     // Delete where permitted
+    [PERMISSIONS.APPROVE]: false,        // No approve access
+    [PERMISSIONS.ASSIGN]: 'limited',     // Assign where permitted
+    [PERMISSIONS.CLOSE]: 'limited'       // Close where permitted
   }
 };
 
@@ -381,6 +439,25 @@ const MENU_CONFIG = {
     { key: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard', path: '/vendor/dashboard' },
     { key: 'work_orders', label: 'My Work Orders', icon: 'ClipboardList', path: '/vendor/work-orders' },
     { key: 'notifications', label: 'Notifications', icon: 'Bell', path: '/vendor/notifications' }
+  ],
+  [ROLES.FRANCHISE_PARTNER]: [
+    { key: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard', path: '/fp/dashboard' },
+    { key: 'properties', label: 'Property Management', icon: 'Building2', path: '/fp/properties' },
+    { key: 'work_orders', label: 'Work Orders', icon: 'ClipboardList', path: '/fp/work-orders' },
+    { key: 'customers', label: 'Add Customer', icon: 'UserPlus', path: '/fp/customers' },
+    { key: 'user_management', label: 'User Management', icon: 'Shield', path: '/fp/users' },
+    { key: 'vendor_management', label: 'Vendor Management', icon: 'Truck', path: '/fp/vendors' },
+    { key: 'employee_management', label: 'Employee Management', icon: 'Users', path: '/fp/employees' },
+    { key: 'estimates', label: 'Estimates / AMC', icon: 'Calculator', path: '/fp/estimates' }
+  ],
+  [ROLES.COORDINATOR]: [
+    { key: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard', path: '/coordinator/dashboard' },
+    { key: 'properties', label: 'Property Management', icon: 'Building2', path: '/coordinator/properties' },
+    { key: 'work_orders', label: 'Work Orders', icon: 'ClipboardList', path: '/coordinator/work-orders' },
+    { key: 'customers', label: 'Add Customer', icon: 'UserPlus', path: '/coordinator/customers' },
+    { key: 'vendor_management', label: 'Vendor Management', icon: 'Truck', path: '/coordinator/vendors', viewOnly: 'assigned' },
+    { key: 'employee_management', label: 'Employee Management', icon: 'Users', path: '/coordinator/employees' },
+    { key: 'estimates', label: 'Estimates / AMC', icon: 'Calculator', path: '/coordinator/estimates' }
   ]
 };
 
@@ -418,6 +495,8 @@ const isManager = (role) => role === ROLES.MANAGER;
 const isSupervisor = (role) => role === ROLES.SUPERVISOR;
 const isExecutive = (role) => role === ROLES.EXECUTIVE;
 const isVendor = (role) => role === ROLES.VENDOR;
+const isFranchisePartner = (role) => role === ROLES.FRANCHISE_PARTNER;
+const isCoordinator = (role) => role === ROLES.COORDINATOR;
 
 /**
  * Capability Checks - Based on Role Requirements
@@ -541,6 +620,8 @@ module.exports = {
   isSupervisor,
   isExecutive,
   isVendor,
+  isFranchisePartner,
+  isCoordinator,
   // Admin-only capabilities
   canManageUsers,
   canManageSettings,

@@ -5,39 +5,41 @@
 const USER_STORAGE_KEY = 'pm_users';
 const CURRENT_USER_KEY = 'pm_current_user';
 const DEMO_MODE_KEY = 'pm_demo_mode';
+const AUTH_TOKEN_KEY = 'pm_auth_token';
 
 // Demo user templates (no passwords stored - demo login is role-based)
+// Uses backend role values (lowercase): admin, manager, franchise
 const DEMO_USER_TEMPLATES = {
-  Admin: {
+  admin: {
     id: 'demo_admin',
     username: 'demo_admin',
     name: 'Demo Administrator',
     email: 'demo.admin@example.com',
-    role: 'Admin',
+    role: 'admin',
     phone: '+91 0000000000',
     status: 'active',
     avatar: null,
     permissions: ['all'],
     isDemo: true
   },
-  'Operations Manager': {
+  manager: {
     id: 'demo_ops',
-    username: 'demo_opsmanager',
+    username: 'demo_manager',
     name: 'Demo Operations Manager',
-    email: 'demo.ops@example.com',
-    role: 'Operations Manager',
+    email: 'demo.manager@example.com',
+    role: 'manager',
     phone: '+91 0000000001',
     status: 'active',
     avatar: null,
     permissions: ['view_properties', 'manage_vendors', 'manage_employees', 'view_reports', 'manage_work_orders'],
     isDemo: true
   },
-  'Franchise Partner': {
+  franchise: {
     id: 'demo_franchise',
     username: 'demo_franchise',
     name: 'Demo Franchise Partner',
     email: 'demo.franchise@example.com',
-    role: 'Franchise Partner',
+    role: 'franchise',
     phone: '+91 0000000002',
     status: 'active',
     avatar: null,
@@ -49,17 +51,17 @@ const DEMO_USER_TEMPLATES = {
 // Default users array (populated from localStorage or empty for production)
 const DEFAULT_USERS = [];
 
-// Role definitions with colors and icons
+// Role definitions with colors and icons (using backend role keys)
 export const USER_ROLES = {
-  Admin: {
-    label: 'Administrator',
+  admin: {
+    label: 'Admin',
     color: 'bg-red-500',
     textColor: 'text-red-600',
     bgColor: 'bg-red-50',
     borderColor: 'border-red-200',
     description: 'Full system access with all permissions'
   },
-  'Operations Manager': {
+  manager: {
     label: 'Operations Manager',
     color: 'bg-blue-500',
     textColor: 'text-blue-600',
@@ -67,13 +69,37 @@ export const USER_ROLES = {
     borderColor: 'border-blue-200',
     description: 'Manage operations, vendors, and employees'
   },
-  'Franchise Partner': {
+  franchise: {
     label: 'Franchise Partner',
     color: 'bg-green-500',
     textColor: 'text-green-600',
     bgColor: 'bg-green-50',
     borderColor: 'border-green-200',
     description: 'Partner with limited access to view operations'
+  },
+  coordinator: {
+    label: 'Coordinator',
+    color: 'bg-teal-500',
+    textColor: 'text-teal-600',
+    bgColor: 'bg-teal-50',
+    borderColor: 'border-teal-200',
+    description: 'Field coordinator with assigned data access'
+  },
+  supervisor: {
+    label: 'Supervisor',
+    color: 'bg-amber-500',
+    textColor: 'text-amber-600',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-200',
+    description: 'Site supervisor with field oversight'
+  },
+  executive: {
+    label: 'Executive',
+    color: 'bg-indigo-500',
+    textColor: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+    borderColor: 'border-indigo-200',
+    description: 'Data entry executive with limited access'
   }
 };
 
@@ -112,47 +138,62 @@ export const getUserById = (id) => {
 };
 
 // Authenticate user via backend API
-export const authenticateUser = async (username, password) => {
+export const authenticateUser = async (username, password, role) => {
+  // Validate inputs
+  if (!username || !password) {
+    return { success: false, message: 'Username and password are required' };
+  }
+  if (!role) {
+    return { success: false, message: 'Please select a role' };
+  }
+
   try {
-    // In production, authenticate via backend API
+    // Authenticate via backend API
     const response = await fetch('/api/staff/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password, role })
     });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { success: false, message: errorData.message || `Login failed (${response.status})` };
+    }
     
     const result = await response.json();
     
     if (result.success && result.data) {
+      const userRole = result.data.user?.role || result.data.role;
+      
+      // Validate that user's role matches selected role
+      if (userRole !== role) {
+        return { success: false, message: `Invalid role. Your account is registered as: ${userRole}` };
+      }
+      
       const user = {
         id: result.data.user?.id || result.data.id,
         username: result.data.user?.username || result.data.username,
         name: `${result.data.user?.firstName || result.data.firstName || ''} ${result.data.user?.lastName || result.data.lastName || ''}`.trim(),
         email: result.data.user?.email || result.data.email,
-        role: result.data.user?.role || result.data.role,
+        role: userRole,
         status: 'active',
         permissions: result.data.user?.permissions || ['all']
       };
+      
+      // Store token and user data
+      if (result.data.token) {
+        localStorage.setItem(AUTH_TOKEN_KEY, result.data.token);
+      }
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+      localStorage.removeItem(DEMO_MODE_KEY);
+      
       return { success: true, user };
     }
     
     return { success: false, message: result.message || 'Invalid credentials' };
   } catch (error) {
-    // Fallback: check localStorage users (for offline/demo scenarios without backend)
-    const users = getUsers();
-    const user = users.find(
-      u => (u.username === username || u.email === username) && u.status === 'active'
-    );
-    
-    if (user && user.isDemo) {
-      // Demo users don't require password verification in offline mode
-      const { ...userWithoutSensitive } = user;
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithoutSensitive));
-      return { success: true, user: userWithoutSensitive };
-    }
-    
-    return { success: false, message: 'Unable to authenticate. Please check your connection.' };
+    console.error('Authentication error:', error);
+    return { success: false, message: 'Unable to connect to server. Please check if the backend is running.' };
   }
 };
 
@@ -183,6 +224,12 @@ export const getCurrentUser = () => {
 export const logoutUser = () => {
   localStorage.removeItem(CURRENT_USER_KEY);
   localStorage.removeItem(DEMO_MODE_KEY);
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+};
+
+// Get auth token
+export const getAuthToken = () => {
+  return localStorage.getItem(AUTH_TOKEN_KEY);
 };
 
 // Check if in demo mode
@@ -255,8 +302,8 @@ export const deleteUser = (id) => {
   }
   
   // Prevent deleting the last admin
-  const admins = users.filter(u => u.role === 'Admin');
-  if (users[index].role === 'Admin' && admins.length === 1) {
+  const admins = users.filter(u => u.role === 'admin');
+  if (users[index].role === 'admin' && admins.length === 1) {
     return { success: false, message: 'Cannot delete the last administrator' };
   }
   
@@ -285,7 +332,7 @@ export const hasPermission = (permission) => {
   if (!currentUser) return false;
   
   // Admins have all permissions
-  if (currentUser.role === 'Admin' || currentUser.permissions?.includes('all')) {
+  if (currentUser.role === 'admin' || currentUser.permissions?.includes('all')) {
     return true;
   }
   
@@ -299,9 +346,9 @@ export const getRoleStats = () => {
     total: users.length,
     active: users.filter(u => u.status === 'active').length,
     byRole: {
-      Admin: users.filter(u => u.role === 'Admin').length,
-      'Operations Manager': users.filter(u => u.role === 'Operations Manager').length,
-      'Franchise Partner': users.filter(u => u.role === 'Franchise Partner').length
+      admin: users.filter(u => u.role === 'admin').length,
+      manager: users.filter(u => u.role === 'manager').length,
+      franchise: users.filter(u => u.role === 'franchise').length
     }
   };
 };

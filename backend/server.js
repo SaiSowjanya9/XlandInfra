@@ -21,6 +21,11 @@ const contactRouter = require('./routes/contact');
 const onboardingRouter = require('./routes/onboarding');
 const vendorOnboardingRouter = require('./routes/vendorOnboarding');
 const customersRouter = require('./routes/customers');
+const franchisePartnerRouter = require('./routes/franchisePartner');
+const managerRouter = require('./routes/manager');
+const coordinatorRouter = require('./routes/coordinator');
+const supervisorRouter = require('./routes/supervisor');
+const executiveRouter = require('./routes/executive');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -91,6 +96,11 @@ app.use('/api/pricing', pricingRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/onboarding', onboardingRouter);
 app.use('/api/customers', customersRouter);
+app.use('/api/fp', franchisePartnerRouter);
+app.use('/api/manager', managerRouter);
+app.use('/api/coordinator', coordinatorRouter);
+app.use('/api/supervisor', supervisorRouter);
+app.use('/api/executive', executiveRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
