@@ -1,0 +1,35 @@
+{
+  "name": "xland-qr-service",
+  "version": "1.0.0",
+  "description": "XLAND INFRA Dynamic QR Redirect Service for qr.xlandinfra.com",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop xland-qr-service",
+    "pm2:restart": "pm2 restart xland-qr-service",
+    "pm2:logs": "pm2 logs xland-qr-service"
+  },
+  "keywords": [
+    "qr",
+    "redirect",
+    "xland",
+    "infra"
+  ],
+  "author": "XLAND INFRA",
+  "license": "PROPRIETARY",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mysql2": "^3.6.5",
+    "ua-parser-js": "^1.0.37"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

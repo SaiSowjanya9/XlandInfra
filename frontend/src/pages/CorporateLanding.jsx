@@ -643,36 +643,45 @@ function CorporateLanding() {
                 ? 'opacity-100 translate-y-0' 
                 : heroPhase === 'services' ? 'opacity-0' : 'opacity-0 translate-y-8 pointer-events-none absolute'
             }`}>
-              {/* Service Content Container */}
-              <div className="relative min-h-[320px] md:min-h-[300px] lg:min-h-[280px]">
+              {/* Active Service Icon */}
+              <div className="w-14 h-14 mb-6 bg-gradient-to-br from-gold-400/20 to-gold-600/20 border border-gold-500/30 rounded-xl flex items-center justify-center shadow-[0_0_30px_rgba(216,178,92,0.2)]">
+                {heroServices[activeHeroService] && (() => {
+                  const Icon = heroServices[activeHeroService].icon;
+                  return <Icon className="w-7 h-7 text-gold-400" />;
+                })()}
+              </div>
+
+              {/* All Service Titles - Stacked with Faded Effect */}
+              <div className="space-y-3 mb-8">
                 {heroServices.map((service, index) => {
-                  const Icon = service.icon;
+                  const isActive = index === activeHeroService;
                   return (
                     <div
                       key={service.id}
-                      className={`absolute inset-0 transition-all duration-700 ease-out ${
-                        index === activeHeroService && !isTransitioning
-                          ? 'opacity-100 translate-y-0'
-                          : 'opacity-0 translate-y-6 pointer-events-none'
+                      className={`transition-all duration-500 ease-out cursor-pointer ${
+                        isActive 
+                          ? 'opacity-100 scale-100' 
+                          : 'opacity-30 scale-95 hover:opacity-50'
                       }`}
+                      onClick={() => setActiveHeroService(index)}
                     >
-                      {/* Service Icon */}
-                      <div className="w-14 h-14 mb-6 bg-gradient-to-br from-gold-400/20 to-gold-600/20 border border-gold-500/30 rounded-xl flex items-center justify-center shadow-[0_0_30px_rgba(216,178,92,0.2)]">
-                        <Icon className="w-7 h-7 text-gold-400" />
-                      </div>
-
-                      {/* Service Title */}
-                      <h2 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-white mb-6 leading-[1.1]">
+                      <h2 className={`font-display font-bold leading-[1.1] transition-all duration-500 ${
+                        isActive 
+                          ? 'text-3xl md:text-4xl lg:text-5xl text-white' 
+                          : 'text-xl md:text-2xl lg:text-3xl text-gray-500'
+                      }`}>
                         {service.title}
                       </h2>
-
-                      {/* Service Description */}
-                      <p className="text-lg md:text-xl text-gray-400 leading-relaxed max-w-2xl">
-                        {service.subtitle}
-                      </p>
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Active Service Description */}
+              <div className="transition-all duration-500 ease-out">
+                <p className="text-lg md:text-xl text-gray-400 leading-relaxed max-w-2xl">
+                  {heroServices[activeHeroService]?.subtitle}
+                </p>
               </div>
 
               {/* CTA Buttons - Services Phase */}

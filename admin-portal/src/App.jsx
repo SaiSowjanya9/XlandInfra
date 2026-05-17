@@ -78,6 +78,7 @@ import EmployeeDetails from './pages/EmployeeDetails';
 import EmployeeZoneManagement from './pages/EmployeeZoneManagement';
 import Estimates from './pages/Estimates';
 import UserManagement from './pages/UserManagement';
+import QRManagement from './pages/QRManagement';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -192,6 +193,7 @@ function App() {
             <Route path="/employee/employee-details" element={<EmployeeDetails />} />
             <Route path="/employee/employee-zone-management" element={<EmployeeZoneManagement />} />
             <Route path="/employee/user-management" element={<UserManagement />} />
+            <Route path="/employee/qr-management" element={<QRManagement />} />
             <Route path="/employee/estimates" element={<Navigate to="/employee/estimates/list" replace />} />
             <Route path="/employee/estimates/create" element={<Estimates admin={user} defaultTab="create" />} />
             <Route path="/employee/estimates/list" element={<Estimates admin={user} defaultTab="list" />} />
@@ -239,6 +241,7 @@ function App() {
             <Route path="/fp/estimates/amc" element={<FPEstimates user={user} defaultTab="amc" />} />
             <Route path="/fp/estimates/addons" element={<FPEstimates user={user} defaultTab="addons" />} />
             <Route path="/fp/estimates/archived" element={<FPEstimates user={user} defaultTab="archived" />} />
+            <Route path="/fp/qr-management" element={<QRManagement />} />
             <Route path="*" element={<Navigate to="/fp" replace />} />
           </Routes>
         </FPLayout>
