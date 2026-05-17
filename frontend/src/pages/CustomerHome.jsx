@@ -31,7 +31,7 @@ import {
   Linkedin,
   Youtube
 } from 'lucide-react';
-import Logo from '../assets/LOGO 2.png';
+import BrandLogo from '../components/BrandLogo';
 import HeroVideo from '../assets/Sample_Video.mp4';
 
 const navigationModules = [
@@ -195,20 +195,7 @@ function CustomerHome() {
         {/* Hero Content */}
         <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
           {/* Logo */}
-          <img src={Logo} alt="XlandInfra" className="h-20 md:h-28 w-auto mb-6 drop-shadow-2xl" />
-          
-          {/* Main Heading - Styled to POP */}
-          <h1 className="relative">
-            <span className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight">
-              <span className="text-white">X</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-300 to-gold-500">Land</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-500 via-amber-400 to-gold-600">Infra</span>
-            </span>
-            {/* Subtle Glow Effect */}
-            <span className="absolute inset-0 text-5xl md:text-7xl lg:text-8xl font-black tracking-tight blur-xl opacity-20">
-              <span className="text-gold-400">XLandInfra</span>
-            </span>
-          </h1>
+          <BrandLogo size="xl" className="mb-6 drop-shadow-2xl" />
           
           {/* Tagline */}
           <p className="mt-6 text-lg md:text-xl text-dark-200 max-w-2xl font-light tracking-wide">
@@ -225,20 +212,12 @@ function CustomerHome() {
                 Go to Dashboard
               </button>
             ) : (
-              <>
-                <button
-                  onClick={handleLogin}
-                  className="px-8 py-3 rounded-xl font-semibold bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-dark-900 transition-all duration-300 shadow-lg shadow-gold-500/25 hover:shadow-gold-500/40 hover:scale-105"
-                >
-                  Login to Portal
-                </button>
-                <button
-                  onClick={() => navigate('/register')}
-                  className="px-8 py-3 rounded-xl font-semibold border-2 border-gold-500/50 text-gold-400 hover:bg-gold-500/10 hover:border-gold-400 transition-all duration-300"
-                >
-                  Register Now
-                </button>
-              </>
+              <button
+                onClick={handleLogin}
+                className="px-8 py-3 rounded-xl font-semibold bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-dark-900 transition-all duration-300 shadow-lg shadow-gold-500/25 hover:shadow-gold-500/40 hover:scale-105"
+              >
+                Login to Portal
+              </button>
             )}
           </div>
         </div>
@@ -256,14 +235,10 @@ function CustomerHome() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <img src={Logo} alt="XlandInfra" className="h-10 md:h-12 w-auto" />
-              <div className="hidden sm:block">
-                <span className="text-lg md:text-xl font-bold text-white">
-                  Xland<span className="text-gold-400">Infra</span>
-                </span>
-                <p className="text-xs text-dark-400">Customer Portal</p>
-              </div>
+            <div className="flex items-center space-x-4">
+              <BrandLogo size="sm" className="hidden sm:flex" />
+              <BrandLogo size="xs" showText={false} className="sm:hidden" />
+              <span className="text-sm text-dark-400 hidden sm:block border-l border-gold-500/30 pl-4">Customer Portal</span>
             </div>
 
             {/* Main Navigation Modules */}
@@ -566,18 +541,15 @@ function CustomerHome() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             {/* Company Info */}
             <div className="md:col-span-2">
-              <div className="flex items-center space-x-3 mb-4">
-                <img src={Logo} alt="XlandInfra" className="h-12 w-auto" />
-                <span className="text-2xl font-bold text-white">
-                  Xland<span style={{ color: '#D8B25C' }}>Infra</span>
-                </span>
+              <div className="mb-4">
+                <BrandLogo size="default" />
               </div>
               <p className="text-stone-400 text-sm leading-relaxed mb-6 max-w-md">
                 Building dreams into reality. Your trusted partner for quality construction 
                 and infrastructure development across the region.
               </p>
-              {/* Social Media Icons - Modern Style */}
-              <div className="flex items-center space-x-3">
+              {/* Social Media Icons - Hidden from UI, code preserved */}
+              <div className="hidden flex items-center space-x-3">
                 <a href="#" className="group w-11 h-11 bg-stone-800/80 hover:bg-[#1877F2] border border-stone-700/50 hover:border-[#1877F2] rounded-xl flex items-center justify-center text-stone-400 hover:text-white transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#1877F2]/20">
                   <Facebook className="w-5 h-5" />
                 </a>
@@ -616,23 +588,15 @@ function CustomerHome() {
               <ul className="space-y-3">
                 <li className="flex items-center space-x-3 text-stone-400 text-sm">
                   <Phone className="w-4 h-4" style={{ color: '#D8B25C' }} />
-                  <span>+91 98765 43210</span>
-                </li>
-                <li className="flex items-center space-x-3 text-stone-400 text-sm">
-                  <Phone className="w-4 h-4" style={{ color: '#D8B25C' }} />
-                  <span>+91 40 1234 5678</span>
+                  <span>+91 8500 101 111</span>
                 </li>
                 <li className="flex items-center space-x-3 text-stone-400 text-sm">
                   <Mail className="w-4 h-4" style={{ color: '#D8B25C' }} />
                   <span>info@xlandinfra.com</span>
                 </li>
-                <li className="flex items-center space-x-3 text-stone-400 text-sm">
-                  <Mail className="w-4 h-4" style={{ color: '#D8B25C' }} />
-                  <span>support@xlandinfra.com</span>
-                </li>
                 <li className="flex items-start space-x-3 text-stone-400 text-sm">
                   <MapPin className="w-4 h-4 mt-0.5" style={{ color: '#D8B25C' }} />
-                  <span>123 Business Park, Tower A<br/>Hyderabad, Telangana 500081</span>
+                  <span>D.No. 7-333/A/1, Nri Hospital Road<br/>Mangalagiri, Guntur, 522503</span>
                 </li>
               </ul>
             </div>

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, AlertCircle, ArrowLeft, Mail, Info } from 'lucide-react';
-import Logo from '../assets/LOGO 2.png';
+import BrandLogo from '../components/BrandLogo';
+import SEO from '../components/SEO';
 
 const Login = ({ onLogin }) => {
   const navigate = useNavigate();
@@ -96,6 +97,12 @@ const Login = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 flex items-center justify-center p-4 relative overflow-hidden">
+      <SEO 
+        title="Login - HomeHub Customer Portal"
+        description="Login to your XLAND INFRA HomeHub customer portal. Access project details, track construction progress, and manage your property investments."
+        keywords="login, customer portal, HomeHub, XLAND INFRA, real estate services"
+        canonical="https://xlandinfra.com/login"
+      />
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gold-600/10 rounded-full blur-3xl"></div>
@@ -111,7 +118,9 @@ const Login = ({ onLogin }) => {
       <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10">
         {/* Header */}
         <div className="px-6 py-8 text-center border-b border-gold-600/20">
-          <img src={Logo} alt="XLand Infra" className="h-20 w-auto mx-auto mb-4" />
+          <div className="flex justify-center mb-4">
+            <BrandLogo size="lg" />
+          </div>
           <h1 className="text-2xl font-bold text-white">Customer Portal</h1>
           <p className="text-dark-300 mt-2">Sign in to your account</p>
         </div>
@@ -204,18 +213,9 @@ const Login = ({ onLogin }) => {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-dark-300">
-              New Customer?{' '}
-              <button onClick={() => navigate('/register')} className="text-gold-400 font-medium hover:text-gold-300 transition-colors">
-                Get Started Now
-              </button>
-            </p>
-          </div>
-
           <div className="mt-6 p-4 bg-dark-700/50 rounded-lg border border-dark-600">
             <p className="text-xs text-dark-400 text-center">
-              <strong className="text-gold-400">Demo:</strong> Register using pre-loaded resident data or use admin portal to add residents first.
+              <strong className="text-gold-400">Need an account?</strong> Please contact your property administrator to get access.
             </p>
           </div>
         </div>

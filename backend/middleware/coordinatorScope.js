@@ -3,7 +3,7 @@
  * Handles data isolation and ownership validation for Coordinator Portal
  */
 
-const db = require('../db');
+const { pool } = require('../config/database');
 
 /**
  * Attach coordinator scope to request
@@ -56,7 +56,7 @@ const addCoordinatorFilter = (baseQuery, coordinatorId, alias = '') => {
 const validateCoordinatorOwnership = async (tableName, recordId, coordinatorId, checkAssigned = false) => {
   try {
     // First check direct ownership
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       `SELECT id FROM ${tableName} WHERE id = ? AND coordinator_id = ?`,
       [recordId, coordinatorId]
     );
@@ -69,7 +69,7 @@ const validateCoordinatorOwnership = async (tableName, recordId, coordinatorId, 
     if (checkAssigned) {
       const assignedTable = `coordinator_assigned_${tableName}`;
       try {
-        const [assignedRows] = await db.query(
+        const [assignedRows] = await pool.query(
           `SELECT can_modify, can_delete FROM ${assignedTable} WHERE coordinator_id = ? AND ${tableName.slice(0, -1)}_id = ?`,
           [coordinatorId, recordId]
         );
@@ -168,7 +168,7 @@ const buildScopedQuery = (baseQuery, coordinatorId, options = {}) => {
  */
 const getCoordinatorPermissions = async (coordinatorId, module) => {
   try {
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       `SELECT * FROM coordinator_permissions WHERE coordinator_id = ? AND module = ?`,
       [coordinatorId, module]
     );

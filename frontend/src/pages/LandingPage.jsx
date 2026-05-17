@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Users, Briefcase, Phone, Mail, MapPin, Clock, CheckCircle, Award, Shield, Menu, X } from 'lucide-react';
-import Logo from '../assets/LOGO 2.png';
+import BrandLogo from '../components/BrandLogo';
+import SEO from '../components/SEO';
 
 const loginOptions = [
   {
     id: 'customer',
-    title: 'Customer Login',
+    title: 'HomeHub Login',
     description: 'Access your project details, track progress, view schedules, and manage payments',
     icon: Users,
     path: '/login',
@@ -69,6 +70,12 @@ function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 relative overflow-hidden">
+      <SEO 
+        title="Customer Portal - HomeHub Login"
+        description="Access your XLAND INFRA customer portal. Track project progress, view schedules, manage payments, and stay connected with your dream home journey."
+        keywords="customer portal, HomeHub, project tracking, payment management, XLAND INFRA, real estate services"
+        canonical="https://xlandinfra.com/home"
+      />
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gold-600/10 rounded-full blur-3xl"></div>
@@ -81,11 +88,9 @@ function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <img src={Logo} alt="XlandInfra" className="h-12 md:h-14 w-auto" />
-              <span className="text-xl md:text-2xl font-bold text-white hidden sm:block">
-                Xland<span className="text-gold-400">Infra</span>
-              </span>
+            <div className="flex items-center">
+              <BrandLogo size="default" className="hidden sm:flex" />
+              <BrandLogo size="sm" showText={false} className="sm:hidden" />
             </div>
 
             {/* Desktop Navigation */}
@@ -163,11 +168,7 @@ function LandingPage() {
       <section id="home" className="relative z-10 py-16 md:py-24 px-4">
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center mb-8">
-            <img 
-              src={Logo} 
-              alt="XlandInfra" 
-              className="h-28 md:h-36 w-auto drop-shadow-2xl"
-            />
+            <BrandLogo size="xl" className="drop-shadow-2xl" />
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
             Building <span className="text-gold-gradient">Dreams</span> Into Reality
@@ -296,8 +297,7 @@ function LandingPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-white mb-1">Phone</h3>
-                    <p className="text-dark-300">+91 98765 43210</p>
-                    <p className="text-dark-300">+91 40 1234 5678</p>
+                    <p className="text-dark-300">+91 8500 101 111</p>
                   </div>
                 </div>
               </div>
@@ -437,11 +437,8 @@ function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div className="md:col-span-2">
-              <div className="flex items-center space-x-3 mb-4">
-                <img src={Logo} alt="XlandInfra" className="h-10 w-auto" />
-                <span className="text-xl font-bold text-white">
-                  Xland<span className="text-gold-400">Infra</span>
-                </span>
+              <div className="mb-4">
+                <BrandLogo size="default" />
               </div>
               <p className="text-dark-400 text-sm mb-4">
                 Building dreams into reality. Your trusted partner for quality construction 
@@ -460,9 +457,9 @@ function LandingPage() {
             <div>
               <h4 className="text-white font-semibold mb-4">Contact Info</h4>
               <ul className="space-y-2 text-sm text-dark-400">
-                <li>+91 98765 43210</li>
+                <li>+91 8500 101 111</li>
                 <li>info@xlandinfra.com</li>
-                <li>Hyderabad, India</li>
+                <li>D.No. 7-333/A/1, Nri Hospital Road, Mangalagiri, Guntur, 522503</li>
               </ul>
             </div>
           </div>

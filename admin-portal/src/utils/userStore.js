@@ -4,49 +4,7 @@
 
 const USER_STORAGE_KEY = 'pm_users';
 const CURRENT_USER_KEY = 'pm_current_user';
-const DEMO_MODE_KEY = 'pm_demo_mode';
 const AUTH_TOKEN_KEY = 'pm_auth_token';
-
-// Demo user templates (no passwords stored - demo login is role-based)
-// Uses backend role values (lowercase): admin, manager, franchise
-const DEMO_USER_TEMPLATES = {
-  admin: {
-    id: 'demo_admin',
-    username: 'demo_admin',
-    name: 'Demo Administrator',
-    email: 'demo.admin@example.com',
-    role: 'admin',
-    phone: '+91 0000000000',
-    status: 'active',
-    avatar: null,
-    permissions: ['all'],
-    isDemo: true
-  },
-  manager: {
-    id: 'demo_ops',
-    username: 'demo_manager',
-    name: 'Demo Operations Manager',
-    email: 'demo.manager@example.com',
-    role: 'manager',
-    phone: '+91 0000000001',
-    status: 'active',
-    avatar: null,
-    permissions: ['view_properties', 'manage_vendors', 'manage_employees', 'view_reports', 'manage_work_orders'],
-    isDemo: true
-  },
-  franchise: {
-    id: 'demo_franchise',
-    username: 'demo_franchise',
-    name: 'Demo Franchise Partner',
-    email: 'demo.franchise@example.com',
-    role: 'franchise',
-    phone: '+91 0000000002',
-    status: 'active',
-    avatar: null,
-    permissions: ['view_properties', 'view_reports', 'view_vendors'],
-    isDemo: true
-  }
-};
 
 // Default users array (populated from localStorage or empty for production)
 const DEFAULT_USERS = [];
@@ -61,51 +19,27 @@ export const USER_ROLES = {
     borderColor: 'border-red-200',
     description: 'Full system access with all permissions'
   },
-  manager: {
+  operations_manager: {
     label: 'Operations Manager',
-    color: 'bg-blue-500',
-    textColor: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
-    description: 'Manage operations, vendors, and employees'
+    color: 'bg-purple-500',
+    textColor: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+    borderColor: 'border-purple-200',
+    description: 'Full system access with all permissions (same as Admin)'
   },
-  franchise: {
+  franchise_partner: {
     label: 'Franchise Partner',
-    color: 'bg-green-500',
-    textColor: 'text-green-600',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-200',
-    description: 'Partner with limited access to view operations'
-  },
-  coordinator: {
-    label: 'Coordinator',
-    color: 'bg-teal-500',
-    textColor: 'text-teal-600',
-    bgColor: 'bg-teal-50',
-    borderColor: 'border-teal-200',
-    description: 'Field coordinator with assigned data access'
-  },
-  supervisor: {
-    label: 'Supervisor',
-    color: 'bg-amber-500',
-    textColor: 'text-amber-600',
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-amber-200',
-    description: 'Site supervisor with field oversight'
-  },
-  executive: {
-    label: 'Executive',
-    color: 'bg-indigo-500',
-    textColor: 'text-indigo-600',
-    bgColor: 'bg-indigo-50',
-    borderColor: 'border-indigo-200',
-    description: 'Data entry executive with limited access'
+    color: 'bg-emerald-500',
+    textColor: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+    borderColor: 'border-emerald-200',
+    description: 'Franchise partner with scoped access'
   }
 };
 
 // Version key to track role structure changes
 const USER_VERSION_KEY = 'pm_users_version';
-const CURRENT_VERSION = '2'; // Increment this when roles change
+const CURRENT_VERSION = '3'; // Increment this when roles change - v3: cleared test data
 
 // Initialize users in localStorage
 export const initializeUsers = () => {
@@ -137,22 +71,19 @@ export const getUserById = (id) => {
   return users.find(user => user.id === id);
 };
 
-// Authenticate user via backend API
-export const authenticateUser = async (username, password, role) => {
+// Authenticate user via backend API (with auto role detection)
+export const authenticateUser = async (username, password, role = null) => {
   // Validate inputs
   if (!username || !password) {
     return { success: false, message: 'Username and password are required' };
   }
-  if (!role) {
-    return { success: false, message: 'Please select a role' };
-  }
 
   try {
-    // Authenticate via backend API
-    const response = await fetch('/api/staff/login', {
+    // Authenticate via unified employee login API
+    const response = await fetch('/api/employee/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, role })
+      body: JSON.stringify({ username, password })
     });
     
     if (!response.ok) {
@@ -165,11 +96,6 @@ export const authenticateUser = async (username, password, role) => {
     if (result.success && result.data) {
       const userRole = result.data.user?.role || result.data.role;
       
-      // Validate that user's role matches selected role
-      if (userRole !== role) {
-        return { success: false, message: `Invalid role. Your account is registered as: ${userRole}` };
-      }
-      
       const user = {
         id: result.data.user?.id || result.data.id,
         username: result.data.user?.username || result.data.username,
@@ -177,7 +103,12 @@ export const authenticateUser = async (username, password, role) => {
         email: result.data.user?.email || result.data.email,
         role: userRole,
         status: 'active',
-        permissions: result.data.user?.permissions || ['all']
+        permissions: result.data.user?.permissions || ['all'],
+        franchisePartnerId: result.data.user?.franchisePartnerId,
+        managerId: result.data.user?.managerId,
+        coordinatorId: result.data.user?.coordinatorId,
+        supervisorId: result.data.user?.supervisorId,
+        executiveId: result.data.user?.executiveId
       };
       
       // Store token and user data
@@ -185,9 +116,10 @@ export const authenticateUser = async (username, password, role) => {
         localStorage.setItem(AUTH_TOKEN_KEY, result.data.token);
       }
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-      localStorage.removeItem(DEMO_MODE_KEY);
       
-      return { success: true, user };
+      // Return user with detected portal type
+      const portalType = getPortalTypeFromRole(userRole);
+      return { success: true, user: { ...user, portal: portalType } };
     }
     
     return { success: false, message: result.message || 'Invalid credentials' };
@@ -197,21 +129,15 @@ export const authenticateUser = async (username, password, role) => {
   }
 };
 
-// Demo login by role (no password required - for demo/testing purposes only)
-export const demoLoginByRole = (role) => {
-  const demoUser = DEMO_USER_TEMPLATES[role];
-  if (!demoUser) {
-    return { success: false, message: 'Invalid demo role' };
-  }
-  
-  const userWithTimestamp = {
-    ...demoUser,
-    createdAt: new Date().toISOString()
+// Map role to portal type
+export const getPortalTypeFromRole = (role) => {
+  const rolePortalMap = {
+    'admin': 'employee',
+    'operations_manager': 'employee',
+    'franchise_partner': 'franchise',
+    'franchise': 'franchise'
   };
-  
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithTimestamp));
-  localStorage.setItem(DEMO_MODE_KEY, 'true');
-  return { success: true, user: userWithTimestamp };
+  return rolePortalMap[role] || 'employee';
 };
 
 // Get current logged in user
@@ -223,7 +149,6 @@ export const getCurrentUser = () => {
 // Logout user
 export const logoutUser = () => {
   localStorage.removeItem(CURRENT_USER_KEY);
-  localStorage.removeItem(DEMO_MODE_KEY);
   localStorage.removeItem(AUTH_TOKEN_KEY);
 };
 
@@ -232,9 +157,28 @@ export const getAuthToken = () => {
   return localStorage.getItem(AUTH_TOKEN_KEY);
 };
 
-// Check if in demo mode
-export const isDemoMode = () => {
-  return localStorage.getItem(DEMO_MODE_KEY) === 'true';
+// Generate unique User ID based on role
+const generateUserId = (role) => {
+  const prefixes = {
+    admin: 'ADM',
+    operations_manager: 'OPM',
+    franchise_partner: 'FRP',
+    franchise: 'FRP'
+  };
+  const prefix = prefixes[role] || 'USR';
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${prefix}-${timestamp}${random}`;
+};
+
+// Generate temporary password
+const generateTempPassword = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
 };
 
 // Add new user
@@ -249,13 +193,37 @@ export const addUser = (userData) => {
     return { success: false, message: 'Email already exists' };
   }
   
+  // Generate unique User ID and temp password
+  const userId = generateUserId(userData.role);
+  const tempPassword = generateTempPassword();
+  
   const newUser = {
     id: `usr_${Date.now()}`,
+    userId: userId,
     ...userData,
+    password: tempPassword, // Store temp password (in real app, this would be hashed)
+    mustChangePassword: true,
     status: 'active',
     createdAt: new Date().toISOString(),
     avatar: null
   };
+  
+  // Add Franchise Partner specific fields if applicable
+  if (userData.role === 'franchise_partner' || userData.role === 'franchise') {
+    newUser.franchiseId = userData.franchiseId || '';
+    newUser.franchiseName = userData.franchiseName || '';
+    newUser.companyName = userData.companyName || '';
+    newUser.gstNumber = userData.gstNumber || '';
+    newUser.panNumber = userData.panNumber || '';
+    newUser.address = userData.address || '';
+    newUser.city = userData.city || '';
+    newUser.state = userData.state || '';
+    newUser.pincode = userData.pincode || '';
+    newUser.bankName = userData.bankName || '';
+    newUser.accountNumber = userData.accountNumber || '';
+    newUser.ifscCode = userData.ifscCode || '';
+    newUser.commissionRate = userData.commissionRate || 0;
+  }
   
   users.push(newUser);
   localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
@@ -347,8 +315,8 @@ export const getRoleStats = () => {
     active: users.filter(u => u.status === 'active').length,
     byRole: {
       admin: users.filter(u => u.role === 'admin').length,
-      manager: users.filter(u => u.role === 'manager').length,
-      franchise: users.filter(u => u.role === 'franchise').length
+      operations_manager: users.filter(u => u.role === 'operations_manager').length,
+      franchise_partner: users.filter(u => u.role === 'franchise_partner' || u.role === 'franchise').length
     }
   };
 };

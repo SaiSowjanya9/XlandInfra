@@ -19,17 +19,6 @@ const {
 // ADMIN AUTH
 // ============================================
 
-// Demo mode configuration - credentials loaded from environment variables
-const DEMO_MODE_ENABLED = process.env.DEMO_MODE === 'true';
-const DEMO_PASSWORD_HASH = process.env.DEMO_PASSWORD_HASH || '';
-
-// Demo admin users (fallback when database is not available)
-// NOTE: Passwords are NOT stored here - they must be set via environment variables
-const DEMO_ADMINS = DEMO_MODE_ENABLED ? [
-  { id: 1, username: 'demo_admin', email: 'demo.admin@example.com', firstName: 'Demo', lastName: 'Admin', role: 'admin' },
-  { id: 2, username: 'demo_exec', email: 'demo.exec@example.com', firstName: 'Demo', lastName: 'Executive', role: 'executive' }
-] : [];
-
 // Admin login
 router.post('/login', async (req, res) => {
   try {
@@ -42,57 +31,19 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Try database first, fallback to demo users
-    let admin = null;
-    let useDemo = false;
+    const [admins] = await pool.execute(
+      `SELECT * FROM admin_users WHERE (username = ? OR email = ?) AND is_active = TRUE`,
+      [username, username]
+    );
 
-    try {
-      const [admins] = await pool.execute(
-        `SELECT * FROM admin_users WHERE (username = ? OR email = ?) AND is_active = TRUE`,
-        [username, username]
-      );
-      if (admins.length > 0) {
-        admin = admins[0];
-      }
-    } catch (dbError) {
-      console.log('Database not available, using demo mode');
-      useDemo = true;
-    }
-
-    // Fallback to demo users (only if demo mode is enabled)
-    if (!admin && DEMO_MODE_ENABLED) {
-      const demoAdmin = DEMO_ADMINS.find(a => a.username === username || a.email === username);
-      if (demoAdmin && DEMO_PASSWORD_HASH) {
-        // Verify password against environment-stored hash
-        const isDemoPasswordValid = await bcrypt.compare(password, DEMO_PASSWORD_HASH);
-        if (isDemoPasswordValid) {
-          return res.json({
-            success: true,
-            message: 'Login successful (Demo Mode)',
-            data: {
-              id: demoAdmin.id,
-              username: demoAdmin.username,
-              email: demoAdmin.email,
-              firstName: demoAdmin.firstName,
-              lastName: demoAdmin.lastName,
-              role: demoAdmin.role,
-              isDemo: true
-            }
-          });
-        }
-      }
+    if (admins.length === 0) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
-    if (!admin) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
+    const admin = admins[0];
 
     // Verify password against stored hash
     const isValidPassword = await bcrypt.compare(password, admin.password_hash);
@@ -105,12 +56,10 @@ router.post('/login', async (req, res) => {
     }
 
     // Update last login
-    try {
-      await pool.execute(
-        `UPDATE admin_users SET last_login = NOW() WHERE id = ?`,
-        [admin.id]
-      );
-    } catch (e) {}
+    await pool.execute(
+      `UPDATE admin_users SET last_login = NOW() WHERE id = ?`,
+      [admin.id]
+    );
 
     res.json({
       success: true,

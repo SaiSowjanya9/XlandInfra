@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ClipboardList, Calendar, CreditCard, HelpCircle, Home, LogOut, User } from 'lucide-react';
-import Logo from '../assets/LOGO 2.png';
+import BrandLogo from './BrandLogo';
 
 const Layout = ({ children, user, onLogout }) => {
   const location = useLocation();
@@ -19,9 +19,10 @@ const Layout = ({ children, user, onLogout }) => {
       <header className="bg-dark-800 shadow-lg border-b border-gold-600/20 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/dashboard" className="flex items-center space-x-3">
-              <img src={Logo} alt="XLand Infra" className="h-10 w-auto" />
-              <span className="text-xl font-bold text-white hidden sm:block">
+            <Link to="/dashboard" className="flex items-center space-x-4">
+              <BrandLogo size="sm" className="hidden sm:flex" />
+              <BrandLogo size="xs" showText={false} className="sm:hidden" />
+              <span className="text-lg font-semibold text-white hidden md:block border-l border-gold-500/30 pl-4">
                 Customer Portal
               </span>
             </Link>

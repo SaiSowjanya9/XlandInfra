@@ -6,7 +6,7 @@ import {
 import { getVendors } from '../utils/vendorStore';
 import { getEstimatesByPropertyId, seedTestEstimateForProperty } from '../utils/estimateStore';
 import { 
-  saveServiceVendorAssignments, 
+  saveServiceVendorAssignmentsWithSync, 
   getServiceVendorAssignmentsByEstimate 
 } from '../utils/assignmentStore';
 
@@ -583,7 +583,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
         }
       });
       
-      const result = saveServiceVendorAssignments(
+      const result = saveServiceVendorAssignmentsWithSync(
         property.propertyId,
         selectedEstimate.estimateId,
         serviceAssignments,

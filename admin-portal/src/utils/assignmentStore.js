@@ -374,3 +374,86 @@ export const getPropertyAssignmentSummary = (propertyId) => {
     }))
   };
 };
+
+// ============================================
+// Real-time Sync & Event System
+// ============================================
+
+// Custom event for assignment changes - enables two-way sync
+const ASSIGNMENT_CHANGE_EVENT = 'vendorAssignmentChanged';
+
+// Dispatch change event for real-time sync across components
+export const dispatchAssignmentChange = (action, data) => {
+  const event = new CustomEvent(ASSIGNMENT_CHANGE_EVENT, {
+    detail: { action, data, timestamp: new Date().toISOString() }
+  });
+  window.dispatchEvent(event);
+  console.log('[AssignmentStore] Dispatched change event:', action, data?.id || data?.length || '');
+};
+
+// Subscribe to assignment changes
+export const subscribeToAssignmentChanges = (callback) => {
+  const handler = (event) => callback(event.detail);
+  window.addEventListener(ASSIGNMENT_CHANGE_EVENT, handler);
+  return () => window.removeEventListener(ASSIGNMENT_CHANGE_EVENT, handler);
+};
+
+// Enhanced update function with sync notification
+export const updateServiceVendorAssignmentWithSync = (assignmentId, updates) => {
+  const result = updateServiceVendorAssignment(assignmentId, updates);
+  if (result.success) {
+    dispatchAssignmentChange('update', result.data);
+  }
+  return result;
+};
+
+// Enhanced save function with sync notification
+export const saveServiceVendorAssignmentsWithSync = (propertyId, estimateId, serviceAssignments, propertyInfo = {}) => {
+  const result = saveServiceVendorAssignments(propertyId, estimateId, serviceAssignments, propertyInfo);
+  if (result.success) {
+    dispatchAssignmentChange('save', result.data);
+  }
+  return result;
+};
+
+// Enhanced remove function with sync notification
+export const removeServiceVendorAssignmentWithSync = (assignmentId) => {
+  const result = removeServiceVendorAssignment(assignmentId);
+  if (result.success) {
+    dispatchAssignmentChange('remove', { id: assignmentId });
+  }
+  return result;
+};
+
+// Get unique service types from all assignments
+export const getUniqueServiceTypes = () => {
+  const assignments = getServiceVendorAssignments('all');
+  return [...new Set(assignments.map(a => a.serviceType).filter(Boolean))].sort();
+};
+
+// Get unique zones from all assignments
+export const getUniqueZones = () => {
+  const assignments = getServiceVendorAssignments('all');
+  return [...new Set(assignments.map(a => a.propertyZone).filter(Boolean))].sort();
+};
+
+// Get assignments grouped by property
+export const getAssignmentsGroupedByProperty = (status = 'active') => {
+  const assignments = getServiceVendorAssignments(status);
+  const grouped = {};
+  
+  assignments.forEach(assignment => {
+    const key = assignment.propertyId;
+    if (!grouped[key]) {
+      grouped[key] = {
+        propertyId: assignment.propertyId,
+        propertyName: assignment.propertyName,
+        propertyZone: assignment.propertyZone,
+        assignments: []
+      };
+    }
+    grouped[key].assignments.push(assignment);
+  });
+  
+  return Object.values(grouped);
+};

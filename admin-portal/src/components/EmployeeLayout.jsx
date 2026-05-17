@@ -14,8 +14,6 @@ import {
   Users,
   ClipboardCheck,
   FileText,
-  PanelLeft,
-  PanelLeftClose,
   Briefcase,
   Plus,
   List,
@@ -31,7 +29,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
   const [vendorOpen, setVendorOpen] = useState(
     location.pathname.startsWith('/employee/add-vendor') ||
@@ -88,7 +85,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     const handleClick = (e) => {
       if (mobile) setSidebarOpen(false);
 
-      // Check for unsaved form changes
       if (localStorage.getItem('formDirty') === 'true') {
         e.preventDefault();
         const confirmed = window.confirm("You haven't submitted the form yet. Are you sure you want to leave this page?");
@@ -102,10 +98,10 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
       <Link
         to={item.path}
         onClick={handleClick}
-        className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
           isActive
-            ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-500/30'
-            : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700'
+            ? 'bg-primary-600 text-white'
+            : 'text-gray-600 hover:bg-gray-100'
         }`}
       >
         <Icon className="w-5 h-5" />
@@ -115,16 +111,16 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gray-100">
       {/* Mobile Header */}
-      <header className="lg:hidden bg-white shadow-sm border-b border-indigo-100 sticky top-0 z-40">
+      <header className="lg:hidden bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
         <div className="flex items-center justify-between px-4 h-16">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-indigo-50">
-            <Menu className="w-6 h-6 text-indigo-600" />
+          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100">
+            <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center space-x-2">
-            <Briefcase className="w-6 h-6 text-indigo-600" />
-            <span className="font-bold text-gray-900">Employee Portal</span>
+            <Briefcase className="w-6 h-6 text-primary-600" />
+            <span className="font-bold text-gray-900">{admin?.role === 'admin' ? 'Admin Portal' : 'Operations Manager'}</span>
           </div>
           <div className="w-10" />
         </div>
@@ -137,48 +133,35 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full ${sidebarExpanded ? 'lg:w-80' : 'w-64'} bg-white/95 backdrop-blur-sm border-r border-indigo-100 z-50 transform transition-all duration-300 lg:translate-x-0 ${
+        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between px-6 h-16 border-b border-indigo-100 bg-gradient-to-r from-indigo-50/80 to-blue-50/80">
+          <div className="flex items-center justify-between px-6 h-16 border-b border-gray-200">
             <div className="flex items-center space-x-2">
-              <div className="w-9 h-9 bg-gradient-to-br from-indigo-600 to-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-300/50">
-                <Briefcase className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-lg text-gray-900">Employee</span>
+              <Briefcase className="w-8 h-8 text-primary-600" />
+              <span className="font-bold text-lg text-gray-900">{admin?.role === 'admin' ? 'Admin' : 'Ops Manager'}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setSidebarExpanded((prev) => !prev)}
-                className="hidden lg:flex p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 transition-colors duration-200"
-                title={sidebarExpanded ? 'Set normal width' : 'Expand panel width'}
-                aria-label={sidebarExpanded ? 'Set normal width' : 'Expand panel width'}
-              >
-                {sidebarExpanded ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
-              </button>
-              <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-indigo-50">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Admin Info */}
-          <div className="px-6 py-4 border-b border-indigo-50 bg-white">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Signed in as</p>
-            <p className="font-semibold text-gray-900 mt-1">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <p className="text-sm text-gray-500">Logged in as</p>
+            <p className="font-semibold text-gray-900">
               {admin?.firstName} {admin?.lastName}
             </p>
-            <span className="inline-block mt-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-700">
-              {admin?.role === 'admin' ? 'Admin' : 'Employee'}
+            <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+              {admin?.role === 'admin' ? 'Admin' : 'Operations Manager'}
             </span>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/80">
-            <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Menu</p>
+          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
             {navItems.map((item) => (
               <NavLink key={item.path} item={item} mobile />
             ))}
@@ -187,10 +170,10 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             <div className="mt-2">
               <button
                 onClick={() => setVendorOpen(!vendorOpen)}
-                className={`flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 ${
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
                   isVendorSectionActive && !vendorOpen
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700'
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -204,7 +187,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
                 />
               </button>
               {vendorOpen && (
-                <div className="ml-4 mt-1 space-y-1 border-l-2 border-indigo-100 pl-2">
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
                   {vendorSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
                   ))}
@@ -216,10 +199,10 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             <div className="mt-2">
               <button
                 onClick={() => setEmployeeOpen(!employeeOpen)}
-                className={`flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 ${
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
                   isEmployeeSectionActive && !employeeOpen
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700'
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -233,7 +216,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
                 />
               </button>
               {employeeOpen && (
-                <div className="ml-4 mt-1 space-y-1 border-l-2 border-indigo-100 pl-2">
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
                   {employeeSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
                   ))}
@@ -245,15 +228,15 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             <div className="mt-2">
               <button
                 onClick={() => setEstimatesOpen(!estimatesOpen)}
-                className={`flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 ${
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
                   isEstimatesSectionActive && !estimatesOpen
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700'
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 <div className="flex items-center space-x-3">
                   <FileText className="w-5 h-5" />
-                  <span className="font-medium">Estimates</span>
+                  <span className="font-medium">Estimates / AMC</span>
                 </div>
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-200 ${
@@ -262,7 +245,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
                 />
               </button>
               {estimatesOpen && (
-                <div className="ml-4 mt-1 space-y-1 border-l-2 border-indigo-100 pl-2">
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
                   {estimatesSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
                   ))}
@@ -273,10 +256,10 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
           </nav>
 
           {/* Logout */}
-          <div className="p-4 border-t border-indigo-50 bg-white">
+          <div className="p-4 border-t border-gray-200">
             <button
               onClick={onLogout}
-              className="flex items-center space-x-3 w-full px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200"
+              className="flex items-center space-x-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
             >
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Logout</span>
@@ -286,7 +269,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
       </aside>
 
       {/* Main Content */}
-      <main className={`min-h-screen transition-all duration-300 ${sidebarExpanded ? 'lg:ml-80' : 'lg:ml-64'}`}>
+      <main className="lg:ml-64 min-h-screen">
         <div className="p-4 lg:p-8">{children}</div>
       </main>
     </div>

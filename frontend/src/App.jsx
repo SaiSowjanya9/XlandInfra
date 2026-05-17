@@ -9,9 +9,17 @@ import Schedule from './pages/Schedule';
 import Payment from './pages/Payment';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import ActivateAccount from './pages/ActivateAccount';
-import Logo from './assets/LOGO 2.png';
+import InvestmentConsultation from './pages/services/InvestmentConsultation';
+import DesignConceptualization from './pages/services/DesignConceptualization';
+import ConstructionDelivery from './pages/services/ConstructionDelivery';
+import PropertySalesAdvisory from './pages/services/PropertySalesAdvisory';
+import BrokerageServices from './pages/services/BrokerageServices';
+import PrivacyPolicy from './pages/legal/PrivacyPolicy';
+import TermsOfService from './pages/legal/TermsOfService';
+import CookiePolicy from './pages/legal/CookiePolicy';
+import BrandLogo from './components/BrandLogo';
+import CookieConsent from './components/CookieConsent';
 
 // Vendor Portal Coming Soon Component
 function VendorPortalComingSoon() {
@@ -25,7 +33,9 @@ function VendorPortalComingSoon() {
       
       <div className="relative z-10 text-center px-6 max-w-2xl mx-auto">
         {/* Logo */}
-        <img src={Logo} alt="XLAND INFRA" className="h-20 w-auto mx-auto mb-8 float-slow" />
+        <div className="flex justify-center mb-8 float-slow">
+          <BrandLogo size="xl" />
+        </div>
         
         {/* Title */}
         <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">
@@ -108,7 +118,9 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-charcoal-900">
         <div className="text-center">
-          <img src={Logo} alt="XLAND INFRA" className="h-16 w-auto mx-auto mb-6 animate-pulse" />
+          <div className="flex justify-center mb-6 animate-pulse">
+            <BrandLogo size="lg" />
+          </div>
           <div className="w-12 h-12 border-2 border-gold-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
       </div>
@@ -124,12 +136,21 @@ function App() {
         {/* Customer Portal Home (after login) */}
         <Route path="/portal" element={<CustomerHome />} />
         
+        {/* Service Pages */}
+                <Route path="/services/investment-consultation" element={<InvestmentConsultation />} />
+        <Route path="/services/design-conceptualization" element={<DesignConceptualization />} />
+        <Route path="/services/construction-delivery" element={<ConstructionDelivery />} />
+        <Route path="/services/property-sales-advisory" element={<PropertySalesAdvisory />} />
+        <Route path="/services/brokerage-services" element={<BrokerageServices />} />
+        
+        {/* Legal Pages */}
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/cookie-policy" element={<CookiePolicy />} />
+        
         {/* Customer Portal Routes */}
         <Route path="/login" element={
           user ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />
-        } />
-        <Route path="/register" element={
-          user ? <Navigate to="/dashboard" replace /> : <Register />
         } />
         <Route path="/activate/:token" element={<ActivateAccount />} />
         <Route path="/dashboard/*" element={
@@ -160,7 +181,9 @@ function App() {
               <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gold-600/5 rounded-full blur-3xl"></div>
             </div>
             <div className="relative z-10 text-center px-6">
-              <img src={Logo} alt="XLAND INFRA" className="h-20 w-auto mx-auto mb-8" />
+              <div className="flex justify-center mb-8">
+                <BrandLogo size="xl" />
+              </div>
               <h1 className="text-4xl font-display font-bold text-white mb-4">
                 Admin <span className="text-gold-gradient">Portal</span>
               </h1>
@@ -181,6 +204,7 @@ function App() {
           </div>
         } />
       </Routes>
+      <CookieConsent />
     </Router>
   );
 }

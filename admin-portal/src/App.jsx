@@ -4,11 +4,9 @@ import { seedTestData } from './utils/estimateStore';
 
 import PortalSelector from './pages/PortalSelector';
 import EmployeeLogin from './pages/EmployeeLogin';
-import CustomerLogin from './pages/CustomerLogin';
 import VendorLogin from './pages/VendorLogin';
 
 import EmployeeLayout from './components/EmployeeLayout';
-import CustomerLayout from './components/CustomerLayout';
 import VendorLayout from './components/VendorLayout';
 import FPLayout from './components/FPLayout';
 
@@ -19,12 +17,6 @@ import CreateCustomer from './pages/CreateCustomer';
 import WorkOrders from './pages/WorkOrders';
 import EmployeeWorkOrders from './pages/EmployeeWorkOrders';
 import Categories from './pages/Categories';
-
-import CustomerDashboard from './pages/CustomerDashboard';
-import CustomerWorkOrder from './pages/CustomerWorkOrder';
-import CustomerPayment from './pages/CustomerPayment';
-import CustomerSchedule from './pages/CustomerSchedule';
-import CustomerContact from './pages/CustomerContact';
 
 import VendorDashboard from './pages/VendorDashboard';
 import VendorDetails from './pages/VendorDetails';
@@ -89,7 +81,7 @@ import UserManagement from './pages/UserManagement';
 
 function App() {
   const [user, setUser] = useState(null);
-  const [portal, setPortal] = useState(null); // 'employee' | 'customer' | 'vendor'
+  const [portal, setPortal] = useState(null); // 'employee' | 'vendor'
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -163,9 +155,6 @@ function App() {
     if (portal === 'employee') {
       return <EmployeeLogin onLogin={handleLogin} onBack={handleBackToPortals} />;
     }
-    if (portal === 'customer') {
-      return <CustomerLogin onLogin={handleLogin} onBack={handleBackToPortals} />;
-    }
     if (portal === 'vendor') {
       return <VendorLogin onLogin={handleLogin} onBack={handleBackToPortals} />;
     }
@@ -216,23 +205,6 @@ function App() {
     );
   }
 
-  if (portal === 'customer') {
-    return (
-      <Router>
-        <CustomerLayout admin={user} onLogout={handleLogout}>
-          <Routes>
-            <Route path="/customer" element={<CustomerDashboard user={user} />} />
-            <Route path="/customer/work-order" element={<CustomerWorkOrder user={user} />} />
-            <Route path="/customer/payment" element={<CustomerPayment user={user} />} />
-            <Route path="/customer/schedule" element={<CustomerSchedule user={user} />} />
-            <Route path="/customer/contact" element={<CustomerContact user={user} />} />
-            <Route path="*" element={<Navigate to="/customer" replace />} />
-          </Routes>
-        </CustomerLayout>
-      </Router>
-    );
-  }
-
   if (portal === 'vendor') {
     return (
       <Router>
@@ -258,7 +230,7 @@ function App() {
             <Route path="/fp/users" element={<FPUsers user={user} />} />
             <Route path="/fp/vendors" element={<FPVendors user={user} />} />
             <Route path="/fp/vendors/add" element={<FPVendors user={user} />} />
-            <Route path="/fp/vendors/assigned" element={<FPVendors user={user} />} />
+            <Route path="/fp/vendors/assigned" element={<AssignedVendors />} />
             <Route path="/fp/employees" element={<FPEmployees user={user} />} />
             <Route path="/fp/employees/add" element={<FPEmployees user={user} />} />
             <Route path="/fp/employees/zones" element={<FPEmployees user={user} />} />
@@ -287,7 +259,7 @@ function App() {
             <Route path="/manager/customers" element={<ManagerCustomers user={user} />} />
             <Route path="/manager/vendors" element={<ManagerVendors user={user} />} />
             <Route path="/manager/vendors/add" element={<ManagerVendors user={user} />} />
-            <Route path="/manager/vendors/assigned" element={<ManagerVendors user={user} />} />
+            <Route path="/manager/vendors/assigned" element={<AssignedVendors />} />
             <Route path="/manager/estimates" element={<ManagerEstimates user={user} defaultTab="list" />} />
             <Route path="/manager/estimates/create" element={<ManagerEstimates user={user} defaultTab="create" />} />
             <Route path="/manager/estimates/archived" element={<ManagerEstimates user={user} defaultTab="archived" />} />
@@ -310,7 +282,7 @@ function App() {
             <Route path="/coordinator/work-orders/completed" element={<CoordinatorWorkOrders user={user} />} />
             <Route path="/coordinator/customers" element={<CoordinatorCustomers user={user} />} />
             <Route path="/coordinator/vendors" element={<CoordinatorVendors user={user} />} />
-            <Route path="/coordinator/vendors/assigned" element={<CoordinatorVendors user={user} />} />
+            <Route path="/coordinator/vendors/assigned" element={<AssignedVendors />} />
             <Route path="/coordinator/estimates" element={<CoordinatorEstimates user={user} defaultTab="list" />} />
             <Route path="/coordinator/estimates/create" element={<CoordinatorEstimates user={user} defaultTab="create" />} />
             <Route path="/coordinator/estimates/archived" element={<CoordinatorEstimates user={user} defaultTab="archived" />} />
@@ -333,6 +305,7 @@ function App() {
             <Route path="/supervisor/work-orders/completed" element={<SupervisorWorkOrders user={user} />} />
             <Route path="/supervisor/customers" element={<SupervisorCustomers user={user} />} />
             <Route path="/supervisor/vendors" element={<SupervisorVendors user={user} />} />
+            <Route path="/supervisor/vendors/assigned" element={<AssignedVendors />} />
             <Route path="/supervisor/estimates" element={<SupervisorEstimates user={user} defaultTab="list" />} />
             <Route path="/supervisor/estimates/create" element={<SupervisorEstimates user={user} defaultTab="create" />} />
             <Route path="/supervisor/estimates/archived" element={<SupervisorEstimates user={user} defaultTab="archived" />} />
@@ -355,6 +328,7 @@ function App() {
             <Route path="/executive/work-orders/completed" element={<ExecutiveWorkOrders user={user} />} />
             <Route path="/executive/customers" element={<ExecutiveCustomers user={user} />} />
             <Route path="/executive/vendors" element={<ExecutiveVendors user={user} />} />
+            <Route path="/executive/vendors/assigned" element={<AssignedVendors />} />
             <Route path="/executive/estimates" element={<ExecutiveEstimates user={user} defaultTab="list" />} />
             <Route path="/executive/estimates/create" element={<ExecutiveEstimates user={user} defaultTab="create" />} />
             <Route path="/executive/estimates/archived" element={<ExecutiveEstimates user={user} defaultTab="archived" />} />
