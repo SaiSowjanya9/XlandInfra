@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { authenticate } = require('../middleware/auth');
@@ -34,7 +34,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Find supervisor user
-    const [users] = await db.query(
+    const [users] = await pool.query(
       `SELECT id, username, email, password_hash, first_name, last_name, role, is_active
        FROM users 
        WHERE (username = ? OR email = ?) AND role = 'supervisor'`,
@@ -115,54 +115,54 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
 
     // Get counts for supervisor's data
-    const [propertiesCount] = await db.query(
+    const [propertiesCount] = await pool.query(
       `SELECT COUNT(*) as count FROM properties WHERE supervisor_id = ?
        UNION ALL
        SELECT COUNT(*) FROM supervisor_assigned_properties WHERE supervisor_id = ?`,
       [supervisorId, supervisorId]
     );
 
-    const [vendorsCount] = await db.query(
+    const [vendorsCount] = await pool.query(
       `SELECT COUNT(*) as count FROM vendors WHERE supervisor_id = ?
        UNION ALL
        SELECT COUNT(*) FROM supervisor_assigned_vendors WHERE supervisor_id = ?`,
       [supervisorId, supervisorId]
     );
 
-    const [customersCount] = await db.query(
+    const [customersCount] = await pool.query(
       `SELECT COUNT(*) as count FROM clients WHERE supervisor_id = ?`,
       [supervisorId]
     );
 
-    const [employeesCount] = await db.query(
+    const [employeesCount] = await pool.query(
       `SELECT COUNT(*) as count FROM supervisor_employees WHERE supervisor_id = ?`,
       [supervisorId]
     );
 
-    const [workOrdersCount] = await db.query(
+    const [workOrdersCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders WHERE supervisor_id = ?`,
       [supervisorId]
     );
 
-    const [pendingWOCount] = await db.query(
+    const [pendingWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
        WHERE supervisor_id = ? AND status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
       [supervisorId]
     );
 
-    const [completedWOCount] = await db.query(
+    const [completedWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
        WHERE supervisor_id = ? AND status IN ('completed', 'closed')`,
       [supervisorId]
     );
 
-    const [estimatesCount] = await db.query(
+    const [estimatesCount] = await pool.query(
       `SELECT COUNT(*) as count FROM estimates WHERE supervisor_id = ?`,
       [supervisorId]
     );
 
     // Get recent work orders
-    const [recentWorkOrders] = await db.query(
+    const [recentWorkOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, sc.name as category_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
@@ -203,7 +203,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
 
     // Get both own and assigned properties
-    const [properties] = await db.query(
+    const [properties] = await pool.query(
       `SELECT p.*, z.name as zone_name, 
               'own' as access_type, TRUE as can_modify, TRUE as can_delete,
               TRUE as can_assign_vendor, TRUE as can_assign_employee
@@ -236,7 +236,7 @@ router.post('/properties', requireSupervisorScope, async (req, res) => {
 
     const propertyId = `PROP-SUP-${Date.now()}`;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
         contact_person, contact_phone, contact_email, zone_id, supervisor_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -264,7 +264,7 @@ router.put('/properties/:id', requireSupervisorScope, validateOwnership('propert
     const { id } = req.params;
     const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
 
-    await db.query(
+    await pool.query(
       `UPDATE properties SET name = ?, property_type = ?, address = ?, city = ?, state = ?, 
         zip_code = ?, contact_person = ?, contact_phone = ?, contact_email = ?, zone_id = ?
        WHERE id = ?`,
@@ -285,7 +285,7 @@ router.delete('/properties/:id', requireSupervisorScope, validateOwnership('prop
     }
 
     const { id } = req.params;
-    await db.query('DELETE FROM properties WHERE id = ?', [id]);
+    await pool.query('DELETE FROM properties WHERE id = ?', [id]);
     res.json({ success: true, message: 'Property deleted successfully' });
   } catch (error) {
     console.error('Property delete error:', error);
@@ -300,7 +300,7 @@ router.post('/properties/:id/assign-vendor', requireSupervisorScope, async (req,
     const supervisorId = req.supervisorId;
 
     // Verify property belongs to supervisor
-    const [property] = await db.query(
+    const [property] = await pool.query(
       `SELECT id FROM properties WHERE id = ? AND supervisor_id = ?
        UNION
        SELECT property_id FROM supervisor_assigned_properties WHERE property_id = ? AND supervisor_id = ? AND can_assign_vendor = TRUE`,
@@ -311,7 +311,7 @@ router.post('/properties/:id/assign-vendor', requireSupervisorScope, async (req,
       return res.status(403).json({ success: false, message: 'Cannot assign vendor to this property' });
     }
 
-    await db.query(
+    await pool.query(
       'UPDATE properties SET assigned_vendor_id = ? WHERE id = ?',
       [vendorId, id]
     );
@@ -330,7 +330,7 @@ router.post('/properties/:id/assign-employee', requireSupervisorScope, async (re
     const supervisorId = req.supervisorId;
 
     // Verify property belongs to supervisor
-    const [property] = await db.query(
+    const [property] = await pool.query(
       `SELECT id FROM properties WHERE id = ? AND supervisor_id = ?
        UNION
        SELECT property_id FROM supervisor_assigned_properties WHERE property_id = ? AND supervisor_id = ? AND can_assign_employee = TRUE`,
@@ -341,7 +341,7 @@ router.post('/properties/:id/assign-employee', requireSupervisorScope, async (re
       return res.status(403).json({ success: false, message: 'Cannot assign employee to this property' });
     }
 
-    await db.query(
+    await pool.query(
       'UPDATE properties SET assigned_employee_id = ? WHERE id = ?',
       [employeeId, id]
     );
@@ -378,7 +378,7 @@ router.get('/work-orders', requireSupervisorScope, async (req, res) => {
 
     query += ' ORDER BY wo.created_at DESC';
 
-    const [workOrders] = await db.query(query, params);
+    const [workOrders] = await pool.query(query, params);
     res.json({ success: true, data: workOrders });
   } catch (error) {
     console.error('Work orders fetch error:', error);
@@ -390,7 +390,7 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
 
-    const [workOrders] = await db.query(
+    const [workOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, sc.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
@@ -412,7 +412,7 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
   try {
     const supervisorId = req.supervisorId;
 
-    const [workOrders] = await db.query(
+    const [workOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, sc.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
@@ -437,7 +437,7 @@ router.post('/work-orders', requireSupervisorScope, async (req, res) => {
 
     const workOrderId = `WO-SUP-${Date.now()}`;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
         priority, permission_to_enter, has_pet, scheduled_date, supervisor_id, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested')`,
@@ -467,7 +467,7 @@ router.patch('/work-orders/:id/status', requireSupervisorScope, validateOwnershi
       return res.status(403).json({ success: false, message: 'You can only update status to requested or under_review' });
     }
 
-    await db.query('UPDATE work_orders SET status = ? WHERE id = ?', [status, id]);
+    await pool.query('UPDATE work_orders SET status = ? WHERE id = ?', [status, id]);
     res.json({ success: true, message: 'Status updated successfully' });
   } catch (error) {
     console.error('Status update error:', error);
@@ -482,7 +482,7 @@ router.get('/customers', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
 
-    const [customers] = await db.query(
+    const [customers] = await pool.query(
       `SELECT c.*, p.name as property_name
        FROM clients c
        LEFT JOIN properties p ON c.property_id = p.id
@@ -505,7 +505,7 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
 
     const clientId = `CLT-SUP-${Date.now()}`;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
         zip_code, client_type, company_name, property_id, gst_number, supervisor_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -532,7 +532,7 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
 
     // Get own vendors
-    const [ownVendors] = await db.query(
+    const [ownVendors] = await pool.query(
       `SELECT v.*, 'own' as vendor_type, TRUE as can_modify, TRUE as can_delete
        FROM vendors v
        WHERE v.supervisor_id = ?`,
@@ -540,7 +540,7 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
     );
 
     // Get assigned vendors
-    const [assignedVendors] = await db.query(
+    const [assignedVendors] = await pool.query(
       `SELECT v.*, 'assigned' as vendor_type, sav.can_modify, sav.can_delete
        FROM vendors v
        INNER JOIN supervisor_assigned_vendors sav ON v.id = sav.vendor_id
@@ -569,7 +569,7 @@ router.post('/vendors', requireSupervisorScope, async (req, res) => {
 
     const vendorId = `VND-SUP-${Date.now()}`;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO vendors (vendor_id, company_name, contact_person, email, phone, alternate_phone, 
         address, city, state, zip_code, gst_number, pan_number, supervisor_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -596,7 +596,7 @@ router.put('/vendors/:id', requireSupervisorScope, validateOwnership('vendors', 
     const { id } = req.params;
     const { companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber } = req.body;
 
-    await db.query(
+    await pool.query(
       `UPDATE vendors SET company_name = ?, contact_person = ?, email = ?, phone = ?, 
         alternate_phone = ?, address = ?, city = ?, state = ?, zip_code = ?, gst_number = ?, pan_number = ?
        WHERE id = ?`,
@@ -617,7 +617,7 @@ router.delete('/vendors/:id', requireSupervisorScope, validateOwnership('vendors
     }
 
     const { id } = req.params;
-    await db.query('DELETE FROM vendors WHERE id = ?', [id]);
+    await pool.query('DELETE FROM vendors WHERE id = ?', [id]);
     res.json({ success: true, message: 'Vendor deleted successfully' });
   } catch (error) {
     console.error('Vendor delete error:', error);
@@ -632,7 +632,7 @@ router.get('/employees', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
 
-    const [employees] = await db.query(
+    const [employees] = await pool.query(
       `SELECT se.*, GROUP_CONCAT(z.name) as zone_names
        FROM supervisor_employees se
        LEFT JOIN supervisor_employee_zones sez ON se.id = sez.supervisor_employee_id
@@ -655,7 +655,7 @@ router.get('/employees/:id', requireSupervisorScope, async (req, res) => {
     const { id } = req.params;
     const supervisorId = req.supervisorId;
 
-    const [employees] = await db.query(
+    const [employees] = await pool.query(
       `SELECT se.*, GROUP_CONCAT(z.id) as zone_ids, GROUP_CONCAT(z.name) as zone_names
        FROM supervisor_employees se
        LEFT JOIN supervisor_employee_zones sez ON se.id = sez.supervisor_employee_id
@@ -683,7 +683,7 @@ router.post('/employees', requireSupervisorScope, async (req, res) => {
 
     const employeeCode = `EMP-SUP-${Date.now()}`;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO supervisor_employees (supervisor_id, employee_code, first_name, last_name, email, phone, role)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [supervisorId, employeeCode, firstName, lastName, email, phone, role || 'sup_executive']
@@ -692,7 +692,7 @@ router.post('/employees', requireSupervisorScope, async (req, res) => {
     // Assign zones
     if (assignedZones && assignedZones.length > 0) {
       const zoneValues = assignedZones.map(zoneId => [result.insertId, zoneId]);
-      await db.query(
+      await pool.query(
         'INSERT INTO supervisor_employee_zones (supervisor_employee_id, zone_id) VALUES ?',
         [zoneValues]
       );
@@ -716,7 +716,7 @@ router.put('/employees/:id', requireSupervisorScope, async (req, res) => {
     const { firstName, lastName, email, phone, role, assignedZones } = req.body;
 
     // Verify ownership
-    const [existing] = await db.query(
+    const [existing] = await pool.query(
       'SELECT id FROM supervisor_employees WHERE id = ? AND supervisor_id = ?',
       [id, supervisorId]
     );
@@ -725,7 +725,7 @@ router.put('/employees/:id', requireSupervisorScope, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    await db.query(
+    await pool.query(
       `UPDATE supervisor_employees SET first_name = ?, last_name = ?, email = ?, phone = ?, role = ?
        WHERE id = ?`,
       [firstName, lastName, email, phone, role, id]
@@ -733,10 +733,10 @@ router.put('/employees/:id', requireSupervisorScope, async (req, res) => {
 
     // Update zones
     if (assignedZones) {
-      await db.query('DELETE FROM supervisor_employee_zones WHERE supervisor_employee_id = ?', [id]);
+      await pool.query('DELETE FROM supervisor_employee_zones WHERE supervisor_employee_id = ?', [id]);
       if (assignedZones.length > 0) {
         const zoneValues = assignedZones.map(zoneId => [id, zoneId]);
-        await db.query(
+        await pool.query(
           'INSERT INTO supervisor_employee_zones (supervisor_employee_id, zone_id) VALUES ?',
           [zoneValues]
         );
@@ -755,7 +755,7 @@ router.delete('/employees/:id', requireSupervisorScope, async (req, res) => {
     const { id } = req.params;
     const supervisorId = req.supervisorId;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       'DELETE FROM supervisor_employees WHERE id = ? AND supervisor_id = ?',
       [id, supervisorId]
     );
@@ -795,7 +795,7 @@ router.get('/estimates', requireSupervisorScope, async (req, res) => {
 
     query += ' ORDER BY e.created_at DESC';
 
-    const [estimates] = await db.query(query, [supervisorId]);
+    const [estimates] = await pool.query(query, [supervisorId]);
     res.json({ success: true, data: estimates });
   } catch (error) {
     console.error('Estimates fetch error:', error);
@@ -813,7 +813,7 @@ router.post('/estimates', requireSupervisorScope, async (req, res) => {
     const discount = (subtotal * (discountPercentage || 0)) / 100;
     const totalAmount = subtotal + tax - discount;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO estimates (estimate_id, client_id, property_id, title, description, estimate_type,
         subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount, total_amount,
         valid_until, supervisor_id, status)
@@ -832,7 +832,7 @@ router.post('/estimates', requireSupervisorScope, async (req, res) => {
         item.unitPrice,
         item.totalPrice || (item.quantity * item.unitPrice)
       ]);
-      await db.query(
+      await pool.query(
         'INSERT INTO estimate_items (estimate_id, description, quantity, unit_price, total_price) VALUES ?',
         [itemValues]
       );
@@ -857,7 +857,7 @@ router.get('/amc-packages', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
     const canView = await canViewPricing(supervisorId, 'amc_packages');
 
-    const [packages] = await db.query(
+    const [packages] = await pool.query(
       `SELECT * FROM supervisor_amc_packages WHERE supervisor_id = ? ORDER BY created_at DESC`,
       [supervisorId]
     );
@@ -874,7 +874,7 @@ router.post('/amc-packages', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
     const { name, description, durationMonths, basePrice, services, termsConditions, hidePricing } = req.body;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO supervisor_amc_packages (supervisor_id, name, description, duration_months, base_price, services, terms_conditions, hide_pricing)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [supervisorId, name, description, durationMonths || 12, basePrice || 0,
@@ -900,7 +900,7 @@ router.get('/addons', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
     const canView = await canViewPricing(supervisorId, 'addons');
 
-    const [addons] = await db.query(
+    const [addons] = await pool.query(
       `SELECT sa.*, sc.name as category_name
        FROM supervisor_addons sa
        LEFT JOIN service_categories sc ON sa.category_id = sc.id
@@ -921,7 +921,7 @@ router.post('/addons', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
     const { name, description, price, unit, categoryId, hidePricing } = req.body;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO supervisor_addons (supervisor_id, name, description, price, unit, category_id, hide_pricing)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [supervisorId, name, description, price || 0, unit || 'per_service', categoryId || null, hidePricing !== false]
@@ -943,7 +943,7 @@ router.post('/addons', requireSupervisorScope, async (req, res) => {
 // =====================================================
 router.get('/zones', requireSupervisorScope, async (req, res) => {
   try {
-    const [zones] = await db.query('SELECT * FROM zones WHERE is_active = TRUE ORDER BY name');
+    const [zones] = await pool.query('SELECT * FROM zones WHERE is_active = TRUE ORDER BY name');
     res.json({ success: true, data: zones });
   } catch (error) {
     console.error('Zones fetch error:', error);
@@ -953,7 +953,7 @@ router.get('/zones', requireSupervisorScope, async (req, res) => {
 
 router.get('/categories', requireSupervisorScope, async (req, res) => {
   try {
-    const [categories] = await db.query('SELECT * FROM service_categories WHERE is_active = TRUE ORDER BY name');
+    const [categories] = await pool.query('SELECT * FROM service_categories WHERE is_active = TRUE ORDER BY name');
     res.json({ success: true, data: categories });
   } catch (error) {
     console.error('Categories fetch error:', error);
@@ -968,7 +968,7 @@ router.get('/export/properties', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
 
-    const [properties] = await db.query(
+    const [properties] = await pool.query(
       `SELECT p.*, z.name as zone_name FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id
        WHERE p.supervisor_id = ?`,
@@ -986,7 +986,7 @@ router.get('/export/vendors', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
 
-    const [vendors] = await db.query(
+    const [vendors] = await pool.query(
       `SELECT * FROM vendors WHERE supervisor_id = ?`,
       [supervisorId]
     );
@@ -1002,7 +1002,7 @@ router.get('/export/employees', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
 
-    const [employees] = await db.query(
+    const [employees] = await pool.query(
       `SELECT se.*, GROUP_CONCAT(z.name) as zone_names
        FROM supervisor_employees se
        LEFT JOIN supervisor_employee_zones sez ON se.id = sez.supervisor_employee_id
@@ -1023,7 +1023,7 @@ router.get('/export/work-orders', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
 
-    const [workOrders] = await db.query(
+    const [workOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, sc.name as category_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id

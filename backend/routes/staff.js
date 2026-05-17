@@ -6,10 +6,42 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { pool } = require('../config/database');
 const { authenticate, generateToken } = require('../middleware/auth');
 const { adminOnly, managerOrAdmin, requireRole, ROLES } = require('../middleware/rbac');
 const { ROLE_NAMES } = require('../config/roles');
+const { sendEmployeeWelcomeEmail } = require('../services/emailService');
+
+// Generate unique User ID based on role
+const generateUserId = (role) => {
+  const prefixes = {
+    admin: 'ADM',
+    operations_manager: 'OPM',
+    franchise_partner: 'FRP',
+    franchise: 'FRP',
+    manager: 'MGR',
+    coordinator: 'CRD',
+    supervisor: 'SUP',
+    executive: 'EXE'
+  };
+  const prefix = prefixes[role] || 'USR';
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = crypto.randomBytes(2).toString('hex').toUpperCase();
+  return `${prefix}-${timestamp}${random}`;
+};
+
+// Generate secure temporary password
+const generateTempPassword = () => {
+  const length = 12;
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!';
+  let password = '';
+  const randomBytes = crypto.randomBytes(length);
+  for (let i = 0; i < length; i++) {
+    password += chars[randomBytes[i] % chars.length];
+  }
+  return password;
+};
 
 // ============================================
 // STAFF LOGIN
@@ -120,9 +152,13 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Check if user must change password
+    const mustChangePassword = user.must_change_password === 1 || user.must_change_password === true;
+    
     // Generate token for database user
     const token = generateToken({
       id: user.id,
+      userId: user.user_id,
       username: user.username,
       email: user.email,
       role: user.role,
@@ -132,11 +168,13 @@ router.post('/login', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Login successful',
+      message: mustChangePassword ? 'Login successful. Password change required.' : 'Login successful',
       data: {
         token,
+        mustChangePassword,
         user: {
           id: user.id,
+          userId: user.user_id,
           username: user.username,
           email: user.email,
           firstName: user.first_name,
@@ -165,6 +203,7 @@ router.get('/me', authenticate, async (req, res) => {
       success: true,
       data: {
         id: req.user.id,
+        userId: req.user.userId,
         username: req.user.username,
         email: req.user.email,
         firstName: req.user.firstName,
@@ -177,6 +216,97 @@ router.get('/me', authenticate, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching user data',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// SET NEW PASSWORD (First Login / Password Reset)
+// ============================================
+router.post('/set-password', async (req, res) => {
+  try {
+    const { username, currentPassword, newPassword } = req.body;
+
+    if (!username || !currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username, current password, and new password are required'
+      });
+    }
+
+    // Validate new password strength
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 8 characters long'
+      });
+    }
+
+    // Find user
+    const [users] = await pool.execute(
+      `SELECT * FROM users WHERE (username = ? OR email = ?) AND is_active = TRUE`,
+      [username, username]
+    );
+
+    if (users.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    const user = users[0];
+
+    // Verify current/temporary password
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Hash new password and update
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    await pool.execute(
+      `UPDATE users SET password_hash = ?, must_change_password = FALSE WHERE id = ?`,
+      [newPasswordHash, user.id]
+    );
+
+    // Generate token for auto-login
+    const token = generateToken({
+      id: user.id,
+      userId: user.user_id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      first_name: user.first_name,
+      last_name: user.last_name
+    });
+
+    res.json({
+      success: true,
+      message: 'Password updated successfully',
+      data: {
+        token,
+        user: {
+          id: user.id,
+          userId: user.user_id,
+          username: user.username,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          role: user.role,
+          roleName: ROLE_NAMES[user.role]
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error setting password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating password',
       error: error.message
     });
   }
@@ -308,27 +438,29 @@ router.get('/:id', authenticate, adminOnly, async (req, res) => {
   }
 });
 
-// Create new staff member
+// Create new staff member with auto-generated temp password and email notification
 router.post('/', authenticate, adminOnly, async (req, res) => {
   try {
     const { 
-      username, email, password, firstName, lastName, phone, role,
-      canView, canCreate, canEdit, canDelete, canApprove, canAssign, canClose 
+      username, email, firstName, lastName, phone, role,
+      canView, canCreate, canEdit, canDelete, canApprove, canAssign, canClose,
+      sendEmail = true // Default to sending email
     } = req.body;
 
-    // Validation
-    if (!username || !email || !password || !firstName || !lastName || !role) {
+    // Validation - password is NOT required (auto-generated)
+    if (!username || !email || !firstName || !lastName || !role) {
       return res.status(400).json({
         success: false,
-        message: 'Username, email, password, first name, last name, and role are required'
+        message: 'Username, email, first name, last name, and role are required'
       });
     }
 
-    // Validate role
-    if (!Object.values(ROLES).includes(role) || role === ROLES.VENDOR) {
+    // Validate role - allow all 7 roles
+    const validRoles = ['admin', 'operations_manager', 'franchise_partner', 'franchise', 'manager', 'coordinator', 'supervisor', 'executive'];
+    if (!validRoles.includes(role)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid role. Must be admin, manager, supervisor, or executive'
+        message: 'Invalid role. Must be one of: admin, operations_manager, franchise_partner, manager, coordinator, supervisor, executive'
       });
     }
 
@@ -345,33 +477,55 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
       });
     }
 
-    // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    // Generate unique User ID and temporary password
+    const userId = generateUserId(role);
+    const tempPassword = generateTempPassword();
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-    // Insert new user
+    // Insert new user with must_change_password flag
     const [result] = await pool.execute(
       `INSERT INTO users (
-        username, email, password_hash, first_name, last_name, phone, role,
+        user_id, username, email, password_hash, first_name, last_name, phone, role,
         can_view, can_create, can_edit, can_delete, can_approve, can_assign, can_close,
-        created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        must_change_password, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)`,
       [
-        username, email, passwordHash, firstName, lastName, phone || null, role,
+        userId, username, email, passwordHash, firstName, lastName, phone || null, role,
         canView ?? null, canCreate ?? null, canEdit ?? null, canDelete ?? null,
         canApprove ?? null, canAssign ?? null, canClose ?? null,
         req.user.id
       ]
     );
 
+    // Send welcome email with temporary password
+    let emailSent = false;
+    if (sendEmail) {
+      const emailResult = await sendEmployeeWelcomeEmail({
+        email,
+        firstName,
+        lastName,
+        username,
+        tempPassword,
+        role,
+        userId,
+        loginUrl: process.env.ADMIN_PORTAL_URL || 'http://localhost:5174'
+      });
+      emailSent = emailResult.success;
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Staff member created successfully',
+      message: emailSent 
+        ? 'Staff member created successfully. Welcome email sent with login credentials.' 
+        : 'Staff member created successfully. Email notification could not be sent.',
       data: {
         id: result.insertId,
+        userId,
         username,
         email,
         role,
-        roleName: ROLE_NAMES[role]
+        roleName: ROLE_NAMES[role],
+        emailSent
       }
     });
   } catch (error) {

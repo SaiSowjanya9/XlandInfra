@@ -1,247 +1,260 @@
-import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Building2,
   ClipboardList,
   UserPlus,
   Store,
-  Users,
   FileText,
   LogOut,
   Menu,
   X,
   ChevronDown,
-  ChevronRight,
-  Clock,
-  CheckCircle,
-  Package,
-  PlusCircle,
-  Archive,
-  MapPin,
   Eye
 } from 'lucide-react';
 
 const SupervisorLayout = ({ admin, onLogout, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [expandedItems, setExpandedItems] = useState(['work-orders', 'employees', 'estimates']);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState({});
 
   const navItems = [
-    {
-      path: '/supervisor',
-      icon: LayoutDashboard,
-      label: 'Dashboard'
-    },
-    {
-      path: '/supervisor/properties',
-      icon: Building2,
-      label: 'Property Management'
-    },
-    {
-      id: 'work-orders',
-      icon: ClipboardList,
-      label: 'Work Orders',
-      subItems: [
-        { path: '/supervisor/work-orders', label: 'All Work Orders', icon: ClipboardList },
-        { path: '/supervisor/work-orders/pending', label: 'Pending', icon: Clock },
-        { path: '/supervisor/work-orders/completed', label: 'Completed', icon: CheckCircle }
-      ]
-    },
-    {
-      path: '/supervisor/customers',
-      icon: UserPlus,
-      label: 'Add Customer'
-    },
-    {
-      path: '/supervisor/vendors',
-      icon: Store,
-      label: 'Vendor Management'
-    },
-    {
-      id: 'estimates',
-      icon: FileText,
-      label: 'Estimates / AMC',
-      subItems: [
-        { path: '/supervisor/estimates', label: 'All Estimates', icon: FileText },
-        { path: '/supervisor/estimates/create', label: 'Create Estimate', icon: PlusCircle },
-        { path: '/supervisor/estimates/archived', label: 'Archived', icon: Archive }
-      ]
-    }
+    { path: '/supervisor', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/supervisor/properties', icon: Building2, label: 'Property Management' },
+    { path: '/supervisor/customers', icon: UserPlus, label: 'Add Customer' },
   ];
 
-  const toggleExpanded = (id) => {
-    setExpandedItems(prev =>
-      prev.includes(id)
-        ? prev.filter(item => item !== id)
-        : [...prev, id]
-    );
-  };
+  const workOrdersSubItems = [
+    { path: '/supervisor/work-orders', label: 'All Work Orders' },
+    { path: '/supervisor/work-orders/pending', label: 'Pending' },
+    { path: '/supervisor/work-orders/completed', label: 'Completed' }
+  ];
 
-  const isActive = (path) => location.pathname === path;
-  const isParentActive = (item) => {
-    if (item.subItems) {
-      return item.subItems.some(sub => location.pathname === sub.path);
-    }
-    return false;
-  };
+  const vendorSubItems = [
+    { path: '/supervisor/vendors', label: 'All Vendors' },
+    { path: '/supervisor/vendors/assigned', label: 'Assigned Vendors' }
+  ];
 
-  const handleNavigation = (path) => {
-    navigate(path);
-    setMobileMenuOpen(false);
-  };
+  const estimatesSubItems = [
+    { path: '/supervisor/estimates', label: 'All Estimates' },
+    { path: '/supervisor/estimates/create', label: 'Create Estimate' },
+    { path: '/supervisor/estimates/archived', label: 'Archived' }
+  ];
 
-  const renderNavItem = (item) => {
-    if (item.subItems) {
-      const isExpanded = expandedItems.includes(item.id);
-      const parentActive = isParentActive(item);
+  const isWorkOrdersActive = workOrdersSubItems.some(item => location.pathname === item.path);
+  const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
+  const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path);
 
-      return (
-        <div key={item.id}>
-          <button
-            onClick={() => toggleExpanded(item.id)}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all ${
-              parentActive
-                ? 'bg-amber-100 text-amber-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <item.icon className="w-5 h-5" />
-              {sidebarOpen && <span className="font-medium">{item.label}</span>}
-            </div>
-            {sidebarOpen && (
-              isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
-            )}
-          </button>
-          {sidebarOpen && isExpanded && (
-            <div className="ml-4 mt-1 space-y-1">
-              {item.subItems.map(sub => (
-                <button
-                  key={sub.path}
-                  onClick={() => handleNavigation(sub.path)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
-                    isActive(sub.path)
-                      ? 'bg-amber-500 text-white'
-                      : 'text-gray-500 hover:bg-gray-100'
-                  }`}
-                >
-                  <sub.icon className="w-4 h-4" />
-                  <span>{sub.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
+  useEffect(() => {
+    if (isWorkOrdersActive) setExpandedMenus(prev => ({ ...prev, workOrders: true }));
+    if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
+    if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
+  }, [location.pathname]);
 
+  const NavLink = ({ item, mobile = false }) => {
+    const Icon = item.icon;
+    const isActive = location.pathname === item.path;
     return (
-      <button
-        key={item.path}
-        onClick={() => handleNavigation(item.path)}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-          isActive(item.path)
-            ? 'bg-amber-500 text-white'
+      <Link
+        to={item.path}
+        onClick={() => mobile && setSidebarOpen(false)}
+        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+          isActive
+            ? 'bg-primary-600 text-white'
             : 'text-gray-600 hover:bg-gray-100'
         }`}
       >
-        <item.icon className="w-5 h-5" />
-        {sidebarOpen && <span className="font-medium">{item.label}</span>}
-      </button>
+        <Icon className="w-5 h-5" />
+        <span className="font-medium">{item.label}</span>
+      </Link>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Desktop Sidebar */}
+    <div className="min-h-screen bg-gray-100">
+      {/* Mobile Header */}
+      <header className="lg:hidden bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+        <div className="flex items-center justify-between px-4 h-16">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100">
+            <Menu className="w-6 h-6" />
+          </button>
+          <div className="flex items-center space-x-2">
+            <Eye className="w-6 h-6 text-primary-600" />
+            <span className="font-bold text-gray-900">Supervisor Portal</span>
+          </div>
+          <div className="w-10" />
+        </div>
+      </header>
+
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Sidebar */}
       <aside
-        className={`hidden md:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 ${
-          sidebarOpen ? 'w-64' : 'w-20'
+        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Header */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
-          {sidebarOpen && (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-                <Eye className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-gray-900">Supervisor</span>
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="flex items-center justify-between px-6 h-16 border-b border-gray-200">
+            <div className="flex items-center space-x-2">
+              <Eye className="w-8 h-8 text-primary-600" />
+              <span className="font-bold text-lg text-gray-900">Supervisor</span>
             </div>
-          )}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
-            <Menu className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {navItems.map(renderNavItem)}
-        </nav>
-
-        {/* User & Logout */}
-        <div className="p-4 border-t border-gray-100">
-          {sidebarOpen && (
-            <div className="mb-3 px-3">
-              <p className="font-medium text-gray-900 truncate">
-                {admin?.firstName || 'Supervisor'}
-              </p>
-              <p className="text-sm text-gray-500 truncate">{admin?.email}</p>
-            </div>
-          )}
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"
-          >
-            <LogOut className="w-5 h-5" />
-            {sidebarOpen && <span className="font-medium">Logout</span>}
-          </button>
-        </div>
-      </aside>
-
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-50">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-            <Eye className="w-5 h-5 text-white" />
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <span className="font-bold text-gray-900">Supervisor</span>
-        </div>
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 hover:bg-gray-100 rounded-lg"
-        >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
-      </div>
 
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 top-16 bg-white z-40 overflow-y-auto">
-          <nav className="p-4 space-y-1">
-            {navItems.map(renderNavItem)}
+          {/* Admin Info */}
+          <div className="px-6 py-4 border-b border-gray-200">
+            <p className="text-sm text-gray-500">Logged in as</p>
+            <p className="font-semibold text-gray-900">
+              {admin?.firstName} {admin?.lastName}
+            </p>
+            <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
+              Supervisor
+            </span>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+            {navItems.map((item) => (
+              <NavLink key={item.path} item={item} mobile />
+            ))}
+
+            {/* Work Orders Section */}
+            <div className="mt-2">
+              <button
+                onClick={() => setExpandedMenus(prev => ({ ...prev, workOrders: !prev.workOrders }))}
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isWorkOrdersActive && !expandedMenus.workOrders
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <ClipboardList className="w-5 h-5" />
+                  <span className="font-medium">Work Orders</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.workOrders ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedMenus.workOrders && (
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                  {workOrdersSubItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                        location.pathname === item.path
+                          ? 'bg-primary-600 text-white'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Vendor Management Section */}
+            <div className="mt-2">
+              <button
+                onClick={() => setExpandedMenus(prev => ({ ...prev, vendors: !prev.vendors }))}
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isVendorActive && !expandedMenus.vendors
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Store className="w-5 h-5" />
+                  <span className="font-medium">Vendor Management</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.vendors ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedMenus.vendors && (
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                  {vendorSubItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                        location.pathname === item.path
+                          ? 'bg-primary-600 text-white'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Estimates Section */}
+            <div className="mt-2">
+              <button
+                onClick={() => setExpandedMenus(prev => ({ ...prev, estimates: !prev.estimates }))}
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isEstimatesActive && !expandedMenus.estimates
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <FileText className="w-5 h-5" />
+                  <span className="font-medium">Estimates / AMC</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.estimates ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedMenus.estimates && (
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                  {estimatesSubItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                        location.pathname === item.path
+                          ? 'bg-primary-600 text-white'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </nav>
-          <div className="p-4 border-t border-gray-100">
+
+          {/* Logout */}
+          <div className="p-4 border-t border-gray-200">
             <button
               onClick={onLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-red-600 hover:bg-red-50 rounded-lg"
+              className="flex items-center space-x-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
             >
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Logout</span>
             </button>
           </div>
         </div>
-      )}
+      </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:p-6 p-4 pt-20 md:pt-6 overflow-auto">
-        {children}
+      <main className="lg:ml-64 min-h-screen">
+        <div className="p-4 lg:p-8">
+          {children}
+        </div>
       </main>
     </div>
   );

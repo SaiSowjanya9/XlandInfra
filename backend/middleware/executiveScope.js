@@ -3,7 +3,7 @@
  * Handles data isolation and ownership validation for Executive Portal
  */
 
-const db = require('../db');
+const { pool } = require('../config/database');
 
 /**
  * Attach executive scope to request
@@ -56,7 +56,7 @@ const addExecutiveFilter = (baseQuery, executiveId, alias = '') => {
 const validateExecutiveOwnership = async (tableName, recordId, executiveId, checkAssigned = false) => {
   try {
     // First check direct ownership
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       `SELECT id FROM ${tableName} WHERE id = ? AND executive_id = ?`,
       [recordId, executiveId]
     );
@@ -69,7 +69,7 @@ const validateExecutiveOwnership = async (tableName, recordId, executiveId, chec
     if (checkAssigned) {
       const assignedTable = `executive_assigned_${tableName}`;
       try {
-        const [assignedRows] = await db.query(
+        const [assignedRows] = await pool.query(
           `SELECT can_modify, can_delete FROM ${assignedTable} WHERE executive_id = ? AND ${tableName.slice(0, -1)}_id = ?`,
           [executiveId, recordId]
         );
@@ -168,7 +168,7 @@ const buildScopedQuery = (baseQuery, executiveId, options = {}) => {
  */
 const getExecutivePermissions = async (executiveId, module) => {
   try {
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       `SELECT * FROM executive_permissions WHERE executive_id = ? AND module = ?`,
       [executiveId, module]
     );

@@ -107,26 +107,23 @@ const ExecutiveDashboard = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-violet-700 rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">
-              Welcome back, {user?.firstName || 'Executive'}!
-            </h1>
-            <p className="text-indigo-100 mt-1">
-              Here's your data entry overview for today.
-            </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome back, {user?.firstName || 'Executive'}!
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Here's your data entry overview for today.
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Pending</p>
+            <p className="text-2xl font-bold text-orange-600">{stats?.pendingWorkOrders || 0}</p>
           </div>
-          <div className="hidden md:flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm text-indigo-200">Pending Work Orders</p>
-              <p className="text-3xl font-bold">{stats?.pendingWorkOrders || 0}</p>
-            </div>
-            <div className="w-px h-12 bg-white/20" />
-            <div className="text-right">
-              <p className="text-sm text-indigo-200">Completed</p>
-              <p className="text-3xl font-bold">{stats?.completedWorkOrders || 0}</p>
-            </div>
+          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Completed</p>
+            <p className="text-2xl font-bold text-green-600">{stats?.completedWorkOrders || 0}</p>
           </div>
         </div>
       </div>
@@ -137,17 +134,19 @@ const ExecutiveDashboard = ({ user }) => {
           <button
             key={stat.label}
             onClick={() => navigate(stat.path)}
-            className={`p-4 rounded-xl border ${getColorClasses(stat.color)} hover:shadow-md transition-all text-left`}
+            className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all text-left group"
           >
-            <stat.icon className="w-6 h-6 mb-2" />
-            <p className="text-2xl font-bold">{stat.value}</p>
-            <p className="text-sm opacity-70">{stat.label}</p>
+            <div className={`w-10 h-10 rounded-lg ${getColorClasses(stat.color)} flex items-center justify-center mb-3`}>
+              <stat.icon className="w-5 h-5" />
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+            <p className="text-sm text-gray-500">{stat.label}</p>
           </button>
         ))}
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="bg-white rounded-lg border border-gray-200 p-5">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {quickActions.map((action) => (

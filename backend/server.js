@@ -26,6 +26,7 @@ const managerRouter = require('./routes/manager');
 const coordinatorRouter = require('./routes/coordinator');
 const supervisorRouter = require('./routes/supervisor');
 const executiveRouter = require('./routes/executive');
+const employeeRouter = require('./routes/employee');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -101,6 +102,7 @@ app.use('/api/manager', managerRouter);
 app.use('/api/coordinator', coordinatorRouter);
 app.use('/api/supervisor', supervisorRouter);
 app.use('/api/executive', executiveRouter);
+app.use('/api/employee', employeeRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

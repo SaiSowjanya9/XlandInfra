@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, AlertCircle, CheckCircle, ArrowLeft, Lock, Mail, Key, Loader2, ShieldCheck } from 'lucide-react';
-import Logo from '../assets/LOGO 2.png';
+import BrandLogo from '../components/BrandLogo';
 
 const ActivateAccount = () => {
   const { token } = useParams();
@@ -145,7 +145,9 @@ const ActivateAccount = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 flex items-center justify-center">
         <div className="text-center">
-          <img src={Logo} alt="XLAND INFRA" className="h-16 w-auto mx-auto mb-6 animate-pulse" />
+          <div className="flex justify-center mb-6 animate-pulse">
+            <BrandLogo size="lg" />
+          </div>
           <Loader2 className="w-10 h-10 text-gold-400 animate-spin mx-auto" />
           <p className="text-gray-400 mt-4">Validating activation link...</p>
         </div>
@@ -215,7 +217,9 @@ const ActivateAccount = () => {
       <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10">
         {/* Header */}
         <div className="px-6 py-8 text-center border-b border-gold-600/20 bg-gradient-to-b from-dark-700/50 to-transparent">
-          <img src={Logo} alt="XLAND INFRA" className="h-16 w-auto mx-auto mb-4" />
+          <div className="flex justify-center mb-4">
+            <BrandLogo size="lg" />
+          </div>
           <div className="flex items-center justify-center space-x-2 mb-2">
             <ShieldCheck className="w-6 h-6 text-gold-400" />
             <h1 className="text-xl font-bold text-white">Activate Your Account</h1>

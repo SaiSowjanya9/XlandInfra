@@ -109,26 +109,23 @@ const ManagerDashboard = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">
-              Welcome back, {user?.firstName || 'Manager'}!
-            </h1>
-            <p className="text-blue-100 mt-1">
-              Here's what's happening with your operations today.
-            </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome back, {user?.firstName || 'Manager'}!
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Here's what's happening with your operations today.
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Pending</p>
+            <p className="text-2xl font-bold text-orange-600">{stats?.pendingWorkOrders || 0}</p>
           </div>
-          <div className="hidden md:flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm text-blue-200">Pending Work Orders</p>
-              <p className="text-3xl font-bold">{stats?.pendingWorkOrders || 0}</p>
-            </div>
-            <div className="w-px h-12 bg-white/20" />
-            <div className="text-right">
-              <p className="text-sm text-blue-200">Completed Today</p>
-              <p className="text-3xl font-bold">{stats?.completedWorkOrders || 0}</p>
-            </div>
+          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Completed</p>
+            <p className="text-2xl font-bold text-green-600">{stats?.completedWorkOrders || 0}</p>
           </div>
         </div>
       </div>
@@ -139,29 +136,31 @@ const ManagerDashboard = ({ user }) => {
           <button
             key={stat.label}
             onClick={() => navigate(stat.path)}
-            className={`p-4 rounded-xl border ${getColorClasses(stat.color)} hover:shadow-md transition-all text-left`}
+            className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all text-left group"
           >
-            <stat.icon className="w-6 h-6 mb-2" />
-            <p className="text-2xl font-bold">{stat.value}</p>
-            <p className="text-sm opacity-70">{stat.label}</p>
+            <div className={`w-10 h-10 rounded-lg ${getColorClasses(stat.color)} flex items-center justify-center mb-3`}>
+              <stat.icon className="w-5 h-5" />
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+            <p className="text-sm text-gray-500">{stat.label}</p>
           </button>
         ))}
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="bg-white rounded-lg border border-gray-200 p-5">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {quickActions.map((action) => (
             <button
               key={action.label}
               onClick={() => navigate(action.path)}
-              className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all group"
+              className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-gray-50 transition-all group"
             >
-              <div className={`w-10 h-10 rounded-lg bg-${action.color}-100 flex items-center justify-center`}>
-                <action.icon className={`w-5 h-5 text-${action.color}-600`} />
+              <div className={`w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-primary-50`}>
+                <action.icon className="w-5 h-5 text-gray-600 group-hover:text-primary-600" />
               </div>
-              <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700">
+              <span className="text-sm font-medium text-gray-700 group-hover:text-primary-700">
                 {action.label}
               </span>
             </button>
@@ -170,53 +169,59 @@ const ManagerDashboard = ({ user }) => {
       </div>
 
       {/* Work Orders Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Pending Work Orders */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <div className="bg-white rounded-lg border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-orange-500" />
-              <h3 className="font-semibold text-gray-900">Pending</h3>
+              <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
+                <Clock className="w-4 h-4 text-orange-600" />
+              </div>
+              <h3 className="font-medium text-gray-900">Pending</h3>
             </div>
             <span className="text-2xl font-bold text-orange-600">{stats?.pendingWorkOrders || 0}</span>
           </div>
           <button
             onClick={() => navigate('/manager/work-orders/pending')}
-            className="w-full py-2 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+            className="w-full py-2 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors border border-orange-200"
           >
             View All Pending
           </button>
         </div>
 
         {/* Completed Work Orders */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <div className="bg-white rounded-lg border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <h3 className="font-semibold text-gray-900">Completed</h3>
+              <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+              </div>
+              <h3 className="font-medium text-gray-900">Completed</h3>
             </div>
             <span className="text-2xl font-bold text-green-600">{stats?.completedWorkOrders || 0}</span>
           </div>
           <button
             onClick={() => navigate('/manager/work-orders/completed')}
-            className="w-full py-2 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+            className="w-full py-2 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-green-200"
           >
             View All Completed
           </button>
         </div>
 
         {/* Total Estimates */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <div className="bg-white rounded-lg border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-purple-500" />
-              <h3 className="font-semibold text-gray-900">Estimates</h3>
+              <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
+                <FileText className="w-4 h-4 text-purple-600" />
+              </div>
+              <h3 className="font-medium text-gray-900">Estimates</h3>
             </div>
             <span className="text-2xl font-bold text-purple-600">{stats?.estimates || 0}</span>
           </div>
           <button
             onClick={() => navigate('/manager/estimates')}
-            className="w-full py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+            className="w-full py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors border border-purple-200"
           >
             Manage Estimates
           </button>
@@ -224,12 +229,12 @@ const ManagerDashboard = ({ user }) => {
       </div>
 
       {/* Recent Work Orders Table */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Recent Work Orders</h2>
           <button
             onClick={() => navigate('/manager/work-orders')}
-            className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
           >
             View All <ArrowRight className="w-4 h-4" />
           </button>
@@ -237,11 +242,11 @@ const ManagerDashboard = ({ user }) => {
 
         {recentWorkOrders.length === 0 ? (
           <div className="p-8 text-center">
-            <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No work orders yet</p>
+            <ClipboardList className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 text-sm">No work orders yet</p>
             <button
               onClick={() => navigate('/manager/work-orders')}
-              className="mt-3 text-sm text-blue-600 hover:text-blue-700"
+              className="mt-3 text-sm text-primary-600 hover:text-primary-700"
             >
               Create your first work order
             </button>
@@ -249,26 +254,26 @@ const ManagerDashboard = ({ user }) => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Work Order</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Category</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Work Order</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Property</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {recentWorkOrders.slice(0, 5).map((wo) => (
-                  <tr key={wo.id} className="border-t border-gray-50 hover:bg-gray-50">
+                  <tr key={wo.id} className="hover:bg-gray-50 transition-colors">
                     <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900">{wo.title || wo.work_order_id}</p>
+                      <p className="font-medium text-gray-900 text-sm">{wo.title || wo.work_order_id}</p>
                       <p className="text-xs text-gray-500">{wo.work_order_id}</p>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">{wo.property_name || '-'}</td>
                     <td className="py-3 px-4 text-sm text-gray-600">{wo.category_name || '-'}</td>
                     <td className="py-3 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(wo.status)}`}>
                         {wo.status?.replace(/_/g, ' ').toUpperCase()}
                       </span>
                     </td>

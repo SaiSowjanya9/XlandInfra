@@ -3,7 +3,7 @@
  * Handles data isolation and ownership validation for Supervisor Portal
  */
 
-const db = require('../db');
+const { pool } = require('../config/database');
 
 /**
  * Attach supervisor scope to request
@@ -56,7 +56,7 @@ const addSupervisorFilter = (baseQuery, supervisorId, alias = '') => {
 const validateSupervisorOwnership = async (tableName, recordId, supervisorId, checkAssigned = false) => {
   try {
     // First check direct ownership
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       `SELECT id FROM ${tableName} WHERE id = ? AND supervisor_id = ?`,
       [recordId, supervisorId]
     );
@@ -69,7 +69,7 @@ const validateSupervisorOwnership = async (tableName, recordId, supervisorId, ch
     if (checkAssigned) {
       const assignedTable = `supervisor_assigned_${tableName}`;
       try {
-        const [assignedRows] = await db.query(
+        const [assignedRows] = await pool.query(
           `SELECT can_modify, can_delete FROM ${assignedTable} WHERE supervisor_id = ? AND ${tableName.slice(0, -1)}_id = ?`,
           [supervisorId, recordId]
         );
@@ -168,7 +168,7 @@ const buildScopedQuery = (baseQuery, supervisorId, options = {}) => {
  */
 const getSupervisorPermissions = async (supervisorId, module) => {
   try {
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       `SELECT * FROM supervisor_permissions WHERE supervisor_id = ? AND module = ?`,
       [supervisorId, module]
     );

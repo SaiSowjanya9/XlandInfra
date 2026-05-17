@@ -19,13 +19,20 @@ import {
   Package,
   Users,
   Layers,
+  Save,
+  UserCheck,
+  Filter,
 } from 'lucide-react';
 import {
   getVendorAssignments,
   removeVendorAssignment,
   getServiceVendorAssignments,
-  removeServiceVendorAssignment,
-  updateServiceVendorAssignment,
+  removeServiceVendorAssignmentWithSync,
+  updateServiceVendorAssignmentWithSync,
+  subscribeToAssignmentChanges,
+  getAssignmentsGroupedByProperty,
+  getUniqueServiceTypes,
+  getUniqueZones,
 } from '../utils/assignmentStore';
 import { getVendors } from '../utils/vendorStore';
 
@@ -37,13 +44,25 @@ const AssignedVendors = () => {
   const [statusFilter, setStatusFilter] = useState('active');
   const [searchTerm, setSearchTerm] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
+  const [serviceTypeFilter, setServiceTypeFilter] = useState('');
   const [toast, setToast] = useState(null);
   const [viewAssignment, setViewAssignment] = useState(null);
   const [removeConfirm, setRemoveConfirm] = useState(null);
   const [editAssignment, setEditAssignment] = useState(null);
+  const [editModalData, setEditModalData] = useState(null);
 
   useEffect(() => {
     loadData();
+  }, [statusFilter]);
+
+  // Subscribe to real-time assignment changes from Property Management
+  useEffect(() => {
+    const unsubscribe = subscribeToAssignmentChanges((change) => {
+      console.log('[AssignedVendors] Received sync event:', change);
+      loadData(); // Reload data when changes are made from Property Management
+    });
+    
+    return unsubscribe;
   }, [statusFilter]);
 
   // Refresh data when page becomes visible (handles navigation back to this page)
@@ -99,7 +118,7 @@ const AssignedVendors = () => {
   };
 
   const handleRemoveServiceAssignment = (assignment) => {
-    const result = removeServiceVendorAssignment(assignment.id);
+    const result = removeServiceVendorAssignmentWithSync(assignment.id);
     if (result.success) {
       showToast('Service vendor assignment removed successfully');
       setRemoveConfirm(null);
@@ -116,8 +135,8 @@ const AssignedVendors = () => {
       return;
     }
 
-    // Update just this single assignment
-    const result = updateServiceVendorAssignment(assignment.id, {
+    // Update just this single assignment with sync
+    const result = updateServiceVendorAssignmentWithSync(assignment.id, {
       vendorId: vendor.vendorId,
       vendorName: vendor.ownerName,
       vendorZone: vendor.zone,
@@ -125,8 +144,9 @@ const AssignedVendors = () => {
     });
 
     if (result.success) {
-      showToast('Vendor updated successfully');
+      showToast('Vendor updated successfully - changes synced to Property Management');
       setEditAssignment(null);
+      setEditModalData(null);
       loadData();
     } else {
       showToast(result.message || 'Failed to update', 'error');
@@ -152,13 +172,13 @@ const AssignedVendors = () => {
     });
   };
 
-  // Get unique zones from all assignments
-  const allZones = [
-    ...new Set([
-      ...assignments.map(a => a.propertyZone),
-      ...serviceAssignments.map(a => a.propertyZone)
-    ].filter(Boolean))
-  ];
+  // Get unique zones and service types from all assignments
+  const allZones = [...new Set([
+    ...assignments.map(a => a.propertyZone),
+    ...serviceAssignments.map(a => a.propertyZone)
+  ].filter(Boolean))];
+
+  const allServiceTypes = [...new Set(serviceAssignments.map(a => a.serviceType).filter(Boolean))];
 
   // Filter property assignments
   const filteredAssignments = assignments.filter(a => {
@@ -172,9 +192,7 @@ const AssignedVendors = () => {
         a.serviceType?.toLowerCase().includes(q);
       if (!matchesSearch) return false;
     }
-
     if (zoneFilter && a.propertyZone !== zoneFilter) return false;
-
     return true;
   });
 
@@ -191,25 +209,23 @@ const AssignedVendors = () => {
         a.estimateId?.toLowerCase().includes(q);
       if (!matchesSearch) return false;
     }
-
     if (zoneFilter && a.propertyZone !== zoneFilter) return false;
-
+    if (serviceTypeFilter && a.serviceType !== serviceTypeFilter) return false;
     return true;
   });
 
-  // Group service assignments by property and estimate for better display
-  const groupedServiceAssignments = filteredServiceAssignments.reduce((acc, assignment) => {
-    const key = `${assignment.propertyId}-${assignment.estimateId}`;
+  // Group service assignments by property for card-based display
+  const groupedByProperty = filteredServiceAssignments.reduce((acc, assignment) => {
+    const key = assignment.propertyId;
     if (!acc[key]) {
       acc[key] = {
         propertyId: assignment.propertyId,
         propertyName: assignment.propertyName,
         propertyZone: assignment.propertyZone,
-        estimateId: assignment.estimateId,
-        services: []
+        assignments: []
       };
     }
-    acc[key].services.push(assignment);
+    acc[key].assignments.push(assignment);
     return acc;
   }, {});
 
@@ -245,66 +261,6 @@ const AssignedVendors = () => {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-        <button
-          onClick={() => setActiveTab('service')}
-          className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
-            activeTab === 'service'
-              ? 'bg-white text-amber-700 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Package className="w-4 h-4" />
-          Service Assignments
-          {serviceAssignments.length > 0 && (
-            <span className={`px-1.5 py-0.5 rounded-full text-xs ${
-              activeTab === 'service' ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-600'
-            }`}>
-              {serviceAssignments.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('property')}
-          className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
-            activeTab === 'property'
-              ? 'bg-white text-amber-700 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Building2 className="w-4 h-4" />
-          Property Assignments
-          {assignments.length > 0 && (
-            <span className={`px-1.5 py-0.5 rounded-full text-xs ${
-              activeTab === 'property' ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-600'
-            }`}>
-              {assignments.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Info Card - Contextual based on active tab */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            {activeTab === 'service' ? <Package className="w-5 h-5 text-amber-600" /> : <Truck className="w-5 h-5 text-amber-600" />}
-          </div>
-          <div>
-            <h3 className="font-medium text-amber-800">
-              {activeTab === 'service' ? 'Service-wise Vendor Assignments' : 'Property Vendor Assignments'}
-            </h3>
-            <p className="text-sm text-amber-700 mt-1">
-              {activeTab === 'service' 
-                ? 'These are vendors assigned to specific AMC services for properties. You can modify vendor assignments here or from Property Management → Assign Vendors.'
-                : 'These are general vendor assignments to properties. To assign vendors to specific services, go to Property Management and use the "Assign Vendors" option.'
-              }
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex flex-col sm:flex-row gap-3">
@@ -333,6 +289,19 @@ const AssignedVendors = () => {
           </div>
           <div className="relative">
             <select
+              value={serviceTypeFilter}
+              onChange={(e) => setServiceTypeFilter(e.target.value)}
+              className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-200 focus:border-amber-500 outline-none"
+            >
+              <option value="">All Services</option>
+              {allServiceTypes.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+          </div>
+          <div className="relative">
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-200 focus:border-amber-500 outline-none"
@@ -343,9 +312,9 @@ const AssignedVendors = () => {
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           </div>
-          {(searchTerm || zoneFilter || statusFilter !== 'active') && (
+          {(searchTerm || zoneFilter || serviceTypeFilter || statusFilter !== 'active') && (
             <button
-              onClick={() => { setSearchTerm(''); setZoneFilter(''); setStatusFilter('active'); }}
+              onClick={() => { setSearchTerm(''); setZoneFilter(''); setServiceTypeFilter(''); setStatusFilter('active'); }}
               className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Clear
@@ -354,10 +323,9 @@ const AssignedVendors = () => {
         </div>
       </div>
 
-      {/* Service Assignments Tab Content */}
-      {activeTab === 'service' && (
-        <div className="space-y-4">
-          {Object.keys(groupedServiceAssignments).length === 0 ? (
+      {/* Vendor Assignments - Zone Management Style Card Grid */}
+      <div className="space-y-6">
+          {Object.keys(groupedByProperty).length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 py-16 text-center">
               <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 font-medium">No service vendor assignments found</p>
@@ -369,249 +337,110 @@ const AssignedVendors = () => {
               </p>
             </div>
           ) : (
-            Object.values(groupedServiceAssignments).map((group) => (
-              <div key={`${group.propertyId}-${group.estimateId}`} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                {/* Property Header */}
-                <div className="px-5 py-4 bg-gradient-to-r from-amber-50 to-white border-b border-gray-200">
-                  <div className="flex items-center justify-between">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.values(groupedByProperty).map((group) => (
+                <div
+                  key={group.propertyId}
+                  className="bg-white rounded-xl border border-gray-200 p-5 transition-all hover:shadow-md hover:border-amber-200"
+                >
+                  {/* Property Card Header */}
+                  <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
                         <Building2 className="w-5 h-5 text-amber-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{group.propertyName || 'Property'}</h3>
-                        <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                          <span className="font-mono">{group.propertyId}</span>
-                          <span>•</span>
-                          <span>Zone: {group.propertyZone || '-'}</span>
-                          <span>•</span>
-                          <span className="text-amber-600 font-medium">Estimate: {group.estimateId}</span>
+                        <h3 className="font-semibold text-gray-900 line-clamp-1">{group.propertyName || 'Property'}</h3>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <MapPin className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs text-gray-500">{group.propertyZone || 'No Zone'}</span>
                         </div>
                       </div>
                     </div>
-                    <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
-                      {group.services.length} service(s)
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
+                      Active
                     </span>
                   </div>
-                </div>
 
-                {/* Services Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 border-b border-gray-100">
-                      <tr>
-                        <th className="px-4 py-2.5 text-left font-medium text-gray-600 text-xs uppercase">Service Type</th>
-                        <th className="px-4 py-2.5 text-center font-medium text-gray-600 text-xs uppercase w-20">Freq.</th>
-                        <th className="px-4 py-2.5 text-center font-medium text-gray-600 text-xs uppercase w-24">Type</th>
-                        <th className="px-4 py-2.5 text-left font-medium text-gray-600 text-xs uppercase">Assigned Vendor</th>
-                        <th className="px-4 py-2.5 text-center font-medium text-gray-600 text-xs uppercase w-24">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {group.services.map((service) => (
-                        <tr key={service.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3">
-                            <span className="font-medium text-gray-900">{service.serviceType}</span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="inline-flex items-center px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-medium">
-                              {service.frequencyCount || 1}x
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center text-gray-600 text-xs">
-                            {service.frequencyType || 'Monthly'}
-                          </td>
-                          <td className="px-4 py-3">
-                            {editAssignment?.id === service.id ? (
-                              <div className="flex items-center gap-2">
-                                <select
-                                  defaultValue={service.vendorId}
-                                  onChange={(e) => handleUpdateServiceVendor(service, e.target.value)}
-                                  className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500"
-                                >
-                                  <option value="">-- Select Vendor --</option>
-                                  {getMatchingVendors(service.serviceType).map(v => (
-                                    <option key={v.vendorId} value={v.vendorId}>{v.ownerName}</option>
-                                  ))}
-                                  {vendors.filter(v => !getMatchingVendors(service.serviceType).find(mv => mv.vendorId === v.vendorId)).length > 0 && (
-                                    <optgroup label="Other Vendors">
-                                      {vendors.filter(v => !getMatchingVendors(service.serviceType).find(mv => mv.vendorId === v.vendorId)).map(v => (
-                                        <option key={v.vendorId} value={v.vendorId}>{v.ownerName} ({v.serviceType})</option>
-                                      ))}
-                                    </optgroup>
-                                  )}
-                                </select>
-                                <button
-                                  onClick={() => setEditAssignment(null)}
-                                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <Truck className="w-3.5 h-3.5 text-amber-600" />
-                                </div>
-                                <div>
-                                  <span className="font-medium text-gray-900">{service.vendorName || '-'}</span>
-                                  {service.vendorId && (
-                                    <span className="text-xs text-gray-400 ml-2 font-mono">{service.vendorId}</span>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-center gap-1">
-                              {service.status === 'active' && editAssignment?.id !== service.id && (
-                                <>
-                                  <button
-                                    onClick={() => setEditAssignment(service)}
-                                    className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                                    title="Change vendor"
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => setRemoveConfirm({ ...service, type: 'service' })}
-                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                    title="Remove assignment"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </>
-                              )}
+                  {/* Property Stats */}
+                  <div className="space-y-2 text-sm text-gray-600 mb-4">
+                    <div className="flex items-center justify-between">
+                      <span>Services:</span>
+                      <span className="font-medium text-amber-600">{group.assignments.length} assigned</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Property ID:</span>
+                      <span className="font-mono text-xs text-gray-500">{group.propertyId}</span>
+                    </div>
+                  </div>
+
+                  {/* Vendor Assignments List */}
+                  <div className="border-t border-gray-100 pt-3 mb-3">
+                    <p className="text-xs font-medium text-gray-500 uppercase mb-2">Assigned Vendors</p>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {group.assignments.map((assignment) => (
+                        <div 
+                          key={assignment.id} 
+                          className="flex items-center justify-between p-2 bg-gray-50 rounded-lg group hover:bg-amber-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <Truck className="w-3 h-3 text-amber-600" />
                             </div>
-                          </td>
-                        </tr>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium text-gray-900 truncate">{assignment.vendorName || 'Unassigned'}</p>
+                              <p className="text-xs text-gray-500 truncate">{assignment.serviceType}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => setEditModalData(assignment)}
+                              className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-100 rounded transition-colors"
+                              title="Edit assignment"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setRemoveConfirm({ ...assignment, type: 'service' })}
+                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded transition-colors"
+                              title="Remove assignment"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  </div>
+
+                  {/* Card Actions */}
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                    <button
+                      onClick={() => setViewAssignment(group.assignments[0])}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View Details
+                    </button>
+                    <button
+                      onClick={() => setEditModalData(group.assignments[0])}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Modify
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
 
           {filteredServiceAssignments.length > 0 && (
             <div className="text-xs text-gray-500 text-center">
-              Showing {filteredServiceAssignments.length} service assignments across {Object.keys(groupedServiceAssignments).length} properties
+              Showing {filteredServiceAssignments.length} service assignments across {Object.keys(groupedByProperty).length} properties
             </div>
           )}
-        </div>
-      )}
-
-      {/* Property Assignments Tab Content */}
-      {activeTab === 'property' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          {filteredAssignments.length === 0 ? (
-            <div className="py-16 text-center">
-              <Truck className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">No property vendor assignments found</p>
-              <p className="text-gray-400 text-sm mt-1">
-                {assignments.length === 0
-                  ? 'Assign vendors to properties from Property Management.'
-                  : 'Try adjusting your search or filters.'
-                }
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Vendor</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Vendor ID</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Phone</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Email</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Service Type</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Assigned Property</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Zone</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Assigned Date</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Status</th>
-                    <th className="px-4 py-3 text-center font-medium text-gray-600 whitespace-nowrap">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredAssignments.map((assignment) => (
-                    <tr key={assignment.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center">
-                            <Truck className="w-4 h-4 text-amber-600" />
-                          </div>
-                          <span className="font-medium text-gray-900">{assignment.vendorName}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
-                        {assignment.vendorId}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {assignment.vendorPhone || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {assignment.vendorEmail || '-'}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                          {assignment.serviceType || '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-900">{assignment.propertyName}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {assignment.propertyZone || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                        {formatDate(assignment.assignedDate)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          assignment.status === 'active'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {assignment.status === 'active' ? 'Active' : 'Removed'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => setViewAssignment(assignment)}
-                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="View details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          {assignment.status === 'active' && (
-                            <button
-                              onClick={() => setRemoveConfirm({ ...assignment, type: 'property' })}
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                              title="Remove assignment"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {filteredAssignments.length > 0 && (
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
-              Showing {filteredAssignments.length} of {assignments.length} property assignments
-            </div>
-          )}
-        </div>
-      )}
+      </div>
 
       {/* View Assignment Modal */}
       {viewAssignment && (
@@ -726,6 +555,117 @@ const AssignedVendors = () => {
                   Remove
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Assignment Modal - Individual Vendor Modification */}
+      {editModalData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditModalData(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-amber-50 to-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <UserCheck className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Modify Assignment</h2>
+                  <p className="text-xs text-gray-500">Change vendor for this service</p>
+                </div>
+              </div>
+              <button onClick={() => setEditModalData(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {/* Assignment Info */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm font-medium text-gray-900">{editModalData.propertyName}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-700">Service: <span className="font-medium">{editModalData.serviceType}</span></span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Zone: {editModalData.propertyZone || '-'}</span>
+                </div>
+              </div>
+
+              {/* Current Vendor */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 uppercase mb-2">Current Vendor</label>
+                <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                    <Truck className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{editModalData.vendorName || 'Unassigned'}</p>
+                    <p className="text-xs text-gray-500 font-mono">{editModalData.vendorId || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* New Vendor Selection */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 uppercase mb-2">Select New Vendor</label>
+                <div className="relative">
+                  <select
+                    id="newVendorSelect"
+                    defaultValue=""
+                    className="w-full appearance-none px-4 py-3 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-200 focus:border-amber-500 outline-none pr-10"
+                  >
+                    <option value="">-- Select a Vendor --</option>
+                    <optgroup label="Matching Service Type">
+                      {getMatchingVendors(editModalData.serviceType).map(v => (
+                        <option key={v.vendorId} value={v.vendorId}>
+                          {v.ownerName} ({v.zone})
+                        </option>
+                      ))}
+                    </optgroup>
+                    {vendors.filter(v => !getMatchingVendors(editModalData.serviceType).find(mv => mv.vendorId === v.vendorId)).length > 0 && (
+                      <optgroup label="Other Vendors">
+                        {vendors.filter(v => !getMatchingVendors(editModalData.serviceType).find(mv => mv.vendorId === v.vendorId)).map(v => (
+                          <option key={v.vendorId} value={v.vendorId}>
+                            {v.ownerName} - {v.serviceType} ({v.zone})
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Changes will automatically sync to Property Management
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setEditModalData(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const select = document.getElementById('newVendorSelect');
+                  if (select.value) {
+                    handleUpdateServiceVendor(editModalData, select.value);
+                  } else {
+                    showToast('Please select a vendor', 'error');
+                  }
+                }}
+                className="flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                Save Changes
+              </button>
             </div>
           </div>
         </div>

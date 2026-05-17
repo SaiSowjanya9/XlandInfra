@@ -14,7 +14,7 @@ const DEFAULT_PASSWORD = 'Password@123';
 const USERS = [
   {
     username: 'admin',
-    email: 'admin@pmportal.com',
+    email: 'admin@xlandinfra.com',
     firstName: 'System',
     lastName: 'Admin',
     phone: '+91 9999999901',
@@ -22,19 +22,51 @@ const USERS = [
   },
   {
     username: 'opsmanager',
-    email: 'manager@pmportal.com',
+    email: 'opsmanager@xlandinfra.com',
     firstName: 'Operations',
     lastName: 'Manager',
     phone: '+91 9999999902',
-    role: 'manager'
+    role: 'operations_manager'
   },
   {
     username: 'franchise',
-    email: 'franchise@pmportal.com',
+    email: 'franchise@xlandinfra.com',
     firstName: 'Franchise',
     lastName: 'Partner',
     phone: '+91 9999999903',
-    role: 'franchise'
+    role: 'franchise_partner'
+  },
+  {
+    username: 'manager',
+    email: 'manager@xlandinfra.com',
+    firstName: 'Branch',
+    lastName: 'Manager',
+    phone: '+91 9999999904',
+    role: 'manager'
+  },
+  {
+    username: 'coordinator',
+    email: 'coordinator@xlandinfra.com',
+    firstName: 'Field',
+    lastName: 'Coordinator',
+    phone: '+91 9999999905',
+    role: 'coordinator'
+  },
+  {
+    username: 'supervisor',
+    email: 'supervisor@xlandinfra.com',
+    firstName: 'Site',
+    lastName: 'Supervisor',
+    phone: '+91 9999999906',
+    role: 'supervisor'
+  },
+  {
+    username: 'executive',
+    email: 'executive@xlandinfra.com',
+    firstName: 'Data',
+    lastName: 'Executive',
+    phone: '+91 9999999907',
+    role: 'executive'
   }
 ];
 
@@ -68,7 +100,7 @@ async function seedUsers() {
         first_name VARCHAR(100) NOT NULL,
         last_name VARCHAR(100) NOT NULL,
         phone VARCHAR(20),
-        role ENUM('admin', 'manager', 'supervisor', 'executive', 'franchise') NOT NULL DEFAULT 'executive',
+        role ENUM('admin', 'operations_manager', 'franchise_partner', 'manager', 'coordinator', 'supervisor', 'executive') NOT NULL DEFAULT 'executive',
         is_active BOOLEAN DEFAULT TRUE,
         last_login TIMESTAMP NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -77,14 +109,14 @@ async function seedUsers() {
     `);
     console.log('✓ Users table ready');
 
-    // Update role ENUM to include franchise (in case table existed with old ENUM)
+    // Update role ENUM to include all roles (in case table existed with old ENUM)
     try {
       await connection.query(`
         ALTER TABLE users 
-        MODIFY COLUMN role ENUM('admin', 'manager', 'supervisor', 'executive', 'franchise') 
+        MODIFY COLUMN role ENUM('admin', 'operations_manager', 'franchise_partner', 'manager', 'coordinator', 'supervisor', 'executive') 
         NOT NULL DEFAULT 'executive'
       `);
-      console.log('✓ Updated role ENUM to include franchise');
+      console.log('✓ Updated role ENUM to include all roles');
     } catch (err) {
       // Ignore if already correct
     }

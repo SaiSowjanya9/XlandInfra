@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { authenticate } = require('../middleware/auth');
@@ -34,7 +34,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Find coordinator user
-    const [users] = await db.query(
+    const [users] = await pool.query(
       `SELECT id, username, email, password_hash, first_name, last_name, role, is_active
        FROM users 
        WHERE (username = ? OR email = ?) AND role = 'coordinator'`,
@@ -115,54 +115,54 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
     const coordinatorId = req.coordinatorId;
 
     // Get counts for coordinator's data
-    const [propertiesCount] = await db.query(
+    const [propertiesCount] = await pool.query(
       `SELECT COUNT(*) as count FROM properties WHERE coordinator_id = ?
        UNION ALL
        SELECT COUNT(*) FROM coordinator_assigned_properties WHERE coordinator_id = ?`,
       [coordinatorId, coordinatorId]
     );
 
-    const [vendorsCount] = await db.query(
+    const [vendorsCount] = await pool.query(
       `SELECT COUNT(*) as count FROM vendors WHERE coordinator_id = ?
        UNION ALL
        SELECT COUNT(*) FROM coordinator_assigned_vendors WHERE coordinator_id = ?`,
       [coordinatorId, coordinatorId]
     );
 
-    const [customersCount] = await db.query(
+    const [customersCount] = await pool.query(
       `SELECT COUNT(*) as count FROM clients WHERE coordinator_id = ?`,
       [coordinatorId]
     );
 
-    const [employeesCount] = await db.query(
+    const [employeesCount] = await pool.query(
       `SELECT COUNT(*) as count FROM coordinator_employees WHERE coordinator_id = ?`,
       [coordinatorId]
     );
 
-    const [workOrdersCount] = await db.query(
+    const [workOrdersCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders WHERE coordinator_id = ?`,
       [coordinatorId]
     );
 
-    const [pendingWOCount] = await db.query(
+    const [pendingWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
        WHERE coordinator_id = ? AND status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
       [coordinatorId]
     );
 
-    const [completedWOCount] = await db.query(
+    const [completedWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
        WHERE coordinator_id = ? AND status IN ('completed', 'closed')`,
       [coordinatorId]
     );
 
-    const [estimatesCount] = await db.query(
+    const [estimatesCount] = await pool.query(
       `SELECT COUNT(*) as count FROM estimates WHERE coordinator_id = ?`,
       [coordinatorId]
     );
 
     // Get recent work orders
-    const [recentWorkOrders] = await db.query(
+    const [recentWorkOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, sc.name as category_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
@@ -203,7 +203,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     const coordinatorId = req.coordinatorId;
 
     // Get both own and assigned properties
-    const [properties] = await db.query(
+    const [properties] = await pool.query(
       `SELECT p.*, z.name as zone_name, 
               'own' as access_type, TRUE as can_modify, TRUE as can_delete,
               TRUE as can_assign_vendor, TRUE as can_assign_employee
@@ -236,7 +236,7 @@ router.post('/properties', requireCoordinatorScope, async (req, res) => {
 
     const propertyId = `PROP-COORD-${Date.now()}`;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
         contact_person, contact_phone, contact_email, zone_id, coordinator_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -264,7 +264,7 @@ router.put('/properties/:id', requireCoordinatorScope, validateOwnership('proper
     const { id } = req.params;
     const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
 
-    await db.query(
+    await pool.query(
       `UPDATE properties SET name = ?, property_type = ?, address = ?, city = ?, state = ?, 
         zip_code = ?, contact_person = ?, contact_phone = ?, contact_email = ?, zone_id = ?
        WHERE id = ?`,
@@ -318,7 +318,7 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
 
     query += ' ORDER BY wo.created_at DESC';
 
-    const [workOrders] = await db.query(query, params);
+    const [workOrders] = await pool.query(query, params);
     res.json({ success: true, data: workOrders });
   } catch (error) {
     console.error('Work orders fetch error:', error);
@@ -330,7 +330,7 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
   try {
     const coordinatorId = req.coordinatorId;
 
-    const [workOrders] = await db.query(
+    const [workOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, sc.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
@@ -352,7 +352,7 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
   try {
     const coordinatorId = req.coordinatorId;
 
-    const [workOrders] = await db.query(
+    const [workOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, sc.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
@@ -377,7 +377,7 @@ router.post('/work-orders', requireCoordinatorScope, async (req, res) => {
 
     const workOrderId = `WO-COORD-${Date.now()}`;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
         priority, permission_to_enter, has_pet, scheduled_date, coordinator_id, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested')`,
@@ -401,7 +401,7 @@ router.patch('/work-orders/:id/status', requireCoordinatorScope, validateOwnersh
     const { id } = req.params;
     const { status } = req.body;
 
-    await db.query('UPDATE work_orders SET status = ? WHERE id = ?', [status, id]);
+    await pool.query('UPDATE work_orders SET status = ? WHERE id = ?', [status, id]);
     res.json({ success: true, message: 'Status updated successfully' });
   } catch (error) {
     console.error('Status update error:', error);
@@ -414,7 +414,7 @@ router.patch('/work-orders/:id/assign-vendor', requireCoordinatorScope, validate
     const { id } = req.params;
     const { vendorId } = req.body;
 
-    await db.query(
+    await pool.query(
       'UPDATE work_orders SET assigned_vendor_id = ?, status = ? WHERE id = ?',
       [vendorId, 'assigned', id]
     );
@@ -433,7 +433,7 @@ router.get('/customers', requireCoordinatorScope, async (req, res) => {
   try {
     const coordinatorId = req.coordinatorId;
 
-    const [customers] = await db.query(
+    const [customers] = await pool.query(
       `SELECT c.*, p.name as property_name
        FROM clients c
        LEFT JOIN properties p ON c.property_id = p.id
@@ -456,7 +456,7 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
 
     const clientId = `CLT-COORD-${Date.now()}`;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
         zip_code, client_type, company_name, property_id, gst_number, coordinator_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -483,7 +483,7 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
     const coordinatorId = req.coordinatorId;
 
     // Get own vendors
-    const [ownVendors] = await db.query(
+    const [ownVendors] = await pool.query(
       `SELECT v.*, 'own' as vendor_type, TRUE as can_modify, TRUE as can_delete
        FROM vendors v
        WHERE v.coordinator_id = ?`,
@@ -491,7 +491,7 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
     );
 
     // Get assigned vendors
-    const [assignedVendors] = await db.query(
+    const [assignedVendors] = await pool.query(
       `SELECT v.*, 'assigned' as vendor_type, cav.can_modify, cav.can_delete
        FROM vendors v
        INNER JOIN coordinator_assigned_vendors cav ON v.id = cav.vendor_id
@@ -520,7 +520,7 @@ router.post('/vendors', requireCoordinatorScope, async (req, res) => {
 
     const vendorId = `VND-COORD-${Date.now()}`;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO vendors (vendor_id, company_name, contact_person, email, phone, alternate_phone, 
         address, city, state, zip_code, gst_number, pan_number, coordinator_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -595,7 +595,7 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
 
     query += ' ORDER BY e.created_at DESC';
 
-    const [estimates] = await db.query(query, [coordinatorId]);
+    const [estimates] = await pool.query(query, [coordinatorId]);
     res.json({ success: true, data: estimates });
   } catch (error) {
     console.error('Estimates fetch error:', error);
@@ -613,7 +613,7 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
     const discount = (subtotal * (discountPercentage || 0)) / 100;
     const totalAmount = subtotal + tax - discount;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO estimates (estimate_id, client_id, property_id, title, description, estimate_type,
         subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount, total_amount,
         valid_until, coordinator_id, status)
@@ -632,7 +632,7 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
         item.unitPrice,
         item.totalPrice || (item.quantity * item.unitPrice)
       ]);
-      await db.query(
+      await pool.query(
         'INSERT INTO estimate_items (estimate_id, description, quantity, unit_price, total_price) VALUES ?',
         [itemValues]
       );
@@ -657,7 +657,7 @@ router.get('/amc-packages', requireCoordinatorScope, async (req, res) => {
     const coordinatorId = req.coordinatorId;
     const canView = await canViewPricing(coordinatorId, 'amc_packages');
 
-    const [packages] = await db.query(
+    const [packages] = await pool.query(
       `SELECT * FROM coordinator_amc_packages WHERE coordinator_id = ? ORDER BY created_at DESC`,
       [coordinatorId]
     );
@@ -674,7 +674,7 @@ router.post('/amc-packages', requireCoordinatorScope, async (req, res) => {
     const coordinatorId = req.coordinatorId;
     const { name, description, durationMonths, basePrice, services, termsConditions, hidePricing } = req.body;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO coordinator_amc_packages (coordinator_id, name, description, duration_months, base_price, services, terms_conditions, hide_pricing)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [coordinatorId, name, description, durationMonths || 12, basePrice || 0,
@@ -700,7 +700,7 @@ router.get('/addons', requireCoordinatorScope, async (req, res) => {
     const coordinatorId = req.coordinatorId;
     const canView = await canViewPricing(coordinatorId, 'addons');
 
-    const [addons] = await db.query(
+    const [addons] = await pool.query(
       `SELECT ca.*, sc.name as category_name
        FROM coordinator_addons ca
        LEFT JOIN service_categories sc ON ca.category_id = sc.id
@@ -721,7 +721,7 @@ router.post('/addons', requireCoordinatorScope, async (req, res) => {
     const coordinatorId = req.coordinatorId;
     const { name, description, price, unit, categoryId, hidePricing } = req.body;
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO coordinator_addons (coordinator_id, name, description, price, unit, category_id, hide_pricing)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [coordinatorId, name, description, price || 0, unit || 'per_service', categoryId || null, hidePricing || false]
@@ -743,7 +743,7 @@ router.post('/addons', requireCoordinatorScope, async (req, res) => {
 // =====================================================
 router.get('/zones', requireCoordinatorScope, async (req, res) => {
   try {
-    const [zones] = await db.query('SELECT * FROM zones WHERE is_active = TRUE ORDER BY name');
+    const [zones] = await pool.query('SELECT * FROM zones WHERE is_active = TRUE ORDER BY name');
     res.json({ success: true, data: zones });
   } catch (error) {
     console.error('Zones fetch error:', error);
@@ -753,7 +753,7 @@ router.get('/zones', requireCoordinatorScope, async (req, res) => {
 
 router.get('/categories', requireCoordinatorScope, async (req, res) => {
   try {
-    const [categories] = await db.query('SELECT * FROM service_categories WHERE is_active = TRUE ORDER BY name');
+    const [categories] = await pool.query('SELECT * FROM service_categories WHERE is_active = TRUE ORDER BY name');
     res.json({ success: true, data: categories });
   } catch (error) {
     console.error('Categories fetch error:', error);
@@ -780,7 +780,7 @@ router.get('/export/work-orders', requireCoordinatorScope, async (req, res) => {
   try {
     const coordinatorId = req.coordinatorId;
 
-    const [workOrders] = await db.query(
+    const [workOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, sc.name as category_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id

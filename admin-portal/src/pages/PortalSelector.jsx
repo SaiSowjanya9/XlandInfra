@@ -1,226 +1,153 @@
-import { Users, Briefcase, Truck, ArrowRight, Sparkles, Shield, Clock, Lock, Building2, UserCog, ClipboardCheck, Eye, FileEdit } from 'lucide-react';
+import { Briefcase, Truck, Sparkles, Lock, ArrowRight } from 'lucide-react';
 
 const PortalSelector = ({ onSelectPortal }) => {
+  const portals = [
+    { 
+      id: 'employee', 
+      label: 'Employee Portal', 
+      icon: Briefcase,
+      enabled: true
+    },
+    { 
+      id: 'vendor', 
+      label: 'Vendor Portal', 
+      icon: Truck,
+      enabled: false,
+      comingSoon: true
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-black flex flex-col relative overflow-hidden">
-      {/* Animated Background Effects */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Gold gradient orbs */}
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-amber-500/20 via-yellow-400/10 to-transparent rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-amber-600/15 via-orange-400/10 to-transparent rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-[40%] left-[50%] w-[400px] h-[400px] bg-gradient-to-br from-yellow-500/10 to-transparent rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '2s' }} />
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#0f0d08] to-[#0a0a0a] flex flex-col relative overflow-hidden">
+      {/* Premium Background Effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Animated gradient orbs */}
+        <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] bg-gradient-to-br from-amber-500/20 via-yellow-500/12 to-orange-500/8 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[800px] h-[800px] bg-gradient-to-br from-amber-600/18 via-orange-500/10 to-yellow-600/8 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '5s' }} />
+        <div className="absolute top-[30%] right-[20%] w-[400px] h-[400px] bg-gradient-to-br from-yellow-400/10 via-amber-500/8 to-transparent rounded-full blur-[80px] animate-pulse" style={{ animationDuration: '6s' }} />
+        <div className="absolute bottom-[40%] left-[15%] w-[300px] h-[300px] bg-gradient-to-br from-orange-400/8 via-amber-400/6 to-transparent rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '7s' }} />
         
-        {/* Grid pattern overlay */}
+        {/* Elegant grid overlay */}
         <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: `linear-gradient(rgba(212,175,55,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(212,175,55,0.3) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(rgba(245,195,68,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(245,195,68,0.5) 1px, transparent 1px)`,
           backgroundSize: '60px 60px'
         }} />
         
-        {/* Diagonal shine effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-amber-500/5 to-transparent transform -skew-y-12" />
+        {/* Radial gradient center glow - enhanced */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] bg-gradient-radial from-amber-500/10 via-amber-500/3 to-transparent rounded-full" />
+        
+        {/* Top edge gradient line */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+        
+        {/* Floating particles effect */}
+        <div className="absolute top-[15%] left-[25%] w-2 h-2 bg-amber-400/30 rounded-full blur-sm animate-bounce" style={{ animationDuration: '3s' }} />
+        <div className="absolute top-[60%] left-[70%] w-1.5 h-1.5 bg-yellow-400/25 rounded-full blur-sm animate-bounce" style={{ animationDuration: '4s', animationDelay: '1s' }} />
+        <div className="absolute top-[75%] left-[20%] w-1 h-1 bg-amber-300/20 rounded-full blur-sm animate-bounce" style={{ animationDuration: '5s', animationDelay: '2s' }} />
+        <div className="absolute top-[25%] left-[80%] w-1.5 h-1.5 bg-orange-400/25 rounded-full blur-sm animate-bounce" style={{ animationDuration: '3.5s', animationDelay: '0.5s' }} />
       </div>
 
-      {/* Header with Employee Portal */}
-      <header className="w-full py-5 px-6 md:px-10 relative z-10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center space-x-3">
-            <img
-              src="/logo.png"
-              alt="XLand Infra Logo"
-              className="h-16 w-auto object-contain drop-shadow-lg"
-            />
-          </div>
-          
-          {/* Employee Portal - Top Right */}
-          <button
-            onClick={() => onSelectPortal('employee')}
-            className="group flex items-center gap-3 px-5 py-2.5 bg-gradient-to-r from-zinc-800/80 to-zinc-900/80 border border-zinc-700/50 hover:border-amber-500/50 rounded-full backdrop-blur-sm transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10"
-          >
-            <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/30">
-              <Briefcase className="w-4 h-4 text-black" />
-            </div>
-            <span className="text-sm font-medium text-zinc-300 group-hover:text-amber-400 transition-colors">
-              Employee Portal
-            </span>
-            <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
-          </button>
+      {/* Header */}
+      <header className="w-full py-6 px-6 md:px-10 relative z-10">
+        <div className="max-w-7xl mx-auto flex items-center justify-center">
+          <img
+            src="/logo.png"
+            alt="XLand Infra Logo"
+            className="h-28 md:h-32 w-auto object-contain drop-shadow-[0_0_40px_rgba(245,195,68,0.4)] transition-transform duration-300 hover:scale-105"
+          />
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-4 pb-16 relative z-10">
-        <div className="w-full max-w-5xl">
-          {/* Title Section */}
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full mb-6">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span className="text-sm text-amber-400 font-medium">Welcome to XLand Infra</span>
-            </div>
-            <h1 className="text-4xl md:text-6xl font-light text-white mb-5 tracking-tight">
-              XLandInfra <span className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-clip-text text-transparent font-normal">Service</span> Portal
-            </h1>
-            <p className="text-zinc-400 text-lg max-w-2xl mx-auto leading-relaxed">
-              Select your portal to access personalized services and features
-            </p>
+      <div className="flex-1 flex items-start justify-center px-6 pt-8 relative z-10">
+        <div className="text-center max-w-5xl mx-auto">
+          {/* Welcome Badge */}
+          <div className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-gradient-to-r from-amber-500/10 to-amber-400/5 border border-amber-500/20 rounded-full mb-24 backdrop-blur-sm">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span className="text-sm text-amber-300/90 font-medium tracking-wide">Welcome to XLand Infra</span>
           </div>
+          
+          {/* Title */}
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extralight text-white mb-4 tracking-tight leading-tight">
+            XLandInfra{' '}
+            <span className="font-normal bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-400 bg-clip-text text-transparent">
+              Service
+            </span>{' '}
+            Portal
+          </h1>
+          
+          <p className="text-zinc-500 text-base md:text-lg mb-10 font-light">
+            Select your portal to continue
+          </p>
 
-          {/* Portal Access Links */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-2xl mx-auto">
-            {/* Customer Portal Link */}
-            <button
-              onClick={() => onSelectPortal('customer')}
-              className="group flex items-center gap-3 px-6 py-3 bg-zinc-900/60 backdrop-blur-sm border border-zinc-700/50 hover:border-amber-500/50 rounded-full transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/20">
-                <Users className="w-5 h-5 text-black" />
-              </div>
-              <div className="text-left">
-                <span className="block text-sm font-medium text-white group-hover:text-amber-50 transition-colors">
-                  Customer Portal
-                </span>
-                <span className="block text-xs text-zinc-500">Submit work orders & track requests</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-1 transition-all ml-2" />
-            </button>
+          {/* Portal Cards - Pill Style */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6">
+            {portals.map((portal) => {
+              const Icon = portal.icon;
+              return (
+                <button
+                  key={portal.id}
+                  onClick={() => portal.enabled && onSelectPortal(portal.id)}
+                  disabled={!portal.enabled}
+                  className={`relative group transition-all duration-400 ease-out ${
+                    portal.enabled ? 'cursor-pointer' : 'cursor-not-allowed'
+                  }`}
+                >
+                  {/* Pill Container */}
+                  <div className={`relative flex items-center gap-4 px-6 py-4 md:px-8 md:py-5 rounded-full border backdrop-blur-sm transition-all duration-400 ${
+                    portal.enabled 
+                      ? 'bg-gradient-to-r from-amber-500/[0.08] to-amber-400/[0.03] border-amber-500/20 group-hover:border-amber-400/40 group-hover:bg-gradient-to-r group-hover:from-amber-500/[0.12] group-hover:to-amber-400/[0.06] group-hover:shadow-[0_0_40px_-12px_rgba(245,195,68,0.25)]' 
+                      : 'bg-zinc-800/20 border-zinc-700/30'
+                  }`}>
+                    
+                    {/* Coming Soon Badge */}
+                    {portal.comingSoon && (
+                      <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-zinc-800/90 border border-zinc-700/50 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
+                        <Lock className="w-2.5 h-2.5 text-zinc-500" strokeWidth={2} />
+                        <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">Coming Soon</span>
+                      </div>
+                    )}
 
-            {/* Divider */}
-            <div className="hidden sm:block w-px h-10 bg-zinc-700/50" />
-            <div className="sm:hidden w-16 h-px bg-zinc-700/50" />
+                    {/* Icon - Outlined only, soft gold tone */}
+                    <div className={`flex items-center justify-center transition-all duration-300 ${
+                      portal.enabled ? 'group-hover:scale-105' : ''
+                    }`}>
+                      <Icon 
+                        className={`w-6 h-6 md:w-7 md:h-7 transition-colors duration-300 ${
+                          portal.enabled 
+                            ? 'text-amber-400/70 group-hover:text-amber-400/90' 
+                            : 'text-zinc-600'
+                        }`} 
+                        strokeWidth={1.5} 
+                      />
+                    </div>
 
-            {/* Franchise Partner Portal Link */}
-            <button
-              onClick={() => onSelectPortal('franchise')}
-              className="group flex items-center gap-3 px-6 py-3 bg-zinc-900/60 backdrop-blur-sm border border-zinc-700/50 hover:border-emerald-500/50 rounded-full transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-left">
-                <span className="block text-sm font-medium text-white group-hover:text-emerald-50 transition-colors">
-                  Franchise Partner
-                </span>
-                <span className="block text-xs text-zinc-500">Manage your franchise operations</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all ml-2" />
-            </button>
+                    {/* Label */}
+                    <span className={`text-base md:text-lg font-medium tracking-tight transition-colors duration-300 ${
+                      portal.enabled 
+                        ? 'text-amber-100/80 group-hover:text-amber-50' 
+                        : 'text-zinc-500'
+                    }`}>
+                      {portal.label}
+                    </span>
 
-            {/* Divider */}
-            <div className="hidden sm:block w-px h-10 bg-zinc-700/50" />
-            <div className="sm:hidden w-16 h-px bg-zinc-700/50" />
-
-            {/* Manager Portal Link */}
-            <button
-              onClick={() => onSelectPortal('manager')}
-              className="group flex items-center gap-3 px-6 py-3 bg-zinc-900/60 backdrop-blur-sm border border-zinc-700/50 hover:border-blue-500/50 rounded-full transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <UserCog className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-left">
-                <span className="block text-sm font-medium text-white group-hover:text-blue-50 transition-colors">
-                  Manager Portal
-                </span>
-                <span className="block text-xs text-zinc-500">Operations management</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-blue-400 group-hover:translate-x-1 transition-all ml-2" />
-            </button>
-
-            {/* Divider */}
-            <div className="hidden sm:block w-px h-10 bg-zinc-700/50" />
-            <div className="sm:hidden w-16 h-px bg-zinc-700/50" />
-
-            {/* Coordinator Portal Link */}
-            <button
-              onClick={() => onSelectPortal('coordinator')}
-              className="group flex items-center gap-3 px-6 py-3 bg-zinc-900/60 backdrop-blur-sm border border-zinc-700/50 hover:border-teal-500/50 rounded-full transition-all duration-300 hover:shadow-lg hover:shadow-teal-500/10"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-full flex items-center justify-center shadow-lg shadow-teal-500/20">
-                <ClipboardCheck className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-left">
-                <span className="block text-sm font-medium text-white group-hover:text-teal-50 transition-colors">
-                  Coordinator Portal
-                </span>
-                <span className="block text-xs text-zinc-500">Field coordination</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-teal-400 group-hover:translate-x-1 transition-all ml-2" />
-            </button>
-
-            {/* Divider */}
-            <div className="hidden sm:block w-px h-10 bg-zinc-700/50" />
-            <div className="sm:hidden w-16 h-px bg-zinc-700/50" />
-
-            {/* Supervisor Portal Link */}
-            <button
-              onClick={() => onSelectPortal('supervisor')}
-              className="group flex items-center gap-3 px-6 py-3 bg-zinc-900/60 backdrop-blur-sm border border-zinc-700/50 hover:border-amber-500/50 rounded-full transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/20">
-                <Eye className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-left">
-                <span className="block text-sm font-medium text-white group-hover:text-amber-50 transition-colors">
-                  Supervisor Portal
-                </span>
-                <span className="block text-xs text-zinc-500">Site supervision</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-1 transition-all ml-2" />
-            </button>
-
-            {/* Divider */}
-            <div className="hidden sm:block w-px h-10 bg-zinc-700/50" />
-            <div className="sm:hidden w-16 h-px bg-zinc-700/50" />
-
-            {/* Executive Portal Link */}
-            <button
-              onClick={() => onSelectPortal('executive')}
-              className="group flex items-center gap-3 px-6 py-3 bg-zinc-900/60 backdrop-blur-sm border border-zinc-700/50 hover:border-indigo-500/50 rounded-full transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                <FileEdit className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-left">
-                <span className="block text-sm font-medium text-white group-hover:text-indigo-50 transition-colors">
-                  Executive Portal
-                </span>
-                <span className="block text-xs text-zinc-500">Data entry</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all ml-2" />
-            </button>
-
-            {/* Divider */}
-            <div className="hidden sm:block w-px h-10 bg-zinc-700/50" />
-            <div className="sm:hidden w-16 h-px bg-zinc-700/50" />
-
-            {/* Vendor Portal Link - Coming Soon */}
-            <div
-              className="relative group flex items-center gap-3 px-6 py-3 bg-zinc-900/40 backdrop-blur-sm border border-zinc-800/50 rounded-full cursor-not-allowed opacity-70"
-            >
-              {/* Lock overlay badge */}
-              <div className="absolute -top-2 -right-2 flex items-center gap-1 px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded-full">
-                <Lock className="w-3 h-3 text-amber-500" />
-                <span className="text-[10px] font-medium text-amber-400 uppercase tracking-wider">Coming Soon</span>
-              </div>
-              
-              <div className="w-10 h-10 bg-gradient-to-br from-zinc-600 to-zinc-700 rounded-full flex items-center justify-center shadow-lg">
-                <Truck className="w-5 h-5 text-zinc-400" />
-              </div>
-              <div className="text-left">
-                <span className="block text-sm font-medium text-zinc-500">
-                  Vendor Portal
-                </span>
-                <span className="block text-xs text-zinc-600">Manage contracts & assignments</span>
-              </div>
-              <Lock className="w-4 h-4 text-zinc-600 ml-2" />
-            </div>
+                    {/* Arrow Indicator */}
+                    {portal.enabled && (
+                      <ArrowRight 
+                        className="w-4 h-4 md:w-5 md:h-5 text-amber-400/50 group-hover:text-amber-400/80 transition-all duration-300 group-hover:translate-x-0.5" 
+                        strokeWidth={1.5} 
+                      />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="py-5 text-center relative z-10 border-t border-zinc-900">
-        <p className="text-zinc-600 text-sm">&copy; 2026 XLand Infra. All rights reserved.</p>
+      <footer className="py-6 text-center relative z-10">
+        <p className="text-zinc-700 text-sm font-light tracking-wide">&copy; 2026 XLand Infra. All rights reserved.</p>
       </footer>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, AlertCircle, Check, ChevronDown, User, Mail, Phone, Home } from 'lucide-react';
-import Logo from '../assets/LOGO 2.png';
+import BrandLogo from '../components/BrandLogo';
 
 const Register = ({ onRegisterSuccess }) => {
   const navigate = useNavigate();
@@ -127,7 +127,9 @@ const Register = ({ onRegisterSuccess }) => {
       <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10">
         {/* Header */}
         <div className="px-6 py-8 text-center border-b border-gold-600/20">
-          <img src={Logo} alt="XLand Infra" className="h-16 w-auto mx-auto mb-4" />
+          <div className="flex justify-center mb-4">
+            <BrandLogo size="lg" />
+          </div>
           <h1 className="text-2xl font-bold text-white">New Customer</h1>
           <p className="text-dark-300 mt-2">Get started with your account</p>
         </div>

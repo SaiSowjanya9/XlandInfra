@@ -1,4 +1,5 @@
 const mysql = require('mysql2/promise');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 const dbConfig = {
@@ -375,11 +376,93 @@ const initOnboardingTables = async () => {
     `);
     console.log('  ✅ Customer accounts table initialized');
 
+    // Create users table for employee portal
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        phone VARCHAR(20),
+        role ENUM('admin', 'operations_manager', 'manager', 'coordinator', 'supervisor', 'executive', 'franchise', 'franchise_partner') NOT NULL DEFAULT 'executive',
+        is_active BOOLEAN DEFAULT TRUE,
+        last_login TIMESTAMP NULL,
+        created_by INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('  ✅ Users table initialized');
+
+    // Seed default users if table is empty (Password: Password@123)
+    const [userCount] = await conn.execute('SELECT COUNT(*) as cnt FROM users');
+    if (userCount[0].cnt === 0) {
+      console.log('  ⏳ Seeding default users...');
+      // Generate Password@123 bcrypt hash
+      const passwordHash = await bcrypt.hash('Password@123', 10);
+      
+      const defaultUsers = [
+        ['admin', 'admin@pmportal.com', 'System', 'Admin', '+91 9999999901', 'admin'],
+        ['ops_manager', 'ops@pmportal.com', 'Operations', 'Manager', '+91 9999999907', 'operations_manager'],
+        ['manager_admin', 'manager@pmportal.com', 'Operations', 'Manager', '+91 9999999902', 'manager'],
+        ['coordinator_admin', 'coordinator@pmportal.com', 'Field', 'Coordinator', '+91 9999999903', 'coordinator'],
+        ['supervisor_admin', 'supervisor@pmportal.com', 'Site', 'Supervisor', '+91 9999999904', 'supervisor'],
+        ['executive_admin', 'executive@pmportal.com', 'Data Entry', 'Executive', '+91 9999999905', 'executive'],
+        ['franchise', 'franchise@pmportal.com', 'Franchise', 'Partner', '+91 9999999906', 'franchise_partner']
+      ];
+
+      for (const [username, email, firstName, lastName, phone, role] of defaultUsers) {
+        try {
+          await conn.execute(
+            `INSERT INTO users (username, email, password_hash, first_name, last_name, phone, role, is_active) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)`,
+            [username, email, passwordHash, firstName, lastName, phone, role]
+          );
+        } catch (e) {
+          // User may already exist
+        }
+      }
+      console.log('  ✅ Default users seeded (Password: Password@123)');
+    }
+
+    // Create admin_users table
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS admin_users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        phone VARCHAR(20),
+        role VARCHAR(50) NOT NULL DEFAULT 'admin',
+        is_active BOOLEAN DEFAULT TRUE,
+        last_login TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('  ✅ Admin users table initialized');
+
+    // Seed admin user if table is empty
+    const [adminCount] = await conn.execute('SELECT COUNT(*) as cnt FROM admin_users');
+    if (adminCount[0].cnt === 0) {
+      const adminPasswordHash = await bcrypt.hash('Password@123', 10);
+      await conn.execute(
+        `INSERT INTO admin_users (username, email, password_hash, first_name, last_name, role, is_active) 
+         VALUES (?, ?, ?, ?, ?, ?, TRUE)`,
+        ['admin', 'admin@pmportal.com', adminPasswordHash, 'System', 'Admin', 'admin']
+      );
+      console.log('  ✅ Default admin user seeded (Password: Password@123)');
+    }
+
     conn.release();
-    console.log('✅ Onboarding tables initialized (properties & vendors)');
+    console.log('✅ All tables initialized');
     return true;
   } catch (error) {
-    console.error('❌ Failed to initialize onboarding tables:', error.message);
+    console.error('❌ Failed to initialize tables:', error.message);
     return false;
   }
 };
