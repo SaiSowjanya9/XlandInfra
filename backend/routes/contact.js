@@ -1,21 +1,25 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../config/database');
+const db = require('../config/database');
 const { sendContactNotification } = require('../services/emailService');
 
 // Initialize contact_submissions table
 const initContactTable = async () => {
   try {
-    await pool.query(`
+    if (!db.pool || !db.isDbConnected) {
+      console.log('⚠️ Skipping contact table initialization - database not connected');
+      return;
+    }
+    await db.pool.execute(`
       CREATE TABLE IF NOT EXISTS contact_submissions (
-        id SERIAL PRIMARY KEY,
+        id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255) NOT NULL,
         phone VARCHAR(20),
         message TEXT NOT NULL,
         status VARCHAR(50) DEFAULT 'new',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
     console.log('✅ Contact submissions table initialized');
@@ -24,8 +28,8 @@ const initContactTable = async () => {
   }
 };
 
-// Initialize table on module load
-initContactTable();
+// Initialize table after a short delay to allow database connection
+setTimeout(() => initContactTable(), 2000);
 
 // Submit contact form
 router.post('/', async (req, res) => {
@@ -40,15 +44,44 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Store submission in PostgreSQL
-    const result = await pool.query(
+    // Check if database is connected
+    if (!db.pool || !db.isDbConnected) {
+      // Still send email notification even without database
+      const emailSent = await sendContactNotification({
+        name,
+        email,
+        phone: phone || null,
+        message,
+        createdAt: new Date()
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Your message has been submitted successfully',
+        data: {
+          id: null,
+          emailNotification: emailSent,
+          note: 'Database not connected - email notification sent'
+        }
+      });
+    }
+
+    // Store submission in MySQL
+    const [result] = await db.pool.execute(
       `INSERT INTO contact_submissions (name, email, phone, message, status)
-       VALUES ($1, $2, $3, $4, 'new')
-       RETURNING id, name, email, phone, message, status, created_at`,
+       VALUES (?, ?, ?, ?, 'new')`,
       [name, email, phone || null, message]
     );
 
-    const submission = result.rows[0];
+    const insertId = result.insertId;
+    
+    // Fetch the inserted record
+    const [rows] = await db.pool.execute(
+      `SELECT id, name, email, phone, message, status, created_at FROM contact_submissions WHERE id = ?`,
+      [insertId]
+    );
+    
+    const submission = rows[0];
     console.log('📝 New contact submission saved to database:', submission);
 
     // Send email notification
@@ -81,14 +114,23 @@ router.post('/', async (req, res) => {
 // Get all submissions (for admin)
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query(
+    if (!db.pool || !db.isDbConnected) {
+      return res.json({
+        success: true,
+        data: [],
+        total: 0,
+        note: 'Database not connected'
+      });
+    }
+
+    const [rows] = await db.pool.execute(
       `SELECT * FROM contact_submissions ORDER BY created_at DESC`
     );
     
     res.json({
       success: true,
-      data: result.rows,
-      total: result.rows.length
+      data: rows,
+      total: rows.length
     });
   } catch (error) {
     console.error('Error fetching contact submissions:', error);
@@ -106,24 +148,36 @@ router.patch('/:id', async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const result = await pool.query(
+    if (!db.pool || !db.isDbConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database not connected'
+      });
+    }
+
+    const [result] = await db.pool.execute(
       `UPDATE contact_submissions 
-       SET status = $1, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $2 
-       RETURNING *`,
+       SET status = ? 
+       WHERE id = ?`,
       [status, id]
     );
 
-    if (result.rows.length === 0) {
+    if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
         message: 'Submission not found'
       });
     }
 
+    // Fetch updated record
+    const [rows] = await db.pool.execute(
+      `SELECT * FROM contact_submissions WHERE id = ?`,
+      [id]
+    );
+
     res.json({
       success: true,
-      data: result.rows[0]
+      data: rows[0]
     });
   } catch (error) {
     console.error('Error updating submission:', error);
@@ -140,12 +194,19 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `DELETE FROM contact_submissions WHERE id = $1 RETURNING id`,
+    if (!db.pool || !db.isDbConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database not connected'
+      });
+    }
+
+    const [result] = await db.pool.execute(
+      `DELETE FROM contact_submissions WHERE id = ?`,
       [id]
     );
 
-    if (result.rows.length === 0) {
+    if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
         message: 'Submission not found'
