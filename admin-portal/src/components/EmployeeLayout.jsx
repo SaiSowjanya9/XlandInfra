@@ -22,6 +22,7 @@ import {
   Archive,
   Shield,
   MapPin,
+  QrCode,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -48,6 +49,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
     { path: '/employee/user-management', icon: Shield, label: 'User Management' },
+    { path: '/employee/qr-management', icon: QrCode, label: 'QR Management' },
   ];
 
   const [estimatesOpen, setEstimatesOpen] = useState(

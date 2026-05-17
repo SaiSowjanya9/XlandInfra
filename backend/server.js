@@ -27,6 +27,7 @@ const coordinatorRouter = require('./routes/coordinator');
 const supervisorRouter = require('./routes/supervisor');
 const executiveRouter = require('./routes/executive');
 const employeeRouter = require('./routes/employee');
+const { router: qrRouter, initializePool: initQRPool } = require('./routes/qr');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -103,6 +104,7 @@ app.use('/api/coordinator', coordinatorRouter);
 app.use('/api/supervisor', supervisorRouter);
 app.use('/api/executive', executiveRouter);
 app.use('/api/employee', employeeRouter);
+app.use('/api/qr', qrRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -138,7 +140,11 @@ const startServer = async () => {
   if (dbConnected) {
     // Initialize onboarding tables
     await initOnboardingTables();
+    // Initialize QR routes with database pool
+    const { pool } = require('./config/database');
+    initQRPool(pool);
     console.log('✅ Database mode: Connected');
+    console.log('✅ QR Management System initialized');
   } else {
     console.log('⚠️ Database mode: Demo (no MySQL connection)');
     console.log('   To enable database, update .env with valid MySQL credentials');

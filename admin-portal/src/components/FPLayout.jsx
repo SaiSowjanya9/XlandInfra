@@ -19,6 +19,7 @@ import {
   Archive,
   MapPin,
   Truck,
+  QrCode,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -44,6 +45,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
     { path: '/fp/properties', icon: Building2, label: 'Property Management' },
     { path: '/fp/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/fp/customers', icon: UserPlus, label: 'Add Customer' },
+    { path: '/fp/qr-management', icon: QrCode, label: 'QR Management' },
   ];
 
   const vendorSubItems = [

@@ -458,6 +458,171 @@ const initOnboardingTables = async () => {
       console.log('  ✅ Default admin user seeded (Password: Password@123)');
     }
 
+    // Initialize QR Management tables
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS qr_codes (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        qr_id VARCHAR(50) UNIQUE NOT NULL,
+        slug VARCHAR(100) UNIQUE NOT NULL,
+        label VARCHAR(255) NOT NULL,
+        description TEXT,
+        current_url VARCHAR(2048) NOT NULL,
+        original_url VARCHAR(2048) NOT NULL,
+        qr_type ENUM('website', 'admin', 'campaign', 'event', 'custom') DEFAULT 'custom',
+        is_active BOOLEAN DEFAULT TRUE,
+        foreground_color VARCHAR(7) DEFAULT '#000000',
+        background_color VARCHAR(7) DEFAULT '#FFFFFF',
+        error_correction ENUM('L', 'M', 'Q', 'H') DEFAULT 'H',
+        created_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NULL,
+        INDEX idx_qr_slug (slug),
+        INDEX idx_qr_active (is_active)
+      )
+    `);
+
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS qr_redirect_history (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        qr_id INT NOT NULL,
+        previous_url VARCHAR(2048),
+        new_url VARCHAR(2048) NOT NULL,
+        changed_by INT,
+        changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        change_reason VARCHAR(500),
+        INDEX idx_redirect_qr (qr_id)
+      )
+    `);
+
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS qr_scans (
+        id BIGINT PRIMARY KEY AUTO_INCREMENT,
+        qr_id INT NOT NULL,
+        scan_id VARCHAR(64) UNIQUE NOT NULL,
+        visitor_id VARCHAR(64),
+        session_id VARCHAR(64),
+        ip_address VARCHAR(45),
+        ip_hash VARCHAR(64),
+        is_unique_user BOOLEAN DEFAULT TRUE,
+        is_repeat_scan BOOLEAN DEFAULT FALSE,
+        user_agent TEXT,
+        device_type ENUM('mobile', 'tablet', 'desktop', 'unknown') DEFAULT 'unknown',
+        device_brand VARCHAR(100),
+        device_model VARCHAR(100),
+        os_name VARCHAR(50),
+        os_version VARCHAR(50),
+        browser_name VARCHAR(50),
+        browser_version VARCHAR(50),
+        country VARCHAR(100),
+        country_code VARCHAR(3),
+        state VARCHAR(100),
+        city VARCHAR(100),
+        latitude DECIMAL(10, 8),
+        longitude DECIMAL(11, 8),
+        timezone VARCHAR(50),
+        referrer_url VARCHAR(2048),
+        referrer_domain VARCHAR(255),
+        language VARCHAR(10),
+        redirect_url VARCHAR(2048),
+        redirect_success BOOLEAN DEFAULT TRUE,
+        redirect_latency_ms INT,
+        scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        session_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        session_end TIMESTAMP NULL,
+        session_duration INT DEFAULT 0,
+        INDEX idx_scan_qr (qr_id),
+        INDEX idx_scan_date (scanned_at),
+        INDEX idx_scan_device (device_type)
+      )
+    `);
+
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS qr_analytics_daily (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        qr_id INT NOT NULL,
+        date DATE NOT NULL,
+        total_scans INT DEFAULT 0,
+        unique_users INT DEFAULT 0,
+        repeat_users INT DEFAULT 0,
+        mobile_scans INT DEFAULT 0,
+        tablet_scans INT DEFAULT 0,
+        desktop_scans INT DEFAULT 0,
+        UNIQUE KEY unique_qr_date (qr_id, date),
+        INDEX idx_analytics_date (date)
+      )
+    `);
+
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS qr_analytics_hourly (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        qr_id INT NOT NULL,
+        hour_timestamp TIMESTAMP NOT NULL,
+        total_scans INT DEFAULT 0,
+        unique_users INT DEFAULT 0,
+        UNIQUE KEY unique_qr_hour (qr_id, hour_timestamp)
+      )
+    `);
+
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS qr_active_sessions (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        qr_id INT NOT NULL,
+        session_id VARCHAR(64) UNIQUE NOT NULL,
+        visitor_id VARCHAR(64),
+        ip_address VARCHAR(45),
+        device_type VARCHAR(20),
+        browser VARCHAR(50),
+        os VARCHAR(50),
+        country VARCHAR(100),
+        city VARCHAR(100),
+        latitude DECIMAL(10, 8),
+        longitude DECIMAL(11, 8),
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT TRUE,
+        INDEX idx_active_qr (qr_id),
+        INDEX idx_active_session (session_id)
+      )
+    `);
+
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS qr_rate_limits (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        ip_address VARCHAR(45) NOT NULL,
+        qr_id INT,
+        request_count INT DEFAULT 1,
+        window_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_blocked BOOLEAN DEFAULT FALSE,
+        blocked_until TIMESTAMP NULL,
+        UNIQUE KEY unique_ip_qr (ip_address, qr_id)
+      )
+    `);
+
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS qr_bot_detections (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        ip_address VARCHAR(45) NOT NULL,
+        user_agent TEXT,
+        detection_type ENUM('bot', 'spam', 'suspicious', 'blocked') NOT NULL,
+        confidence_score DECIMAL(5, 2),
+        detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Seed default XLAND INFRA QR codes
+    const [qrCount] = await conn.execute('SELECT COUNT(*) as cnt FROM qr_codes');
+    if (qrCount[0].cnt === 0) {
+      await conn.execute(`
+        INSERT INTO qr_codes (qr_id, slug, label, description, current_url, original_url, qr_type, error_correction)
+        VALUES 
+          ('XLAND-MAIN-001', 'main', 'XLAND INFRA Website', 'Official XLAND INFRA main website QR code', 'https://www.xlandinfra.com', 'https://www.xlandinfra.com', 'website', 'H'),
+          ('XLAND-ADMIN-001', 'admin', 'XLAND INFRA Admin Portal', 'Admin portal access QR code', 'https://admin.xlandinfra.com', 'https://admin.xlandinfra.com', 'admin', 'H')
+      `);
+      console.log('  ✅ Default QR codes seeded');
+    }
+    console.log('  ✅ QR Management tables initialized');
+
     conn.release();
     console.log('✅ All tables initialized');
     return true;
