@@ -98,56 +98,72 @@ const sendWorkOrderNotification = async (workOrder) => {
 
 // Send notification for contact form submission
 const sendContactNotification = async (contactData) => {
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: CONTACT_EMAILS.join(', '),
-    subject: `New Contact Inquiry from ${contactData.name} - XLAND INFRA`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #1e293b; color: #f1f5f9;">
-        <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #d97706;">
-          <h1 style="color: #fbbf24; margin: 0;">XlandInfra Customer Portal</h1>
-          <p style="color: #94a3b8; margin-top: 5px;">New Contact Form Submission</p>
-        </div>
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #1e293b; color: #f1f5f9;">
+      <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #d97706;">
+        <h1 style="color: #fbbf24; margin: 0;">XlandInfra Customer Portal</h1>
+        <p style="color: #94a3b8; margin-top: 5px;">New Contact Form Submission</p>
+      </div>
+      
+      <div style="padding: 20px 0;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Name:</td>
+            <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9; font-weight: bold;">${contactData.name}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Email:</td>
+            <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9;">${contactData.email}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Phone:</td>
+            <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9;">${contactData.phone || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; color: #94a3b8;">Submitted At:</td>
+            <td style="padding: 10px; color: #f1f5f9;">${new Date().toLocaleString()}</td>
+          </tr>
+        </table>
         
-        <div style="padding: 20px 0;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Name:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9; font-weight: bold;">${contactData.name}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Email:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9;">${contactData.email}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Phone:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9;">${contactData.phone || 'N/A'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; color: #94a3b8;">Submitted At:</td>
-              <td style="padding: 10px; color: #f1f5f9;">${new Date().toLocaleString()}</td>
-            </tr>
-          </table>
-          
-          <div style="margin-top: 20px; padding: 15px; background-color: #334155; border-radius: 8px;">
-            <h3 style="color: #fbbf24; margin: 0 0 10px 0;">Message:</h3>
-            <p style="color: #f1f5f9; margin: 0; white-space: pre-wrap;">${contactData.message}</p>
-          </div>
-        </div>
-        
-        <div style="text-align: center; padding: 20px 0; border-top: 1px solid #334155; color: #64748b; font-size: 12px;">
-          <p>This is an automated notification from XlandInfra Customer Portal</p>
+        <div style="margin-top: 20px; padding: 15px; background-color: #334155; border-radius: 8px;">
+          <h3 style="color: #fbbf24; margin: 0 0 10px 0;">Message:</h3>
+          <p style="color: #f1f5f9; margin: 0; white-space: pre-wrap;">${contactData.message}</p>
         </div>
       </div>
-    `
-  };
+      
+      <div style="text-align: center; padding: 20px 0; border-top: 1px solid #334155; color: #64748b; font-size: 12px;">
+        <p>This is an automated notification from XlandInfra Customer Portal</p>
+      </div>
+    </div>
+  `;
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`📧 Contact notification sent to ${CONTACT_EMAILS.join(', ')}`);
-    return true;
+    // Send separate emails to each recipient for reliable delivery
+    const emailPromises = CONTACT_EMAILS.map(async (email) => {
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: `New Contact Inquiry from ${contactData.name} - XLAND INFRA`,
+        html: emailHtml
+      };
+      
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`📧 Contact notification sent to ${email}`);
+        return { email, success: true };
+      } catch (err) {
+        console.error(`❌ Failed to send to ${email}:`, err.message);
+        return { email, success: false, error: err.message };
+      }
+    });
+
+    const results = await Promise.all(emailPromises);
+    const successCount = results.filter(r => r.success).length;
+    console.log(`📧 Contact notification: ${successCount}/${CONTACT_EMAILS.length} emails sent successfully`);
+    
+    return successCount > 0;
   } catch (error) {
-    console.error('Error sending email:', error.message);
+    console.error('Error sending contact emails:', error.message);
     return false;
   }
 };
