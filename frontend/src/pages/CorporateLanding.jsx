@@ -181,6 +181,7 @@ function CorporateLanding() {
     name: '',
     email: '',
     phone: '',
+    city: '',
     subject: '',
     message: ''
   });
@@ -274,7 +275,7 @@ function CorporateLanding() {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          message: `Subject: ${formData.subject}\n\n${formData.message}`
+          message: `Subject: ${formData.subject}\nCity: ${formData.city}\n\n${formData.message}`
         }),
       });
 
@@ -282,7 +283,7 @@ function CorporateLanding() {
       
       if (data.success) {
         setFormSuccess(true);
-        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+        setFormData({ name: '', email: '', phone: '', city: '', subject: '', message: '' });
         setTimeout(() => setFormSuccess(false), 5000);
       } else {
         alert('Error submitting form. Please try again.');
@@ -332,7 +333,7 @@ function CorporateLanding() {
               <div className="relative">
                 <div className="absolute inset-0 bg-gold-400/20 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="relative transition-transform duration-500 group-hover:scale-105">
-                  <BrandLogo size="default" className="hidden sm:flex" />
+                  <BrandLogo size="xl" className="hidden sm:flex" />
                   <BrandLogo size="sm" showText={false} className="sm:hidden" />
                 </div>
               </div>
@@ -1202,6 +1203,17 @@ function CorporateLanding() {
                       placeholder="9876543210"
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-gray-400 text-sm mb-2">City</label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleFormChange}
+                    className="input-field"
+                    placeholder="Enter your city"
+                  />
                 </div>
                 <div>
                   <label className="block text-gray-400 text-sm mb-2">Email Address <span className="text-red-400">*</span></label>

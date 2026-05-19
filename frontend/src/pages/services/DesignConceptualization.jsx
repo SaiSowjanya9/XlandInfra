@@ -20,7 +20,7 @@ const DesignConceptualization = () => {
   const primaryStages = [
     { id: 1, title: 'Concept Planning', desc: 'Transforming ideas into structured architectural blueprints', icon: FileText },
     { id: 2, title: 'Design Integration & Coordination', desc: 'Seamless alignment of all design disciplines', icon: Layers },
-    { id: 3, title: 'City & County Approval Management', desc: 'Navigating permits and regulatory compliance', icon: Building },
+    { id: 3, title: 'Approval Management', desc: 'Navigating permits and regulatory compliance', icon: Building },
     { id: 4, title: 'Sales & Marketing Cycle Activation', desc: 'Strategic positioning for market success', icon: Megaphone },
     { id: 5, title: 'Legal Coordination', desc: 'Comprehensive documentation and legal safeguards', icon: Scale },
   ];
