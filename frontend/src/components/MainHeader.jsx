@@ -58,10 +58,10 @@ const MainHeader = () => {
   const isServicePage = location.pathname.startsWith('/services/');
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
-      isScrolled || isServicePage
-        ? 'bg-[#0D0D0D]/95 backdrop-blur-2xl shadow-2xl shadow-black/80 border-b border-gold-500/20' 
-        : 'bg-gradient-to-b from-black/60 to-transparent'
+    <nav className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-700 ${
+      isScrolled || isServicePage || servicesDropdownOpen
+        ? 'bg-[#0D0D0D]/98 backdrop-blur-2xl shadow-2xl shadow-black/80 border-b border-gold-500/20' 
+        : 'bg-gradient-to-b from-black/80 via-black/60 to-transparent'
     }`}>
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-24">
@@ -83,7 +83,7 @@ const MainHeader = () => {
                 {link.hasDropdown ? (
                   /* Services with Dropdown */
                   <div 
-                    className="relative z-[60]"
+                    className="relative z-[1000]"
                     onMouseEnter={() => setServicesDropdownOpen(true)}
                     onMouseLeave={() => setServicesDropdownOpen(false)}
                   >
@@ -103,7 +103,7 @@ const MainHeader = () => {
                     </button>
                     
                     {/* Dropdown Menu */}
-                    <div className={`absolute top-full left-1/2 -translate-x-1/2 pt-3 transition-all duration-300 z-[100] ${
+                    <div className={`absolute top-full left-1/2 -translate-x-1/2 pt-3 transition-all duration-300 z-[1001] ${
                       servicesDropdownOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'
                     }`}>
                       <div className="w-64 rounded-2xl shadow-2xl shadow-black overflow-hidden border border-gold-500/20" style={{ backgroundColor: '#0D0D0D' }}>
