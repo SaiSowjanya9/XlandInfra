@@ -321,10 +321,10 @@ function CorporateLanding() {
         canonical="https://xlandinfra.com/"
       />
       {/* ============ PREMIUM NAVIGATION ============ */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
-        isScrolled 
-          ? 'bg-[#0D0D0D]/95 backdrop-blur-2xl shadow-2xl shadow-black/80 border-b border-gold-500/20' 
-          : 'bg-gradient-to-b from-black/60 to-transparent'
+      <nav className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-700 ${
+        isScrolled || servicesDropdownOpen
+          ? 'bg-[#0D0D0D]/98 backdrop-blur-2xl shadow-2xl shadow-black/80 border-b border-gold-500/20' 
+          : 'bg-gradient-to-b from-black/80 via-black/60 to-transparent'
       }`}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-24">
@@ -346,7 +346,7 @@ function CorporateLanding() {
                   {link.hasDropdown ? (
                     /* Services with Dropdown */
                     <div 
-                      className="relative z-[60]"
+                      className="relative z-[1000]"
                       onMouseEnter={() => setServicesDropdownOpen(true)}
                       onMouseLeave={() => setServicesDropdownOpen(false)}
                     >
@@ -366,7 +366,7 @@ function CorporateLanding() {
                       </button>
                       
                       {/* Dropdown Menu */}
-                      <div className={`absolute top-full left-1/2 -translate-x-1/2 pt-3 transition-all duration-300 z-[100] ${
+                      <div className={`absolute top-full left-1/2 -translate-x-1/2 pt-3 transition-all duration-300 z-[1001] ${
                         servicesDropdownOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'
                       }`}>
                         <div className="w-64 bg-[#0D0D0D] border border-gold-500/20 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden">
@@ -798,7 +798,7 @@ function CorporateLanding() {
       </section>
 
       {/* ============ PREMIUM SERVICES SECTION - CONNECTED FLOW LAYOUT ============ */}
-      <section id="services" className="pt-28 pb-16 md:pt-32 md:pb-20 relative bg-[#0D0D0D] overflow-hidden">
+      <section id="services" className="pt-28 pb-16 md:pt-32 md:pb-20 relative bg-[#0D0D0D] overflow-hidden z-10">
         {/* Background Elements */}
         <div className="absolute inset-0">
           {/* Subtle dot pattern */}
