@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { User, Lock, ArrowLeft, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import SetPassword from './SetPassword';
 
 const CoordinatorLogin = ({ onLogin, onBack }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,12 +25,24 @@ const CoordinatorLogin = ({ onLogin, onBack }) => {
       const result = await response.json();
 
       if (result.success) {
-        localStorage.setItem('pm_auth_token', result.data.token);
-        localStorage.setItem('pm_current_user', JSON.stringify({
-          ...result.data.user,
-          portal: 'coordinator'
-        }));
-        onLogin(result.data.user, 'coordinator');
+        const userData = result.data;
+        
+        if (userData.mustChangePassword) {
+          setPendingUser({
+            ...userData.user,
+            name: `${userData.user.firstName || ''} ${userData.user.lastName || ''}`.trim(),
+            email: userData.user.email,
+            portal: 'coordinator'
+          });
+          setShowSetPassword(true);
+        } else {
+          localStorage.setItem('pm_auth_token', userData.token);
+          localStorage.setItem('pm_current_user', JSON.stringify({
+            ...userData.user,
+            portal: 'coordinator'
+          }));
+          onLogin(userData.user, 'coordinator');
+        }
       } else {
         setError(result.message || 'Login failed');
       }
@@ -37,6 +52,22 @@ const CoordinatorLogin = ({ onLogin, onBack }) => {
       setLoading(false);
     }
   };
+
+  const handlePasswordSet = (updatedUser) => {
+    setShowSetPassword(false);
+    setPendingUser(null);
+    onLogin({ ...updatedUser, portal: 'coordinator' }, 'coordinator');
+  };
+
+  if (showSetPassword && pendingUser) {
+    return (
+      <SetPassword 
+        user={pendingUser} 
+        onPasswordSet={handlePasswordSet}
+        onCancel={() => { setShowSetPassword(false); setPendingUser(null); }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-900 via-cyan-900 to-slate-900 flex items-center justify-center p-4">

@@ -151,7 +151,7 @@ const FPUsers = ({ user }) => {
         </div>
         <button
           onClick={() => { resetForm(); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus className="w-4 h-4" />
           <span>Add User</span>
@@ -180,7 +180,7 @@ const FPUsers = ({ user }) => {
             placeholder="Search users..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
@@ -189,7 +189,7 @@ const FPUsers = ({ user }) => {
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-6 h-6 text-emerald-600 animate-spin" />
+            <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="text-center py-12">
@@ -275,7 +275,7 @@ const FPUsers = ({ user }) => {
                     required
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -286,7 +286,7 @@ const FPUsers = ({ user }) => {
                     required
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -298,7 +298,7 @@ const FPUsers = ({ user }) => {
                   required
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Unique username for login"
                 />
               </div>
@@ -310,7 +310,7 @@ const FPUsers = ({ user }) => {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -323,7 +323,7 @@ const FPUsers = ({ user }) => {
                     minLength={6}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 pr-10"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 pr-10"
                     placeholder="Minimum 6 characters"
                   />
                   <button
@@ -342,7 +342,7 @@ const FPUsers = ({ user }) => {
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -354,7 +354,7 @@ const FPUsers = ({ user }) => {
                       key={opt.value}
                       className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
                         formData.role === opt.value
-                          ? 'border-emerald-500 bg-emerald-50'
+                          ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
@@ -364,7 +364,7 @@ const FPUsers = ({ user }) => {
                         value={opt.value}
                         checked={formData.role === opt.value}
                         onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                        className="mt-1 text-emerald-600 focus:ring-emerald-500"
+                        className="mt-1 text-blue-600 focus:ring-blue-500"
                       />
                       <div>
                         <p className="font-medium text-gray-900">{opt.label}</p>
@@ -385,7 +385,7 @@ const FPUsers = ({ user }) => {
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   <Save className="w-4 h-4" />
                   <span>Create User</span>

@@ -19,7 +19,8 @@ import {
   Archive,
   MapPin,
   Truck,
-  QrCode,
+  Hammer,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -45,24 +46,23 @@ const FPLayout = ({ admin, onLogout, children }) => {
     { path: '/fp/properties', icon: Building2, label: 'Property Management' },
     { path: '/fp/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/fp/customers', icon: UserPlus, label: 'Add Customer' },
-    { path: '/fp/qr-management', icon: QrCode, label: 'QR Management' },
   ];
 
   const vendorSubItems = [
-    { path: '/fp/vendors', icon: Store, label: 'All Vendors' },
-    { path: '/fp/vendors/add', icon: Plus, label: 'Add Vendor' },
-    { path: '/fp/vendors/assigned', icon: Truck, label: 'Assigned Vendors' },
+    { path: '/fp/vendors/add', icon: UserPlus, label: 'Add Vendor' },
+    { path: '/fp/vendors', icon: Hammer, label: 'Vendor Details' },
+    { path: '/fp/vendors/assigned', icon: ClipboardCheck, label: 'Assigned Vendors' },
   ];
 
   const employeeSubItems = [
-    { path: '/fp/employees', icon: Users, label: 'All Employees' },
-    { path: '/fp/employees/add', icon: Plus, label: 'Add Employee' },
-    { path: '/fp/employees/zones', icon: MapPin, label: 'Zone Management' },
+    { path: '/fp/employees/add', icon: UserPlus, label: 'Add Employee' },
+    { path: '/fp/employees', icon: Users, label: 'Employee Details' },
+    { path: '/fp/employees/zones', icon: MapPin, label: 'Employee Zone Management' },
   ];
 
   const estimatesSubItems = [
-    { path: '/fp/estimates', icon: List, label: 'All Estimates' },
     { path: '/fp/estimates/create', icon: Plus, label: 'Create Estimate' },
+    { path: '/fp/estimates', icon: List, label: 'All Estimates' },
     { path: '/fp/estimates/amc', icon: Package, label: 'AMC Packages' },
     { path: '/fp/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
     { path: '/fp/estimates/archived', icon: Archive, label: 'Archived' },
@@ -145,13 +145,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
           {/* Admin Info */}
           <div className="px-6 py-4 border-b border-gray-200">
             <p className="text-sm text-gray-500">Logged in as</p>
-            <p className="font-semibold text-gray-900">
-              {admin?.firstName || admin?.name?.split(' ')[0]} {admin?.lastName || admin?.name?.split(' ').slice(1).join(' ')}
-            </p>
-            {admin?.companyName && (
-              <p className="text-sm text-gray-500 mt-0.5">{admin.companyName}</p>
-            )}
-            <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">
+            <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
               Franchise Partner
             </span>
           </div>

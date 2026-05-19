@@ -11,6 +11,8 @@ const MainHeader = () => {
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
 
   const servicePages = [
+    { label: 'Property Management', path: '/services/property-management' },
+    { label: 'Property Sales & Advisory', path: '/services/property-sales-advisory' },
     { label: 'Investment Consultation', path: '/services/investment-consultation' },
     { label: 'Design & Conceptualization', path: '/services/design-conceptualization' },
     { label: 'Construction & Delivery', path: '/services/construction-delivery' },
@@ -209,7 +211,7 @@ const MainHeader = () => {
                   </button>
                   
                   {/* Service Sub-pages */}
-                  <div className={`overflow-hidden transition-all duration-300 ${servicesDropdownOpen ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
+                  <div className={`overflow-hidden transition-all duration-300 ${servicesDropdownOpen ? 'max-h-72 opacity-100' : 'max-h-0 opacity-0'}`}>
                     <div className="pl-6 py-2 space-y-1">
                       {servicePages.map((service, idx) => (
                         <button

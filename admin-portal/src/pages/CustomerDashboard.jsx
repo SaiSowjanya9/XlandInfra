@@ -22,21 +22,29 @@ const CustomerDashboard = ({ user }) => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ pending: 0, completed: 0 });
+  const [customerData, setCustomerData] = useState(null);
 
   useEffect(() => {
-    fetchRecentOrders();
+    fetchCustomerDashboard();
   }, []);
 
-  const fetchRecentOrders = async () => {
+  const fetchCustomerDashboard = async () => {
     try {
-      const response = await fetch(`${API_BASE}/work-orders?limit=5`);
+      const token = localStorage.getItem('customer_token') || localStorage.getItem('pm_auth_token');
+      const response = await fetch(`${API_BASE}/customers/dashboard`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       const result = await response.json();
       if (result.success) {
-        setRecentOrders(result.data?.slice(0, 3) || []);
-        setStats(result.counts || { pending: 0, completed: 0 });
+        setCustomerData(result.data.customer);
+        setRecentOrders(result.data.recentWorkOrders?.slice(0, 3) || []);
+        setStats(result.data.stats || { pending: 0, completed: 0 });
       }
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error('Error fetching customer dashboard:', error);
     } finally {
       setLoading(false);
     }
@@ -97,16 +105,16 @@ const CustomerDashboard = ({ user }) => {
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg shadow-teal-500/20">
               <span className="text-white font-bold text-lg">
-                {user?.firstName?.[0]}{user?.lastName?.[0] || 'R'}
+                {(customerData?.firstName || user?.firstName)?.[0]}{(customerData?.lastName || user?.lastName)?.[0] || 'R'}
               </span>
             </div>
             <div>
               <p className="text-slate-400 text-sm">Welcome back</p>
               <h1 className="text-2xl font-bold text-white">
-                {user?.firstName || 'Resident'} {user?.lastName || ''}
+                {customerData?.firstName || user?.firstName || 'Resident'} {customerData?.lastName || user?.lastName || ''}
               </h1>
               <p className="text-slate-500 text-sm mt-0.5">
-                {user?.unitNumber ? `Unit ${user.unitNumber}` : 'Resident Portal'} • {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                {customerData?.propertyName || user?.unitNumber ? `${customerData?.propertyName || `Unit ${user?.unitNumber}`}` : 'Resident Portal'} • {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
               </p>
             </div>
           </div>

@@ -129,13 +129,21 @@ export const authenticateUser = async (username, password, role = null) => {
   }
 };
 
-// Map role to portal type
+// Map role to portal type - Each role gets its dedicated portal
 export const getPortalTypeFromRole = (role) => {
   const rolePortalMap = {
     'admin': 'employee',
     'operations_manager': 'employee',
     'franchise_partner': 'franchise',
-    'franchise': 'franchise'
+    'franchise': 'franchise',
+    'manager': 'manager',
+    'coordinator': 'coordinator',
+    'supervisor': 'supervisor',
+    'executive': 'executive',
+    'fp_admin': 'franchise',
+    'fp_manager': 'franchise',
+    'fp_supervisor': 'franchise',
+    'fp_executive': 'franchise'
   };
   return rolePortalMap[role] || 'employee';
 };

@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Building2, ArrowLeft, Eye, EyeOff, Loader2, AlertCircle, ChevronRight } from 'lucide-react';
+import SetPassword from './SetPassword';
 
 const ManagerLogin = ({ onLogin, onBack }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,18 +25,31 @@ const ManagerLogin = ({ onLogin, onBack }) => {
       const result = await response.json();
 
       if (result.success) {
-        // Store token and user info
-        localStorage.setItem('pm_auth_token', result.data.token);
-        localStorage.setItem('pm_current_user', JSON.stringify({
-          ...result.data.user,
-          portal: 'manager'
-        }));
+        const userData = result.data;
+        
+        // Check if user must change password (first login)
+        if (userData.mustChangePassword) {
+          setPendingUser({
+            ...userData.user,
+            name: `${userData.user.firstName || ''} ${userData.user.lastName || ''}`.trim(),
+            email: userData.user.email,
+            portal: 'manager'
+          });
+          setShowSetPassword(true);
+        } else {
+          // Store token and user info
+          localStorage.setItem('pm_auth_token', userData.token);
+          localStorage.setItem('pm_current_user', JSON.stringify({
+            ...userData.user,
+            portal: 'manager'
+          }));
 
-        // Call onLogin with user data
-        onLogin({
-          ...result.data.user,
-          portal: 'manager'
-        });
+          // Call onLogin with user data
+          onLogin({
+            ...userData.user,
+            portal: 'manager'
+          });
+        }
       } else {
         setError(result.message || 'Login failed');
       }
@@ -43,6 +59,27 @@ const ManagerLogin = ({ onLogin, onBack }) => {
       setLoading(false);
     }
   };
+
+  // Handle password set completion
+  const handlePasswordSet = (updatedUser) => {
+    setShowSetPassword(false);
+    setPendingUser(null);
+    onLogin({ ...updatedUser, portal: 'manager' });
+  };
+
+  // Show Set Password screen if needed
+  if (showSetPassword && pendingUser) {
+    return (
+      <SetPassword 
+        user={pendingUser} 
+        onPasswordSet={handlePasswordSet}
+        onCancel={() => {
+          setShowSetPassword(false);
+          setPendingUser(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 flex flex-col relative overflow-hidden">

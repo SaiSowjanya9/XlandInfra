@@ -180,7 +180,8 @@ router.post('/login', async (req, res) => {
           firstName: user.first_name,
           lastName: user.last_name,
           role: user.role,
-          roleName: ROLE_NAMES[user.role]
+          roleName: ROLE_NAMES[user.role],
+          franchisePartnerId: user.franchise_partner_id || null
         }
       }
     });
@@ -298,7 +299,8 @@ router.post('/set-password', async (req, res) => {
           firstName: user.first_name,
           lastName: user.last_name,
           role: user.role,
-          roleName: ROLE_NAMES[user.role]
+          roleName: ROLE_NAMES[user.role],
+          franchisePartnerId: user.franchise_partner_id || null
         }
       }
     });

@@ -3,45 +3,47 @@ import {
   Store,
   Plus,
   Search,
-  Edit,
-  Trash2,
+  Eye,
   Download,
   RefreshCw,
   X,
-  Save,
-  AlertCircle,
-  CheckCircle,
-  Phone,
-  Mail,
-  MapPin,
-  Truck
+  Bell,
+  Truck,
+  Wrench,
+  Zap,
+  Wind,
+  Sparkles,
+  Shield,
+  ChevronDown,
+  FileCheck
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+// Service Type Tabs
+const TABS = [
+  { id: 'all', label: 'All Vendors', icon: Truck },
+  { id: 'Plumbing', label: 'Plumbing', icon: Wrench },
+  { id: 'Electrical', label: 'Electrical', icon: Zap },
+  { id: 'HVAC', label: 'HVAC', icon: Wind },
+  { id: 'Cleaning', label: 'Cleaning', icon: Sparkles },
+  { id: 'Security', label: 'Security', icon: Shield },
+];
 
 const FPVendors = ({ user }) => {
-  const [vendors, setVendors] = useState({ own: [], assigned: [], all: [] });
-  const [categories, setCategories] = useState([]);
+  const navigate = useNavigate();
+  const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
-  const [showModal, setShowModal] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [formData, setFormData] = useState({
-    companyName: '',
-    contactPerson: '',
-    email: '',
-    phone: '',
-    alternatePhone: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    serviceCategories: [],
-    gstNumber: '',
-    panNumber: ''
-  });
+  const [divisionFilter, setDivisionFilter] = useState('');
+  const [zoneFilter, setZoneFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [viewVendor, setViewVendor] = useState(null);
+  const [toast, setToast] = useState(null);
 
   const token = localStorage.getItem('pm_auth_token');
 
+  // Fetch vendors from API
   const fetchVendors = async () => {
     setLoading(true);
     try {
@@ -50,7 +52,9 @@ const FPVendors = ({ user }) => {
       });
       const result = await response.json();
       if (result.success) {
-        setVendors(result.data);
+        // Handle both array and object response
+        const vendorData = Array.isArray(result.data) ? result.data : (result.data?.all || []);
+        setVendors(vendorData);
       }
     } catch (error) {
       console.error('Fetch vendors error:', error);
@@ -59,121 +63,103 @@ const FPVendors = ({ user }) => {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('/api/fp/categories', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success) {
-        setCategories(result.data);
-      }
-    } catch (error) {
-      console.error('Fetch categories error:', error);
-    }
-  };
-
   useEffect(() => {
     fetchVendors();
-    fetchCategories();
-  }, []);
+  }, [statusFilter]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage({ type: '', text: '' });
+  const showToastMessage = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
-    try {
-      const response = await fetch('/api/fp/vendors', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
+  const handleExportAll = () => {
+    const exportData = filteredVendors.map(v => ({
+      'Vendor ID': v.vendorId || v.vendor_id,
+      'Service Type': v.serviceType || v.service_type,
+      'Owner': v.ownerName || v.owner_name,
+      'Zone': v.zone,
+      'Area': v.areaName || v.area_name,
+      'Rate/Visit': `₹${v.ratePerVisit || v.rate_per_visit || 0}`,
+      'Coverage/Day': v.coveragePerDay || v.coverage_per_day || 0,
+      'Status': v.status || 'active'
+    }));
 
-      const result = await response.json();
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vendors_export.json';
+    a.click();
+    showToastMessage('Vendors exported successfully');
+  };
 
-      if (result.success) {
-        setMessage({ type: 'success', text: 'Vendor created successfully!' });
-        setShowModal(false);
-        resetForm();
-        fetchVendors();
-      } else {
-        setMessage({ type: 'error', text: result.message || 'Operation failed' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to create vendor' });
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  // Get unique divisions and zones for filters
+  const divisions = [...new Set(vendors.map(v => v.division).filter(Boolean))];
+  const zones = [...new Set(vendors.map(v => v.zone).filter(Boolean))];
+
+  // Filter vendors
+  const filteredVendors = vendors.filter(v => {
+    // Service type filter
+    if (activeTab !== 'all' && (v.serviceType || v.service_type) !== activeTab) return false;
+    
+    // Division filter
+    if (divisionFilter && v.division !== divisionFilter) return false;
+    
+    // Zone filter
+    if (zoneFilter && v.zone !== zoneFilter) return false;
+    
+    // Status filter
+    if (statusFilter === 'active' && v.status === 'deleted') return false;
+    if (statusFilter === 'deleted' && v.status !== 'deleted') return false;
+    
+    // Search filter
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      return (
+        (v.vendorId || v.vendor_id || '').toLowerCase().includes(q) ||
+        (v.ownerName || v.owner_name || '').toLowerCase().includes(q) ||
+        (v.serviceType || v.service_type || '').toLowerCase().includes(q) ||
+        (v.zone || '').toLowerCase().includes(q) ||
+        (v.areaName || v.area_name || '').toLowerCase().includes(q)
+      );
     }
-  };
-
-  const handleExport = async () => {
-    try {
-      const response = await fetch('/api/fp/export/vendors', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      
-      const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'vendors_export.json';
-      a.click();
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Export failed' });
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      companyName: '',
-      contactPerson: '',
-      email: '',
-      phone: '',
-      alternatePhone: '',
-      address: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      serviceCategories: [],
-      gstNumber: '',
-      panNumber: ''
-    });
-  };
-
-  const getVendorList = () => {
-    switch (activeTab) {
-      case 'own': return vendors.own || [];
-      case 'assigned': return vendors.assigned || [];
-      default: return vendors.all || [];
-    }
-  };
-
-  const filteredVendors = getVendorList().filter(v =>
-    v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const tabs = [
-    { id: 'all', label: 'All Vendors', count: vendors.all?.length || 0 },
-    { id: 'own', label: 'My Vendors', count: vendors.own?.length || 0 },
-    { id: 'assigned', label: 'Assigned Vendors', count: vendors.assigned?.length || 0 }
-  ];
+    return true;
+  });
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vendor Management</h1>
-          <p className="text-gray-500 mt-1">Manage your franchise vendors</p>
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 ${
+          toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'
+        }`}>
+          {toast.message}
         </div>
-        <div className="flex gap-2">
+      )}
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Vendor Details</h1>
+          <p className="text-gray-500 text-sm mt-1">{vendors.length} total vendors</p>
+        </div>
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => { resetForm(); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+            onClick={fetchVendors}
+            className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={() => navigate('/fp/vendors/add')}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus className="w-4 h-4" />
             <span>Add Vendor</span>
@@ -181,269 +167,296 @@ const FPVendors = ({ user }) => {
         </div>
       </div>
 
-      {/* Message */}
-      {message.text && (
-        <div className={`p-4 rounded-lg flex items-center gap-3 ${
-          message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-          <span>{message.text}</span>
-          <button onClick={() => setMessage({ type: '', text: '' })} className="ml-auto">
-            <X className="w-4 h-4" />
-          </button>
+      {/* Tabs + Filters Bar */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        {/* Service Type Tab bar */}
+        <div className="border-b border-gray-200 px-4 flex items-center gap-1 overflow-x-auto">
+          {TABS.map(tab => {
+            const TabIcon = tab.icon;
+            const isActive = activeTab === tab.id;
+            const count = tab.id === 'all' ? vendors.length : vendors.filter(v => (v.serviceType || v.service_type) === tab.id).length;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'border-amber-600 text-amber-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <TabIcon className="w-4 h-4" />
+                {tab.label}
+                <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
+                  isActive ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      )}
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl border border-gray-100 p-1">
-        <div className="flex gap-1">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {tab.label} ({tab.count})
-            </button>
-          ))}
+        {/* Search + Filters */}
+        <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name, ID, service, or zone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <div className="relative">
+              <select
+                value={divisionFilter}
+                onChange={(e) => setDivisionFilter(e.target.value)}
+                className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
+              >
+                <option value="">All Divisions</option>
+                {divisions.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            </div>
+            <div className="relative">
+              <select
+                value={zoneFilter}
+                onChange={(e) => setZoneFilter(e.target.value)}
+                className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
+              >
+                <option value="">All Zones</option>
+                {zones.map(z => <option key={z} value={z}>{z}</option>)}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            </div>
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className={`appearance-none pl-3 pr-8 py-2 border rounded-md text-sm focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none ${
+                  statusFilter === 'deleted' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-300 bg-white'
+                }`}
+              >
+                <option value="active">Active Vendors</option>
+                <option value="deleted">Deleted Vendors</option>
+                <option value="all">All Vendors</option>
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Search */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search vendors..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
-      </div>
-
-      {/* Vendors List */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        {/* Vendor Table */}
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-6 h-6 text-emerald-600 animate-spin" />
+          <div className="py-16 text-center">
+            <RefreshCw className="w-8 h-8 text-amber-600 animate-spin mx-auto" />
           </div>
         ) : filteredVendors.length === 0 ? (
-          <div className="text-center py-12">
-            <Store className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No vendors found</p>
+          <div className="py-16 text-center">
+            <Truck className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 font-medium">No vendors found</p>
+            <p className="text-gray-400 text-sm mt-1">
+              {vendors.length === 0 
+                ? 'Add vendors using the Add Vendor page.' 
+                : 'Try adjusting your search or filters.'
+              }
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Location</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Vendor ID</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Service Type</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Owner</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Zone</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Area</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Rate/Visit</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Coverage/Day</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created By</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3 text-center font-medium text-gray-600 whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {filteredVendors.map((vendor) => (
-                  <tr key={vendor.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-4 px-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{vendor.company_name}</p>
-                        <p className="text-sm text-gray-500">{vendor.vendor_id}</p>
-                        {vendor.contact_person && (
-                          <p className="text-sm text-gray-400">{vendor.contact_person}</p>
-                        )}
-                      </div>
+                  <tr key={vendor.id || vendor.vendorId} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-600 whitespace-nowrap">
+                      {vendor.vendorId || vendor.vendor_id}
                     </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        vendor.vendor_type === 'own' 
-                          ? 'bg-purple-100 text-purple-700' 
-                          : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {vendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
+                        {vendor.serviceType || vendor.service_type}
+                        {vendor.serviceVerified && <FileCheck className="w-3 h-3 text-emerald-500" />}
                       </span>
                     </td>
-                    <td className="py-4 px-4">
-                      <div className="space-y-1">
-                        {vendor.phone && (
-                          <p className="text-sm text-gray-600 flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {vendor.phone}
-                          </p>
-                        )}
-                        {vendor.email && (
-                          <p className="text-sm text-gray-400 flex items-center gap-1">
-                            <Mail className="w-3 h-3" /> {vendor.email}
-                          </p>
-                        )}
-                      </div>
+                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
+                      {vendor.ownerName || vendor.owner_name || '-'}
                     </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-start gap-1">
-                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-gray-600">
-                          {vendor.city ? `${vendor.city}, ${vendor.state || ''}` : '-'}
-                        </span>
-                      </div>
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                      {vendor.zone || '-'}
                     </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        vendor.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                      {vendor.areaName || vendor.area_name || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                      ₹{vendor.ratePerVisit || vendor.rate_per_visit || 0}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
+                      {vendor.coveragePerDay || vendor.coverage_per_day || 0}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                      {vendor.createdBy || 'Manager'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                      {formatDate(vendor.createdAt || vendor.created_at)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                        vendor.status === 'deleted' 
+                          ? 'bg-red-100 text-red-700' 
+                          : 'bg-green-100 text-green-700'
                       }`}>
-                        {vendor.is_active ? 'Active' : 'Inactive'}
+                        {vendor.status === 'deleted' ? 'Deleted' : 'Active'}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => setViewVendor(vendor)}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="View details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const exportData = [{
+                              'Vendor ID': vendor.vendorId || vendor.vendor_id,
+                              'Service Type': vendor.serviceType || vendor.service_type,
+                              'Owner': vendor.ownerName || vendor.owner_name,
+                              'Zone': vendor.zone,
+                              'Area': vendor.areaName || vendor.area_name,
+                              'Rate/Visit': `₹${vendor.ratePerVisit || vendor.rate_per_visit || 0}`,
+                              'Coverage/Day': vendor.coveragePerDay || vendor.coverage_per_day || 0,
+                            }];
+                            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `vendor_${vendor.vendorId || vendor.vendor_id}.json`;
+                            a.click();
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                          title="Export to JSON"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+              Showing {filteredVendors.length} of {vendors.length} vendors
+            </div>
           </div>
         )}
       </div>
 
-      {/* Add Vendor Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Add New Vendor</h2>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
+      {/* Export All Button */}
+      {filteredVendors.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleExportAll}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export All Vendors
+          </button>
+        </div>
+      )}
+
+      {/* View Vendor Modal */}
+      {viewVendor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setViewVendor(null)}>
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">{viewVendor.ownerName || viewVendor.owner_name}</h2>
+                <p className="text-sm text-gray-500 font-mono">{viewVendor.vendorId || viewVendor.vendor_id}</p>
+              </div>
+              <button onClick={() => setViewVendor(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* Service Info */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Service Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Service Type</p>
+                    <p className="font-medium">{viewVendor.serviceType || viewVendor.service_type}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Verified</p>
+                    <p className="font-medium">{viewVendor.serviceVerified ? 'Yes' : 'No'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location Info */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Location</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Zone</p>
+                    <p className="font-medium">{viewVendor.zone || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Area</p>
+                    <p className="font-medium">{viewVendor.areaName || viewVendor.area_name || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rate & Coverage */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate & Coverage</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Rate Per Visit</p>
+                    <p className="font-medium">₹{viewVendor.ratePerVisit || viewVendor.rate_per_visit || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Coverage Per Day</p>
+                    <p className="font-medium">{viewVendor.coveragePerDay || viewVendor.coverage_per_day || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Info */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Contact Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Owner Email</p>
+                    <p className="font-medium">{viewVendor.ownerEmail || viewVendor.owner_email || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Owner Mobile</p>
+                    <p className="font-medium">{viewVendor.ownerMobile || viewVendor.owner_mobile || '-'}</p>
+                  </div>
+                </div>
               </div>
             </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.companyName}
-                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-                  <input
-                    type="text"
-                    value={formData.contactPerson}
-                    onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Alternate Phone</label>
-                  <input
-                    type="tel"
-                    value={formData.alternatePhone}
-                    onChange={(e) => setFormData({ ...formData, alternatePhone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                  <textarea
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    rows={2}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                  <input
-                    type="text"
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
-                  <input
-                    type="text"
-                    value={formData.gstNumber}
-                    onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">PAN Number</label>
-                  <input
-                    type="text"
-                    value={formData.panNumber}
-                    onChange={(e) => setFormData({ ...formData, panNumber: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Add Vendor</span>
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

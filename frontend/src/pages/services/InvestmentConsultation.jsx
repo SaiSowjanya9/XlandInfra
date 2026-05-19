@@ -33,7 +33,7 @@ const InvestmentConsultation = () => {
     // Secondary Stages (Silver/Charcoal)
     { id: 5, title: 'Concept Planning', desc: 'Architectural vision and development blueprint', icon: FileText, isPrimary: false },
     { id: 6, title: 'Design Integration & Coordination', desc: 'Unified design execution across all disciplines', icon: Layers, isPrimary: false },
-    { id: 7, title: 'City & County Approval Management', desc: 'Permit acquisition and regulatory compliance', icon: Building, isPrimary: false },
+    { id: 7, title: 'Approval Management', desc: 'Permit acquisition and regulatory compliance', icon: Building, isPrimary: false },
     { id: 8, title: 'Sales & Marketing Activation', desc: 'Strategic market positioning and buyer engagement', icon: Megaphone, isPrimary: false },
     { id: 9, title: 'Legal Coordination', desc: 'Contracts, documentation, and legal safeguards', icon: Scale, isPrimary: false },
     { id: 10, title: 'Financial Forecasting', desc: 'Cash flow modeling and investment projections', icon: LineChart, isPrimary: false },

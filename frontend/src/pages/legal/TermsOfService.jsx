@@ -19,15 +19,15 @@ const TermsOfService = () => {
       title: 'Acceptance of Terms',
       content: `By accessing or using the services provided by XLAND INFRA PVT LTD ("Company," "we," "our," or "us"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
 
-These terms apply to all visitors, users, and others who access or use our website, customer portal, property management services, brokerage services, construction services, and any other services we provide.`
+These terms apply to all visitors, users, and others who access or use our website, customer portal, property management services, property sales services, investment consultation, design services, construction services, and any other services we provide.`
     },
     {
       icon: FileText,
       title: 'Services Description',
       content: `XLAND INFRA provides comprehensive real estate services including:
 
+• Property Management: Complete facility management solutions including maintenance, AMC services, and end-to-end property care
 • Property Sales & Advisory: Verified property listings, marketing, buyer matching, and end-to-end sales support
-• Brokerage Services: Professional property buying, selling, and acquisition services
 • Investment Consultation: Strategic real estate investment guidance and portfolio analysis
 • Design & Conceptualization: Architectural concepts and space planning solutions
 • Construction & Delivery: End-to-end construction execution and project management

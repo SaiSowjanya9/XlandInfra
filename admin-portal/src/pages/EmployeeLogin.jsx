@@ -2,13 +2,16 @@ import { useState, useEffect } from 'react';
 import { 
   Eye, EyeOff, AlertCircle, ArrowLeft, Briefcase, User, Lock
 } from 'lucide-react';
-import { authenticateUser, initializeUsers } from '../utils/userStore';
+import { initializeUsers, getPortalTypeFromRole } from '../utils/userStore';
+import SetPassword from './SetPassword';
 
 const EmployeeLogin = ({ onLogin, onBack }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
 
   useEffect(() => {
     initializeUsers();
@@ -20,21 +23,77 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
     setLoading(true);
     
     try {
-      // Authenticate without role - backend will detect role automatically
-      const result = await authenticateUser(formData.username, formData.password);
+      // Authenticate via unified employee login API
+      const response = await fetch('/api/employee/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: formData.username, password: formData.password })
+      });
       
-      if (result.success) {
-        // Pass the user with detected portal type
-        onLogin(result.user);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        const userRole = result.data.user?.role || result.data.role;
+        
+        const user = {
+          id: result.data.user?.id || result.data.id,
+          username: result.data.user?.username || result.data.username,
+          name: `${result.data.user?.firstName || result.data.firstName || ''} ${result.data.user?.lastName || result.data.lastName || ''}`.trim(),
+          email: result.data.user?.email || result.data.email,
+          role: userRole,
+          status: 'active',
+          permissions: result.data.user?.permissions || ['all'],
+          franchisePartnerId: result.data.user?.franchisePartnerId,
+          portal: getPortalTypeFromRole(userRole)
+        };
+        
+        // Check if user must change password (first login)
+        if (result.data.mustChangePassword) {
+          // Store temporary credentials for password change
+          setPendingUser({
+            ...user,
+            tempPassword: formData.password
+          });
+          setShowSetPassword(true);
+        } else {
+          // Store token and user data
+          if (result.data.token) {
+            localStorage.setItem('pm_auth_token', result.data.token);
+          }
+          localStorage.setItem('pm_current_user', JSON.stringify(user));
+          onLogin(user);
+        }
       } else {
         setError(result.message || 'Invalid credentials');
       }
     } catch (err) {
-      setError('Authentication failed. Please try again.');
+      console.error('Authentication error:', err);
+      setError('Unable to connect to server. Please check if the backend is running.');
     } finally {
       setLoading(false);
     }
   };
+
+  // Handle password set completion
+  const handlePasswordSet = (updatedUser) => {
+    setShowSetPassword(false);
+    setPendingUser(null);
+    onLogin(updatedUser);
+  };
+
+  // Show Set Password screen if needed
+  if (showSetPassword && pendingUser) {
+    return (
+      <SetPassword 
+        user={pendingUser} 
+        onPasswordSet={handlePasswordSet}
+        onCancel={() => {
+          setShowSetPassword(false);
+          setPendingUser(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">

@@ -55,46 +55,46 @@ const FPLogin = ({ onLogin, onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-teal-900 to-emerald-800 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-900 to-blue-800 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Abstract background shapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-emerald-700/20 to-transparent rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-700/20 to-transparent rounded-full blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-teal-600/15 to-transparent rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-emerald-700/10 via-transparent to-teal-700/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-700/10 via-transparent to-indigo-700/10 rounded-full blur-3xl" />
       </div>
       
       <div className="w-full max-w-md">
         {/* Back Button */}
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-emerald-300 hover:text-white mb-8 transition-colors"
+          className="flex items-center gap-2 text-blue-300 hover:text-white mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm">Back to Portal Selection</span>
         </button>
 
         {/* Login Card */}
-        <div className="relative bg-emerald-800/80 backdrop-blur-xl border border-emerald-700/50 rounded-2xl p-8 shadow-2xl shadow-black/20">
+        <div className="relative bg-blue-800/80 backdrop-blur-xl border border-blue-700/50 rounded-2xl p-8 shadow-2xl shadow-black/20">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 border border-emerald-400/30 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 border border-blue-400/30 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
               <Briefcase className="w-7 h-7 text-white" strokeWidth={1.5} />
             </div>
             <h1 className="text-2xl font-bold text-white">Franchise Partner Portal</h1>
-            <p className="text-emerald-300 text-sm mt-1">Sign in to manage your franchise operations</p>
+            <p className="text-blue-300 text-sm mt-1">Sign in to manage your franchise operations</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username Field */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-emerald-200">Username or Email</label>
+              <label className="block text-sm font-medium text-blue-200">Username or Email</label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" strokeWidth={1.5} />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" strokeWidth={1.5} />
                 <input
                   type="text"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 bg-emerald-900/60 border border-emerald-600/50 rounded-lg text-white placeholder-emerald-400 focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-500/50 outline-none transition-all"
+                  className="w-full pl-11 pr-4 py-3 bg-blue-900/60 border border-blue-600/50 rounded-lg text-white placeholder-blue-400 focus:ring-2 focus:ring-blue-400/50 focus:border-blue-500/50 outline-none transition-all"
                   placeholder="Enter username or email"
                   required
                 />
@@ -103,21 +103,21 @@ const FPLogin = ({ onLogin, onBack }) => {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-emerald-200">Password</label>
+              <label className="block text-sm font-medium text-blue-200">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" strokeWidth={1.5} />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" strokeWidth={1.5} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full pl-11 pr-12 py-3 bg-emerald-900/60 border border-emerald-600/50 rounded-lg text-white placeholder-emerald-400 focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-500/50 outline-none transition-all"
+                  className="w-full pl-11 pr-12 py-3 bg-blue-900/60 border border-blue-600/50 rounded-lg text-white placeholder-blue-400 focus:ring-2 focus:ring-blue-400/50 focus:border-blue-500/50 outline-none transition-all"
                   placeholder="Enter password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400 hover:text-white transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-400 hover:text-white transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" strokeWidth={1.5} /> : <Eye className="w-5 h-5" strokeWidth={1.5} />}
                 </button>
@@ -136,7 +136,7 @@ const FPLogin = ({ onLogin, onBack }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center shadow-lg shadow-emerald-500/30"
+              className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-400 hover:to-indigo-400 text-white font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center shadow-lg shadow-blue-500/30"
             >
               {loading ? (
                 <div className="flex items-center gap-2">
@@ -150,8 +150,8 @@ const FPLogin = ({ onLogin, onBack }) => {
           </form>
 
           {/* Footer */}
-          <div className="mt-6 pt-6 border-t border-emerald-700/50 text-center">
-            <p className="text-emerald-400 text-xs">
+          <div className="mt-6 pt-6 border-t border-blue-700/50 text-center">
+            <p className="text-blue-400 text-xs">
               Access restricted to authorized Franchise Partners only
             </p>
           </div>

@@ -16,6 +16,7 @@ const {
   validateOwnership,
   buildScopedQuery 
 } = require('../middleware/fpScope');
+const { sendFPEmployeeWelcomeEmail } = require('../services/emailService');
 
 // ============================================
 // FP AUTHENTICATION (Public - No Auth Required)
@@ -680,43 +681,215 @@ router.get('/employees', requireFPScope, async (req, res) => {
   }
 });
 
-// Create employee
+// Helper function to generate temporary password
+const generateTempPassword = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
+// Helper function to generate user ID
+const generateUserId = (prefix = 'FPE') => {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${prefix}-${timestamp}${random}`;
+};
+
+// Create employee with full onboarding (user account + email)
 router.post('/employees', requireFPScope, async (req, res) => {
   try {
     const {
-      firstName, lastName, email, phone, role, assignedZones
+      name, email, phone, countryCode, aadhaar, role, assignedZones
     } = req.body;
 
-    const employeeCode = `FP${req.fpId}-EMP-${Date.now()}`;
-
-    const [result] = await pool.execute(
-      `INSERT INTO fp_employees (
-        franchise_partner_id, employee_code, first_name, last_name, email, phone, role
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [req.fpId, employeeCode, firstName, lastName, email, phone, role || 'fp_executive']
-    );
-
-    // Assign zones if provided
-    if (assignedZones && assignedZones.length > 0) {
-      for (const zoneId of assignedZones) {
-        await pool.execute(
-          `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_id)
-           VALUES (?, ?, ?)`,
-          [req.fpId, result.insertId, zoneId]
-        );
-      }
+    // Validate required email field
+    if (!email || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email address is required for employee account creation',
+        field: 'email'
+      });
     }
 
-    res.status(201).json({
-      success: true,
-      message: 'Employee created successfully',
-      data: { id: result.insertId, employeeCode }
-    });
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address',
+        field: 'email'
+      });
+    }
+
+    // Check if email already exists in users table
+    const [existingUser] = await pool.execute(
+      'SELECT id FROM users WHERE email = ?',
+      [email.trim().toLowerCase()]
+    );
+
+    if (existingUser.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email already exists',
+        field: 'email'
+      });
+    }
+
+    // Check if email exists in fp_employees table
+    const [existingEmployee] = await pool.execute(
+      'SELECT id FROM fp_employees WHERE email = ? AND franchise_partner_id = ?',
+      [email.trim().toLowerCase(), req.fpId]
+    );
+
+    if (existingEmployee.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'An employee with this email already exists',
+        field: 'email'
+      });
+    }
+
+    // Parse name into first and last name
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Generate employee code, user ID, and temporary password
+    const employeeCode = `FP${req.fpId}-EMP-${Date.now()}`;
+    const userId = generateUserId('FPE');
+    const tempPassword = generateTempPassword();
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    // Generate username from email (part before @)
+    const username = email.trim().toLowerCase().split('@')[0] + '_' + Date.now().toString(36);
+
+    // Get FP company name for email
+    const [fpData] = await pool.execute(
+      'SELECT company_name FROM franchise_partners WHERE id = ?',
+      [req.fpId]
+    );
+    const companyName = fpData.length > 0 ? fpData[0].company_name : 'Franchise Partner';
+
+    // Start transaction
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      // 1. Create user account in users table with must_change_password flag
+      const [userResult] = await connection.execute(
+        `INSERT INTO users (
+          user_id, username, email, password_hash, first_name, last_name, phone, 
+          role, franchise_partner_id, must_change_password, is_active, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'fp_executive', ?, TRUE, TRUE, ?)`,
+        [
+          userId, 
+          username, 
+          email.trim().toLowerCase(), 
+          passwordHash, 
+          firstName, 
+          lastName, 
+          phone || null,
+          req.fpId,
+          req.user.id
+        ]
+      );
+
+      // 2. Create fp_employees record
+      const [empResult] = await connection.execute(
+        `INSERT INTO fp_employees (
+          franchise_partner_id, employee_code, first_name, last_name, email, phone, 
+          country_code, aadhaar, role, username, password_hash, user_id, is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
+        [
+          req.fpId, 
+          employeeCode, 
+          firstName, 
+          lastName, 
+          email.trim().toLowerCase(), 
+          phone || null,
+          countryCode || '+91',
+          aadhaar || null,
+          role || 'fp_executive',
+          username,
+          passwordHash,
+          userResult.insertId
+        ]
+      );
+
+      // 3. Assign zones if provided
+      if (assignedZones && assignedZones.length > 0) {
+        for (const zoneId of assignedZones) {
+          await connection.execute(
+            `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_id)
+             VALUES (?, ?, ?)`,
+            [req.fpId, empResult.insertId, zoneId]
+          );
+        }
+      }
+
+      await connection.commit();
+      connection.release();
+
+      // 4. Send welcome email with temporary password and login instructions
+      const portalUrl = process.env.ADMIN_PORTAL_URL || 'http://localhost:5174';
+      const emailResult = await sendFPEmployeeWelcomeEmail({
+        email: email.trim().toLowerCase(),
+        firstName,
+        lastName,
+        username,
+        userId,
+        tempPassword,
+        companyName,
+        role: role || 'fp_executive',
+        loginUrl: portalUrl
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Employee account created successfully. Login credentials have been sent to the employee\'s email.',
+        data: { 
+          id: empResult.insertId, 
+          employeeId: employeeCode,
+          userId: userId,
+          email: email.trim().toLowerCase(),
+          emailSent: emailResult.success,
+          emailMessage: emailResult.success 
+            ? 'Welcome email sent successfully with login instructions'
+            : 'Account created but email delivery failed. Please share credentials manually.'
+        }
+      });
+    } catch (dbError) {
+      await connection.rollback();
+      connection.release();
+      throw dbError;
+    }
   } catch (error) {
     console.error('Create employee error:', error);
+    
+    // Handle duplicate entry errors
+    if (error.code === 'ER_DUP_ENTRY') {
+      if (error.message.includes('email')) {
+        return res.status(400).json({
+          success: false,
+          message: 'An account with this email already exists',
+          field: 'email'
+        });
+      }
+      if (error.message.includes('username')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username already exists. Please try again.',
+          field: 'email'
+        });
+      }
+    }
+    
     res.status(500).json({
       success: false,
-      message: 'Failed to create employee',
+      message: 'Failed to create employee account',
       error: error.message
     });
   }

@@ -18,9 +18,7 @@ const PropertySalesAdvisory = () => {
   const services = [
     { icon: Building2, title: 'Property Listing & Marketing', desc: 'Professional listing with premium marketing reach across multiple channels' },
     { icon: Shield, title: 'Legal Verification', desc: 'Complete legal due diligence and documentation verification' },
-    { icon: Users, title: 'Targeted Buyer Matching', desc: 'Connect with verified and qualified potential buyers' },
-    { icon: Target, title: 'Sales Execution', desc: 'Professional handling of complete sales process' },
-    { icon: Sparkles, title: 'Advisory Solutions', desc: 'Expert property advisory and strategic consultation' }
+    { icon: Target, title: 'Sales Execution', desc: 'Professional handling of complete sales process' }
   ];
 
   const whyChooseUs = [
@@ -152,7 +150,7 @@ const PropertySalesAdvisory = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {services.map((service, index) => {
               const Icon = service.icon;
               return (

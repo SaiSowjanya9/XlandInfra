@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Eye as EyeIcon, Lock, ArrowLeft, EyeOff, AlertCircle } from 'lucide-react';
+import SetPassword from './SetPassword';
 
 const SupervisorLogin = ({ onLogin, onBack }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,12 +25,24 @@ const SupervisorLogin = ({ onLogin, onBack }) => {
       const result = await response.json();
 
       if (result.success) {
-        localStorage.setItem('pm_auth_token', result.data.token);
-        localStorage.setItem('pm_current_user', JSON.stringify({
-          ...result.data.user,
-          portal: 'supervisor'
-        }));
-        onLogin(result.data.user, 'supervisor');
+        const userData = result.data;
+        
+        if (userData.mustChangePassword) {
+          setPendingUser({
+            ...userData.user,
+            name: `${userData.user.firstName || ''} ${userData.user.lastName || ''}`.trim(),
+            email: userData.user.email,
+            portal: 'supervisor'
+          });
+          setShowSetPassword(true);
+        } else {
+          localStorage.setItem('pm_auth_token', userData.token);
+          localStorage.setItem('pm_current_user', JSON.stringify({
+            ...userData.user,
+            portal: 'supervisor'
+          }));
+          onLogin(userData.user, 'supervisor');
+        }
       } else {
         setError(result.message || 'Login failed');
       }
@@ -37,6 +52,22 @@ const SupervisorLogin = ({ onLogin, onBack }) => {
       setLoading(false);
     }
   };
+
+  const handlePasswordSet = (updatedUser) => {
+    setShowSetPassword(false);
+    setPendingUser(null);
+    onLogin({ ...updatedUser, portal: 'supervisor' }, 'supervisor');
+  };
+
+  if (showSetPassword && pendingUser) {
+    return (
+      <SetPassword 
+        user={pendingUser} 
+        onPasswordSet={handlePasswordSet}
+        onCancel={() => { setShowSetPassword(false); setPendingUser(null); }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-900 via-orange-900 to-slate-900 flex items-center justify-center p-4">
