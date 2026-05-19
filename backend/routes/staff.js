@@ -631,7 +631,7 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
   }
 });
 
-// Delete staff member (soft delete)
+// Delete staff member (permanent delete)
 router.delete('/:id', authenticate, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
@@ -644,8 +644,22 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
       });
     }
 
+    // Check if user exists
+    const [existing] = await pool.execute(
+      `SELECT id, email, role FROM users WHERE id = ?`,
+      [id]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff member not found'
+      });
+    }
+
+    // Permanently delete the user from database
     const [result] = await pool.execute(
-      `UPDATE users SET is_active = FALSE WHERE id = ?`,
+      `DELETE FROM users WHERE id = ?`,
       [id]
     );
 
@@ -656,9 +670,11 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
       });
     }
 
+    console.log(`🗑️ User permanently deleted: ID ${id}, Email: ${existing[0].email}`);
+
     res.json({
       success: true,
-      message: 'Staff member deleted successfully'
+      message: 'Staff member permanently deleted successfully'
     });
   } catch (error) {
     console.error('Error deleting staff member:', error);
