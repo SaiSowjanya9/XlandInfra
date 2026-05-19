@@ -1170,7 +1170,7 @@ function CorporateLanding() {
             </div>
 
             {/* Contact Form */}
-            <div className="bg-gradient-to-br from-charcoal-800/80 to-charcoal-900/80 backdrop-blur-xl rounded-2xl border border-gold-500/20 p-8">
+            <div id="contact-form" className="bg-gradient-to-br from-charcoal-800/80 to-charcoal-900/80 backdrop-blur-xl rounded-2xl border border-gold-500/20 p-8">
               <h3 className="text-2xl font-bold text-white mb-6">Send us a Message</h3>
               <form onSubmit={handleFormSubmit} className="space-y-5">
                 <div className="grid sm:grid-cols-2 gap-5">

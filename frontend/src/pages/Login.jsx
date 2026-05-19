@@ -215,7 +215,18 @@ const Login = ({ onLogin }) => {
 
           <div className="mt-6 p-4 bg-dark-700/50 rounded-lg border border-dark-600">
             <p className="text-xs text-dark-400 text-center">
-              <Link to="/#contact" className="text-gold-400 hover:text-gold-300 font-semibold underline underline-offset-2">Need an account?</Link> Start your Property Management journey with XLand Infra now
+              <button
+                onClick={() => {
+                  navigate('/');
+                  setTimeout(() => {
+                    document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 150);
+                }}
+                className="text-gold-400 hover:text-gold-300 font-semibold underline underline-offset-2"
+              >
+                Need an account?
+              </button>{' '}
+              Start your Property Management journey with XLand Infra now
             </p>
           </div>
         </div>

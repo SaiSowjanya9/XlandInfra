@@ -1,16 +1,18 @@
 /**
  * Seed Employee Users Script
  * Creates default users for all employee roles
- * Password for all users: Password@123
+ * Production Admin: XL_admin / Password$123
+ * Other users: Password@123
  */
 
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/database');
 
-const PASSWORD = 'Password@123';
+const DEFAULT_PASSWORD = 'Password@123';
+const ADMIN_PASSWORD = 'Password$123';  // Production admin password
 
 const users = [
-  { username: 'admin', email: 'admin@pmportal.com', firstName: 'System', lastName: 'Admin', phone: '+91 9999999901', role: 'admin' },
+  { username: 'XL_admin', email: 'admin@xlandinfra.com', firstName: 'XLand', lastName: 'Admin', phone: '+91 9999999901', role: 'admin', isMainAdmin: true },
   { username: 'ops_manager', email: 'ops@pmportal.com', firstName: 'Operations', lastName: 'Manager', phone: '+91 9999999907', role: 'operations_manager' },
   { username: 'manager_admin', email: 'manager@pmportal.com', firstName: 'Operations', lastName: 'Manager', phone: '+91 9999999902', role: 'manager' },
   { username: 'coordinator_admin', email: 'coordinator@pmportal.com', firstName: 'Field', lastName: 'Coordinator', phone: '+91 9999999903', role: 'coordinator' },
@@ -21,9 +23,10 @@ const users = [
 
 async function seedUsers() {
   try {
-    console.log('Generating password hash for:', PASSWORD);
-    const passwordHash = await bcrypt.hash(PASSWORD, 10);
-    console.log('Password hash:', passwordHash);
+    console.log('Generating password hashes...');
+    const defaultPasswordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+    const adminPasswordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+    console.log('Password hashes generated');
 
     // First, update the role ENUM to include all roles
     console.log('\nUpdating role ENUM...');
@@ -41,6 +44,9 @@ async function seedUsers() {
     console.log('\nInserting users...');
     for (const user of users) {
       try {
+        // Use admin password for main admin, default password for others
+        const passwordHash = user.isMainAdmin ? adminPasswordHash : defaultPasswordHash;
+        
         await pool.execute(`
           INSERT INTO users (username, email, password_hash, first_name, last_name, phone, role, is_active) 
           VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)
@@ -62,7 +68,9 @@ async function seedUsers() {
     const [rows] = await pool.execute('SELECT id, username, email, first_name, last_name, role, is_active FROM users');
     console.table(rows);
 
-    console.log('\n✓ Seed completed! All users have password: Password@123');
+    console.log('\n✓ Seed completed!');
+    console.log('  - Main Admin (XL_admin): Password$123');
+    console.log('  - Other users: Password@123');
     process.exit(0);
   } catch (error) {
     console.error('Seed error:', error);
