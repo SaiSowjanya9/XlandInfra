@@ -183,7 +183,7 @@ const requireAnyPermission = (...permissions) => {
   };
 };
 
-// Admin only middleware
+// Admin only middleware (includes Operations Manager)
 const adminOnly = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -192,7 +192,7 @@ const adminOnly = (req, res, next) => {
     });
   }
 
-  if (req.user.role !== ROLES.ADMIN) {
+  if (![ROLES.ADMIN, ROLES.OPERATIONS_MANAGER].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Admin privileges required.'
@@ -202,7 +202,7 @@ const adminOnly = (req, res, next) => {
   next();
 };
 
-// Manager or Admin middleware
+// Manager or Admin middleware (includes Operations Manager)
 const managerOrAdmin = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -211,7 +211,7 @@ const managerOrAdmin = (req, res, next) => {
     });
   }
 
-  if (![ROLES.ADMIN, ROLES.MANAGER].includes(req.user.role)) {
+  if (![ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Manager or Admin privileges required.'
