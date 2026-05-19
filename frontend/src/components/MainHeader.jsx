@@ -70,7 +70,7 @@ const MainHeader = () => {
             <div className="relative">
               <div className="absolute inset-0 bg-gold-400/20 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <div className="relative transition-transform duration-500 group-hover:scale-105">
-                <BrandLogo size="default" className="hidden sm:flex" />
+                <BrandLogo size="xl" className="hidden sm:flex" />
                 <BrandLogo size="sm" showText={false} className="sm:hidden" />
               </div>
             </div>
