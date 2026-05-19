@@ -380,6 +380,7 @@ const initOnboardingTables = async () => {
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id VARCHAR(20) UNIQUE,
         username VARCHAR(100) UNIQUE NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
@@ -387,6 +388,14 @@ const initOnboardingTables = async () => {
         last_name VARCHAR(100) NOT NULL,
         phone VARCHAR(20),
         role ENUM('admin', 'operations_manager', 'manager', 'coordinator', 'supervisor', 'executive', 'franchise', 'franchise_partner') NOT NULL DEFAULT 'executive',
+        can_view BOOLEAN DEFAULT TRUE,
+        can_create BOOLEAN DEFAULT FALSE,
+        can_edit BOOLEAN DEFAULT FALSE,
+        can_delete BOOLEAN DEFAULT FALSE,
+        can_approve BOOLEAN DEFAULT FALSE,
+        can_assign BOOLEAN DEFAULT FALSE,
+        can_close BOOLEAN DEFAULT FALSE,
+        must_change_password BOOLEAN DEFAULT FALSE,
         is_active BOOLEAN DEFAULT TRUE,
         last_login TIMESTAMP NULL,
         created_by INT NULL,
@@ -394,6 +403,28 @@ const initOnboardingTables = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
+    
+    // Add missing columns if table already exists (for existing deployments)
+    const userColumnsToAdd = [
+      { name: 'user_id', definition: 'VARCHAR(20) UNIQUE AFTER id' },
+      { name: 'can_view', definition: 'BOOLEAN DEFAULT TRUE AFTER role' },
+      { name: 'can_create', definition: 'BOOLEAN DEFAULT FALSE AFTER can_view' },
+      { name: 'can_edit', definition: 'BOOLEAN DEFAULT FALSE AFTER can_create' },
+      { name: 'can_delete', definition: 'BOOLEAN DEFAULT FALSE AFTER can_edit' },
+      { name: 'can_approve', definition: 'BOOLEAN DEFAULT FALSE AFTER can_delete' },
+      { name: 'can_assign', definition: 'BOOLEAN DEFAULT FALSE AFTER can_approve' },
+      { name: 'can_close', definition: 'BOOLEAN DEFAULT FALSE AFTER can_assign' },
+      { name: 'must_change_password', definition: 'BOOLEAN DEFAULT FALSE AFTER can_close' }
+    ];
+    
+    for (const col of userColumnsToAdd) {
+      try {
+        await conn.execute(`ALTER TABLE users ADD COLUMN ${col.name} ${col.definition}`);
+        console.log(`  ✅ Added column ${col.name} to users table`);
+      } catch (e) {
+        // Column already exists - ignore
+      }
+    }
     console.log('  ✅ Users table initialized');
 
     // Seed default users if table is empty (Password: Password@123)
@@ -457,6 +488,58 @@ const initOnboardingTables = async () => {
       );
       console.log('  ✅ Default admin user seeded (Password: Password@123)');
     }
+
+    // Create franchise_partners table
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS franchise_partners (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        company_name VARCHAR(255) NOT NULL,
+        contact_person VARCHAR(200),
+        phone VARCHAR(20),
+        address TEXT,
+        city VARCHAR(100),
+        state VARCHAR(100),
+        pincode VARCHAR(10),
+        gst_number VARCHAR(20),
+        pan_number VARCHAR(20),
+        is_active BOOLEAN DEFAULT TRUE,
+        last_login TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('  ✅ Franchise partners table initialized');
+
+    // Create fp_users table (Portal users under FP)
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS fp_users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        franchise_partner_id INT NOT NULL,
+        username VARCHAR(100) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        phone VARCHAR(20),
+        role ENUM('fp_admin', 'fp_manager', 'fp_supervisor', 'fp_executive') NOT NULL DEFAULT 'fp_executive',
+        can_view BOOLEAN DEFAULT TRUE,
+        can_create BOOLEAN DEFAULT NULL,
+        can_edit BOOLEAN DEFAULT NULL,
+        can_delete BOOLEAN DEFAULT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        last_login TIMESTAMP NULL,
+        created_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (franchise_partner_id) REFERENCES franchise_partners(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_fp_username (franchise_partner_id, username),
+        UNIQUE KEY unique_fp_email (franchise_partner_id, email)
+      )
+    `);
+    console.log('  ✅ FP users table initialized');
 
     // Initialize QR Management tables
     await conn.execute(`

@@ -53,33 +53,39 @@
 // User Roles
 const ROLES = {
   ADMIN: 'admin',
-  MANAGER: 'manager',           // Operations Manager
+  OPERATIONS_MANAGER: 'operations_manager', // Operations Manager (top level)
+  MANAGER: 'manager',           // Manager
   SUPERVISOR: 'supervisor',     // Site Supervisor
   EXECUTIVE: 'executive',       // Data Entry Executive
   VENDOR: 'vendor',
-  FRANCHISE_PARTNER: 'franchise', // Franchise Partner
+  FRANCHISE_PARTNER: 'franchise_partner', // Franchise Partner
+  FRANCHISE: 'franchise',       // Alias for Franchise Partner
   COORDINATOR: 'coordinator'    // Field Coordinator
 };
 
 // Role Display Names (Professional Names)
 const ROLE_NAMES = {
   [ROLES.ADMIN]: 'Admin',
-  [ROLES.MANAGER]: 'Operations Manager',
+  [ROLES.OPERATIONS_MANAGER]: 'Operations Manager',
+  [ROLES.MANAGER]: 'Manager',
   [ROLES.SUPERVISOR]: 'Site Supervisor',
   [ROLES.EXECUTIVE]: 'Data Entry Executive',
   [ROLES.VENDOR]: 'Vendor',
   [ROLES.FRANCHISE_PARTNER]: 'Franchise Partner',
+  [ROLES.FRANCHISE]: 'Franchise Partner',
   [ROLES.COORDINATOR]: 'Coordinator'
 };
 
 // Role Descriptions
 const ROLE_DESCRIPTIONS = {
   [ROLES.ADMIN]: 'Full system control - Can access all modules and perform all actions',
-  [ROLES.MANAGER]: 'Main operations handling - Manages work orders, vendors, estimates, and schedules',
+  [ROLES.OPERATIONS_MANAGER]: 'Operations Manager - Oversees all operations, estimates, schedules, and staff',
+  [ROLES.MANAGER]: 'Manager - Manages work orders, vendors, estimates, and schedules',
   [ROLES.SUPERVISOR]: 'Monitoring and request-raising - Creates work order requests and tracks progress',
   [ROLES.EXECUTIVE]: 'Basic data collection - Adds client and vendor details',
   [ROLES.VENDOR]: 'External service provider - Accepts and completes assigned work orders',
   [ROLES.FRANCHISE_PARTNER]: 'Franchise Partner - Full access to own data with isolation from other partners',
+  [ROLES.FRANCHISE]: 'Franchise Partner - Full access to own data with isolation from other partners',
   [ROLES.COORDINATOR]: 'Field Coordinator - Manages assigned properties, work orders, and field operations'
 };
 
@@ -149,6 +155,23 @@ const MODULE_ACCESS = {
     [MODULES.REPORTS]: ACCESS_LEVELS.FULL,
     [MODULES.NOTIFICATIONS]: ACCESS_LEVELS.FULL,
     [MODULES.SETTINGS]: ACCESS_LEVELS.FULL
+  },
+  [ROLES.OPERATIONS_MANAGER]: {
+    [MODULES.DASHBOARD]: ACCESS_LEVELS.FULL,
+    [MODULES.MASTER_DATA]: ACCESS_LEVELS.FULL,
+    [MODULES.STAFF_MANAGEMENT]: ACCESS_LEVELS.FULL,
+    [MODULES.VENDOR_MANAGEMENT]: ACCESS_LEVELS.FULL,
+    [MODULES.DATA_ENTRY]: ACCESS_LEVELS.FULL,
+    [MODULES.ESTIMATE]: ACCESS_LEVELS.FULL,
+    [MODULES.PRICING]: ACCESS_LEVELS.FULL,
+    [MODULES.SCHEDULES]: ACCESS_LEVELS.FULL,
+    [MODULES.WORK_ORDER_REQUEST]: ACCESS_LEVELS.FULL,
+    [MODULES.WORK_ORDERS]: ACCESS_LEVELS.FULL,
+    [MODULES.ASSIGN_VENDOR]: ACCESS_LEVELS.FULL,
+    [MODULES.CLOSE_WORK_ORDER]: ACCESS_LEVELS.FULL,
+    [MODULES.REPORTS]: ACCESS_LEVELS.FULL,
+    [MODULES.NOTIFICATIONS]: ACCESS_LEVELS.FULL,
+    [MODULES.SETTINGS]: ACCESS_LEVELS.LIMITED
   },
   [ROLES.MANAGER]: {
     [MODULES.DASHBOARD]: ACCESS_LEVELS.FULL,             // Full access
@@ -235,6 +258,23 @@ const MODULE_ACCESS = {
     [MODULES.NOTIFICATIONS]: ACCESS_LEVELS.FULL,         // Full notifications
     [MODULES.SETTINGS]: ACCESS_LEVELS.LIMITED            // Limited settings (own profile only)
   },
+  [ROLES.FRANCHISE]: {
+    [MODULES.DASHBOARD]: ACCESS_LEVELS.FULL,             // Full dashboard access (own data only)
+    [MODULES.MASTER_DATA]: ACCESS_LEVELS.NO_ACCESS,      // No access to global master data
+    [MODULES.STAFF_MANAGEMENT]: ACCESS_LEVELS.FULL,      // Manage own staff/users
+    [MODULES.VENDOR_MANAGEMENT]: ACCESS_LEVELS.FULL,     // Full vendor management (own vendors)
+    [MODULES.DATA_ENTRY]: ACCESS_LEVELS.FULL,            // Full data entry (own customers)
+    [MODULES.ESTIMATE]: ACCESS_LEVELS.FULL,              // Full estimate access (own estimates)
+    [MODULES.PRICING]: ACCESS_LEVELS.FULL,               // Full pricing access (own packages)
+    [MODULES.SCHEDULES]: ACCESS_LEVELS.FULL,             // Full schedules access (own schedules)
+    [MODULES.WORK_ORDER_REQUEST]: ACCESS_LEVELS.FULL,    // Full work order request access
+    [MODULES.WORK_ORDERS]: ACCESS_LEVELS.FULL,           // Full work orders (own work orders)
+    [MODULES.ASSIGN_VENDOR]: ACCESS_LEVELS.FULL,         // Can assign vendors to own work orders
+    [MODULES.CLOSE_WORK_ORDER]: ACCESS_LEVELS.FULL,      // Can close own work orders
+    [MODULES.REPORTS]: ACCESS_LEVELS.FULL,               // Full reports (own data)
+    [MODULES.NOTIFICATIONS]: ACCESS_LEVELS.FULL,         // Full notifications
+    [MODULES.SETTINGS]: ACCESS_LEVELS.LIMITED            // Limited settings (own profile only)
+  },
   [ROLES.COORDINATOR]: {
     [MODULES.DASHBOARD]: ACCESS_LEVELS.FULL,             // Full dashboard access (assigned data)
     [MODULES.MASTER_DATA]: ACCESS_LEVELS.NO_ACCESS,      // No access to global master data
@@ -288,6 +328,15 @@ const ROLE_PERMISSIONS = {
     [PERMISSIONS.ASSIGN]: true,          // Full assign access
     [PERMISSIONS.CLOSE]: true            // Full close access
   },
+  [ROLES.OPERATIONS_MANAGER]: {
+    [PERMISSIONS.VIEW]: true,            // Full view access
+    [PERMISSIONS.CREATE]: true,          // Full create access
+    [PERMISSIONS.EDIT]: true,            // Full edit access
+    [PERMISSIONS.DELETE]: true,          // Full delete access
+    [PERMISSIONS.APPROVE]: true,         // Full approve access
+    [PERMISSIONS.ASSIGN]: true,          // Full assign access
+    [PERMISSIONS.CLOSE]: true            // Full close access
+  },
   [ROLES.MANAGER]: {
     [PERMISSIONS.VIEW]: true,            // Full view access
     [PERMISSIONS.CREATE]: true,          // Full create access
@@ -325,6 +374,15 @@ const ROLE_PERMISSIONS = {
     [PERMISSIONS.CLOSE]: false           // No close access
   },
   [ROLES.FRANCHISE_PARTNER]: {
+    [PERMISSIONS.VIEW]: 'own_data',      // View own data only
+    [PERMISSIONS.CREATE]: 'own_data',    // Create own data only
+    [PERMISSIONS.EDIT]: 'own_data',      // Edit own data only
+    [PERMISSIONS.DELETE]: 'own_data',    // Delete own data only
+    [PERMISSIONS.APPROVE]: 'own_data',   // Approve own estimates
+    [PERMISSIONS.ASSIGN]: 'own_data',    // Assign vendors to own work orders
+    [PERMISSIONS.CLOSE]: 'own_data'      // Close own work orders
+  },
+  [ROLES.FRANCHISE]: {
     [PERMISSIONS.VIEW]: 'own_data',      // View own data only
     [PERMISSIONS.CREATE]: 'own_data',    // Create own data only
     [PERMISSIONS.EDIT]: 'own_data',      // Edit own data only
@@ -491,12 +549,14 @@ const getMenuForRole = (role) => {
 
 // Role check helpers
 const isAdmin = (role) => role === ROLES.ADMIN;
+const isOperationsManager = (role) => role === ROLES.OPERATIONS_MANAGER;
 const isManager = (role) => role === ROLES.MANAGER;
 const isSupervisor = (role) => role === ROLES.SUPERVISOR;
 const isExecutive = (role) => role === ROLES.EXECUTIVE;
 const isVendor = (role) => role === ROLES.VENDOR;
-const isFranchisePartner = (role) => role === ROLES.FRANCHISE_PARTNER;
+const isFranchisePartner = (role) => role === ROLES.FRANCHISE_PARTNER || role === ROLES.FRANCHISE;
 const isCoordinator = (role) => role === ROLES.COORDINATOR;
+const isAdminOrOpsManager = (role) => isAdmin(role) || isOperationsManager(role);
 
 /**
  * Capability Checks - Based on Role Requirements
@@ -616,12 +676,14 @@ module.exports = {
   getRoleCapabilities,
   // Role checks
   isAdmin,
+  isOperationsManager,
   isManager,
   isSupervisor,
   isExecutive,
   isVendor,
   isFranchisePartner,
   isCoordinator,
+  isAdminOrOpsManager,
   // Admin-only capabilities
   canManageUsers,
   canManageSettings,
