@@ -29,7 +29,10 @@ import FPProperties from './pages/FPProperties';
 import FPWorkOrders from './pages/FPWorkOrders';
 import FPCustomers from './pages/FPCustomers';
 import FPVendors from './pages/FPVendors';
+import FPAddVendor from './pages/FPAddVendor';
 import FPEmployees from './pages/FPEmployees';
+import FPAddEmployee from './pages/FPAddEmployee';
+import FPEmployeeZones from './pages/FPEmployeeZones';
 import FPUsers from './pages/FPUsers';
 import FPEstimates from './pages/FPEstimates';
 
@@ -231,11 +234,11 @@ function App() {
             <Route path="/fp/customers" element={<FPCustomers user={user} />} />
             <Route path="/fp/users" element={<FPUsers user={user} />} />
             <Route path="/fp/vendors" element={<FPVendors user={user} />} />
-            <Route path="/fp/vendors/add" element={<FPVendors user={user} />} />
-            <Route path="/fp/vendors/assigned" element={<AssignedVendors />} />
+            <Route path="/fp/vendors/add" element={<FPAddVendor user={user} />} />
+            <Route path="/fp/vendors/assigned" element={<AssignedVendors user={user} />} />
             <Route path="/fp/employees" element={<FPEmployees user={user} />} />
-            <Route path="/fp/employees/add" element={<FPEmployees user={user} />} />
-            <Route path="/fp/employees/zones" element={<FPEmployees user={user} />} />
+            <Route path="/fp/employees/add" element={<FPAddEmployee user={user} />} />
+            <Route path="/fp/employees/zones" element={<FPEmployeeZones user={user} />} />
             <Route path="/fp/estimates" element={<FPEstimates user={user} defaultTab="list" />} />
             <Route path="/fp/estimates/create" element={<FPEstimates user={user} defaultTab="create" />} />
             <Route path="/fp/estimates/amc" element={<FPEstimates user={user} defaultTab="amc" />} />

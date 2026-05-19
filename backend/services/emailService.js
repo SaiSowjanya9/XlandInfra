@@ -491,6 +491,129 @@ const sendEmployeeWelcomeEmail = async (userData) => {
   }
 };
 
+// Send welcome email to new FP Employee with login instructions
+const sendFPEmployeeWelcomeEmail = async (userData) => {
+  const { email, firstName, lastName, username, userId, tempPassword, companyName, role, loginUrl } = userData;
+  
+  const roleLabels = {
+    fp_admin: 'FP Admin',
+    fp_manager: 'FP Manager',
+    fp_supervisor: 'FP Supervisor',
+    fp_executive: 'FP Executive'
+  };
+  
+  const roleLabel = roleLabels[role] || 'Employee';
+  const portalUrl = loginUrl || process.env.ADMIN_PORTAL_URL || 'http://localhost:5174';
+  
+  const mailOptions = {
+    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `Welcome to XLAND INFRA - Your Employee Account Has Been Created`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+          <!-- Header -->
+          <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%); border-radius: 16px 16px 0 0; border: 1px solid #D8B25C33; border-bottom: none;">
+            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 300; letter-spacing: 2px;">
+              XLAND<span style="color: #D8B25C;">INFRA</span>
+            </h1>
+            <p style="margin: 5px 0 0 0; color: #888; font-size: 11px; letter-spacing: 3px;">PRIVATE LIMITED</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none;">
+            <h2 style="color: #D8B25C; margin: 0 0 20px 0; font-size: 24px; font-weight: 400;">Welcome, ${firstName || 'Team Member'}!</h2>
+            
+            <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 25px 0;">
+              Your employee account has been created for <strong style="color: #D8B25C;">${companyName || 'XLAND INFRA'}</strong>. 
+              You have been assigned the role of <strong style="color: #D8B25C;">${roleLabel}</strong>.
+            </p>
+            
+            <!-- Credentials Box -->
+            <div style="background: #0D0D0D; border: 1px solid #D8B25C44; border-radius: 12px; padding: 25px; margin: 30px 0;">
+              <h3 style="color: #D8B25C; margin: 0 0 20px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Your Login Credentials</h3>
+              
+              <div style="margin-bottom: 15px;">
+                <p style="color: #888; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;">Employee ID</p>
+                <p style="color: #ffffff; font-size: 16px; margin: 0; font-family: monospace; background: #1a1a1a; padding: 12px 15px; border-radius: 8px; border: 1px solid #333;">${userId}</p>
+              </div>
+              
+              <div style="margin-bottom: 15px;">
+                <p style="color: #888; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;">Login Email</p>
+                <p style="color: #ffffff; font-size: 16px; margin: 0; font-family: monospace; background: #1a1a1a; padding: 12px 15px; border-radius: 8px; border: 1px solid #333;">${email}</p>
+              </div>
+              
+              <div>
+                <p style="color: #888; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;">Temporary Password</p>
+                <p style="color: #D8B25C; font-size: 20px; margin: 0; font-family: monospace; background: #1a1a1a; padding: 12px 15px; border-radius: 8px; border: 1px solid #D8B25C44; letter-spacing: 3px; font-weight: bold;">${tempPassword}</p>
+              </div>
+            </div>
+            
+            <!-- Login Instructions -->
+            <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 20px; margin: 25px 0;">
+              <h3 style="color: #ffffff; margin: 0 0 15px 0; font-size: 16px;">📋 First-Time Login Instructions</h3>
+              <ol style="color: #cccccc; font-size: 14px; line-height: 2; margin: 0; padding-left: 20px;">
+                <li>Click the <strong style="color: #D8B25C;">"Login to Portal"</strong> button below</li>
+                <li>Select <strong style="color: #D8B25C;">"Employee Portal"</strong> from the portal options</li>
+                <li>Enter your <strong>email</strong> and <strong>temporary password</strong> shown above</li>
+                <li>You will be prompted to create a <strong>new secure password</strong></li>
+                <li>Set your new password (minimum 8 characters) to activate your account</li>
+                <li>Once activated, you can access all your assigned features</li>
+              </ol>
+            </div>
+            
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${portalUrl}" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
+                LOGIN TO PORTAL
+              </a>
+            </div>
+            
+            <p style="color: #888; font-size: 13px; text-align: center; margin: 25px 0 0 0;">
+              Or copy and paste this link in your browser:<br>
+              <a href="${portalUrl}" style="color: #D8B25C; word-break: break-all; font-size: 12px;">${portalUrl}</a>
+            </p>
+            
+            <!-- Security Warning -->
+            <div style="background: #2a1a0a; border: 1px solid #D8B25C44; border-radius: 8px; padding: 15px 20px; margin-top: 30px;">
+              <p style="color: #D8B25C; font-size: 13px; margin: 0; line-height: 1.6;">
+                🔒 <strong>Security Notice:</strong> For your protection, you <strong>must change</strong> your temporary password on your first login. 
+                Choose a strong password with at least 8 characters. Never share your password with anyone.
+              </p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #0D0D0D; padding: 25px 30px; border-radius: 0 0 16px 16px; border: 1px solid #D8B25C33; border-top: 2px solid #D8B25C;">
+            <p style="color: #666; font-size: 12px; margin: 0 0 10px 0; text-align: center;">
+              If you did not expect this email, please contact your administrator immediately.
+            </p>
+            <p style="color: #444; font-size: 11px; margin: 0; text-align: center;">
+              © ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`📧 FP Employee welcome email sent to ${email} (Message ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error sending FP employee welcome email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWorkOrderNotification,
   sendContactNotification,
@@ -498,5 +621,6 @@ module.exports = {
   sendCustomerActivationEmail,
   sendPasswordResetConfirmation,
   sendEmployeeWelcomeEmail,
+  sendFPEmployeeWelcomeEmail,
   NOTIFICATION_EMAIL
 };

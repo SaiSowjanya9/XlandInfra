@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home } from 'lucide-react';
+import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock } from 'lucide-react';
 
 const Dashboard = ({ user }) => {
   const menuItems = [
@@ -12,14 +12,16 @@ const Dashboard = ({ user }) => {
     {
       path: '/dashboard/schedule',
       icon: Calendar,
-      title: 'Schedule',
+      title: 'Schedules',
       description: 'View and manage your appointments',
+      locked: true,
     },
     {
       path: '/dashboard/payment',
       icon: CreditCard,
       title: 'Payment',
       description: 'Make payments and view billing history',
+      locked: true,
     },
     {
       path: '/dashboard/contact',
@@ -64,6 +66,36 @@ const Dashboard = ({ user }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {menuItems.map((item) => {
           const Icon = item.icon;
+          
+          if (item.locked) {
+            return (
+              <div
+                key={item.path}
+                className="relative bg-dark-800/50 rounded-2xl shadow-lg border border-dark-600/30 overflow-hidden opacity-60 cursor-not-allowed"
+              >
+                <div className="absolute top-3 right-3 z-10">
+                  <div className="bg-dark-700 border border-dark-500 rounded-full p-1.5">
+                    <Lock className="w-4 h-4 text-dark-400" />
+                  </div>
+                </div>
+                <div className="bg-gradient-to-br from-dark-700/50 to-dark-800/50 p-6 border-b border-dark-600/30">
+                  <Icon className="w-12 h-12 text-dark-500" />
+                </div>
+                <div className="p-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-lg font-semibold text-dark-400">
+                      {item.title}
+                    </h2>
+                  </div>
+                  <p className="text-sm text-dark-500">
+                    {item.description}
+                  </p>
+                  <p className="text-xs text-dark-500 mt-2 italic">Coming Soon</p>
+                </div>
+              </div>
+            );
+          }
+          
           return (
             <Link
               key={item.path}

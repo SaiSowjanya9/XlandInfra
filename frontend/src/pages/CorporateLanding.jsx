@@ -4,8 +4,7 @@ import {
   Building2, 
   TrendingUp, 
   Compass, 
-  HardHat, 
-  Key, 
+  HardHat,
   Settings,
   Scale,
   ChevronDown,
@@ -35,8 +34,17 @@ import {
 import BrandLogo from '../components/BrandLogo';
 import SEO from '../components/SEO';
 
-// Services Data - Property Sales & Advisory → Brokerage → Investment → Design → Construction
+// Services Data - Property Management → Property Sales → Investment → Design → Construction
 const services = [
+  {
+    id: 'property-management',
+    title: 'Property Management',
+    subtitle: 'Management',
+    description: 'Complete facility management solutions including residential & commercial maintenance, AMC services, operations management, and end-to-end property care.',
+    icon: Settings,
+    features: ['Facility Management', 'AMC Services', 'Vendor Coordination'],
+    link: '/services/property-management'
+  },
   {
     id: 'property-sales',
     title: 'Property Sales & Advisory',
@@ -45,15 +53,6 @@ const services = [
     icon: Scale,
     features: ['Verified Listings', 'Buyer Matching', 'Legal Support'],
     link: '/services/property-sales-advisory'
-  },
-  {
-    id: 'brokerage',
-    title: 'Brokerage Services',
-    subtitle: 'Sales',
-    description: 'Deliver professional property buying, selling, and acquisition services through strong market networks, verified listings, and strategic deal execution.',
-    icon: Key,
-    features: ['Property Sales', 'Acquisitions', 'Buyer Matching'],
-    link: '/services/brokerage-services'
   },
   {
     id: 'investment',
@@ -135,18 +134,18 @@ const stats = [
 // Hero Rotating Services Data
 const heroServices = [
   {
+    id: 'property-management',
+    title: 'Property Management',
+    subtitle: 'Complete facility management solutions including maintenance, AMC services, vendor coordination, and end-to-end property care.',
+    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80',
+    icon: Settings
+  },
+  {
     id: 'property-sales',
     title: 'Property Sales & Advisory',
     subtitle: 'Verified property listings, strategic marketing, buyer matching, and end-to-end sales execution under one trusted platform.',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80',
-    icon: Scale
-  },
-  {
-    id: 'brokerage',
-    title: 'Brokerage Services',
-    subtitle: 'Professional property buying, selling, and acquisition services with verified listings and strategic deal execution.',
     image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&q=80',
-    icon: Key
+    icon: Scale
   },
   {
     id: 'investment',
@@ -210,14 +209,8 @@ function CorporateLanding() {
     if (heroPhase !== 'services') return;
 
     const rotationInterval = setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setActiveHeroService((prev) => (prev + 1) % heroServices.length);
-        setTimeout(() => {
-          setIsTransitioning(false);
-        }, 100);
-      }, 600);
-    }, 3000);
+      setActiveHeroService((prev) => (prev + 1) % heroServices.length);
+    }, 4000);
 
     return () => clearInterval(rotationInterval);
   }, [heroPhase]);
@@ -303,8 +296,8 @@ function CorporateLanding() {
   };
 
   const servicePages = [
+    { label: 'Property Management', path: '/services/property-management' },
     { label: 'Property Sales & Advisory', path: '/services/property-sales-advisory' },
-    { label: 'Brokerage Services', path: '/services/brokerage-services' },
     { label: 'Investment Consultation', path: '/services/investment-consultation' },
     { label: 'Design & Conceptualization', path: '/services/design-conceptualization' },
     { label: 'Construction & Delivery', path: '/services/construction-delivery' },
@@ -532,11 +525,11 @@ function CorporateLanding() {
 
       {/* ============ HERO SECTION - TWO PHASE CINEMATIC ============ */}
       <section id="home" className="relative min-h-screen flex items-center overflow-hidden">
-        {/* Dynamic Background Images */}
-        <div className="absolute inset-0">
+        {/* ===== BACKGROUND IMAGES LAYER (z-0) ===== */}
+        <div className="absolute inset-0 z-0">
           {/* Intro Phase Background */}
           <div 
-            className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
               heroPhase === 'intro' ? 'opacity-100' : 'opacity-0'
             }`}
           >
@@ -550,11 +543,11 @@ function CorporateLanding() {
           </div>
 
           {/* Services Phase - Rotating Backgrounds */}
-          {heroPhase === 'services' && heroServices.map((service, index) => (
+          {heroServices.map((service, index) => (
             <div
               key={service.id}
-              className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
-                index === activeHeroService && !isTransitioning
+              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                heroPhase === 'services' && index === activeHeroService
                   ? 'opacity-100' 
                   : 'opacity-0'
               }`}
@@ -563,23 +556,34 @@ function CorporateLanding() {
                 className="absolute inset-0 bg-cover bg-center"
                 style={{ 
                   backgroundImage: `url('${service.image}')`,
-                  animation: index === activeHeroService ? 'slowZoom 8s ease-out forwards' : 'none'
+                  transform: heroPhase === 'services' && index === activeHeroService ? 'scale(1.05)' : 'scale(1)',
+                  transition: 'transform 8s ease-out'
                 }}
               ></div>
             </div>
           ))}
-          
-          {/* Premium Dark Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0D0D0D] via-[#0D0D0D]/90 to-[#0D0D0D]/50"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D0D] via-transparent to-[#0D0D0D]/80"></div>
-          <div className="absolute inset-0 bg-[#0D0D0D]/40"></div>
         </div>
 
-        {/* Animated Gold Accents */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/3 left-0 w-[600px] h-[600px] bg-gold-500/10 rounded-full blur-[150px] animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-gold-600/8 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
-          <div className="absolute top-1/2 right-0 w-[400px] h-[400px] bg-gold-400/5 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '4s' }}></div>
+        {/* ===== DARK OVERLAY LAYER (z-[1]) - Always on top of all backgrounds ===== */}
+        <div className="absolute inset-0 z-[1]">
+          {/* Primary left-side dark gradient */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent"></div>
+          {/* Strong left reinforcement for text area */}
+          <div className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-[#0a0a0a]/95 via-[#0a0a0a]/80 to-transparent"></div>
+          {/* Overall darkening */}
+          <div className="absolute inset-0 bg-[#0a0a0a]/30"></div>
+          {/* Top and bottom framing */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/80 via-transparent to-[#0a0a0a]"></div>
+        </div>
+
+        {/* ===== GOLD ACCENT LAYER (z-[2]) ===== */}
+        <div className="absolute inset-0 z-[2] overflow-hidden pointer-events-none">
+          {/* Top-left gold glow */}
+          <div className="absolute -top-20 -left-20 w-[500px] h-[500px] bg-gradient-to-br from-gold-500/15 via-gold-600/8 to-transparent rounded-full blur-[100px]"></div>
+          {/* Bottom-right subtle glow */}
+          <div className="absolute -bottom-20 -right-20 w-[400px] h-[400px] bg-gradient-to-tl from-gold-500/10 via-gold-400/5 to-transparent rounded-full blur-[80px]"></div>
+          {/* Center-left accent */}
+          <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[300px] h-[400px] bg-gradient-to-r from-gold-500/10 to-transparent rounded-full blur-[60px]"></div>
         </div>
 
         {/* Hero Content */}
@@ -587,8 +591,8 @@ function CorporateLanding() {
           <div className="max-w-3xl">
             
             {/* ===== PHASE 1: INTRO CONTENT ===== */}
-            <div className={`transition-all duration-800 ease-out ${
-              heroPhase === 'intro' && !isTransitioning
+            <div className={`transition-all duration-700 ease-out ${
+              heroPhase === 'intro'
                 ? 'opacity-100 translate-y-0' 
                 : 'opacity-0 -translate-y-4 pointer-events-none absolute'
             }`}>
@@ -638,10 +642,10 @@ function CorporateLanding() {
             </div>
 
             {/* ===== PHASE 2: ROTATING SERVICES CONTENT ===== */}
-            <div className={`transition-all duration-800 ease-out ${
-              heroPhase === 'services' && !isTransitioning
+            <div className={`transition-all duration-700 ease-out ${
+              heroPhase === 'services'
                 ? 'opacity-100 translate-y-0' 
-                : heroPhase === 'services' ? 'opacity-0' : 'opacity-0 translate-y-8 pointer-events-none absolute'
+                : 'opacity-0 translate-y-8 pointer-events-none absolute'
             }`}>
               {/* Active Service Icon */}
               <div className="w-14 h-14 mb-6 bg-gradient-to-br from-gold-400/20 to-gold-600/20 border border-gold-500/30 rounded-xl flex items-center justify-center shadow-[0_0_30px_rgba(216,178,92,0.2)]">
@@ -720,11 +724,7 @@ function CorporateLanding() {
                 key={service.id}
                 onClick={() => {
                   if (heroPhase === 'services') {
-                    setIsTransitioning(true);
-                    setTimeout(() => {
-                      setActiveHeroService(index);
-                      setTimeout(() => setIsTransitioning(false), 100);
-                    }, 400);
+                    setActiveHeroService(index);
                   }
                 }}
                 className="group relative h-2 rounded-full overflow-hidden transition-all duration-500"
@@ -751,9 +751,6 @@ function CorporateLanding() {
             <h2 className="section-title mb-5 tracking-tight">
               Redefining <span className="text-gold-gradient">Real Estate</span> Excellence
             </h2>
-            <p className="section-subtitle mx-auto">
-              With over 15 years of industry expertise, XLAND INFRA has established itself as a premier real estate and infrastructure company, delivering exceptional value across the complete property lifecycle.
-            </p>
           </div>
 
           {/* About Content */}
@@ -963,32 +960,6 @@ function CorporateLanding() {
             })}
           </div>
 
-          {/* Bottom Flow Indicator */}
-          <div className="mt-16 flex justify-center">
-            <div className="relative">
-              {/* Glowing background */}
-              <div className="absolute inset-0 bg-gold-500/10 blur-xl rounded-full"></div>
-              
-              <div className="relative inline-flex items-center gap-3 px-8 py-4 bg-[#0D0D0D] border border-gold-500/20 rounded-full backdrop-blur-sm">
-                {services.map((service, index) => (
-                  <div key={service.id} className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-gold-400 shadow-[0_0_8px_rgba(216,178,92,0.5)]"></div>
-                      <span className="text-gray-400 text-sm hidden sm:inline">{service.subtitle}</span>
-                      <span className="text-gray-400 text-xs sm:hidden">{index + 1}</span>
-                    </div>
-                    {index < services.length - 1 && (
-                      <ArrowRight className="w-4 h-4 text-gold-500/50" />
-                    )}
-                  </div>
-                ))}
-                <div className="flex items-center gap-2 ml-2 pl-3 border-l border-gold-500/20">
-                  <Sparkles className="w-4 h-4 text-gold-400" />
-                  <span className="text-gold-400 font-medium text-sm">Repeat</span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -1256,10 +1227,11 @@ function CorporateLanding() {
                     className="select-field"
                   >
                     <option value="">Select a subject</option>
-                    <option value="investment">Investment Inquiry</option>
-                    <option value="property">Property Sales & Advisory</option>
-                    <option value="construction">Construction Services</option>
-                    <option value="sales">Property Sales</option>
+                    <option value="property-management">Property Management</option>
+                    <option value="property-sales">Property Sales & Advisory</option>
+                    <option value="investment">Investment Consultation</option>
+                    <option value="design">Design & Conceptualization</option>
+                    <option value="construction">Construction & Delivery</option>
                     <option value="other">Other</option>
                   </select>
                 </div>
@@ -1354,7 +1326,7 @@ function CorporateLanding() {
                 <div className="flex-1 h-px bg-gradient-to-r from-gold-500/30 to-transparent ml-3"></div>
               </h4>
               <ul className="space-y-3">
-                {['Property Sales & Advisory', 'Brokerage Services', 'Investment Consultation', 'Design & Conceptualization', 'Construction & Delivery'].map((service) => (
+                {['Property Management', 'Property Sales & Advisory', 'Investment Consultation', 'Design & Conceptualization', 'Construction & Delivery'].map((service) => (
                   <li key={service}>
                     <a href="#" className="text-gray-400 hover:text-gold-400 text-sm transition-colors gold-underline">
                       {service}

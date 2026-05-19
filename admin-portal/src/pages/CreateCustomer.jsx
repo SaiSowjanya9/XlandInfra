@@ -16,7 +16,6 @@ import {
   Grid3X3,
   Lock,
   Store,
-  Truck,
   Map,
   AlertCircle,
   Loader2,
@@ -151,13 +150,6 @@ const CATEGORIES = [
     name: 'Commercial',
     icon: Store,
     color: 'bg-blue-500',
-    locked: true
-  },
-  {
-    id: 'vendor',
-    name: 'Vendor',
-    icon: Truck,
-    color: 'bg-purple-500',
     locked: true
   }
 ];
@@ -467,12 +459,6 @@ const CreateCustomer = ({ admin }) => {
         border: 'border-blue-200',
         icon: 'bg-gradient-to-br from-blue-500 to-indigo-600',
         arrow: 'text-blue-600'
-      },
-      vendor: {
-        bg: 'bg-gradient-to-br from-purple-50 via-white to-violet-50',
-        border: 'border-purple-200',
-        icon: 'bg-gradient-to-br from-purple-500 to-violet-600',
-        arrow: 'text-purple-600'
       }
     };
 
@@ -493,7 +479,7 @@ const CreateCustomer = ({ admin }) => {
             <p className="text-gray-500 text-sm">Choose the customer category to proceed</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {CATEGORIES.map((category) => {
               const Icon = category.icon;
               const styles = categoryStyles[category.id] || categoryStyles.residential;

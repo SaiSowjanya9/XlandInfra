@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import SetPassword from './SetPassword';
 
 const Login = ({ onLogin }) => {
   const [formData, setFormData] = useState({
@@ -9,6 +10,8 @@ const Login = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,7 +19,7 @@ const Login = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/admin/login', {
+      const response = await fetch('/api/staff/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -25,7 +28,30 @@ const Login = ({ onLogin }) => {
       const result = await response.json();
 
       if (result.success) {
-        onLogin(result.data);
+        const userData = result.data;
+        
+        // Check if user must change password (first login)
+        if (userData.mustChangePassword) {
+          setPendingUser({
+            ...userData.user,
+            name: `${userData.user.firstName || ''} ${userData.user.lastName || ''}`.trim(),
+            email: userData.user.email,
+            portal: 'admin'
+          });
+          setShowSetPassword(true);
+        } else {
+          // Store token and proceed
+          if (userData.token) {
+            localStorage.setItem('pm_auth_token', userData.token);
+          }
+          const user = {
+            ...userData.user,
+            name: `${userData.user.firstName || ''} ${userData.user.lastName || ''}`.trim(),
+            portal: 'admin'
+          };
+          localStorage.setItem('pm_current_user', JSON.stringify(user));
+          onLogin(user);
+        }
       } else {
         setError(result.message || 'Invalid credentials');
       }
@@ -35,6 +61,27 @@ const Login = ({ onLogin }) => {
       setLoading(false);
     }
   };
+
+  // Handle password set completion
+  const handlePasswordSet = (updatedUser) => {
+    setShowSetPassword(false);
+    setPendingUser(null);
+    onLogin(updatedUser);
+  };
+
+  // Show Set Password screen if needed
+  if (showSetPassword && pendingUser) {
+    return (
+      <SetPassword 
+        user={pendingUser} 
+        onPasswordSet={handlePasswordSet}
+        onCancel={() => {
+          setShowSetPassword(false);
+          setPendingUser(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-900 flex items-center justify-center p-4">

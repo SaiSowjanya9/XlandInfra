@@ -53,6 +53,9 @@ const PortalSelector = ({ onSelectPortal }) => {
             src="/logo.png"
             alt="XLand Infra Logo"
             className="h-28 md:h-32 w-auto object-contain drop-shadow-[0_0_40px_rgba(245,195,68,0.4)] transition-transform duration-300 hover:scale-105"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
           />
         </div>
       </header>

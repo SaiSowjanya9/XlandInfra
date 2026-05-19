@@ -77,9 +77,9 @@ const FPDashboard = ({ user }) => {
       title: 'Customers',
       value: stats?.customers || 0,
       icon: Users,
-      color: 'bg-emerald-500',
-      bgColor: 'bg-emerald-50',
-      textColor: 'text-emerald-600',
+      color: 'bg-green-500',
+      bgColor: 'bg-green-50',
+      textColor: 'text-blue-600',
       link: '/fp/customers'
     },
     {
@@ -138,7 +138,7 @@ const FPDashboard = ({ user }) => {
       accepted: 'bg-indigo-100 text-indigo-700',
       in_progress: 'bg-orange-100 text-orange-700',
       completed: 'bg-green-100 text-green-700',
-      verified: 'bg-emerald-100 text-emerald-700',
+      verified: 'bg-green-100 text-green-700',
       closed: 'bg-gray-100 text-gray-700',
       cancelled: 'bg-red-100 text-red-700'
     };
@@ -158,7 +158,7 @@ const FPDashboard = ({ user }) => {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <RefreshCw className="w-8 h-8 text-emerald-600 animate-spin mx-auto mb-4" />
+          <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -200,7 +200,7 @@ const FPDashboard = ({ user }) => {
           <Link
             key={index}
             to={card.link}
-            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-emerald-200 transition-all duration-200 group"
+            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -235,10 +235,10 @@ const FPDashboard = ({ user }) => {
           </Link>
           <Link
             to="/fp/customers"
-            className="flex flex-col items-center p-4 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
+            className="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
           >
-            <Users className="w-8 h-8 text-emerald-600 mb-2" />
-            <span className="text-sm font-medium text-emerald-700">Add Customer</span>
+            <Users className="w-8 h-8 text-blue-600 mb-2" />
+            <span className="text-sm font-medium text-blue-700">Add Customer</span>
           </Link>
           <Link
             to="/fp/estimates/create"
@@ -256,7 +256,7 @@ const FPDashboard = ({ user }) => {
           <h2 className="text-lg font-semibold text-gray-900">Recent Work Orders</h2>
           <Link
             to="/fp/work-orders"
-            className="text-sm text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
           >
             View All
             <ArrowRight className="w-4 h-4" />
@@ -269,7 +269,7 @@ const FPDashboard = ({ user }) => {
             <p className="text-gray-500">No work orders yet</p>
             <Link
               to="/fp/work-orders"
-              className="text-emerald-600 hover:text-emerald-700 text-sm font-medium mt-2 inline-block"
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium mt-2 inline-block"
             >
               Create your first work order
             </Link>

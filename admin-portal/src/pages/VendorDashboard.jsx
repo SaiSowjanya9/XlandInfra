@@ -1,60 +1,72 @@
 import { useState, useEffect } from 'react';
-import { Building2, FileText, Users, Briefcase, TrendingUp, ArrowUpRight, Clock, CheckCircle2 } from 'lucide-react';
+import { Building2, FileText, Users, Briefcase, TrendingUp, ArrowUpRight, Clock, CheckCircle2, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getVendors } from '../utils/vendorStore';
 
 const VendorDashboard = ({ user }) => {
-  const [stats, setStats] = useState({ totalVendors: 0, totalUnits: 0 });
+  const [stats, setStats] = useState({ pending: 0, completed: 0, total: 0 });
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [vendorData, setVendorData] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const vendors = await getVendors();
-        const totalUnits = vendors.reduce((sum, v) => sum + (v.totalUnits || 0), 0);
-        setStats({ totalVendors: vendors.length, totalUnits });
-      } catch (error) {
-        console.error('Error fetching vendor stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
+    fetchVendorDashboard();
   }, []);
+
+  const fetchVendorDashboard = async () => {
+    try {
+      const token = localStorage.getItem('vendor_token') || localStorage.getItem('pm_auth_token');
+      const response = await fetch('/api/vendors/dashboard', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setVendorData(result.data.vendor);
+        setRecentOrders(result.data.recentWorkOrders || []);
+        setStats(result.data.stats || { pending: 0, completed: 0, total: 0 });
+      }
+    } catch (error) {
+      console.error('Error fetching vendor dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const statCards = [
     { 
-      label: 'Total Vendors', 
-      value: stats.totalVendors, 
-      icon: Briefcase, 
+      label: 'Total Orders', 
+      value: stats.total, 
+      icon: ClipboardList, 
       gradient: 'from-amber-500 to-orange-500',
-      trend: '+12%',
-      trendLabel: 'vs last month'
-    },
-    { 
-      label: 'Total Units', 
-      value: stats.totalUnits, 
-      icon: Building2, 
-      gradient: 'from-blue-500 to-indigo-500',
-      trend: '+8%',
-      trendLabel: 'vs last month'
+      trend: 'All time',
+      trendLabel: 'assigned to you'
     },
     { 
       label: 'Active Orders', 
-      value: 24, 
+      value: stats.pending, 
       icon: Clock, 
       gradient: 'from-violet-500 to-purple-500',
-      trend: '5 new',
-      trendLabel: 'this week'
+      trend: 'In progress',
+      trendLabel: 'needs attention'
     },
     { 
       label: 'Completed', 
-      value: 156, 
+      value: stats.completed, 
       icon: CheckCircle2, 
       gradient: 'from-emerald-500 to-teal-500',
-      trend: '+23%',
-      trendLabel: 'completion rate'
+      trend: 'Done',
+      trendLabel: 'successfully closed'
+    },
+    { 
+      label: 'Rating', 
+      value: vendorData?.rating || '-', 
+      icon: TrendingUp, 
+      gradient: 'from-blue-500 to-indigo-500',
+      trend: 'Your score',
+      trendLabel: 'based on feedback'
     },
   ];
 
@@ -103,10 +115,10 @@ const VendorDashboard = ({ user }) => {
             <div>
               <p className="text-slate-400 text-sm">Welcome back</p>
               <h1 className="text-2xl font-bold text-white">
-                {user?.firstName || 'Partner'} {user?.lastName || ''}
+                {vendorData?.contactPerson || user?.firstName || 'Partner'}
               </h1>
               <p className="text-slate-500 text-sm mt-0.5">
-                Vendor Portal • {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                {vendorData?.companyName || 'Vendor Portal'} • {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
               </p>
             </div>
           </div>
@@ -168,34 +180,54 @@ const VendorDashboard = ({ user }) => {
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Work Orders */}
       <div className="bg-slate-900/50 border border-white/5 rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-white/5">
-          <h2 className="font-semibold text-white">Recent Activity</h2>
+          <h2 className="font-semibold text-white">Recent Work Orders</h2>
         </div>
         <div className="divide-y divide-white/5">
-          {[
-            { action: 'New order received', time: '2 hours ago', status: 'pending' },
-            { action: 'Order #1234 completed', time: '5 hours ago', status: 'completed' },
-            { action: 'Client feedback received', time: '1 day ago', status: 'info' },
-          ].map((activity, index) => (
-            <div key={index} className="px-6 py-4 hover:bg-white/[0.02] transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${
-                    activity.status === 'pending' ? 'bg-amber-400' :
-                    activity.status === 'completed' ? 'bg-emerald-400' : 'bg-blue-400'
-                  }`} />
-                  <span className="text-white text-sm">{activity.action}</span>
-                </div>
-                <span className="text-xs text-slate-500">{activity.time}</span>
-              </div>
+          {recentOrders.length === 0 ? (
+            <div className="px-6 py-8 text-center">
+              <ClipboardList className="w-10 h-10 text-slate-600 mx-auto mb-2" />
+              <p className="text-slate-400 text-sm">No work orders assigned yet</p>
             </div>
-          ))}
+          ) : (
+            recentOrders.slice(0, 5).map((order, index) => (
+              <div key={order.id || index} className="px-6 py-4 hover:bg-white/[0.02] transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${
+                      order.status === 'assigned' || order.status === 'in_progress' ? 'bg-amber-400' :
+                      order.status === 'completed' || order.status === 'verified' ? 'bg-emerald-400' : 'bg-blue-400'
+                    }`} />
+                    <div>
+                      <span className="text-white text-sm">{order.category_name || 'Work Order'}</span>
+                      <p className="text-xs text-slate-500">{order.property_name || order.work_order_id}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      order.status === 'in_progress' ? 'bg-amber-500/20 text-amber-400' :
+                      order.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
+                      order.status === 'assigned' ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-500/20 text-slate-400'
+                    }`}>
+                      {order.status?.replace('_', ' ')}
+                    </span>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {order.created_at ? new Date(order.created_at).toLocaleDateString() : '-'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
         <div className="px-6 py-4 bg-slate-900/30 border-t border-white/5">
-          <button className="text-sm text-amber-400 hover:text-amber-300 font-medium transition-colors">
-            View all activity →
+          <button 
+            onClick={() => navigate('/vendor/work-orders')}
+            className="text-sm text-amber-400 hover:text-amber-300 font-medium transition-colors"
+          >
+            View all work orders →
           </button>
         </div>
       </div>

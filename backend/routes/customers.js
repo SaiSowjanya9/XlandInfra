@@ -686,4 +686,88 @@ router.post('/resend-activation', async (req, res) => {
   }
 });
 
+// ============================================
+// CUSTOMER DASHBOARD - Get customer-specific dashboard data
+// ============================================
+router.get('/dashboard', async (req, res) => {
+  try {
+    // Get customer ID from auth token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    const customerId = decoded.customerId || decoded.id;
+    if (!customerId) {
+      return res.status(401).json({ success: false, message: 'Customer ID not found in token' });
+    }
+
+    // Get customer details
+    const [customer] = await pool.execute(
+      `SELECT ca.*, p.property_name, p.property_id as property_code
+       FROM customer_accounts ca
+       LEFT JOIN properties p ON ca.property_id = p.id
+       WHERE ca.id = ?`,
+      [customerId]
+    );
+
+    if (customer.length === 0) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    // Get work orders for this customer only
+    const [workOrders] = await pool.execute(
+      `SELECT wo.*, c.name as category_name, sc.name as subcategory_name
+       FROM work_orders wo
+       LEFT JOIN categories c ON wo.category_id = c.id
+       LEFT JOIN subcategories sc ON wo.subcategory_id = sc.id
+       WHERE wo.customer_id = ?
+       ORDER BY wo.created_at DESC
+       LIMIT 10`,
+      [customerId]
+    );
+
+    // Get stats for this customer
+    const [pendingCount] = await pool.execute(
+      `SELECT COUNT(*) as count FROM work_orders WHERE customer_id = ? AND status IN ('pending', 'requested', 'under_review', 'assigned', 'in_progress')`,
+      [customerId]
+    );
+    const [completedCount] = await pool.execute(
+      `SELECT COUNT(*) as count FROM work_orders WHERE customer_id = ? AND status IN ('completed', 'closed', 'verified')`,
+      [customerId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        customer: {
+          id: customer[0].id,
+          firstName: customer[0].first_name,
+          lastName: customer[0].last_name,
+          email: customer[0].email,
+          propertyName: customer[0].property_name,
+          propertyCode: customer[0].property_code
+        },
+        recentWorkOrders: workOrders,
+        stats: {
+          pending: pendingCount[0].count,
+          completed: completedCount[0].count,
+          total: pendingCount[0].count + completedCount[0].count
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Customer dashboard error:', error);
+    res.status(500).json({ success: false, message: 'Failed to load dashboard', error: error.message });
+  }
+});
+
 module.exports = router;

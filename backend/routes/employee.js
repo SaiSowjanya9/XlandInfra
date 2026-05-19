@@ -62,7 +62,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Check if user role is valid for employee portal
-    const validRoles = ['admin', 'operations_manager', 'franchise_partner', 'franchise', 'manager', 'coordinator', 'supervisor', 'executive'];
+    const validRoles = ['admin', 'operations_manager', 'franchise_partner', 'franchise', 'manager', 'coordinator', 'supervisor', 'executive', 'fp_admin', 'fp_manager', 'fp_supervisor', 'fp_executive'];
     if (!validRoles.includes(user.role)) {
       return res.status(403).json({
         success: false,
@@ -94,6 +94,7 @@ router.post('/login', async (req, res) => {
           firstName: user.first_name,
           lastName: user.last_name,
           role: user.role,
+          franchisePartnerId: user.franchise_partner_id || null,
           permissions: ['all']
         }
       }
@@ -181,7 +182,8 @@ router.post('/set-password', async (req, res) => {
           email: user.email,
           firstName: user.first_name,
           lastName: user.last_name,
-          role: user.role
+          role: user.role,
+          franchisePartnerId: user.franchise_partner_id || null
         }
       }
     });

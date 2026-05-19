@@ -11,7 +11,19 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronDown
+  ChevronDown,
+  FileInput,
+  Hammer,
+  ClipboardCheck,
+  Shield,
+  MapPin,
+  QrCode,
+  Plus,
+  List,
+  Package,
+  PlusCircle,
+  Archive,
+  Settings
 } from 'lucide-react';
 
 const ManagerLayout = ({ admin, onLogout, children }) => {
@@ -23,34 +35,39 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   const navItems = [
     { path: '/manager', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/manager/properties', icon: Building2, label: 'Property Management' },
-    { path: '/manager/customers', icon: UserPlus, label: 'Add Customer' },
-  ];
-
-  const workOrdersSubItems = [
-    { path: '/manager/work-orders', label: 'All Work Orders' },
-    { path: '/manager/work-orders/pending', label: 'Pending' },
-    { path: '/manager/work-orders/completed', label: 'Completed' }
+    { path: '/manager/work-orders', icon: ClipboardList, label: 'Work Orders' },
+    { path: '/manager/customers', icon: FileInput, label: 'Add Customer' },
+    { path: '/manager/user-management', icon: Shield, label: 'User Management' },
+    { path: '/manager/qr-management', icon: QrCode, label: 'QR Management' },
   ];
 
   const vendorSubItems = [
-    { path: '/manager/vendors', label: 'All Vendors' },
-    { path: '/manager/vendors/add', label: 'Add Vendor' },
-    { path: '/manager/vendors/assigned', label: 'Assigned Vendors' }
+    { path: '/manager/vendors/add', icon: UserPlus, label: 'Add Vendor' },
+    { path: '/manager/vendors', icon: Hammer, label: 'Vendor Details' },
+    { path: '/manager/vendors/assigned', icon: ClipboardCheck, label: 'Assigned Vendors' }
+  ];
+
+  const employeeSubItems = [
+    { path: '/manager/employees/add', icon: UserPlus, label: 'Add Employee' },
+    { path: '/manager/employees', icon: Users, label: 'Employee Details' },
+    { path: '/manager/employees/zones', icon: MapPin, label: 'Employee Zone Management' }
   ];
 
   const estimatesSubItems = [
-    { path: '/manager/estimates', label: 'All Estimates' },
-    { path: '/manager/estimates/create', label: 'Create Estimate' },
-    { path: '/manager/estimates/archived', label: 'Archived' }
+    { path: '/manager/estimates/create', icon: Plus, label: 'Create Estimate' },
+    { path: '/manager/estimates', icon: List, label: 'All Estimates' },
+    { path: '/manager/estimates/amc', icon: Package, label: 'AMC Packages' },
+    { path: '/manager/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
+    { path: '/manager/estimates/archived', icon: Archive, label: 'Archived' }
   ];
 
-  const isWorkOrdersActive = workOrdersSubItems.some(item => location.pathname === item.path);
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
-  const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path);
+  const isEmployeeActive = employeeSubItems.some(item => location.pathname === item.path);
+  const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/manager/estimates';
 
   useEffect(() => {
-    if (isWorkOrdersActive) setExpandedMenus(prev => ({ ...prev, workOrders: true }));
     if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
+    if (isEmployeeActive) setExpandedMenus(prev => ({ ...prev, employees: true }));
     if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
   }, [location.pathname]);
 
@@ -82,8 +99,8 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center space-x-2">
-            <Building2 className="w-6 h-6 text-primary-600" />
-            <span className="font-bold text-gray-900">Manager Portal</span>
+            <Settings className="w-6 h-6 text-primary-600" />
+            <span className="font-bold text-gray-900">Operations Manager</span>
           </div>
           <div className="w-10" />
         </div>
@@ -104,8 +121,8 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
           {/* Logo */}
           <div className="flex items-center justify-between px-6 h-16 border-b border-gray-200">
             <div className="flex items-center space-x-2">
-              <Building2 className="w-8 h-8 text-primary-600" />
-              <span className="font-bold text-lg text-gray-900">Manager Portal</span>
+              <Settings className="w-8 h-8 text-primary-600" />
+              <span className="font-bold text-lg text-gray-900">Operations Manager</span>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
               <X className="w-5 h-5" />
@@ -119,7 +136,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
               {admin?.firstName} {admin?.lastName}
             </p>
             <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
-              Manager
+              Operations Manager
             </span>
           </div>
 
@@ -128,42 +145,6 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
             {navItems.map((item) => (
               <NavLink key={item.path} item={item} mobile />
             ))}
-
-            {/* Work Orders Section */}
-            <div className="mt-2">
-              <button
-                onClick={() => setExpandedMenus(prev => ({ ...prev, workOrders: !prev.workOrders }))}
-                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
-                  isWorkOrdersActive && !expandedMenus.workOrders
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <ClipboardList className="w-5 h-5" />
-                  <span className="font-medium">Work Orders</span>
-                </div>
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.workOrders ? 'rotate-180' : ''}`} />
-              </button>
-              {expandedMenus.workOrders && (
-                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
-                  {workOrdersSubItems.map((item) => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-                        location.pathname === item.path
-                          ? 'bg-primary-600 text-white'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Vendor Management Section */}
             <div className="mt-2">
@@ -183,20 +164,64 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
               </button>
               {expandedMenus.vendors && (
                 <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
-                  {vendorSubItems.map((item) => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-                        location.pathname === item.path
-                          ? 'bg-primary-600 text-white'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
+                  {vendorSubItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                          location.pathname === item.path
+                            ? 'bg-primary-600 text-white'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Employee Management Section */}
+            <div className="mt-2">
+              <button
+                onClick={() => setExpandedMenus(prev => ({ ...prev, employees: !prev.employees }))}
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isEmployeeActive && !expandedMenus.employees
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Users className="w-5 h-5" />
+                  <span className="font-medium">Employee Management</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.employees ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedMenus.employees && (
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                  {employeeSubItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                          location.pathname === item.path
+                            ? 'bg-primary-600 text-white'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -219,20 +244,24 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
               </button>
               {expandedMenus.estimates && (
                 <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
-                  {estimatesSubItems.map((item) => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-                        location.pathname === item.path
-                          ? 'bg-primary-600 text-white'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
+                  {estimatesSubItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                          location.pathname === item.path
+                            ? 'bg-primary-600 text-white'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </div>

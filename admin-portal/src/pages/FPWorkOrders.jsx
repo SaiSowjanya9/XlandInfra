@@ -1,58 +1,106 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList,
   Plus,
   Search,
-  Filter,
   RefreshCw,
   X,
-  Save,
   AlertCircle,
   CheckCircle,
   Clock,
   User,
+  Eye,
   Building2,
-  Calendar,
-  ChevronDown
+  Users,
+  Image,
+  Camera,
+  FileText,
+  Trash2
 } from 'lucide-react';
 
 const FPWorkOrders = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [showModal, setShowModal] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [activeTab, setActiveTab] = useState('pending');
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [propertySearch, setPropertySearch] = useState('');
   const [formData, setFormData] = useState({
     propertyId: '',
     categoryId: '',
-    title: '',
+    subcategoryId: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
     description: '',
+    permissionToEnter: '',
+    hasPet: '',
+    entryNotes: '',
     priority: 'medium',
-    permissionToEnter: 'no',
-    hasPet: 'no',
-    scheduledDate: ''
+    attachments: []
   });
 
   const token = localStorage.getItem('pm_auth_token');
 
-  const statusOptions = [
-    { value: '', label: 'All Status' },
-    { value: 'draft', label: 'Draft' },
-    { value: 'requested', label: 'Requested' },
-    { value: 'under_review', label: 'Under Review' },
-    { value: 'assigned', label: 'Assigned' },
-    { value: 'accepted', label: 'Accepted' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'closed', label: 'Closed' },
-    { value: 'cancelled', label: 'Cancelled' }
-  ];
+  // File input refs
+  const galleryInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // File handling functions
+  const handleFileSelect = (e, type) => {
+    const files = Array.from(e.target.files);
+    const maxFiles = 5;
+    const currentCount = formData.attachments.length;
+    
+    if (currentCount >= maxFiles) {
+      setMessage({ type: 'error', text: 'Maximum 5 files allowed' });
+      return;
+    }
+
+    const remainingSlots = maxFiles - currentCount;
+    const filesToAdd = files.slice(0, remainingSlots);
+
+    const newAttachments = filesToAdd.map(file => ({
+      id: Date.now() + Math.random(),
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+    }));
+
+    setFormData(prev => ({
+      ...prev,
+      attachments: [...prev.attachments, ...newAttachments]
+    }));
+
+    // Reset the input
+    e.target.value = '';
+  };
+
+  const removeAttachment = (id) => {
+    setFormData(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter(att => att.id !== id)
+    }));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
   const priorityOptions = [
     { value: 'low', label: 'Low', color: 'bg-green-100 text-green-700' },
@@ -64,10 +112,7 @@ const FPWorkOrders = ({ user }) => {
   const fetchWorkOrders = async () => {
     setLoading(true);
     try {
-      let url = '/api/fp/work-orders';
-      if (statusFilter) url += `?status=${statusFilter}`;
-      
-      const response = await fetch(url, {
+      const response = await fetch('/api/fp/work-orders', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -106,28 +151,50 @@ const FPWorkOrders = ({ user }) => {
   useEffect(() => {
     fetchWorkOrders();
     fetchDependencies();
-  }, [statusFilter]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
 
     try {
+      // Use FormData for file uploads
+      const submitData = new FormData();
+      submitData.append('propertyId', formData.propertyId);
+      submitData.append('categoryId', formData.categoryId);
+      submitData.append('subcategoryId', formData.subcategoryId);
+      submitData.append('customerName', formData.customerName);
+      submitData.append('customerEmail', formData.customerEmail);
+      submitData.append('customerPhone', formData.customerPhone);
+      submitData.append('description', formData.description);
+      submitData.append('permissionToEnter', formData.permissionToEnter);
+      submitData.append('hasPet', formData.hasPet);
+      submitData.append('entryNotes', formData.entryNotes);
+      submitData.append('priority', formData.priority);
+
+      // Append files
+      formData.attachments.forEach((attachment, index) => {
+        submitData.append('attachments', attachment.file);
+      });
+
       const response = await fetch('/api/fp/work-orders', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: submitData
       });
 
       const result = await response.json();
 
       if (result.success) {
         setMessage({ type: 'success', text: 'Work order created successfully!' });
-        setShowModal(false);
+        // Clean up preview URLs
+        formData.attachments.forEach(att => {
+          if (att.preview) URL.revokeObjectURL(att.preview);
+        });
         resetForm();
+        setActiveTab('pending');
         fetchWorkOrders();
       } else {
         setMessage({ type: 'error', text: result.message || 'Operation failed' });
@@ -135,6 +202,12 @@ const FPWorkOrders = ({ user }) => {
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to create work order' });
     }
+  };
+
+  const handleCategoryChange = (categoryId) => {
+    setFormData({ ...formData, categoryId, subcategoryId: '' });
+    const category = categories.find(c => c.id === parseInt(categoryId));
+    setSubcategories(category?.subcategories || []);
   };
 
   const handleStatusUpdate = async (id, newStatus) => {
@@ -193,14 +266,26 @@ const FPWorkOrders = ({ user }) => {
     setFormData({
       propertyId: '',
       categoryId: '',
-      title: '',
+      subcategoryId: '',
+      customerName: '',
+      customerEmail: '',
+      customerPhone: '',
       description: '',
+      permissionToEnter: '',
+      hasPet: '',
+      entryNotes: '',
       priority: 'medium',
-      permissionToEnter: 'no',
-      hasPet: 'no',
-      scheduledDate: ''
+      attachments: []
     });
+    setPropertySearch('');
+    setSubcategories([]);
   };
+
+  // Filter properties based on search
+  const filteredPropertyOptions = properties.filter(p => 
+    p.name?.toLowerCase().includes(propertySearch.toLowerCase()) ||
+    p.property_id?.toLowerCase().includes(propertySearch.toLowerCase())
+  );
 
   const getStatusColor = (status) => {
     const colors = {
@@ -211,7 +296,7 @@ const FPWorkOrders = ({ user }) => {
       accepted: 'bg-indigo-100 text-indigo-700',
       in_progress: 'bg-orange-100 text-orange-700',
       completed: 'bg-green-100 text-green-700',
-      verified: 'bg-emerald-100 text-emerald-700',
+      verified: 'bg-green-100 text-green-700',
       closed: 'bg-gray-100 text-gray-700',
       cancelled: 'bg-red-100 text-red-700'
     };
@@ -231,27 +316,60 @@ const FPWorkOrders = ({ user }) => {
     });
   };
 
-  const filteredWorkOrders = workOrders.filter(wo =>
-    wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Count work orders by status
+  const pendingCount = workOrders.filter(wo => 
+    ['draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)
+  ).length;
+  const completedCount = workOrders.filter(wo => 
+    ['completed', 'verified', 'closed'].includes(wo.status)
+  ).length;
+
+  // Filter work orders by active tab and search term
+  const filteredWorkOrders = workOrders.filter(wo => {
+    // Tab filter
+    const isPending = ['draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status);
+    const isCompleted = ['completed', 'verified', 'closed'].includes(wo.status);
+    
+    if (activeTab === 'pending' && !isPending) return false;
+    if (activeTab === 'completed' && !isCompleted) return false;
+
+    // Search filter
+    if (searchTerm) {
+      return (
+        wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        wo.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    return true;
+  });
+
+  const handleSearch = () => {
+    setSearchTerm(searchInput);
+  };
+
+  const handleClear = () => {
+    setSearchInput('');
+    setSearchTerm('');
+  };
+
+  const handleViewDetail = (wo) => {
+    setSelectedWorkOrder(wo);
+    setShowDetailModal(true);
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+          <ClipboardList className="w-6 h-6 text-white" />
+        </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
-          <p className="text-gray-500 mt-1">Manage your franchise work orders</p>
+          <p className="text-gray-500">Manage and track all work orders</p>
         </div>
-        <button
-          onClick={() => { resetForm(); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Work Order</span>
-        </button>
       </div>
 
       {/* Message */}
@@ -267,260 +385,634 @@ const FPWorkOrders = ({ user }) => {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search work orders..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-9 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 appearance-none bg-white"
-            >
-              {statusOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          </div>
-          <button
-            onClick={fetchWorkOrders}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Refresh</span>
-          </button>
-        </div>
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'pending'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Pending</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${
+            activeTab === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+          }`}>
+            {pendingCount}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('completed')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'completed'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <CheckCircle className="w-4 h-4" />
+          <span>Completed</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${
+            activeTab === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+          }`}>
+            {completedCount}
+          </span>
+        </button>
+        <button
+          onClick={() => { resetForm(); setActiveTab('create'); }}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'create'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Plus className="w-4 h-4" />
+          <span>Create New</span>
+        </button>
       </div>
 
-      {/* Work Orders List */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-6 h-6 text-emerald-600 animate-spin" />
+      {/* Create New Work Order Form */}
+      {activeTab === 'create' && (
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          {/* Form Header */}
+          <div className="flex items-start gap-3 mb-6">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Plus className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Create New Work Order</h2>
+              <p className="text-sm text-gray-500">Fill in the details to create a work order on behalf of a resident</p>
+            </div>
           </div>
-        ) : filteredWorkOrders.length === 0 ? (
-          <div className="text-center py-12">
-            <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No work orders found</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Work Order</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Category</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Priority</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredWorkOrders.map((wo) => (
-                  <tr key={wo.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-4 px-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{wo.title || wo.work_order_id}</p>
-                        <p className="text-sm text-gray-500">{wo.work_order_id}</p>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="text-sm text-gray-600">{wo.property_name || '-'}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="text-sm text-gray-600">{wo.category_name || '-'}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(wo.priority)}`}>
-                        {wo.priority?.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
-                        {wo.status?.replace(/_/g, ' ').toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="text-sm text-gray-600">{wo.vendor_name || '-'}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {!wo.assigned_vendor_id && wo.status !== 'closed' && wo.status !== 'cancelled' && (
-                          <button
-                            onClick={() => { setSelectedWorkOrder(wo); setShowAssignModal(true); }}
-                            className="px-3 py-1 text-sm text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50"
-                          >
-                            Assign Vendor
-                          </button>
-                        )}
-                        {wo.status === 'completed' && (
-                          <button
-                            onClick={() => handleStatusUpdate(wo.id, 'closed')}
-                            className="px-3 py-1 text-sm text-green-600 border border-green-200 rounded-lg hover:bg-green-50"
-                          >
-                            Close
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Property Information */}
+            <div className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Building2 className="w-4 h-4 text-gray-500" />
+                <h3 className="font-medium text-gray-900">Property Information</h3>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Property ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Search by Property ID or Community Name..."
+                  value={propertySearch}
+                  onChange={(e) => setPropertySearch(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                />
+                {propertySearch && filteredPropertyOptions.length > 0 && (
+                  <div className="mt-1 border border-gray-200 rounded-lg max-h-40 overflow-y-auto bg-white shadow-lg">
+                    {filteredPropertyOptions.slice(0, 5).map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, propertyId: p.id });
+                          setPropertySearch(p.name + ' - ' + p.property_id);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
+                      >
+                        <span className="font-medium">{p.name}</span>
+                        <span className="text-gray-500 ml-2">{p.property_id}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Customer Details */}
+            <div className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="w-4 h-4 text-gray-500" />
+                <h3 className="font-medium text-gray-900">Customer Details</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Customer name"
+                    value={formData.customerName}
+                    onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    placeholder="customer@email.com"
+                    value={formData.customerEmail}
+                    onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="Phone number"
+                    value={formData.customerPhone}
+                    onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Category Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    required
+                    value={formData.categoryId}
+                    onChange={(e) => handleCategoryChange(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add</span>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Subcategory <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={formData.subcategoryId}
+                  onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
+                  disabled={!formData.categoryId}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">{formData.categoryId ? 'Select a subcategory' : 'Select a category first'}</option>
+                  {subcategories.map((sub) => (
+                    <option key={sub.id} value={sub.id}>{sub.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description <span className="text-gray-400">(Optional)</span>
+              </label>
+              <div className="relative">
+                <textarea
+                  rows={4}
+                  maxLength={500}
+                  placeholder="Describe the issue or request in detail..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                />
+                <span className="absolute bottom-2 right-3 text-xs text-gray-400">
+                  {formData.description.length}/500
+                </span>
+              </div>
+            </div>
+
+            {/* Permission to Enter & Has Pet */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Permission to Enter <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-gray-500 mb-2">Allow entry if resident is unavailable</p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, permissionToEnter: 'yes' })}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      formData.permissionToEnter === 'yes'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, permissionToEnter: 'no' })}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      formData.permissionToEnter === 'no'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Has Pet? <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-gray-500 mb-2">Does the resident have a pet?</p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, hasPet: 'yes' })}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      formData.hasPet === 'yes'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, hasPet: 'no' })}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      formData.hasPet === 'no'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Entry Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Entry Notes <span className="text-gray-400">(Optional)</span>
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Special instructions for entry (gate code, parking, etc.)..."
+                value={formData.entryNotes}
+                onChange={(e) => setFormData({ ...formData, entryNotes: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
+              />
+            </div>
+
+            {/* Priority */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+              <div className="flex gap-3">
+                {['low', 'medium', 'high', 'urgent'].map((priority) => (
+                  <button
+                    key={priority}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, priority })}
+                    className={`flex-1 py-2.5 px-4 rounded-lg border-2 text-sm font-medium capitalize transition-all ${
+                      formData.priority === priority
+                        ? priority === 'low' ? 'border-green-500 bg-green-50 text-green-700'
+                          : priority === 'medium' ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                            : priority === 'high' ? 'border-orange-500 bg-orange-50 text-orange-700'
+                              : 'border-red-500 bg-red-50 text-red-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                    }`}
+                  >
+                    {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                  </button>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              </div>
+            </div>
 
-      {/* Create Work Order Modal */}
-      {showModal && (
+            {/* Attachments */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Attachments <span className="text-gray-400">(Optional - max 5 files)</span>
+              </label>
+              
+              {/* Hidden file inputs */}
+              <input
+                type="file"
+                ref={galleryInputRef}
+                onChange={(e) => handleFileSelect(e, 'gallery')}
+                accept="image/*"
+                multiple
+                className="hidden"
+              />
+              <input
+                type="file"
+                ref={cameraInputRef}
+                onChange={(e) => handleFileSelect(e, 'camera')}
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+              />
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={(e) => handleFileSelect(e, 'files')}
+                accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
+                multiple
+                className="hidden"
+              />
+
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  disabled={formData.attachments.length >= 5}
+                  className={`flex flex-col items-center justify-center gap-2 py-4 px-4 border-2 border-dashed rounded-lg transition-colors ${
+                    formData.attachments.length >= 5
+                      ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-600'
+                  }`}
+                >
+                  <Image className="w-6 h-6" />
+                  <span className="text-sm">Gallery</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  disabled={formData.attachments.length >= 5}
+                  className={`flex flex-col items-center justify-center gap-2 py-4 px-4 border-2 border-dashed rounded-lg transition-colors ${
+                    formData.attachments.length >= 5
+                      ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-600'
+                  }`}
+                >
+                  <Camera className="w-6 h-6" />
+                  <span className="text-sm">Camera</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={formData.attachments.length >= 5}
+                  className={`flex flex-col items-center justify-center gap-2 py-4 px-4 border-2 border-dashed rounded-lg transition-colors ${
+                    formData.attachments.length >= 5
+                      ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-600'
+                  }`}
+                >
+                  <FileText className="w-6 h-6" />
+                  <span className="text-sm">Files</span>
+                </button>
+              </div>
+
+              {/* Selected Files Preview */}
+              {formData.attachments.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs text-gray-500">{formData.attachments.length}/5 files selected</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {formData.attachments.map((attachment) => (
+                      <div
+                        key={attachment.id}
+                        className="relative group border border-gray-200 rounded-lg p-2 bg-gray-50"
+                      >
+                        {attachment.preview ? (
+                          <img
+                            src={attachment.preview}
+                            alt={attachment.name}
+                            className="w-full h-20 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-full h-20 flex items-center justify-center bg-gray-100 rounded">
+                            <FileText className="w-8 h-8 text-gray-400" />
+                          </div>
+                        )}
+                        <div className="mt-1">
+                          <p className="text-xs font-medium text-gray-700 truncate">{attachment.name}</p>
+                          <p className="text-xs text-gray-400">{formatFileSize(attachment.size)}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(attachment.id)}
+                          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => { resetForm(); setActiveTab('pending'); }}
+                className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <ClipboardList className="w-4 h-4" />
+                <span>Create Work Order</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Work Orders List - Only show for pending/completed tabs */}
+      {(activeTab === 'pending' || activeTab === 'completed') && (
+        <>
+          {/* Search */}
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by Work Order ID, category, or name..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                onClick={handleSearch}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Search className="w-4 h-4" />
+                <span>Search</span>
+              </button>
+              <button
+                onClick={handleClear}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Clear</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Work Orders Table */}
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
+              </div>
+            ) : filteredWorkOrders.length === 0 ? (
+              <div className="text-center py-12">
+                <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No work orders found</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="border-b border-gray-100">
+                    <tr>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Order ID</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Resident</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Category</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredWorkOrders.map((wo) => (
+                      <tr key={wo.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-4 px-4">
+                          <span className="text-sm text-gray-900">{wo.work_order_id}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-sm text-gray-600">{wo.property_name || 'N/A'}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{wo.category_name || '-'}</p>
+                            {wo.title && <p className="text-xs text-gray-500">{wo.title}</p>}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
+                            {wo.status?.replace(/_/g, ' ')}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <button
+                            onClick={() => handleViewDetail(wo)}
+                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Work Order Detail Modal */}
+      {showDetailModal && selectedWorkOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Create Work Order</h2>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
+                  <p className="text-sm text-gray-500 mt-1">{selectedWorkOrder.work_order_id}</p>
+                </div>
+                <button onClick={() => { setShowDetailModal(false); setSelectedWorkOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Property *</label>
-                  <select
-                    required
-                    value={formData.propertyId}
-                    onChange={(e) => setFormData({ ...formData, propertyId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="">Select Property</option>
-                    {properties.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                  <p className="text-sm text-gray-500">Property</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.property_name || '-'}</p>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                  <select
-                    required
-                    value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                  <p className="text-sm text-gray-500">Category</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.category_name || '-'}</p>
                 </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Brief title for the work order"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    rows={3}
-                    placeholder="Detailed description of the work required"
-                  />
-                </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                  <select
-                    value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  >
-                    {priorityOptions.map(p => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
-                    ))}
-                  </select>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedWorkOrder.status)}`}>
+                    {selectedWorkOrder.status?.replace(/_/g, ' ')}
+                  </span>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Scheduled Date</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.scheduledDate}
-                    onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
+                  <p className="text-sm text-gray-500">Priority</p>
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(selectedWorkOrder.priority)}`}>
+                    {selectedWorkOrder.priority}
+                  </span>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Permission to Enter</label>
-                  <select
-                    value={formData.permissionToEnter}
-                    onChange={(e) => setFormData({ ...formData, permissionToEnter: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="no">No</option>
-                    <option value="yes">Yes</option>
-                  </select>
+                  <p className="text-sm text-gray-500">Created</p>
+                  <p className="font-medium text-gray-900">{formatDate(selectedWorkOrder.created_at)}</p>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Has Pet?</label>
-                  <select
-                    value={formData.hasPet}
-                    onChange={(e) => setFormData({ ...formData, hasPet: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="no">No</option>
-                    <option value="yes">Yes</option>
-                  </select>
+                  <p className="text-sm text-gray-500">Vendor</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.vendor_name || 'Not Assigned'}</p>
                 </div>
               </div>
+
+              {selectedWorkOrder.title && (
+                <div>
+                  <p className="text-sm text-gray-500">Title</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.title}</p>
+                </div>
+              )}
+
+              {selectedWorkOrder.description && (
+                <div>
+                  <p className="text-sm text-gray-500">Description</p>
+                  <p className="text-gray-700">{selectedWorkOrder.description}</p>
+                </div>
+              )}
 
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                {!selectedWorkOrder.assigned_vendor_id && selectedWorkOrder.status !== 'closed' && selectedWorkOrder.status !== 'cancelled' && (
+                  <button
+                    onClick={() => { setShowDetailModal(false); setShowAssignModal(true); }}
+                    className="px-4 py-2 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50"
+                  >
+                    Assign Vendor
+                  </button>
+                )}
                 <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  onClick={() => { setShowDetailModal(false); setSelectedWorkOrder(null); }}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Create Work Order</span>
+                  Close
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
@@ -550,7 +1042,7 @@ const FPWorkOrders = ({ user }) => {
                     <button
                       key={vendor.id}
                       onClick={() => handleAssignVendor(vendor.id)}
-                      className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-emerald-50 hover:border-emerald-300 transition-colors text-left"
+                      className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
                     >
                       <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                         <User className="w-5 h-5 text-purple-600" />

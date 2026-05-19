@@ -637,4 +637,80 @@ router.get('/list/active', authenticate, managerOrAdmin, async (req, res) => {
   }
 });
 
+// ============================================
+// VENDOR DASHBOARD - Get vendor-specific dashboard data
+// ============================================
+router.get('/dashboard', authenticate, vendorOnly, async (req, res) => {
+  try {
+    const vendorId = req.user?.id || req.user?.vendorId;
+    
+    if (!vendorId) {
+      return res.status(401).json({ success: false, message: 'Vendor ID not found' });
+    }
+
+    // Get vendor details
+    const [vendor] = await pool.execute(
+      `SELECT * FROM vendors WHERE id = ? OR vendor_id = ?`,
+      [vendorId, vendorId]
+    );
+
+    if (vendor.length === 0) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    const dbVendorId = vendor[0].id;
+
+    // Get work orders assigned to this vendor
+    const [workOrders] = await pool.execute(
+      `SELECT wo.*, c.name as category_name, sc.name as subcategory_name, p.property_name
+       FROM work_orders wo
+       LEFT JOIN categories c ON wo.category_id = c.id
+       LEFT JOIN subcategories sc ON wo.subcategory_id = sc.id
+       LEFT JOIN properties p ON wo.property_id = p.id
+       WHERE wo.assigned_vendor_id = ?
+       ORDER BY wo.created_at DESC
+       LIMIT 10`,
+      [dbVendorId]
+    );
+
+    // Get stats for this vendor
+    const [pendingCount] = await pool.execute(
+      `SELECT COUNT(*) as count FROM work_orders WHERE assigned_vendor_id = ? AND status IN ('assigned', 'accepted', 'in_progress')`,
+      [dbVendorId]
+    );
+    const [completedCount] = await pool.execute(
+      `SELECT COUNT(*) as count FROM work_orders WHERE assigned_vendor_id = ? AND status IN ('completed', 'verified', 'closed')`,
+      [dbVendorId]
+    );
+    const [totalCount] = await pool.execute(
+      `SELECT COUNT(*) as count FROM work_orders WHERE assigned_vendor_id = ?`,
+      [dbVendorId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        vendor: {
+          id: vendor[0].id,
+          vendorId: vendor[0].vendor_id,
+          companyName: vendor[0].company_name,
+          contactPerson: vendor[0].contact_person,
+          email: vendor[0].email,
+          phone: vendor[0].phone,
+          rating: vendor[0].rating
+        },
+        recentWorkOrders: workOrders,
+        stats: {
+          pending: pendingCount[0].count,
+          completed: completedCount[0].count,
+          total: totalCount[0].count
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Vendor dashboard error:', error);
+    res.status(500).json({ success: false, message: 'Failed to load dashboard', error: error.message });
+  }
+});
+
 module.exports = router;

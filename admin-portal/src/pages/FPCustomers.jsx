@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Users,
   Plus,
   Search,
-  Edit,
   RefreshCw,
   X,
   Save,
@@ -12,30 +11,121 @@ import {
   Phone,
   Mail,
   MapPin,
-  Building2
+  Building2,
+  Home,
+  Store,
+  Truck,
+  Lock,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Grid3X3,
+  Layers,
+  Loader2,
+  Navigation,
+  Trash2
 } from 'lucide-react';
+import LocationPicker from '../components/common/LocationPicker';
+
+// Category options matching Admin Portal
+const CATEGORIES = [
+  {
+    id: 'residential',
+    name: 'Residential',
+    icon: Home,
+    color: 'bg-emerald-500',
+    locked: false
+  },
+  {
+    id: 'commercial',
+    name: 'Commercial',
+    icon: Store,
+    color: 'bg-blue-500',
+    locked: true
+  },
+  {
+    id: 'vendor',
+    name: 'Vendor',
+    icon: Truck,
+    color: 'bg-purple-500',
+    locked: true
+  }
+];
+
+// Entry types for Residential
+const ENTRY_TYPES = [
+  { id: 'GC', name: 'Gated Community', icon: Building2, color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
+  { id: 'APT', name: 'Apartment', icon: Home, color: 'bg-gradient-to-br from-emerald-500 to-emerald-600' },
+  { id: 'VILLA', name: 'Villa', icon: Home, color: 'bg-gradient-to-br from-amber-500 to-amber-600' },
+  { id: 'FLAT', name: 'Flat', icon: Grid3X3, color: 'bg-gradient-to-br from-cyan-500 to-cyan-600' },
+  { id: 'PLOT', name: 'Plot', icon: MapPin, color: 'bg-gradient-to-br from-rose-500 to-rose-600' }
+];
+
+// Property types per entry type
+const PROPERTY_TYPES = {
+  GC: ['Gated Community'],
+  APT: ['Apartment'],
+  VILLA: ['Villa'],
+  PLOT: ['Plot'],
+  FLAT: ['Flat']
+};
+
+// Country codes
+const COUNTRY_CODES = [
+  { code: '+91', flag: '🇮🇳', label: 'India' },
+  { code: '+1', flag: '🇺🇸', label: 'US' },
+  { code: '+44', flag: '🇬🇧', label: 'UK' },
+  { code: '+61', flag: '🇦🇺', label: 'Australia' },
+  { code: '+971', flag: '🇦🇪', label: 'UAE' }
+];
+
+// Division options
+const DIVISIONS = ['Division A', 'Division B', 'Division C', 'Division D', 'Division E'];
 
 const FPCustomers = ({ user }) => {
   const [customers, setCustomers] = useState([]);
   const [properties, setProperties] = useState([]);
+  const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showModal, setShowModal] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  
+  // View states
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedEntryType, setSelectedEntryType] = useState(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    alternatePhone: '',
+    zone: '',
+    areaName: '',
+    division: '',
+    propertyType: '',
+    communityName: '',
+    associationContacts: [{ name: '', email: '', phone: '', countryCode: '+91' }],
+    numberOfBlocks: 1,
+    unitsPerBlock: {},
+    blockNames: {},
+    numberOfUnits: '',
+    villaPlotNumber: '',
+    blockInfo: '',
+    blockNA: false,
     address: '',
     city: '',
     state: '',
-    zipCode: '',
-    clientType: 'individual',
-    companyName: '',
-    propertyId: '',
-    gstNumber: ''
+    postalCode: '',
+    landmark: '',
+    mapLocation: { lat: null, lng: null, address: '' },
+    notes: ''
   });
+
+  const [showAddressDetails, setShowAddressDetails] = useState(false);
+  const [showZoneDropdown, setShowZoneDropdown] = useState(false);
+  const [showAreaDropdown, setShowAreaDropdown] = useState(false);
+  const [zoneSuggestions, setZoneSuggestions] = useState([]);
+  const [areaSuggestions, setAreaSuggestions] = useState([]);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const formRef = useRef(null);
 
   const token = localStorage.getItem('pm_auth_token');
 
@@ -70,15 +160,38 @@ const FPCustomers = ({ user }) => {
     }
   };
 
+  const fetchZones = async () => {
+    try {
+      const response = await fetch('/api/fp/zones', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setZones(result.data || []);
+      }
+    } catch (error) {
+      console.error('Fetch zones error:', error);
+    }
+  };
+
   useEffect(() => {
     fetchCustomers();
     fetchProperties();
+    fetchZones();
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setAttemptedSubmit(true);
     setMessage({ type: '', text: '' });
 
+    // Validate form
+    if (!isFormValid()) {
+      setMessage({ type: 'error', text: 'Please fill in all required fields' });
+      return;
+    }
+
+    setSubmitting(true);
     try {
       const response = await fetch('/api/fp/customers', {
         method: 'POST',
@@ -86,39 +199,146 @@ const FPCustomers = ({ user }) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          entryType: selectedEntryType,
+          category: selectedCategory
+        })
       });
 
       const result = await response.json();
 
       if (result.success) {
         setMessage({ type: 'success', text: 'Customer created successfully!' });
-        setShowModal(false);
         resetForm();
+        setSelectedEntryType(null);
+        setSelectedCategory(null);
         fetchCustomers();
       } else {
         setMessage({ type: 'error', text: result.message || 'Operation failed' });
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to create customer' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  const isFormValid = () => {
+    const contact = formData.associationContacts[0];
+    const basicValid = formData.zone.trim() && formData.areaName.trim() && 
+                       formData.division && formData.propertyType && formData.communityName.trim();
+    const contactValid = contact.name.trim() && contact.email.trim() && contact.phone.trim();
+    const addressValid = formData.address.trim() && formData.city.trim() && 
+                         formData.state.trim() && formData.postalCode.trim();
+
+    // Entry type specific validation
+    if (selectedEntryType === 'GC') {
+      const blocksValid = formData.numberOfBlocks >= 1 && 
+        Object.keys(formData.unitsPerBlock).length === formData.numberOfBlocks &&
+        Object.values(formData.unitsPerBlock).every(u => u > 0);
+      return basicValid && contactValid && addressValid && blocksValid;
+    }
+    
+    if (selectedEntryType === 'APT') {
+      const aptValid = (formData.blockNA || formData.blockInfo.trim()) && 
+                       formData.numberOfUnits && formData.numberOfUnits > 0;
+      return basicValid && contactValid && addressValid && aptValid;
+    }
+    
+    if (selectedEntryType === 'VILLA' || selectedEntryType === 'FLAT' || selectedEntryType === 'PLOT') {
+      const numberValid = formData.villaPlotNumber.trim();
+      return basicValid && contactValid && addressValid && numberValid;
+    }
+
+    return basicValid && contactValid && addressValid;
+  };
+
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidPhone = (phone) => /^\d{10}$/.test(phone);
+
   const resetForm = () => {
     setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      alternatePhone: '',
+      zone: '',
+      areaName: '',
+      division: '',
+      propertyType: '',
+      communityName: '',
+      associationContacts: [{ name: '', email: '', phone: '', countryCode: '+91' }],
+      numberOfBlocks: 1,
+      unitsPerBlock: {},
+      blockNames: {},
+      numberOfUnits: '',
+      villaPlotNumber: '',
+      blockInfo: '',
+      blockNA: false,
       address: '',
       city: '',
       state: '',
-      zipCode: '',
-      clientType: 'individual',
-      companyName: '',
-      propertyId: '',
-      gstNumber: ''
+      postalCode: '',
+      landmark: '',
+      mapLocation: { lat: null, lng: null, address: '' },
+      notes: ''
     });
+    setCurrentStep(1);
+    setShowAddressDetails(false);
+    setAttemptedSubmit(false);
+  };
+
+  const updateFormData = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateUnitsForBlock = (blockNum, units) => {
+    setFormData(prev => ({
+      ...prev,
+      unitsPerBlock: { ...prev.unitsPerBlock, [blockNum]: units }
+    }));
+  };
+
+  const updateBlockName = (blockNum, name) => {
+    setFormData(prev => ({
+      ...prev,
+      blockNames: { ...prev.blockNames, [blockNum]: name }
+    }));
+  };
+
+  const calculateTotalFlats = () => {
+    return Object.values(formData.unitsPerBlock).reduce((sum, units) => sum + (parseInt(units) || 0), 0);
+  };
+
+  const addAssociationContact = () => {
+    setFormData(prev => ({
+      ...prev,
+      associationContacts: [...prev.associationContacts, { name: '', email: '', phone: '', countryCode: '+91' }]
+    }));
+  };
+
+  const removeAssociationContact = (index) => {
+    if (formData.associationContacts.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        associationContacts: prev.associationContacts.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const updateAssociationContact = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      associationContacts: prev.associationContacts.map((contact, i) => 
+        i === index ? { ...contact, [field]: value } : contact
+      )
+    }));
+  };
+
+  const goBack = () => {
+    if (selectedEntryType) {
+      setSelectedEntryType(null);
+      resetForm();
+    } else if (selectedCategory) {
+      setSelectedCategory(null);
+    }
   };
 
   const filteredCustomers = customers.filter(c =>
@@ -128,293 +348,767 @@ const FPCustomers = ({ user }) => {
     c.client_id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  // Category Selection View (Initial)
+  if (!selectedCategory) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-          <p className="text-gray-500 mt-1">Manage your franchise customers</p>
+          <p className="text-gray-500 mt-1">Customer Creation Module</p>
         </div>
-        <button
-          onClick={() => { resetForm(); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Customer</span>
-        </button>
-      </div>
 
-      {/* Message */}
-      {message.text && (
-        <div className={`p-4 rounded-lg flex items-center gap-3 ${
-          message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-          <span>{message.text}</span>
-          <button onClick={() => setMessage({ type: '', text: '' })} className="ml-auto">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Search */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search customers..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
-      </div>
-
-      {/* Customers List */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-6 h-6 text-emerald-600 animate-spin" />
-          </div>
-        ) : filteredCustomers.length === 0 ? (
-          <div className="text-center py-12">
-            <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No customers found</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Customer</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Location</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCustomers.map((customer) => (
-                  <tr key={customer.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-4 px-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{customer.name}</p>
-                        <p className="text-sm text-gray-500">{customer.client_id}</p>
-                        {customer.company_name && (
-                          <p className="text-sm text-gray-400">{customer.company_name}</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium capitalize">
-                        {customer.client_type}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="space-y-1">
-                        {customer.phone && (
-                          <p className="text-sm text-gray-600 flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {customer.phone}
-                          </p>
-                        )}
-                        {customer.email && (
-                          <p className="text-sm text-gray-400 flex items-center gap-1">
-                            <Mail className="w-3 h-3" /> {customer.email}
-                          </p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="text-sm text-gray-600">{customer.property_name || '-'}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-start gap-1">
-                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-gray-600">
-                          {customer.city ? `${customer.city}, ${customer.state || ''}` : '-'}
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Message */}
+        {message.text && (
+          <div className={`p-4 rounded-lg flex items-center gap-3 ${
+            message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            <span>{message.text}</span>
+            <button onClick={() => setMessage({ type: '', text: '' })} className="ml-auto">
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
-      </div>
 
-      {/* Add Customer Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Add New Customer</h2>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
+        {/* Category Selection Card */}
+        <div className="bg-white rounded-xl border border-gray-100 p-10">
+          <div className="text-center mb-10">
+            <h2 className="text-xl font-semibold text-gray-900">Select Category</h2>
+            <p className="text-gray-500 mt-2">Choose the customer category to proceed</p>
+          </div>
+
+          <div className="flex justify-center gap-8">
+            {CATEGORIES.map((category) => {
+              const Icon = category.icon;
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => !category.locked && setSelectedCategory(category.id)}
+                  disabled={category.locked}
+                  className={`relative flex flex-col items-center px-10 py-8 rounded-xl border-2 transition-all min-w-[180px] ${
+                    category.locked
+                      ? 'border-gray-200 bg-white cursor-not-allowed'
+                      : 'border-emerald-400 hover:border-emerald-500 hover:shadow-md cursor-pointer'
+                  }`}
+                >
+                  {category.locked && (
+                    <span className="absolute top-3 right-3 flex items-center gap-1 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                      <Lock className="w-3 h-3" />
+                      Coming Soon
+                    </span>
+                  )}
+                  <div className={`w-16 h-16 ${category.locked ? 'bg-gray-100' : category.color} rounded-2xl flex items-center justify-center mb-6`}>
+                    <Icon className={`w-8 h-8 ${category.locked ? 'text-gray-400' : 'text-white'}`} />
+                  </div>
+                  <p className={`font-medium text-base ${category.locked ? 'text-gray-400' : 'text-gray-900'}`}>
+                    {category.name}
+                  </p>
                 </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Entry Type Selection View (after selecting Residential)
+  if (selectedCategory && !selectedEntryType) {
+    return (
+      <div className="space-y-6">
+        {/* Header with Back */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={goBack}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
+            <p className="text-gray-500">Select property type for {selectedCategory}</p>
+          </div>
+        </div>
+
+        {/* Entry Type Selection */}
+        <div className="bg-white rounded-xl border border-gray-100 p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-xl font-semibold text-gray-900">Select Property Type</h2>
+            <p className="text-gray-500 mt-1">Choose the type of property</p>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-4">
+            {ENTRY_TYPES.map((entry) => {
+              const Icon = entry.icon;
+              return (
+                <button
+                  key={entry.id}
+                  onClick={() => setSelectedEntryType(entry.id)}
+                  className="flex flex-col items-center p-6 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-md transition-all min-w-[140px]"
+                >
+                  <div className={`w-12 h-12 ${entry.color} rounded-xl flex items-center justify-center mb-3`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <p className="font-medium text-gray-900 text-sm">{entry.name}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Customer Creation Form (after selecting entry type)
+  if (selectedEntryType) {
+    const entryTypeInfo = ENTRY_TYPES.find(t => t.id === selectedEntryType);
+    const hasError = attemptedSubmit && !isFormValid();
+
+    const inputClass = (fieldError) =>
+      `w-full px-3 py-2.5 border rounded-md transition-colors focus:ring-1 focus:outline-none text-sm ${
+        fieldError
+          ? 'border-red-400 focus:ring-red-200 focus:border-red-500'
+          : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
+      }`;
+
+    const selectClass = (fieldError) =>
+      `w-full px-3 py-2.5 border rounded-md transition-colors focus:ring-1 focus:outline-none appearance-none bg-white text-sm ${
+        fieldError
+          ? 'border-red-400 focus:ring-red-200 focus:border-red-500'
+          : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
+      }`;
+
+    const FieldError = ({ show, message }) =>
+      show ? <p className="text-xs text-red-500 mt-1">{message}</p> : null;
+
+    return (
+      <div className="space-y-6">
+        {/* Header with Back button */}
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Create Customer</h1>
+            <p className="text-gray-500 text-sm mt-1">
+              {entryTypeInfo?.name} • Complete all required fields
+            </p>
+          </div>
+          <button
+            onClick={goBack}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md transition-colors text-sm"
+          >
+            ← Back
+          </button>
+        </div>
+
+        {/* Form Container */}
+        <div className="max-w-3xl">
+          <form ref={formRef} onSubmit={handleSubmit} className="bg-white border-l-4 border-l-blue-500 shadow-sm">
+            
+            {/* Property Information Section */}
+            <div className="p-8 border-b border-gray-200">
+              <h2 className="text-xl font-medium text-gray-800 mb-6">Property Information</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                {/* Zone */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1.5">
+                    Zone <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.zone}
+                      onChange={(e) => updateFormData('zone', e.target.value)}
+                      onFocus={() => setShowZoneDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowZoneDropdown(false), 200)}
+                      className={inputClass(hasError && !formData.zone.trim())}
+                      placeholder="Type or select zone..."
+                    />
+                    {showZoneDropdown && zones.length > 0 && (
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {zones.filter(z => z.name?.toLowerCase().includes(formData.zone.toLowerCase())).map(z => (
+                          <button
+                            key={z.id}
+                            type="button"
+                            onMouseDown={() => {
+                              updateFormData('zone', z.name);
+                              setShowZoneDropdown(false);
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 transition-colors"
+                          >
+                            {z.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <FieldError show={hasError && !formData.zone.trim()} message="Zone is required" />
+                </div>
+
+                {/* Area Name */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1.5">
+                    Area Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.areaName}
+                    onChange={(e) => updateFormData('areaName', e.target.value)}
+                    className={inputClass(hasError && !formData.areaName.trim())}
+                    placeholder="Type or select area name..."
+                  />
+                  <FieldError show={hasError && !formData.areaName.trim()} message="Area name is required" />
+                </div>
+
+                {/* Division with Add button */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1.5">
+                    Division <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <select
+                        value={formData.division}
+                        onChange={(e) => updateFormData('division', e.target.value)}
+                        className={selectClass(hasError && !formData.division)}
+                      >
+                        <option value="">Select a division</option>
+                        {DIVISIONS.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                      <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 rotate-90 pointer-events-none" />
+                    </div>
+                    <button
+                      type="button"
+                      className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium flex items-center gap-1"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add
+                    </button>
+                  </div>
+                  <FieldError show={hasError && !formData.division} message="Please select a division" />
+                </div>
+
+                {/* Property Type */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1.5">
+                    Property Type <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={formData.propertyType}
+                      onChange={(e) => updateFormData('propertyType', e.target.value)}
+                      className={selectClass(hasError && !formData.propertyType)}
+                    >
+                      <option value="">Select a property type</option>
+                      {PROPERTY_TYPES[selectedEntryType]?.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                    <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 rotate-90 pointer-events-none" />
+                  </div>
+                  <FieldError show={hasError && !formData.propertyType} message="Please select a property type" />
+                </div>
+
+                {/* Community Name - Full width */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-gray-700 mb-1.5">
+                    Community Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.communityName}
+                    onChange={(e) => updateFormData('communityName', e.target.value)}
+                    className={inputClass(hasError && !formData.communityName.trim())}
+                    placeholder="Enter community name"
+                  />
+                  <FieldError show={hasError && !formData.communityName.trim()} message="Community name is required" />
+                </div>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Full name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
-                  <select
-                    value={formData.clientType}
-                    onChange={(e) => setFormData({ ...formData, clientType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="individual">Individual</option>
-                    <option value="company">Company</option>
-                    <option value="association">Association</option>
-                  </select>
-                </div>
-
-                {formData.clientType !== 'individual' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                    <input
-                      type="text"
-                      value={formData.companyName}
-                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Alternate Phone</label>
-                  <input
-                    type="tel"
-                    value={formData.alternatePhone}
-                    onChange={(e) => setFormData({ ...formData, alternatePhone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Linked Property</label>
-                  <select
-                    value={formData.propertyId}
-                    onChange={(e) => setFormData({ ...formData, propertyId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="">Select Property (Optional)</option>
-                    {properties.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                  <textarea
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    rows={2}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                  <input
-                    type="text"
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                  <input
-                    type="text"
-                    value={formData.zipCode}
-                    onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
-                  <input
-                    type="text"
-                    value={formData.gstNumber}
-                    onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            {/* Contact Information Section */}
+            <div className="p-8 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-medium text-gray-800">Contact Information</h2>
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  onClick={addAssociationContact}
+                  className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Add Customer</span>
+                  <Plus className="w-4 h-4" />
+                  Add Contact
                 </button>
               </div>
-            </form>
-          </div>
+
+              {formData.associationContacts.map((contact, index) => {
+                const nameError = hasError && contact.name.trim() === '';
+                const emailError = hasError && (contact.email.trim() === '' || (contact.email.trim() !== '' && !isValidEmail(contact.email)));
+                const phoneError = hasError && (contact.phone.trim() === '' || (contact.phone.trim() !== '' && !isValidPhone(contact.phone)));
+                
+                return (
+                  <div key={index} className="mb-6 pb-6 border-b border-gray-100 last:border-0 last:pb-0 last:mb-0">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-sm font-medium text-gray-600">Contact {index + 1}</span>
+                      {formData.associationContacts.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeAssociationContact(index)}
+                          className="text-red-400 hover:text-red-600 text-sm"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-1.5">
+                          Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={contact.name}
+                          onChange={(e) => updateAssociationContact(index, 'name', e.target.value)}
+                          className={inputClass(nameError)}
+                          placeholder="Contact name"
+                        />
+                        <FieldError show={nameError} message="Name is required" />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-1.5">
+                          Email <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={contact.email}
+                          onChange={(e) => updateAssociationContact(index, 'email', e.target.value)}
+                          className={inputClass(emailError)}
+                          placeholder="example@email.com"
+                        />
+                        <FieldError show={hasError && contact.email.trim() === ''} message="Email is required" />
+                        <FieldError show={hasError && contact.email.trim() !== '' && !isValidEmail(contact.email)} message="Please enter a valid email" />
+                      </div>
+                      
+                      <div className="md:col-span-2">
+                        <label className="block text-sm text-gray-700 mb-1.5">
+                          Phone Number <span className="text-red-500">*</span>
+                        </label>
+                        <div className="flex gap-2 max-w-md">
+                          <select
+                            value={contact.countryCode || '+91'}
+                            onChange={(e) => updateAssociationContact(index, 'countryCode', e.target.value)}
+                            className="w-24 flex-shrink-0 px-2 py-2.5 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-200 focus:border-blue-400 focus:outline-none bg-white"
+                          >
+                            {COUNTRY_CODES.map(cc => (
+                              <option key={cc.code} value={cc.code}>
+                                {cc.flag} {cc.code}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="tel"
+                            inputMode="numeric"
+                            maxLength={10}
+                            value={contact.phone}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                              updateAssociationContact(index, 'phone', digits);
+                            }}
+                            className={`flex-1 ${inputClass(phoneError)}`}
+                            placeholder="10-digit number"
+                          />
+                        </div>
+                        <FieldError show={hasError && contact.phone.trim() === ''} message="Phone number is required" />
+                        <FieldError show={hasError && contact.phone.trim() !== '' && !isValidPhone(contact.phone)} message="Phone number must be exactly 10 digits" />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Block Details Section (for Gated Community) */}
+            {selectedEntryType === 'GC' && (
+              <div className="p-8 border-b border-gray-200">
+                <h2 className="text-xl font-medium text-gray-800 mb-6">Block Details</h2>
+                
+                <div className="space-y-5">
+                  <div className="max-w-xs">
+                    <label className="block text-sm text-gray-700 mb-1.5">
+                      Number of Blocks <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.numberOfBlocks}
+                      onChange={(e) => updateFormData('numberOfBlocks', parseInt(e.target.value) || 1)}
+                      className={inputClass(hasError && formData.numberOfBlocks < 1)}
+                      placeholder="Enter number of blocks"
+                    />
+                  </div>
+
+                  {/* Units per Block */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    {Array.from({ length: formData.numberOfBlocks }, (_, i) => i + 1).map(blockNum => {
+                      const blockError = hasError && (!formData.unitsPerBlock[blockNum] || formData.unitsPerBlock[blockNum] <= 0);
+                      return (
+                        <div key={blockNum} className="flex gap-3">
+                          <div className="w-32">
+                            <label className="block text-xs text-gray-500 mb-1">Block Name</label>
+                            <input
+                              type="text"
+                              value={formData.blockNames[blockNum] || ''}
+                              onChange={(e) => updateBlockName(blockNum, e.target.value)}
+                              className={inputClass(false)}
+                              placeholder={`Block ${blockNum}`}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="block text-xs text-gray-500 mb-1">Units <span className="text-red-500">*</span></label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={formData.unitsPerBlock[blockNum] || ''}
+                              onChange={(e) => updateUnitsForBlock(blockNum, e.target.value)}
+                              className={inputClass(blockError)}
+                              placeholder="No. of units"
+                            />
+                            <FieldError show={blockError} message="Required" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {formData.numberOfBlocks >= 1 && calculateTotalFlats() > 0 && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md inline-block">
+                      <span className="text-sm text-blue-700">Total Flats: <strong>{calculateTotalFlats()}</strong></span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Apartment Details Section */}
+            {selectedEntryType === 'APT' && (
+              <div className="p-8 border-b border-gray-200">
+                <h2 className="text-xl font-medium text-gray-800 mb-6">Apartment Details</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                  <div>
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <label className="block text-sm text-gray-700">
+                        Block Information
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="blockNA"
+                          checked={formData.blockNA}
+                          onChange={(e) => updateFormData('blockNA', e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="blockNA" className="text-sm text-gray-600">Not Applicable</label>
+                      </div>
+                    </div>
+                    {!formData.blockNA && (
+                      <>
+                        <input
+                          type="text"
+                          value={formData.blockInfo}
+                          onChange={(e) => updateFormData('blockInfo', e.target.value)}
+                          className={inputClass(hasError && !formData.blockNA && formData.blockInfo.trim() === '')}
+                          placeholder="Block A, Tower 1, etc."
+                        />
+                        <FieldError show={hasError && !formData.blockNA && formData.blockInfo.trim() === ''} message="Block info required (or mark N/A)" />
+                      </>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1.5">
+                      Number of Units <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.numberOfUnits}
+                      onChange={(e) => updateFormData('numberOfUnits', e.target.value)}
+                      className={inputClass(hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0))}
+                      placeholder="Total number of units"
+                    />
+                    <FieldError show={hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0)} message="Number of units is required" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Villa Details Section */}
+            {selectedEntryType === 'VILLA' && (
+              <div className="p-8 border-b border-gray-200">
+                <h2 className="text-xl font-medium text-gray-800 mb-6">Villa Details</h2>
+                
+                <div className="max-w-md">
+                  <label className="block text-sm text-gray-700 mb-1.5">
+                    Villa Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.villaPlotNumber}
+                    onChange={(e) => updateFormData('villaPlotNumber', e.target.value)}
+                    className={inputClass(hasError && !formData.villaPlotNumber.trim())}
+                    placeholder="Enter villa number"
+                  />
+                  <FieldError show={hasError && !formData.villaPlotNumber.trim()} message="Villa number is required" />
+                </div>
+              </div>
+            )}
+
+            {/* Flat Details Section */}
+            {selectedEntryType === 'FLAT' && (
+              <div className="p-8 border-b border-gray-200">
+                <h2 className="text-xl font-medium text-gray-800 mb-6">Flat Details</h2>
+                
+                <div className="max-w-md">
+                  <label className="block text-sm text-gray-700 mb-1.5">
+                    Flat Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.villaPlotNumber}
+                    onChange={(e) => updateFormData('villaPlotNumber', e.target.value)}
+                    className={inputClass(hasError && !formData.villaPlotNumber.trim())}
+                    placeholder="Enter flat number"
+                  />
+                  <FieldError show={hasError && !formData.villaPlotNumber.trim()} message="Flat number is required" />
+                </div>
+              </div>
+            )}
+
+            {/* Plot Details Section */}
+            {selectedEntryType === 'PLOT' && (
+              <div className="p-8 border-b border-gray-200">
+                <h2 className="text-xl font-medium text-gray-800 mb-6">Plot Details</h2>
+                
+                <div className="max-w-md">
+                  <label className="block text-sm text-gray-700 mb-1.5">
+                    Plot Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.villaPlotNumber}
+                    onChange={(e) => updateFormData('villaPlotNumber', e.target.value)}
+                    className={inputClass(hasError && !formData.villaPlotNumber.trim())}
+                    placeholder="Enter plot number"
+                  />
+                  <FieldError show={hasError && !formData.villaPlotNumber.trim()} message="Plot number is required" />
+                </div>
+              </div>
+            )}
+
+            {/* Address Section */}
+            <div className="p-8 border-b border-gray-200">
+              <h2 className="text-xl font-medium text-gray-800 mb-6">Address</h2>
+              
+              <div className="space-y-5">
+                {/* Collapsible Address Header */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddressDetails(!showAddressDetails)}
+                    className={`w-full flex items-center justify-between p-4 border rounded-lg transition-all duration-200 ${
+                      showAddressDetails 
+                        ? 'bg-blue-50 border-blue-300' 
+                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <MapPin className={`w-5 h-5 ${showAddressDetails ? 'text-blue-600' : 'text-gray-500'}`} />
+                      <div className="text-left">
+                        <span className={`font-medium ${showAddressDetails ? 'text-blue-700' : 'text-gray-700'}`}>
+                          Street, City, State, Postal Code
+                        </span>
+                        <span className="text-red-500 ml-1">*</span>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {showAddressDetails ? 'Click to collapse' : 'Click to expand and enter details'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className={`w-5 h-5 transition-transform duration-200 ${
+                      showAddressDetails ? 'rotate-90 text-blue-600' : 'text-gray-400'
+                    }`} />
+                  </button>
+
+                  {/* Expanded Address Fields */}
+                  {showAddressDetails && (
+                    <div className="mt-4 p-5 bg-white border border-gray-200 rounded-lg space-y-5">
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddressDetails(false)}
+                          className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                        >
+                          <X className="w-4 h-4" />
+                          Collapse
+                        </button>
+                      </div>
+
+                      {/* Street Address */}
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-1.5">
+                          Street Address <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.address}
+                          onChange={(e) => updateFormData('address', e.target.value)}
+                          className={inputClass(hasError && !formData.address.trim())}
+                          placeholder="Enter street address"
+                        />
+                        <FieldError show={hasError && !formData.address.trim()} message="Address is required" />
+                      </div>
+
+                      {/* City */}
+                      <div className="max-w-sm">
+                        <label className="block text-sm text-gray-700 mb-1.5">
+                          City <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.city}
+                          onChange={(e) => updateFormData('city', e.target.value)}
+                          className={inputClass(hasError && !formData.city.trim())}
+                          placeholder="City name"
+                        />
+                        <FieldError show={hasError && !formData.city.trim()} message="City is required" />
+                      </div>
+
+                      {/* State and Postal Code */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-1.5">
+                            State <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.state}
+                            onChange={(e) => updateFormData('state', e.target.value)}
+                            className={inputClass(hasError && !formData.state.trim())}
+                            placeholder="State"
+                          />
+                          <FieldError show={hasError && !formData.state.trim()} message="State is required" />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-1.5">
+                            Postal Code <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.postalCode}
+                            onChange={(e) => updateFormData('postalCode', e.target.value)}
+                            className={inputClass(hasError && !formData.postalCode.trim())}
+                            placeholder="Postal code"
+                          />
+                          <FieldError show={hasError && !formData.postalCode.trim()} message="Postal code is required" />
+                        </div>
+                      </div>
+
+                      {/* Landmark */}
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-1.5">
+                          Landmark Reference <span className="text-gray-400 text-xs">(Optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.landmark}
+                          onChange={(e) => updateFormData('landmark', e.target.value)}
+                          className={inputClass(false)}
+                          placeholder="Near Central Park, Behind Mall, etc."
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Show validation error if address fields not filled */}
+                  {hasError && !showAddressDetails && (!formData.address.trim() || !formData.city.trim() || !formData.state.trim() || !formData.postalCode.trim()) && (
+                    <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      Please expand and fill in the address details
+                    </p>
+                  )}
+                </div>
+
+                {/* Location Picker */}
+                <div className="pt-4">
+                  <LocationPicker
+                    value={formData.mapLocation}
+                    onChange={(loc) => updateFormData('mapLocation', loc)}
+                    onAddressComponentsChange={(components) => {
+                      // Auto-populate address fields from location selection
+                      if (components.city && !formData.city) {
+                        updateFormData('city', components.city);
+                      }
+                      if (components.state && !formData.state) {
+                        updateFormData('state', components.state);
+                      }
+                      if (components.postalCode && !formData.postalCode) {
+                        updateFormData('postalCode', components.postalCode);
+                      }
+                      if (components.addressLine1 && !formData.address) {
+                        updateFormData('address', components.addressLine1);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Notes Section */}
+            <div className="p-8">
+              <h2 className="text-xl font-medium text-gray-800 mb-6">Additional Notes</h2>
+              
+              <div>
+                <label className="block text-sm text-gray-700 mb-1.5">
+                  Notes <span className="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => updateFormData('notes', e.target.value)}
+                  rows={4}
+                  className={inputClass(false)}
+                  placeholder="Enter any additional notes or comments"
+                />
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="p-8 pt-0 flex justify-end">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Property Entry'
+                )}
+              </button>
+            </div>
+          </form>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export default FPCustomers;

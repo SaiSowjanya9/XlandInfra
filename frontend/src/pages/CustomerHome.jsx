@@ -29,7 +29,9 @@ import {
   Twitter,
   Instagram,
   Linkedin,
-  Youtube
+  Youtube,
+  QrCode,
+  Download
 } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 import HeroVideo from '../assets/Sample_Video.mp4';
@@ -599,6 +601,59 @@ function CustomerHome() {
                   <span>D.No. 7-333/A/1, Nri Hospital Road<br/>Mangalagiri, Guntur, 522503</span>
                 </li>
               </ul>
+            </div>
+          </div>
+          
+          {/* QR Codes Section */}
+          <div className="mb-8 pt-6 border-t border-stone-800">
+            <div className="flex items-center space-x-2 mb-4">
+              <QrCode className="w-5 h-5" style={{ color: '#D8B25C' }} />
+              <h4 className="text-white font-semibold">Quick Access QR Codes</h4>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Website QR */}
+              <div className="bg-stone-800/50 border border-stone-700/50 rounded-xl p-4 text-center">
+                <div className="bg-white p-2 rounded-lg inline-block mb-3">
+                  <img 
+                    src="/XLAND_INFRA_Website.png" 
+                    alt="Website QR" 
+                    className="w-20 h-20 object-contain"
+                  />
+                </div>
+                <p className="text-white text-sm font-medium mb-1">Main Website</p>
+                <p className="text-stone-500 text-xs mb-2">xlandinfra.com</p>
+                <a 
+                  href="/XLAND_INFRA_Website.png" 
+                  download="XLAND_Website_QR.png"
+                  className="inline-flex items-center space-x-1 text-xs px-3 py-1.5 rounded-lg border transition-colors"
+                  style={{ color: '#D8B25C', borderColor: 'rgba(216, 178, 92, 0.3)' }}
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Download</span>
+                </a>
+              </div>
+              
+              {/* Customer Portal QR */}
+              <div className="bg-stone-800/50 border border-stone-700/50 rounded-xl p-4 text-center">
+                <div className="bg-white p-2 rounded-lg inline-block mb-3">
+                  <img 
+                    src="/XLAND_INFRA_Customer_Portal.png" 
+                    alt="Customer Portal QR" 
+                    className="w-20 h-20 object-contain"
+                  />
+                </div>
+                <p className="text-white text-sm font-medium mb-1">Customer Portal</p>
+                <p className="text-stone-500 text-xs mb-2">xlandinfra.com/login</p>
+                <a 
+                  href="/XLAND_INFRA_Customer_Portal.png" 
+                  download="XLAND_Portal_QR.png"
+                  className="inline-flex items-center space-x-1 text-xs px-3 py-1.5 rounded-lg border transition-colors"
+                  style={{ color: '#D8B25C', borderColor: 'rgba(216, 178, 92, 0.3)' }}
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Download</span>
+                </a>
+              </div>
             </div>
           </div>
           
