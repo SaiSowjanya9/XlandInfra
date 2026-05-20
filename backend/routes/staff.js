@@ -73,15 +73,18 @@ router.post('/login', async (req, res) => {
     }
 
     let user = null;
+    let userType = 'user'; // 'user' or 'franchise_partner'
 
     // Try database first
     try {
+      // First check users table
       const [users] = await pool.execute(
         `SELECT * FROM users WHERE (username = ? OR email = ?) AND is_active = TRUE`,
         [username, username]
       );
       if (users.length > 0) {
         user = users[0];
+        userType = 'user';
         
         // Verify password against stored hash
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
@@ -98,8 +101,35 @@ router.post('/login', async (req, res) => {
           [user.id]
         );
       }
+      
+      // If not found in users, check franchise_partners table
+      if (!user) {
+        const [fpUsers] = await pool.execute(
+          `SELECT * FROM franchise_partners WHERE (username = ? OR email = ?) AND is_active = TRUE`,
+          [username, username]
+        );
+        if (fpUsers.length > 0) {
+          user = fpUsers[0];
+          userType = 'franchise_partner';
+          
+          // Verify password against stored hash
+          const isValidPassword = await bcrypt.compare(password, user.password_hash);
+          if (!isValidPassword) {
+            return res.status(401).json({
+              success: false,
+              message: 'Invalid credentials'
+            });
+          }
+
+          // Update last login
+          await pool.execute(
+            `UPDATE franchise_partners SET last_login = NOW() WHERE id = ?`,
+            [user.id]
+          );
+        }
+      }
     } catch (dbError) {
-      console.log('Database not available, using demo mode');
+      console.log('Database not available, using demo mode:', dbError.message);
     }
 
     // Fallback to demo users (only if demo mode is enabled)
@@ -155,7 +185,41 @@ router.post('/login', async (req, res) => {
     // Check if user must change password
     const mustChangePassword = user.must_change_password === 1 || user.must_change_password === true;
     
-    // Generate token for database user
+    // Handle FP users differently
+    if (userType === 'franchise_partner') {
+      const token = generateToken({
+        id: user.id,
+        fpId: user.id,
+        username: user.username,
+        email: user.email,
+        role: 'franchise_partner',
+        first_name: user.contact_person || user.owner_name || user.company_name,
+        last_name: ''
+      });
+
+      return res.json({
+        success: true,
+        message: 'Login successful',
+        data: {
+          token,
+          mustChangePassword: false,
+          user: {
+            id: user.id,
+            fpId: user.id,
+            username: user.username,
+            email: user.email,
+            firstName: user.contact_person || user.owner_name || user.company_name,
+            lastName: '',
+            role: 'franchise_partner',
+            roleName: 'Franchise Partner',
+            companyName: user.company_name,
+            franchisePartnerId: user.id
+          }
+        }
+      });
+    }
+    
+    // Generate token for regular database user
     const token = generateToken({
       id: user.id,
       userId: user.user_id,
