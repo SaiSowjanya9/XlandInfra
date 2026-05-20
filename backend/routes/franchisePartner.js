@@ -123,74 +123,74 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
   try {
     const fpId = req.fpId;
 
-    // Get counts for dashboard
-    const [propertiesCount] = await pool.execute(
-      'SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ?',
-      [fpId]
+    // Helper function to safely get count (handles missing tables)
+    const safeCount = async (query, params) => {
+      try {
+        const [result] = await pool.execute(query, params);
+        return result[0]?.count || 0;
+      } catch (e) {
+        console.log(`Dashboard query skipped (table may not exist): ${e.message}`);
+        return 0;
+      }
+    };
+
+    // Get counts for dashboard (safely handles missing tables)
+    const properties = await safeCount(
+      'SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ?', [fpId]
+    );
+    const vendors = await safeCount(
+      'SELECT COUNT(*) as count FROM vendors WHERE franchise_partner_id = ?', [fpId]
+    );
+    const customers = await safeCount(
+      'SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?', [fpId]
+    );
+    const totalWorkOrders = await safeCount(
+      'SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ?', [fpId]
+    );
+    const pendingWorkOrders = await safeCount(
+      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ? AND status NOT IN ('completed', 'closed', 'cancelled')`, [fpId]
+    );
+    const completedWorkOrders = await safeCount(
+      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ? AND status IN ('completed', 'closed')`, [fpId]
+    );
+    const estimates = await safeCount(
+      'SELECT COUNT(*) as count FROM estimates WHERE franchise_partner_id = ?', [fpId]
+    );
+    const employees = await safeCount(
+      'SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ?', [fpId]
     );
 
-    const [vendorsCount] = await pool.execute(
-      'SELECT COUNT(*) as count FROM vendors WHERE franchise_partner_id = ?',
-      [fpId]
-    );
-
-    const [customersCount] = await pool.execute(
-      'SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?',
-      [fpId]
-    );
-
-    const [workOrdersCount] = await pool.execute(
-      'SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ?',
-      [fpId]
-    );
-
-    const [pendingWorkOrders] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders 
-       WHERE franchise_partner_id = ? AND status NOT IN ('completed', 'closed', 'cancelled')`,
-      [fpId]
-    );
-
-    const [completedWorkOrders] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders 
-       WHERE franchise_partner_id = ? AND status IN ('completed', 'closed')`,
-      [fpId]
-    );
-
-    const [estimatesCount] = await pool.execute(
-      'SELECT COUNT(*) as count FROM estimates WHERE franchise_partner_id = ?',
-      [fpId]
-    );
-
-    const [employeesCount] = await pool.execute(
-      'SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ?',
-      [fpId]
-    );
-
-    // Recent work orders
-    const [recentWorkOrders] = await pool.execute(
-      `SELECT wo.*, p.name as property_name, c.name as category_name
-       FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN categories c ON wo.category_id = c.id
-       WHERE wo.franchise_partner_id = ?
-       ORDER BY wo.created_at DESC LIMIT 5`,
-      [fpId]
-    );
+    // Recent work orders (safely handle missing table)
+    let recentWorkOrders = [];
+    try {
+      const [rows] = await pool.execute(
+        `SELECT wo.*, p.name as property_name, c.name as category_name
+         FROM work_orders wo
+         LEFT JOIN properties p ON wo.property_id = p.id
+         LEFT JOIN categories c ON wo.category_id = c.id
+         WHERE wo.franchise_partner_id = ?
+         ORDER BY wo.created_at DESC LIMIT 5`,
+        [fpId]
+      );
+      recentWorkOrders = rows;
+    } catch (e) {
+      console.log('Recent work orders query skipped:', e.message);
+    }
 
     res.json({
       success: true,
       data: {
         stats: {
-          properties: propertiesCount[0].count,
-          vendors: vendorsCount[0].count,
-          customers: customersCount[0].count,
+          properties,
+          vendors,
+          customers,
           workOrders: {
-            total: workOrdersCount[0].count,
-            pending: pendingWorkOrders[0].count,
-            completed: completedWorkOrders[0].count
+            total: totalWorkOrders,
+            pending: pendingWorkOrders,
+            completed: completedWorkOrders
           },
-          estimates: estimatesCount[0].count,
-          employees: employeesCount[0].count
+          estimates,
+          employees
         },
         recentWorkOrders
       }
