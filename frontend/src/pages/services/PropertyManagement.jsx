@@ -522,11 +522,11 @@ const PropertyManagement = () => {
 
           {/* Contact Details */}
           <div className="flex flex-wrap justify-center gap-8 mb-10">
-            <a href="tel:+918500101111" className="flex items-center gap-3 text-gray-300 hover:text-gold-400 transition-colors">
+            <a href="tel:+918500010111" className="flex items-center gap-3 text-gray-300 hover:text-gold-400 transition-colors">
               <div className="w-10 h-10 bg-gold-400/10 border border-gold-500/30 rounded-lg flex items-center justify-center">
                 <Phone className="w-4 h-4 text-gold-400" />
               </div>
-              <span className="font-medium">+91 8500 101 111</span>
+              <span className="font-medium">+91 8500 010 111</span>
             </a>
             <a href="mailto:info@xlandinfra.com" className="flex items-center gap-3 text-gray-300 hover:text-gold-400 transition-colors">
               <div className="w-10 h-10 bg-gold-400/10 border border-gold-500/30 rounded-lg flex items-center justify-center">

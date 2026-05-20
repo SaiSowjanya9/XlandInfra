@@ -590,7 +590,7 @@ function CustomerHome() {
               <ul className="space-y-3">
                 <li className="flex items-center space-x-3 text-stone-400 text-sm">
                   <Phone className="w-4 h-4" style={{ color: '#D8B25C' }} />
-                  <span>+91 8500 101 111</span>
+                  <span>+91 8500 010 111</span>
                 </li>
                 <li className="flex items-center space-x-3 text-stone-400 text-sm">
                   <Mail className="w-4 h-4" style={{ color: '#D8B25C' }} />

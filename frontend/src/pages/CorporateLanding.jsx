@@ -1125,7 +1125,7 @@ function CorporateLanding() {
                   </div>
                   <div>
                     <h4 className="text-white font-semibold mb-1">Phone</h4>
-                    <p className="text-gray-400">+91 8500 101 111</p>
+                    <p className="text-gray-400">+91 8500 010 111</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-4">
@@ -1357,7 +1357,7 @@ function CorporateLanding() {
                 <li className="flex items-start space-x-3">
                   <Phone className="w-4 h-4 text-gold-400 mt-1 flex-shrink-0" />
                   <div className="text-gray-400 text-sm">
-                    <p>+91 8500 101 111</p>
+                    <p>+91 8500 010 111</p>
                   </div>
                 </li>
                 <li className="flex items-start space-x-3">
