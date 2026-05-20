@@ -12,18 +12,28 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 // Generate JWT Token
 const generateToken = (user) => {
-  return jwt.sign(
-    {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      firstName: user.first_name || user.firstName,
-      lastName: user.last_name || user.lastName
-    },
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
-  );
+  const payload = {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    firstName: user.first_name || user.firstName,
+    lastName: user.last_name || user.lastName
+  };
+  
+  // Include FP-specific fields if present
+  if (user.fpId) {
+    payload.fpId = user.fpId;
+    payload.franchisePartnerId = user.fpId;
+  }
+  if (user.franchisePartnerId) {
+    payload.franchisePartnerId = user.franchisePartnerId;
+  }
+  if (user.userId) {
+    payload.userId = user.userId;
+  }
+  
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 };
 
 // Verify JWT Token
