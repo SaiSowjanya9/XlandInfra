@@ -21,7 +21,7 @@ const ManagerDashboard = ({ user }) => {
   const [recentWorkOrders, setRecentWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const fetchDashboard = async () => {
     setLoading(true);

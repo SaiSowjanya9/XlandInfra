@@ -42,14 +42,14 @@ const Login = ({ onLogin }) => {
         } else {
           // Store token and proceed
           if (userData.token) {
-            localStorage.setItem('pm_auth_token', userData.token);
+            sessionStorage.setItem('pm_auth_token', userData.token);
           }
           const user = {
             ...userData.user,
             name: `${userData.user.firstName || ''} ${userData.user.lastName || ''}`.trim(),
             portal: 'admin'
           };
-          localStorage.setItem('pm_current_user', JSON.stringify(user));
+          sessionStorage.setItem('pm_current_user', JSON.stringify(user));
           onLogin(user);
         }
       } else {

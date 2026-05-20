@@ -19,7 +19,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [amcForm, setAmcForm] = useState({ name: '', description: '', durationMonths: 12, basePrice: 0, services: '', termsConditions: '', hidePricing: true });
   const [addonForm, setAddonForm] = useState({ name: '', description: '', price: 0, unit: 'per_service', categoryId: '', hidePricing: true });
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const tabs = [
     { id: 'list', label: 'All Estimates', icon: List },

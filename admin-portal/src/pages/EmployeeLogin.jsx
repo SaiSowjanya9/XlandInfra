@@ -58,9 +58,9 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
         } else {
           // Store token and user data
           if (result.data.token) {
-            localStorage.setItem('pm_auth_token', result.data.token);
+            sessionStorage.setItem('pm_auth_token', result.data.token);
           }
-          localStorage.setItem('pm_current_user', JSON.stringify(user));
+          sessionStorage.setItem('pm_current_user', JSON.stringify(user));
           onLogin(user);
         }
       } else {

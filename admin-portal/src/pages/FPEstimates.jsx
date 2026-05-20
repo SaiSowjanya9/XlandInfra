@@ -52,7 +52,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [addonForm, setAddonForm] = useState({ serviceName: '', frequencyCount: 1, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '' });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   useEffect(() => { loadData(); }, [defaultTab]);
 

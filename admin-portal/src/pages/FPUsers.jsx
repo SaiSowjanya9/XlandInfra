@@ -32,7 +32,7 @@ const FPUsers = ({ user }) => {
     role: 'fp_executive'
   });
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const roleOptions = [
     { value: 'fp_admin', label: 'FP Admin', description: 'Full access to FP portal' },

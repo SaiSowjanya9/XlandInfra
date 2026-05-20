@@ -44,7 +44,7 @@ const CoordinatorVendors = ({ user }) => {
 
   const viewType = location.pathname.includes('/assigned') ? 'assigned' : 'all';
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const fetchVendors = async () => {
     setLoading(true);

@@ -30,7 +30,7 @@ const CustomerDashboard = ({ user }) => {
 
   const fetchCustomerDashboard = async () => {
     try {
-      const token = localStorage.getItem('customer_token') || localStorage.getItem('pm_auth_token');
+      const token = localStorage.getItem('customer_token') || sessionStorage.getItem('pm_auth_token');
       const response = await fetch(`${API_BASE}/customers/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`,

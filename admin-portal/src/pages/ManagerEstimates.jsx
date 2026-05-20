@@ -62,7 +62,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     hidePricing: false
   });
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const tabs = [
     { id: 'list', label: 'All Estimates', icon: List },

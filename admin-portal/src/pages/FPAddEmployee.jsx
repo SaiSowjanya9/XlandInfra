@@ -39,7 +39,7 @@ const FPAddEmployee = ({ user }) => {
   const [errors, setErrors] = useState({});
   const [createdEmployee, setCreatedEmployee] = useState(null);
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));

@@ -130,7 +130,7 @@ const FPCustomers = ({ user }) => {
   const [newDivision, setNewDivision] = useState('');
   const formRef = useRef(null);
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const fetchCustomers = async () => {
     setLoading(true);

@@ -31,7 +31,7 @@ const FPProperties = ({ user }) => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const fetchProperties = async () => {
     setLoading(true);

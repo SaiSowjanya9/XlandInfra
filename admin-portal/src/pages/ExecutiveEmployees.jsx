@@ -13,7 +13,7 @@ const ExecutiveEmployees = ({ user }) => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', phone: '', role: 'exec_assistant', assignedZones: [] });
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const fetchData = async () => {
     setLoading(true);

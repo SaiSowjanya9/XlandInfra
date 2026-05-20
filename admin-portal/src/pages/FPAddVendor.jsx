@@ -74,7 +74,7 @@ const FPAddVendor = ({ user }) => {
   const [showZoneDropdown, setShowZoneDropdown] = useState(false);
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   useEffect(() => {
     // Fetch zone suggestions

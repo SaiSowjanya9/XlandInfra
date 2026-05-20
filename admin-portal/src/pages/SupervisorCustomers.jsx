@@ -13,7 +13,7 @@ const SupervisorCustomers = ({ user }) => {
     zipCode: '', clientType: 'individual', companyName: '', propertyId: '', gstNumber: ''
   });
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const fetchCustomers = async () => {
     setLoading(true);
