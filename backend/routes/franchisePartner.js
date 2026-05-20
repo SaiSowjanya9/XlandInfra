@@ -63,14 +63,21 @@ router.post('/login', async (req, res) => {
       [fp.id]
     );
 
+    // Handle owner_name safely (might be null)
+    const ownerName = fp.owner_name || fp.contact_person || fp.company_name || 'Franchise Partner';
+    const nameParts = ownerName.split(' ');
+    const firstName = nameParts[0] || 'Franchise';
+    const lastName = nameParts.slice(1).join(' ') || 'Partner';
+
     // Generate token with FP info
     const token = generateToken({
       id: fp.id,
+      fpId: fp.id,
       username: fp.username,
       email: fp.email,
       role: ROLES.FRANCHISE_PARTNER,
-      firstName: fp.owner_name.split(' ')[0],
-      lastName: fp.owner_name.split(' ').slice(1).join(' ') || '',
+      firstName: firstName,
+      lastName: lastName,
       franchisePartnerId: fp.id,
       companyName: fp.company_name
     });
@@ -82,10 +89,11 @@ router.post('/login', async (req, res) => {
         token,
         user: {
           id: fp.id,
+          fpId: fp.id,
           username: fp.username,
           email: fp.email,
-          firstName: fp.owner_name.split(' ')[0],
-          lastName: fp.owner_name.split(' ').slice(1).join(' ') || '',
+          firstName: firstName,
+          lastName: lastName,
           companyName: fp.company_name,
           role: ROLES.FRANCHISE_PARTNER,
           roleName: ROLE_NAMES[ROLES.FRANCHISE_PARTNER],
