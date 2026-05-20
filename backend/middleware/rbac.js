@@ -622,7 +622,7 @@ const canDeleteAll = (req, res, next) => {
   next();
 };
 
-// Supervisor or above middleware (Admin, Manager, Supervisor)
+// Supervisor or above middleware (Admin, Operations Manager, Manager, Supervisor)
 const supervisorOrAbove = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -631,7 +631,7 @@ const supervisorOrAbove = (req, res, next) => {
     });
   }
 
-  if (![ROLES.ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR].includes(req.user.role)) {
+  if (![ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.FRANCHISE_PARTNER].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Supervisor or above privileges required.'
@@ -641,7 +641,7 @@ const supervisorOrAbove = (req, res, next) => {
   next();
 };
 
-// Data entry roles middleware (Admin, Manager, Supervisor, Executive)
+// Data entry roles middleware (Admin, Operations Manager, Manager, Supervisor, Executive, Franchise Partner)
 const dataEntryRoles = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -650,7 +650,7 @@ const dataEntryRoles = (req, res, next) => {
     });
   }
 
-  if (![ROLES.ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.EXECUTIVE].includes(req.user.role)) {
+  if (![ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.EXECUTIVE, ROLES.FRANCHISE_PARTNER].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Data entry privileges required.'
