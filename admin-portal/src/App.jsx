@@ -93,16 +93,17 @@ function App() {
     seedTestData();
     
     try {
-      const savedUser = localStorage.getItem('adminUser');
-      const savedPortal = localStorage.getItem('activePortal');
+      // Use sessionStorage for session-based auth (expires on browser close)
+      const savedUser = sessionStorage.getItem('adminUser');
+      const savedPortal = sessionStorage.getItem('activePortal');
       if (savedUser && savedPortal) {
         setUser(JSON.parse(savedUser));
         setPortal(savedPortal);
       }
     } catch (error) {
       console.error('Error loading saved state:', error);
-      localStorage.removeItem('adminUser');
-      localStorage.removeItem('activePortal');
+      sessionStorage.removeItem('adminUser');
+      sessionStorage.removeItem('activePortal');
     }
     setLoading(false);
   }, []);
@@ -111,18 +112,25 @@ function App() {
     const portalType = userData.portal || portal;
     setUser(userData);
     setPortal(portalType);
-    localStorage.setItem('adminUser', JSON.stringify(userData));
-    localStorage.setItem('activePortal', portalType);
+    // Use sessionStorage for session-based auth (expires on browser close)
+    sessionStorage.setItem('adminUser', JSON.stringify(userData));
+    sessionStorage.setItem('activePortal', portalType);
     
     // Store token if provided
     if (userData.token) {
-      localStorage.setItem('pm_auth_token', userData.token);
+      sessionStorage.setItem('pm_auth_token', userData.token);
     }
   };
 
   const handleLogout = () => {
     setUser(null);
     setPortal(null);
+    // Clear sessionStorage
+    sessionStorage.removeItem('adminUser');
+    sessionStorage.removeItem('activePortal');
+    sessionStorage.removeItem('pm_auth_token');
+    sessionStorage.removeItem('pm_current_user');
+    // Also clear any legacy localStorage items
     localStorage.removeItem('adminUser');
     localStorage.removeItem('activePortal');
     localStorage.removeItem('pm_auth_token');
@@ -137,8 +145,8 @@ function App() {
   const handleBackToPortals = () => {
     setPortal(null);
     setUser(null);
-    localStorage.removeItem('adminUser');
-    localStorage.removeItem('activePortal');
+    sessionStorage.removeItem('adminUser');
+    sessionStorage.removeItem('activePortal');
   };
 
   if (loading) {

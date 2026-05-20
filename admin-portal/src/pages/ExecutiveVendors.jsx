@@ -14,7 +14,7 @@ const ExecutiveVendors = ({ user }) => {
   const [formData, setFormData] = useState({ companyName: '', contactPerson: '', email: '', phone: '', alternatePhone: '', address: '', city: '', state: '', zipCode: '', gstNumber: '', panNumber: '' });
 
   const viewType = location.pathname.includes('/assigned') ? 'assigned' : 'all';
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const fetchVendors = async () => {
     setLoading(true);

@@ -99,7 +99,7 @@ const SetPassword = ({ user, onPasswordSet, onCancel }) => {
       if (result.success) {
         // Store new token and user data
         if (result.data?.token) {
-          localStorage.setItem('pm_auth_token', result.data.token);
+          sessionStorage.setItem('pm_auth_token', result.data.token);
         }
         if (result.data?.user) {
           const updatedUser = {
@@ -107,7 +107,7 @@ const SetPassword = ({ user, onPasswordSet, onCancel }) => {
             name: `${result.data.user.firstName || ''} ${result.data.user.lastName || ''}`.trim(),
             portal: user.portal || 'employee'
           };
-          localStorage.setItem('pm_current_user', JSON.stringify(updatedUser));
+          sessionStorage.setItem('pm_current_user', JSON.stringify(updatedUser));
           onPasswordSet(updatedUser);
         } else {
           onPasswordSet(user);

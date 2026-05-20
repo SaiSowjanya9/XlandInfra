@@ -25,7 +25,7 @@ const UserManagement = () => {
   const [submitting, setSubmitting] = useState(false);
   const [createdUser, setCreatedUser] = useState(null);
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const initialFormData = {
     role: 'operations_manager',

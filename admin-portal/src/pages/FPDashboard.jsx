@@ -26,7 +26,7 @@ const FPDashboard = ({ user }) => {
     setError(null);
     
     try {
-      const token = localStorage.getItem('pm_auth_token');
+      const token = sessionStorage.getItem('pm_auth_token');
       const response = await fetch('/api/fp/dashboard', {
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -45,7 +45,7 @@ const FPVendors = ({ user }) => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   // Fetch vendors from API
   const fetchVendors = async () => {

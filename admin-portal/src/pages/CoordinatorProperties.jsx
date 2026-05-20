@@ -45,7 +45,7 @@ const CoordinatorProperties = ({ user }) => {
     zoneId: ''
   });
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const fetchData = async () => {
     setLoading(true);

@@ -47,7 +47,7 @@ const ManagerWorkOrders = ({ user }) => {
                  : location.pathname.includes('/completed') ? 'completed' 
                  : 'all';
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const statusOptions = [
     { value: '', label: 'All Status' },

@@ -40,7 +40,7 @@ const ManagerEmployees = ({ user }) => {
                  : location.pathname.includes('/zones') ? 'zones' 
                  : 'all';
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const roleOptions = [
     { value: 'mgr_supervisor', label: 'Supervisor' },

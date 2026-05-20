@@ -27,7 +27,7 @@ const FPEmployeeZones = ({ user }) => {
   const [assignedZonesMap, setAssignedZonesMap] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   useEffect(() => {
     loadData();

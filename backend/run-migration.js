@@ -1,6 +1,10 @@
 // Migration script to add missing columns to work_orders table
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const mysql = require('mysql2/promise');
+
+// Debug: show which DB we're connecting to
+console.log('📍 Connecting to database:', process.env.DB_HOST || 'localhost', '/', process.env.DB_NAME || 'customer_portal');
 
 async function runMigration() {
   const connection = await mysql.createConnection({

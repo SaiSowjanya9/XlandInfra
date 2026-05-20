@@ -38,8 +38,8 @@ const ManagerLogin = ({ onLogin, onBack }) => {
           setShowSetPassword(true);
         } else {
           // Store token and user info
-          localStorage.setItem('pm_auth_token', userData.token);
-          localStorage.setItem('pm_current_user', JSON.stringify({
+          sessionStorage.setItem('pm_auth_token', userData.token);
+          sessionStorage.setItem('pm_current_user', JSON.stringify({
             ...userData.user,
             portal: 'manager'
           }));

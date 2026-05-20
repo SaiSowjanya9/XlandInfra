@@ -22,7 +22,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   });
 
   const viewType = location.pathname.includes('/pending') ? 'pending' : location.pathname.includes('/completed') ? 'completed' : 'all';
-  const token = localStorage.getItem('pm_auth_token');
+  const token = sessionStorage.getItem('pm_auth_token');
 
   const statusOptions = [
     { value: '', label: 'All Status' }, { value: 'draft', label: 'Draft' }, { value: 'requested', label: 'Requested' },
