@@ -395,6 +395,7 @@ const initOnboardingTables = async () => {
         last_name VARCHAR(100) NOT NULL,
         phone VARCHAR(20),
         role ENUM('admin', 'operations_manager', 'manager', 'coordinator', 'supervisor', 'executive', 'franchise', 'franchise_partner') NOT NULL DEFAULT 'executive',
+        franchise_partner_id INT DEFAULT NULL,
         can_view BOOLEAN DEFAULT TRUE,
         can_create BOOLEAN DEFAULT FALSE,
         can_edit BOOLEAN DEFAULT FALSE,
@@ -414,7 +415,8 @@ const initOnboardingTables = async () => {
     // Add missing columns if table already exists (for existing deployments)
     const userColumnsToAdd = [
       { name: 'user_id', definition: 'VARCHAR(20) UNIQUE AFTER id' },
-      { name: 'can_view', definition: 'BOOLEAN DEFAULT TRUE AFTER role' },
+      { name: 'franchise_partner_id', definition: 'INT DEFAULT NULL AFTER role' },
+      { name: 'can_view', definition: 'BOOLEAN DEFAULT TRUE AFTER franchise_partner_id' },
       { name: 'can_create', definition: 'BOOLEAN DEFAULT FALSE AFTER can_view' },
       { name: 'can_edit', definition: 'BOOLEAN DEFAULT FALSE AFTER can_create' },
       { name: 'can_delete', definition: 'BOOLEAN DEFAULT FALSE AFTER can_edit' },
@@ -500,24 +502,53 @@ const initOnboardingTables = async () => {
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS franchise_partners (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        fp_code VARCHAR(50) UNIQUE NOT NULL,
         username VARCHAR(100) UNIQUE NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         company_name VARCHAR(255) NOT NULL,
-        contact_person VARCHAR(200),
+        owner_name VARCHAR(200),
         phone VARCHAR(20),
         address TEXT,
         city VARCHAR(100),
         state VARCHAR(100),
-        pincode VARCHAR(10),
-        gst_number VARCHAR(20),
+        zip_code VARCHAR(20),
+        gst_number VARCHAR(50),
         pan_number VARCHAR(20),
+        must_change_password BOOLEAN DEFAULT TRUE,
         is_active BOOLEAN DEFAULT TRUE,
         last_login TIMESTAMP NULL,
+        created_by INT DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
+    
+    // Add missing columns to franchise_partners for existing deployments
+    const fpColumnsToAdd = [
+      { name: 'fp_code', definition: "VARCHAR(50) UNIQUE AFTER id" },
+      { name: 'owner_name', definition: 'VARCHAR(200) AFTER company_name' },
+      { name: 'zip_code', definition: 'VARCHAR(20) AFTER state' },
+      { name: 'must_change_password', definition: 'BOOLEAN DEFAULT TRUE AFTER pan_number' },
+      { name: 'created_by', definition: 'INT DEFAULT NULL AFTER last_login' }
+    ];
+    
+    for (const col of fpColumnsToAdd) {
+      try {
+        await conn.execute(`ALTER TABLE franchise_partners ADD COLUMN ${col.name} ${col.definition}`);
+        console.log(`  ✅ Added column ${col.name} to franchise_partners table`);
+      } catch (e) {
+        // Column already exists - ignore
+      }
+    }
+    
+    // Ensure fp_code is populated for existing records without it
+    try {
+      await conn.execute(`UPDATE franchise_partners SET fp_code = CONCAT('FP-', id) WHERE fp_code IS NULL OR fp_code = ''`);
+    } catch (e) {
+      // Ignore if column doesn't exist yet
+    }
+    
     console.log('  ✅ Franchise partners table initialized');
 
     // Create fp_users table (Portal users under FP)

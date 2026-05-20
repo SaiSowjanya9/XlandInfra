@@ -185,8 +185,11 @@ router.post('/login', async (req, res) => {
     // Check if user must change password
     const mustChangePassword = user.must_change_password === 1 || user.must_change_password === true;
     
-    // Handle FP users differently
+    // Handle FP users differently (login from franchise_partners table)
     if (userType === 'franchise_partner') {
+      // Check if user must change password
+      const fpMustChangePassword = user.must_change_password === 1 || user.must_change_password === true;
+      
       const token = generateToken({
         id: user.id,
         fpId: user.id,
@@ -199,10 +202,10 @@ router.post('/login', async (req, res) => {
 
       return res.json({
         success: true,
-        message: 'Login successful',
+        message: fpMustChangePassword ? 'Login successful. Password change required.' : 'Login successful',
         data: {
           token,
-          mustChangePassword: false,
+          mustChangePassword: fpMustChangePassword,
           user: {
             id: user.id,
             fpId: user.id,
@@ -308,20 +311,38 @@ router.post('/set-password', async (req, res) => {
       });
     }
 
-    // Find user
+    let user = null;
+    let userType = 'user';
+
+    // First try to find in users table
     const [users] = await pool.execute(
       `SELECT * FROM users WHERE (username = ? OR email = ?) AND is_active = TRUE`,
       [username, username]
     );
 
-    if (users.length === 0) {
+    if (users.length > 0) {
+      user = users[0];
+      userType = 'user';
+    }
+
+    // If not found, check franchise_partners table
+    if (!user) {
+      const [fpUsers] = await pool.execute(
+        `SELECT * FROM franchise_partners WHERE (username = ? OR email = ?) AND is_active = TRUE`,
+        [username, username]
+      );
+      if (fpUsers.length > 0) {
+        user = fpUsers[0];
+        userType = 'franchise_partner';
+      }
+    }
+
+    if (!user) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
-
-    const user = users[0];
 
     // Verify current/temporary password
     const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
@@ -334,40 +355,102 @@ router.post('/set-password', async (req, res) => {
 
     // Hash new password and update
     const newPasswordHash = await bcrypt.hash(newPassword, 10);
-    await pool.execute(
-      `UPDATE users SET password_hash = ?, must_change_password = FALSE WHERE id = ?`,
-      [newPasswordHash, user.id]
-    );
-
-    // Generate token for auto-login
-    const token = generateToken({
-      id: user.id,
-      userId: user.user_id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      first_name: user.first_name,
-      last_name: user.last_name
-    });
-
-    res.json({
-      success: true,
-      message: 'Password updated successfully',
-      data: {
-        token,
-        user: {
-          id: user.id,
-          userId: user.user_id,
-          username: user.username,
-          email: user.email,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          role: user.role,
-          roleName: ROLE_NAMES[user.role],
-          franchisePartnerId: user.franchise_partner_id || null
+    
+    if (userType === 'user') {
+      await pool.execute(
+        `UPDATE users SET password_hash = ?, must_change_password = FALSE WHERE id = ?`,
+        [newPasswordHash, user.id]
+      );
+      
+      // Also update franchise_partners table if this is an FP user
+      if (user.role === 'franchise_partner' || user.role === 'franchise') {
+        try {
+          await pool.execute(
+            `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE WHERE email = ?`,
+            [newPasswordHash, user.email]
+          );
+        } catch (e) {
+          // FP record may not exist - ignore
         }
       }
-    });
+
+      // Generate token for auto-login
+      const token = generateToken({
+        id: user.id,
+        userId: user.user_id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        first_name: user.first_name,
+        last_name: user.last_name
+      });
+
+      return res.json({
+        success: true,
+        message: 'Password updated successfully',
+        data: {
+          token,
+          user: {
+            id: user.id,
+            userId: user.user_id,
+            username: user.username,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            role: user.role,
+            roleName: ROLE_NAMES[user.role],
+            franchisePartnerId: user.franchise_partner_id || null
+          }
+        }
+      });
+    } else {
+      // userType === 'franchise_partner'
+      await pool.execute(
+        `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE WHERE id = ?`,
+        [newPasswordHash, user.id]
+      );
+      
+      // Also update users table if exists
+      try {
+        await pool.execute(
+          `UPDATE users SET password_hash = ?, must_change_password = FALSE WHERE email = ?`,
+          [newPasswordHash, user.email]
+        );
+      } catch (e) {
+        // User record may not exist - ignore
+      }
+
+      // Generate token for auto-login
+      const token = generateToken({
+        id: user.id,
+        fpId: user.id,
+        username: user.username,
+        email: user.email,
+        role: 'franchise_partner',
+        first_name: user.contact_person || user.owner_name || user.company_name,
+        last_name: ''
+      });
+
+      return res.json({
+        success: true,
+        message: 'Password updated successfully',
+        data: {
+          token,
+          user: {
+            id: user.id,
+            fpId: user.id,
+            username: user.username,
+            email: user.email,
+            firstName: user.contact_person || user.owner_name || user.company_name,
+            lastName: '',
+            role: 'franchise_partner',
+            roleName: 'Franchise Partner',
+            companyName: user.company_name,
+            franchisePartnerId: user.id
+          }
+        }
+      });
+    }
   } catch (error) {
     console.error('Error setting password:', error);
     res.status(500).json({
