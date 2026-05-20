@@ -4,7 +4,6 @@ import {
   Plus,
   Search,
   Eye,
-  Download,
   RefreshCw,
   X,
   Bell,
@@ -15,7 +14,10 @@ import {
   Sparkles,
   Shield,
   ChevronDown,
-  FileCheck
+  FileCheck,
+  Edit2,
+  Trash2,
+  Save
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -39,6 +41,8 @@ const FPVendors = ({ user }) => {
   const [zoneFilter, setZoneFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
   const [viewVendor, setViewVendor] = useState(null);
+  const [editVendor, setEditVendor] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [toast, setToast] = useState(null);
 
   const token = localStorage.getItem('pm_auth_token');
@@ -72,26 +76,6 @@ const FPVendors = ({ user }) => {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleExportAll = () => {
-    const exportData = filteredVendors.map(v => ({
-      'Vendor ID': v.vendorId || v.vendor_id,
-      'Service Type': v.serviceType || v.service_type,
-      'Owner': v.ownerName || v.owner_name,
-      'Zone': v.zone,
-      'Area': v.areaName || v.area_name,
-      'Rate/Visit': `₹${v.ratePerVisit || v.rate_per_visit || 0}`,
-      'Coverage/Day': v.coveragePerDay || v.coverage_per_day || 0,
-      'Status': v.status || 'active'
-    }));
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'vendors_export.json';
-    a.click();
-    showToastMessage('Vendors exported successfully');
-  };
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -334,29 +318,24 @@ const FPVendors = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => {
-                            const exportData = [{
-                              'Vendor ID': vendor.vendorId || vendor.vendor_id,
-                              'Service Type': vendor.serviceType || vendor.service_type,
-                              'Owner': vendor.ownerName || vendor.owner_name,
-                              'Zone': vendor.zone,
-                              'Area': vendor.areaName || vendor.area_name,
-                              'Rate/Visit': `₹${vendor.ratePerVisit || vendor.rate_per_visit || 0}`,
-                              'Coverage/Day': vendor.coveragePerDay || vendor.coverage_per_day || 0,
-                            }];
-                            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `vendor_${vendor.vendorId || vendor.vendor_id}.json`;
-                            a.click();
-                          }}
-                          className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                          title="Export to JSON"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
+                        {vendor.status !== 'deleted' && (
+                          <>
+                            <button
+                              onClick={() => setEditVendor(vendor)}
+                              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                              title="Modify vendor"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(vendor)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Delete vendor"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -370,16 +349,144 @@ const FPVendors = ({ user }) => {
         )}
       </div>
 
-      {/* Export All Button */}
-      {filteredVendors.length > 0 && (
-        <div className="flex justify-end">
-          <button
-            onClick={handleExportAll}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Export All Vendors
-          </button>
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Vendor</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to delete <strong>{deleteConfirm.ownerName || deleteConfirm.owner_name}</strong>? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`/api/fp/vendors/${deleteConfirm.id}`, {
+                      method: 'DELETE',
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                      showToastMessage('Vendor deleted successfully');
+                      fetchVendors();
+                    } else {
+                      showToastMessage(result.message || 'Failed to delete vendor', 'error');
+                    }
+                  } catch (error) {
+                    showToastMessage('Failed to delete vendor', 'error');
+                  }
+                  setDeleteConfirm(null);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Vendor Modal */}
+      {editVendor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditVendor(null)}>
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Modify Vendor</h2>
+              <button onClick={() => setEditVendor(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                try {
+                  const response = await fetch(`/api/fp/vendors/${editVendor.id}`, {
+                    method: 'PUT',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      companyName: formData.get('companyName'),
+                      contactPerson: formData.get('contactPerson'),
+                      email: formData.get('email'),
+                      phone: formData.get('phone')
+                    })
+                  });
+                  const result = await response.json();
+                  if (result.success) {
+                    showToastMessage('Vendor updated successfully');
+                    fetchVendors();
+                    setEditVendor(null);
+                  } else {
+                    showToastMessage(result.message || 'Failed to update vendor', 'error');
+                  }
+                } catch (error) {
+                  showToastMessage('Failed to update vendor', 'error');
+                }
+              }}
+              className="p-6 space-y-4"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                  <input
+                    name="companyName"
+                    defaultValue={editVendor.company_name || editVendor.companyName}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                  <input
+                    name="contactPerson"
+                    defaultValue={editVendor.contact_person || editVendor.contactPerson || editVendor.ownerName || editVendor.owner_name}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    name="email"
+                    type="email"
+                    defaultValue={editVendor.email || editVendor.ownerEmail || editVendor.owner_email}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input
+                    name="phone"
+                    defaultValue={editVendor.phone || editVendor.ownerMobile || editVendor.owner_mobile}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditVendor(null)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

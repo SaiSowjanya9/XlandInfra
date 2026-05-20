@@ -33,7 +33,7 @@ import FPAddVendor from './pages/FPAddVendor';
 import FPEmployees from './pages/FPEmployees';
 import FPAddEmployee from './pages/FPAddEmployee';
 import FPEmployeeZones from './pages/FPEmployeeZones';
-import FPUsers from './pages/FPUsers';
+// FPUsers removed - User Management not available for FP portal
 import FPEstimates from './pages/FPEstimates';
 
 import ManagerLogin from './pages/ManagerLogin';
@@ -232,7 +232,6 @@ function App() {
             <Route path="/fp/properties" element={<FPProperties user={user} />} />
             <Route path="/fp/work-orders" element={<FPWorkOrders user={user} />} />
             <Route path="/fp/customers" element={<FPCustomers user={user} />} />
-            <Route path="/fp/users" element={<FPUsers user={user} />} />
             <Route path="/fp/vendors" element={<FPVendors user={user} />} />
             <Route path="/fp/vendors/add" element={<FPAddVendor user={user} />} />
             <Route path="/fp/vendors/assigned" element={<AssignedVendors user={user} />} />

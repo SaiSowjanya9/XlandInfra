@@ -172,7 +172,7 @@ const InvestmentConsultation = () => {
                     )}
                     
                     {/* Card */}
-                    <div className="h-full p-5 bg-gradient-to-b from-gold-500/[0.08] to-gold-600/[0.03] border border-gold-500/30 rounded-2xl bg-[#0D0D0D]/80 hover:border-gold-400/60 hover:shadow-[0_0_40px_-10px_rgba(216,178,92,0.25)] transition-all duration-500 group-hover:translate-y-[-4px]">
+                    <div className="h-full p-5 service-card-gold rounded-2xl hover:border-gold-400/60 transition-all duration-300 group-hover:translate-y-[-4px]">
                       
                       {/* Icon */}
                       <div className="w-12 h-12 mb-4 bg-[#0D0D0D] border border-gold-400/40 rounded-xl flex items-center justify-center group-hover:border-gold-400 group-hover:shadow-[0_0_20px_-5px_rgba(216,178,92,0.3)] transition-all duration-300">
@@ -211,7 +211,7 @@ const InvestmentConsultation = () => {
                 const Icon = stage.icon;
                 return (
                   <div key={stage.id} className="group">
-                    <div className="h-full p-4 bg-gradient-to-b from-zinc-800/40 to-zinc-900/30 border border-zinc-700/30 rounded-xl bg-[#0D0D0D]/80 hover:border-zinc-500/50 hover:bg-zinc-800/50 transition-all duration-300 group-hover:translate-y-[-2px]">
+                    <div className="h-full p-4 service-card-silver rounded-xl hover:border-zinc-500/50 transition-all duration-300 group-hover:translate-y-[-2px]">
                       {/* Stage Number */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="w-8 h-8 bg-zinc-800 border border-zinc-600/50 rounded-lg flex items-center justify-center group-hover:border-zinc-500 transition-colors">
@@ -251,7 +251,7 @@ const InvestmentConsultation = () => {
                 const Icon = stage.icon;
                 return (
                   <div key={stage.id} className="group">
-                    <div className="h-full p-4 bg-gradient-to-b from-zinc-800/30 to-zinc-900/20 border border-zinc-800/40 rounded-xl hover:border-zinc-700/50 transition-all duration-300 group-hover:translate-y-[-2px]">
+                    <div className="h-full p-4 service-card-dark rounded-xl hover:border-zinc-600/50 transition-all duration-300 group-hover:translate-y-[-2px]">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 flex-shrink-0 bg-zinc-800/50 border border-zinc-700/30 rounded-lg flex items-center justify-center group-hover:border-zinc-600/50 transition-colors">
                           <Icon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-400 transition-colors" strokeWidth={1.5} />
