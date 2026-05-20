@@ -446,7 +446,10 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
     const { 
       username, email, firstName, lastName, phone, role,
       canView, canCreate, canEdit, canDelete, canApprove, canAssign, canClose,
-      sendEmail = true // Default to sending email
+      sendEmail = true, // Default to sending email
+      // FP-specific fields
+      franchiseId, franchiseName, companyName, gstNumber, panNumber,
+      address, city, state, pincode, bankName, accountNumber, ifscCode, commissionRate
     } = req.body;
 
     // Validation - password is NOT required (auto-generated)
@@ -499,6 +502,41 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
       ]
     );
 
+    const newUserId = result.insertId;
+    let fpRecord = null;
+
+    // If creating a franchise partner, also create a record in franchise_partners table
+    if (role === 'franchise_partner' || role === 'franchise') {
+      try {
+        const fpCode = franchiseId || `FP-${Date.now()}`;
+        const [fpResult] = await pool.execute(
+          `INSERT INTO franchise_partners (
+            fp_code, username, email, password_hash, company_name, owner_name, phone,
+            address, city, state, zip_code, gst_number, pan_number, created_by
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            fpCode, username, email, passwordHash, 
+            companyName || franchiseName || `${firstName} ${lastName}`,
+            `${firstName} ${lastName}`, phone || null,
+            address || null, city || null, state || null, pincode || null,
+            gstNumber || null, panNumber || null, req.user.id
+          ]
+        );
+        
+        // Update the user record to link to the franchise partner
+        await pool.execute(
+          `UPDATE users SET franchise_partner_id = ? WHERE id = ?`,
+          [fpResult.insertId, newUserId]
+        );
+        
+        fpRecord = { id: fpResult.insertId, fpCode };
+        console.log(`✅ Franchise Partner record created: ${fpCode} (ID: ${fpResult.insertId})`);
+      } catch (fpError) {
+        console.error('Error creating franchise partner record:', fpError);
+        // Continue even if FP record creation fails - user is already created
+      }
+    }
+
     // Send welcome email with temporary password
     let emailSent = false;
     if (sendEmail) {
@@ -521,13 +559,14 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
         ? 'Staff member created successfully. Welcome email sent with login credentials.' 
         : 'Staff member created successfully. Email notification could not be sent.',
       data: {
-        id: result.insertId,
+        id: newUserId,
         userId,
         username,
         email,
         role,
         roleName: ROLE_NAMES[role],
-        emailSent
+        emailSent,
+        franchisePartner: fpRecord
       }
     });
   } catch (error) {

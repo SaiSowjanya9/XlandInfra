@@ -241,35 +241,57 @@ const PropertyManagement = () => {
           </div>
 
           {/* Comparison Table */}
-          <div className="max-w-5xl mx-auto">
-            {/* Header Row */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="p-4"></div>
-              <div className="p-4 bg-charcoal-800/50 border border-charcoal-700/50 rounded-xl text-center">
-                <span className="text-gray-400 font-semibold text-lg">Typical Market</span>
+          <div className="max-w-5xl mx-auto overflow-hidden">
+            {/* Desktop Header Row - Hidden on mobile */}
+            <div className="hidden md:grid grid-cols-3 gap-3 lg:gap-4 mb-6">
+              <div className="p-3 lg:p-4"></div>
+              <div className="p-3 lg:p-4 bg-charcoal-800/50 border border-charcoal-700/50 rounded-xl text-center">
+                <span className="text-gray-400 font-semibold text-base lg:text-lg">Typical Market</span>
               </div>
-              <div className="p-4 bg-gradient-to-br from-gold-500/20 to-gold-600/10 border border-gold-500/30 rounded-xl text-center">
-                <span className="text-gold-400 font-bold text-lg">XLAND INFRA</span>
+              <div className="p-3 lg:p-4 bg-gradient-to-br from-gold-500/20 to-gold-600/10 border border-gold-500/30 rounded-xl text-center">
+                <span className="text-gold-400 font-bold text-base lg:text-lg">XLAND INFRA</span>
               </div>
             </div>
 
-            {/* Comparison Rows */}
-            <div className="space-y-3">
+            {/* Comparison Rows - Stack on mobile, grid on desktop */}
+            <div className="space-y-4 md:space-y-3">
               {comparisonPoints.map((point, index) => (
                 <div 
                   key={index} 
-                  className="grid grid-cols-3 gap-4 group"
+                  className="group"
                 >
-                  <div className="p-4 bg-charcoal-800/30 border border-charcoal-700/30 rounded-xl flex items-center">
-                    <span className="text-white font-medium text-sm md:text-base">{point.aspect}</span>
+                  {/* Mobile Layout - Stacked cards */}
+                  <div className="md:hidden bg-charcoal-800/30 border border-charcoal-700/30 rounded-xl p-4 space-y-3">
+                    <h4 className="text-white font-semibold text-sm border-b border-charcoal-700/30 pb-2">{point.aspect}</h4>
+                    <div className="flex items-start gap-3 text-red-400/80">
+                      <XIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <span className="text-gray-500 text-xs uppercase tracking-wider block mb-1">Market</span>
+                        <span className="text-gray-400 text-sm">{point.market}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 bg-gold-500/5 border border-gold-500/20 rounded-lg p-3 -mx-1">
+                      <CheckCircle className="w-4 h-4 text-gold-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <span className="text-gold-400/80 text-xs uppercase tracking-wider block mb-1">XLAND INFRA</span>
+                        <span className="text-gray-300 text-sm font-medium">{point.xland}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-4 bg-charcoal-800/20 border border-charcoal-700/20 rounded-xl flex items-center gap-3 group-hover:bg-charcoal-800/40 transition-colors">
-                    <XIcon className="w-5 h-5 text-red-400/70 flex-shrink-0" />
-                    <span className="text-gray-500 text-sm">{point.market}</span>
-                  </div>
-                  <div className="p-4 bg-gold-500/5 border border-gold-500/20 rounded-xl flex items-center gap-3 group-hover:bg-gold-500/10 group-hover:border-gold-500/30 transition-all">
-                    <CheckCircle className="w-5 h-5 text-gold-400 flex-shrink-0" />
-                    <span className="text-gray-300 text-sm font-medium">{point.xland}</span>
+
+                  {/* Desktop Layout - Grid */}
+                  <div className="hidden md:grid grid-cols-3 gap-3 lg:gap-4">
+                    <div className="p-3 lg:p-4 bg-charcoal-800/30 border border-charcoal-700/30 rounded-xl flex items-center">
+                      <span className="text-white font-medium text-sm lg:text-base break-words">{point.aspect}</span>
+                    </div>
+                    <div className="p-3 lg:p-4 bg-charcoal-800/20 border border-charcoal-700/20 rounded-xl flex items-center gap-2 lg:gap-3 group-hover:bg-charcoal-800/40 transition-colors overflow-hidden">
+                      <XIcon className="w-4 h-4 lg:w-5 lg:h-5 text-red-400/70 flex-shrink-0" />
+                      <span className="text-gray-500 text-xs lg:text-sm break-words min-w-0">{point.market}</span>
+                    </div>
+                    <div className="p-3 lg:p-4 bg-gold-500/5 border border-gold-500/20 rounded-xl flex items-center gap-2 lg:gap-3 group-hover:bg-gold-500/10 group-hover:border-gold-500/30 transition-all overflow-hidden">
+                      <CheckCircle className="w-4 h-4 lg:w-5 lg:h-5 text-gold-400 flex-shrink-0" />
+                      <span className="text-gray-300 text-xs lg:text-sm font-medium break-words min-w-0">{point.xland}</span>
+                    </div>
                   </div>
                 </div>
               ))}

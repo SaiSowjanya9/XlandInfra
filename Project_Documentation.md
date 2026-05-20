@@ -1,7 +1,7 @@
 # Customer Portal - Project Documentation
 
-> **Last Updated:** April 29, 2026 at 12:30 AM (UTC-05:00)
-> **Version:** 2.0.1
+> **Last Updated:** May 19, 2026 at 9:15 PM (UTC-05:00)
+> **Version:** 2.1.0
 > **Status:** In Development
 
 ---
@@ -1272,6 +1272,55 @@ npm run dev
 ---
 
 ## 14. Change Log
+
+### Version 2.1.0 (May 19, 2026)
+
+#### Mobile Responsiveness & Performance Optimization
+
+**1. Mobile Responsiveness Fixes**
+- Fixed Property Management comparison table - now stacks cards vertically on mobile
+- Fixed content overflow issues in feature boxes on mobile devices
+- Updated viewport meta tag with proper mobile settings (`minimum-scale=1.0, maximum-scale=5.0, viewport-fit=cover`)
+- Added touch optimization to prevent unwanted zoom-out on mobile
+
+**2. Header & Navigation Improvements**
+- Fixed Services dropdown positioning (aligned left, no more diamond arrow)
+- Added invisible bridge element to prevent dropdown flickering on hover
+- Made header background solid (95% opacity minimum) to prevent content showing through
+- Company name "XLAND INFRA" now displays on mobile alongside logo
+- Fixed dropdown stability across all devices
+
+**3. Performance Optimizations**
+- Implemented React.lazy() code splitting for all page components
+- Added Suspense boundaries with loading spinner fallback
+- GPU acceleration for smooth animations using `translateZ(0)`
+- Layout containment (`contain: layout style`) to isolate repaints
+- Simplified blur/shadow effects on mobile for better performance
+- Added `prefers-reduced-motion` support for accessibility
+- Image lazy loading with `content-visibility: auto`
+
+**4. CSS Enhancements**
+- Added comprehensive mobile media queries for responsive text sizing
+- Fixed grid overflow issues with `min-width: 0` on flex/grid items
+- Reduced backdrop blur intensity on mobile devices
+- Added Safari mobile viewport fix using `-webkit-fill-available`
+
+**Files Modified:**
+- `frontend/src/index.css` - Mobile responsiveness and performance CSS
+- `frontend/src/index.html` - Updated viewport meta tag
+- `frontend/src/App.jsx` - React.lazy code splitting
+- `frontend/src/components/MainHeader.jsx` - Header and dropdown fixes
+- `frontend/src/pages/CorporateLanding.jsx` - Header and dropdown fixes
+- `frontend/src/pages/services/PropertyManagement.jsx` - Responsive comparison table
+
+**Benefits:**
+- Faster initial page load with code splitting
+- Smoother scrolling and animations on all devices
+- No more content overflow on mobile
+- Stable dropdown navigation
+- Better accessibility with reduced motion support
+
+---
 
 ### Version 2.0.1 (April 29, 2026)
 

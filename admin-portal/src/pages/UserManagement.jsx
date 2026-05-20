@@ -225,6 +225,23 @@ const UserManagement = () => {
           sendEmail: true
         };
         
+        // Add FP-specific fields if creating a franchise partner
+        if (formData.role === 'franchise_partner' || formData.role === 'franchise') {
+          userData.franchiseId = formData.franchiseId;
+          userData.franchiseName = formData.franchiseName;
+          userData.companyName = formData.companyName;
+          userData.gstNumber = formData.gstNumber;
+          userData.panNumber = formData.panNumber;
+          userData.address = formData.address;
+          userData.city = formData.city;
+          userData.state = formData.state;
+          userData.pincode = formData.pincode;
+          userData.bankName = formData.bankName;
+          userData.accountNumber = formData.accountNumber;
+          userData.ifscCode = formData.ifscCode;
+          userData.commissionRate = formData.commissionRate;
+        }
+        
         const response = await fetch('/api/staff', {
           method: 'POST',
           headers: {
@@ -240,7 +257,7 @@ const UserManagement = () => {
           setCreatedUser(result.data);
           showToast(
             result.data.emailSent 
-              ? `User created! Welcome email sent to ${formData.email}` 
+              ? `User created! Email sent to ${formData.email}. Ask user to check spam folder if not received.` 
               : 'User created but email could not be sent',
             result.data.emailSent ? 'success' : 'warning'
           );

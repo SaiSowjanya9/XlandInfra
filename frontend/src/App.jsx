@@ -1,25 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
-import Layout from './components/Layout';
-import CorporateLanding from './pages/CorporateLanding';
-import CustomerHome from './pages/CustomerHome';
-import Dashboard from './pages/Dashboard';
-import WorkOrder from './pages/WorkOrder';
-import Schedule from './pages/Schedule';
-import Payment from './pages/Payment';
-import Contact from './pages/Contact';
-import Login from './pages/Login';
-import ActivateAccount from './pages/ActivateAccount';
-import PropertyManagement from './pages/services/PropertyManagement';
-import PropertySalesAdvisory from './pages/services/PropertySalesAdvisory';
-import InvestmentConsultation from './pages/services/InvestmentConsultation';
-import DesignConceptualization from './pages/services/DesignConceptualization';
-import ConstructionDelivery from './pages/services/ConstructionDelivery';
-import PrivacyPolicy from './pages/legal/PrivacyPolicy';
-import TermsOfService from './pages/legal/TermsOfService';
-import CookiePolicy from './pages/legal/CookiePolicy';
 import BrandLogo from './components/BrandLogo';
-import CookieConsent from './components/CookieConsent';
+
+// Lazy load components for better performance
+const Layout = lazy(() => import('./components/Layout'));
+const CorporateLanding = lazy(() => import('./pages/CorporateLanding'));
+const CustomerHome = lazy(() => import('./pages/CustomerHome'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const WorkOrder = lazy(() => import('./pages/WorkOrder'));
+const Schedule = lazy(() => import('./pages/Schedule'));
+const Payment = lazy(() => import('./pages/Payment'));
+const Contact = lazy(() => import('./pages/Contact'));
+const Login = lazy(() => import('./pages/Login'));
+const ActivateAccount = lazy(() => import('./pages/ActivateAccount'));
+const PropertyManagement = lazy(() => import('./pages/services/PropertyManagement'));
+const PropertySalesAdvisory = lazy(() => import('./pages/services/PropertySalesAdvisory'));
+const InvestmentConsultation = lazy(() => import('./pages/services/InvestmentConsultation'));
+const DesignConceptualization = lazy(() => import('./pages/services/DesignConceptualization'));
+const ConstructionDelivery = lazy(() => import('./pages/services/ConstructionDelivery'));
+const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/legal/TermsOfService'));
+const CookiePolicy = lazy(() => import('./pages/legal/CookiePolicy'));
+const CookieConsent = lazy(() => import('./components/CookieConsent'));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D]">
+    <div className="text-center">
+      <div className="w-10 h-10 border-2 border-gold-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
+    </div>
+  </div>
+);
 
 // Vendor Portal Coming Soon Component
 function VendorPortalComingSoon() {
@@ -129,9 +140,10 @@ function App() {
 
   return (
     <Router>
-      <Routes>
-        {/* Corporate Landing Page as the entry point */}
-        <Route path="/" element={<CorporateLanding />} />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Corporate Landing Page as the entry point */}
+          <Route path="/" element={<CorporateLanding />} />
         
         {/* Customer Portal Home (after login) */}
         <Route path="/portal" element={<CustomerHome />} />
@@ -203,8 +215,9 @@ function App() {
             </div>
           </div>
         } />
-      </Routes>
-      <CookieConsent />
+        </Routes>
+        <CookieConsent />
+      </Suspense>
     </Router>
   );
 }
