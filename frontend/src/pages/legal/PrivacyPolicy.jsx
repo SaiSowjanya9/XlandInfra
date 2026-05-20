@@ -220,7 +220,7 @@ const PrivacyPolicy = () => {
               </div>
               <div className="flex items-center gap-3 text-gray-300">
                 <Phone className="w-5 h-5 text-gold-400" />
-                <span>+91 8500 101 111</span>
+                <span>+91 8500 010 111</span>
               </div>
             </div>
           </div>

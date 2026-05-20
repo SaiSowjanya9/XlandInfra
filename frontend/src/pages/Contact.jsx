@@ -5,7 +5,7 @@ const Contact = () => {
     {
       icon: Phone,
       title: 'Phone',
-      details: '+91 8500101111',
+      details: '+91 8500 010 111',
       subtext: 'Mon-Sat, 8am-6pm',
     },
     {
@@ -76,11 +76,11 @@ const Contact = () => {
                 For urgent maintenance issues, please call our emergency line
               </p>
               <a
-                href="tel:+918500101111"
+                href="tel:+918500010111"
                 className="inline-flex items-center space-x-2 text-red-400 font-medium hover:text-red-300 transition-colors"
               >
                 <Phone className="w-4 h-4" />
-                <span>+91 8500101111</span>
+                <span>+91 8500 010 111</span>
               </a>
             </div>
           </div>

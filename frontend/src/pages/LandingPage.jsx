@@ -297,7 +297,7 @@ function LandingPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-white mb-1">Phone</h3>
-                    <p className="text-dark-300">+91 8500 101 111</p>
+                    <p className="text-dark-300">+91 8500 010 111</p>
                   </div>
                 </div>
               </div>
@@ -457,7 +457,7 @@ function LandingPage() {
             <div>
               <h4 className="text-white font-semibold mb-4">Contact Info</h4>
               <ul className="space-y-2 text-sm text-dark-400">
-                <li>+91 8500 101 111</li>
+                <li>+91 8500 010 111</li>
                 <li>info@xlandinfra.com</li>
                 <li>D.No. 7-333/A/1, Nri Hospital Road, Mangalagiri, Guntur, 522503</li>
               </ul>
