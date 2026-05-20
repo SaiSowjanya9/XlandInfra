@@ -172,11 +172,7 @@ const InvestmentConsultation = () => {
                     )}
                     
                     {/* Card */}
-                    <div className="h-full p-5 bg-gradient-to-b from-gold-500/[0.08] to-gold-600/[0.03] border border-gold-500/30 rounded-2xl backdrop-blur-sm hover:border-gold-400/60 hover:shadow-[0_0_40px_-10px_rgba(216,178,92,0.25)] transition-all duration-500 group-hover:translate-y-[-4px]">
-                      {/* Stage Number */}
-                      <div className="absolute -top-3 -right-3 w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-600 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(216,178,92,0.4)]">
-                        <span className="text-[#0D0D0D] text-xs font-bold">{stage.id}</span>
-                      </div>
+                    <div className="h-full p-5 bg-gradient-to-b from-gold-500/[0.08] to-gold-600/[0.03] border border-gold-500/30 rounded-2xl bg-[#0D0D0D]/80 hover:border-gold-400/60 hover:shadow-[0_0_40px_-10px_rgba(216,178,92,0.25)] transition-all duration-500 group-hover:translate-y-[-4px]">
                       
                       {/* Icon */}
                       <div className="w-12 h-12 mb-4 bg-[#0D0D0D] border border-gold-400/40 rounded-xl flex items-center justify-center group-hover:border-gold-400 group-hover:shadow-[0_0_20px_-5px_rgba(216,178,92,0.3)] transition-all duration-300">
@@ -210,18 +206,17 @@ const InvestmentConsultation = () => {
               <div className="flex-1 h-px bg-gradient-to-r from-zinc-600/30 to-transparent"></div>
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {roadmapStages.slice(4, 10).map((stage) => {
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {roadmapStages.slice(4, 9).map((stage) => {
                 const Icon = stage.icon;
                 return (
                   <div key={stage.id} className="group">
-                    <div className="h-full p-4 bg-gradient-to-b from-zinc-800/40 to-zinc-900/30 border border-zinc-700/30 rounded-xl backdrop-blur-sm hover:border-zinc-500/50 hover:bg-zinc-800/50 transition-all duration-300 group-hover:translate-y-[-2px]">
+                    <div className="h-full p-4 bg-gradient-to-b from-zinc-800/40 to-zinc-900/30 border border-zinc-700/30 rounded-xl bg-[#0D0D0D]/80 hover:border-zinc-500/50 hover:bg-zinc-800/50 transition-all duration-300 group-hover:translate-y-[-2px]">
                       {/* Stage Number */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="w-8 h-8 bg-zinc-800 border border-zinc-600/50 rounded-lg flex items-center justify-center group-hover:border-zinc-500 transition-colors">
                           <Icon className="w-4 h-4 text-zinc-400 group-hover:text-zinc-300 transition-colors" strokeWidth={1.5} />
                         </div>
-                        <span className="text-zinc-600 text-[10px] font-bold">{String(stage.id).padStart(2, '0')}</span>
                       </div>
                       
                       {/* Content */}
@@ -251,8 +246,8 @@ const InvestmentConsultation = () => {
               <div className="flex-1 h-px bg-gradient-to-r from-zinc-700/20 to-transparent"></div>
             </div>
             
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {roadmapStages.slice(10, 14).map((stage) => {
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {roadmapStages.slice(9, 14).map((stage) => {
                 const Icon = stage.icon;
                 return (
                   <div key={stage.id} className="group">
@@ -264,7 +259,6 @@ const InvestmentConsultation = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="text-sm font-medium text-zinc-400 group-hover:text-zinc-300 transition-colors truncate">{stage.title}</h3>
-                            <span className="text-zinc-700 text-[10px] font-bold flex-shrink-0">{stage.id}</span>
                           </div>
                           <p className="text-zinc-600 text-xs leading-relaxed">{stage.desc}</p>
                         </div>
@@ -283,11 +277,7 @@ const InvestmentConsultation = () => {
               <div className="w-px h-10 bg-gradient-to-b from-transparent via-gold-500/30 to-gold-400/50"></div>
               
               {/* Loop Element */}
-              <div className="relative px-8 py-5 bg-gradient-to-r from-gold-500/[0.08] via-gold-400/[0.12] to-gold-500/[0.08] border border-gold-500/30 rounded-2xl backdrop-blur-sm hover:border-gold-400/50 hover:shadow-[0_0_50px_-15px_rgba(216,178,92,0.3)] transition-all duration-500">
-                {/* Animated Ring */}
-                <div className="absolute inset-0 rounded-2xl overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gold-400/10 to-transparent animate-[shimmer_3s_infinite]"></div>
-                </div>
+              <div className="relative px-8 py-5 bg-gradient-to-r from-gold-500/[0.08] via-gold-400/[0.12] to-gold-500/[0.08] border border-gold-500/30 rounded-2xl bg-[#0D0D0D]/80 hover:border-gold-400/50 hover:shadow-[0_0_50px_-15px_rgba(216,178,92,0.3)] transition-all duration-500">
                 
                 <div className="relative flex items-center gap-4">
                   <div className="w-14 h-14 bg-[#0D0D0D] border-2 border-gold-400/50 rounded-full flex items-center justify-center group-hover:border-gold-400 group-hover:shadow-[0_0_25px_-5px_rgba(216,178,92,0.4)] transition-all duration-300">
@@ -344,7 +334,7 @@ const InvestmentConsultation = () => {
         
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* CTA Card */}
-          <div className="text-center p-8 md:p-10 bg-gradient-to-b from-zinc-900/60 to-zinc-900/30 border border-gold-500/20 rounded-3xl backdrop-blur-sm hover:border-gold-400/40 transition-all duration-500">
+          <div className="text-center p-8 md:p-10 bg-gradient-to-b from-zinc-900/60 to-zinc-900/30 border border-gold-500/20 rounded-3xl bg-[#0D0D0D]/80 hover:border-gold-400/40 transition-all duration-500">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-white mb-3 tracking-tight">
               Ready to Build Your Next <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Investment Success</span>?
             </h2>

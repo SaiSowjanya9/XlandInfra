@@ -115,7 +115,7 @@ const Login = ({ onLogin }) => {
         <span className="font-medium">Back to Home</span>
       </Link>
 
-      <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10">
+      <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10 mt-16 md:mt-0">
         {/* Header */}
         <div className="px-6 py-8 text-center border-b border-gold-600/20">
           <div className="flex justify-center mb-4">
@@ -226,7 +226,7 @@ const Login = ({ onLogin }) => {
               >
                 Need an account?
               </button>{' '}
-              Start your Property Management journey with XLand Infra now
+              Start your Property Management journey with XLand Infra now!
             </p>
           </div>
         </div>
