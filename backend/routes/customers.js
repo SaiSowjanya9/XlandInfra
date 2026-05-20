@@ -10,7 +10,7 @@ const { sendCustomerActivationEmail, sendPasswordResetConfirmation } = require('
 const ACTIVATION_EXPIRY_HOURS = 72; // 72 hours
 const JWT_SECRET = process.env.JWT_SECRET || 'xlandinfra-customer-portal-secret-key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://xlandinfra.com';
 
 // Generate unique customer ID: CUST-XXXX-YYYYMMDD
 const generateCustomerId = () => {

@@ -548,7 +548,7 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
         tempPassword,
         role,
         userId,
-        loginUrl: process.env.ADMIN_PORTAL_URL || 'http://localhost:5174'
+        loginUrl: process.env.ADMIN_PORTAL_URL || 'https://admin.xlandinfra.com'
       });
       emailSent = emailResult.success;
     }

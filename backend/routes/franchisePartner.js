@@ -329,27 +329,38 @@ router.delete('/properties/:id', requireFPScope, validateOwnership('properties')
 // WORK ORDERS
 // ============================================
 
-// Get all FP work orders
+// Get all FP work orders (shows ALL work orders for FP visibility)
 router.get('/work-orders', requireFPScope, async (req, res) => {
   try {
     const { status, priority } = req.query;
 
     let query = `
       SELECT wo.*, 
-        p.name as property_name,
-        c.name as category_name,
-        v.company_name as vendor_name
+        COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+        COALESCE(c.name, wo.category_name) as category_name,
+        wo.subcategory_name,
+        v.company_name as vendor_name,
+        wo.customer_name,
+        wo.customer_email,
+        wo.customer_phone
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-      WHERE wo.franchise_partner_id = ?
+      WHERE (wo.franchise_partner_id = ? OR wo.franchise_partner_id IS NULL)
     `;
     const params = [req.fpId];
 
     if (status) {
-      query += ' AND wo.status = ?';
-      params.push(status);
+      if (status === 'pending') {
+        query += ` AND wo.status IN ('pending', 'assigned', 'in_progress')`;
+      } else if (status === 'completed') {
+        query += ` AND wo.status IN ('completed', 'closed')`;
+      } else {
+        query += ' AND wo.status = ?';
+        params.push(status);
+      }
     }
 
     if (priority) {
@@ -357,7 +368,7 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
       params.push(priority);
     }
 
-    query += ' ORDER BY wo.created_at DESC';
+    query += ' ORDER BY wo.created_at DESC LIMIT 500';
 
     const [workOrders] = await pool.execute(query, params);
 

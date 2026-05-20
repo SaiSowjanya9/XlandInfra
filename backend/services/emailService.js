@@ -6,7 +6,22 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS // Use App Password for Gmail
-  }
+  },
+  // Improved deliverability settings
+  pool: true,
+  maxConnections: 5,
+  maxMessages: 100,
+  rateDelta: 1000,
+  rateLimit: 5
+});
+
+// Default email headers for better deliverability
+const getDefaultHeaders = () => ({
+  'X-Priority': '3',
+  'X-Mailer': 'XLAND INFRA Notification System',
+  'Precedence': 'bulk',
+  'List-Unsubscribe': `<mailto:${process.env.EMAIL_USER}?subject=Unsubscribe>`,
+  'Organization': 'XLAND INFRA Private Limited'
 });
 
 // Notification email addresses
@@ -229,8 +244,15 @@ const sendCustomerActivationEmail = async (customerData) => {
   
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    replyTo: process.env.EMAIL_USER,
     to: email,
     subject: `Welcome to XLAND INFRA Customer Portal - Activate Your Account`,
+    headers: {
+      ...getDefaultHeaders(),
+      'X-Entity-Ref-ID': `activation-${Date.now()}`,
+      'Message-ID': `<activation-${Date.now()}@xlandinfra.com>`
+    },
+    text: `Welcome to XLAND INFRA Customer Portal!\n\nHello ${firstName || 'Valued Customer'},\n\nYour account has been created for ${propertyName || 'XLAND INFRA'} property portal.\n\nYour Login Credentials:\nEmail: ${email}\nTemporary Password: ${tempPassword}\n\nActivate your account: ${activationLink}\n\nThis link expires in 72 hours.\n\nRegards,\nXLAND INFRA Team`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -398,12 +420,19 @@ const sendEmployeeWelcomeEmail = async (userData) => {
   };
   
   const roleLabel = roleLabels[role] || role;
-  const portalUrl = loginUrl || process.env.ADMIN_PORTAL_URL || 'http://localhost:5174';
+  const portalUrl = loginUrl || process.env.ADMIN_PORTAL_URL || 'https://admin.xlandinfra.com';
   
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    replyTo: process.env.EMAIL_USER,
     to: email,
     subject: `Welcome to XLAND INFRA - Your Account Has Been Created`,
+    headers: {
+      ...getDefaultHeaders(),
+      'X-Entity-Ref-ID': `employee-welcome-${Date.now()}`,
+      'Message-ID': `<employee-${Date.now()}@xlandinfra.com>`
+    },
+    text: `Welcome to XLAND INFRA!\n\nHello ${firstName || 'Team Member'},\n\nYour account has been created for XLAND INFRA Service Portal.\nRole: ${roleLabel}\n\nYour Login Credentials:\nUser ID: ${userId}\nUsername: ${username || email}\nTemporary Password: ${tempPassword}\n\nLogin at: ${portalUrl}\n\nYou will be required to change your password on first login.\n\nRegards,\nXLAND INFRA Team`,
     html: `
       <!DOCTYPE html>
       <html>

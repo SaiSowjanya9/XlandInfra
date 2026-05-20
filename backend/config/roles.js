@@ -571,37 +571,37 @@ const canDeleteAllRecords = (role) => role === ROLES.ADMIN;      // Delete all r
 const canFullAccessMasterData = (role) => role === ROLES.ADMIN;  // Full master data management
 
 // Admin and Manager capabilities (Approve permission)
-const canApproveEstimate = (role) => [ROLES.ADMIN, ROLES.MANAGER].includes(role); // Approve estimates
+const canApproveEstimate = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER].includes(role); // Approve estimates
 
-// Admin and Manager capabilities
-const canAccessMasterData = (role) => [ROLES.ADMIN, ROLES.MANAGER].includes(role); // Master data access (Admin full, Manager limited)
-const canViewPricing = (role) => [ROLES.ADMIN, ROLES.MANAGER].includes(role);      // Full pricing access
-const canCreateEstimate = (role) => [ROLES.ADMIN, ROLES.MANAGER].includes(role);   // Create estimates
-const canCreateSchedule = (role) => [ROLES.ADMIN, ROLES.MANAGER].includes(role);   // Create schedules
-const canAssignVendor = (role) => [ROLES.ADMIN, ROLES.MANAGER].includes(role);     // Assign vendors
-const canCloseWorkOrder = (role) => [ROLES.ADMIN, ROLES.MANAGER].includes(role);   // Close work orders
-const canMonitorVendorProgress = (role) => [ROLES.ADMIN, ROLES.MANAGER].includes(role); // Monitor vendor progress
-const canReceiveWorkOrderRequest = (role) => [ROLES.ADMIN, ROLES.MANAGER].includes(role); // Receive WO requests
-const canManageVendors = (role) => [ROLES.ADMIN, ROLES.MANAGER].includes(role);    // Full vendor management
+// Admin, Operations Manager, and Manager capabilities
+const canAccessMasterData = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER].includes(role); // Master data access (Admin full, Manager limited)
+const canViewPricing = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.FRANCHISE_PARTNER].includes(role);      // Full pricing access
+const canCreateEstimate = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.FRANCHISE_PARTNER].includes(role);   // Create estimates
+const canCreateSchedule = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.FRANCHISE_PARTNER].includes(role);   // Create schedules
+const canAssignVendor = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.FRANCHISE_PARTNER].includes(role);     // Assign vendors
+const canCloseWorkOrder = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.FRANCHISE_PARTNER].includes(role);   // Close work orders
+const canMonitorVendorProgress = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.FRANCHISE_PARTNER].includes(role); // Monitor vendor progress
+const canReceiveWorkOrderRequest = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.FRANCHISE_PARTNER].includes(role); // Receive WO requests
+const canManageVendors = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.FRANCHISE_PARTNER].includes(role);    // Full vendor management
 
 // Admin, Manager, Supervisor - Reports access (Admin/Manager full, Supervisor limited)
-const canViewReports = (role) => [ROLES.ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR].includes(role);
+const canViewReports = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.FRANCHISE_PARTNER].includes(role);
 
-// Admin, Manager, Supervisor capabilities
-const canCreateWorkOrderRequest = (role) => [ROLES.ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR].includes(role);
-const canViewEstimate = (role) => [ROLES.ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR].includes(role);
-const canViewSchedule = (role) => [ROLES.ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR].includes(role);
-const canTrackWorkOrder = (role) => [ROLES.ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR].includes(role);
-const canAccessDashboard = (role) => [ROLES.ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.VENDOR].includes(role);
+// Admin, Operations Manager, Manager, Supervisor, FP capabilities
+const canCreateWorkOrderRequest = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.FRANCHISE_PARTNER].includes(role);
+const canViewEstimate = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.FRANCHISE_PARTNER].includes(role);
+const canViewSchedule = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.FRANCHISE_PARTNER].includes(role);
+const canTrackWorkOrder = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.FRANCHISE_PARTNER].includes(role);
+const canAccessDashboard = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.FRANCHISE_PARTNER, ROLES.VENDOR].includes(role);
 
-// Data Entry capabilities (Admin, Manager, Supervisor, Executive)
-const canAccessDataEntry = (role) => [ROLES.ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.EXECUTIVE].includes(role);
-const canAddClientDetails = (role) => [ROLES.ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.EXECUTIVE].includes(role);
-const canAddVendorDetails = (role) => [ROLES.ADMIN, ROLES.MANAGER, ROLES.EXECUTIVE].includes(role);
-const canEditContactDetails = (role) => [ROLES.ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.EXECUTIVE].includes(role);
+// Data Entry capabilities (Admin, Operations Manager, Manager, Supervisor, Executive, FP)
+const canAccessDataEntry = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.EXECUTIVE, ROLES.FRANCHISE_PARTNER].includes(role);
+const canAddClientDetails = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.EXECUTIVE, ROLES.FRANCHISE_PARTNER].includes(role);
+const canAddVendorDetails = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.EXECUTIVE, ROLES.FRANCHISE_PARTNER].includes(role);
+const canEditContactDetails = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.EXECUTIVE, ROLES.FRANCHISE_PARTNER].includes(role);
 
 // Vendor-specific capabilities
-const canUpdateWorkOrderStatus = (role) => [ROLES.ADMIN, ROLES.MANAGER, ROLES.VENDOR].includes(role);
+const canUpdateWorkOrderStatus = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.MANAGER, ROLES.FRANCHISE_PARTNER, ROLES.VENDOR].includes(role);
 const canViewAssignedWorkOrders = (role) => role === ROLES.VENDOR;
 
 /**

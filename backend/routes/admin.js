@@ -545,19 +545,57 @@ router.delete('/units/:id', authenticate, adminOnly, async (req, res) => {
 // Get all work orders (Admin, Manager full access; Supervisor view only)
 router.get('/work-orders', authenticate, supervisorOrAbove, async (req, res) => {
   try {
-    const [workOrders] = await pool.execute(
-      `SELECT wo.*, 
-              r.first_name, r.last_name, r.email, r.phone,
-              u.unit_number, p.name as property_name, p.property_id as property_code,
-              c.name as category_name, sc.name as subcategory_name
-       FROM work_orders wo
-       JOIN residents r ON wo.resident_id = r.id
-       JOIN units u ON wo.unit_id = u.id
-       JOIN properties p ON wo.property_id = p.id
-       JOIN categories c ON wo.category_id = c.id
-       JOIN subcategories sc ON wo.subcategory_id = sc.id
-       ORDER BY wo.created_at DESC`
-    );
+    const { status, search } = req.query;
+    
+    let query = `
+      SELECT wo.*,
+             COALESCE(r.first_name, wo.customer_name) as customer_first_name,
+             COALESCE(r.last_name, '') as customer_last_name,
+             COALESCE(r.email, wo.customer_email) as customer_email,
+             COALESCE(r.phone, wo.customer_phone) as customer_phone,
+             u.unit_number,
+             COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+             COALESCE(p.property_id, wo.property_id) as property_code,
+             COALESCE(c.name, wo.category_name) as category_name,
+             COALESCE(sc.name, wo.subcategory_name) as subcategory_name,
+             v.company_name as vendor_name
+      FROM work_orders wo
+      LEFT JOIN residents r ON wo.resident_id = r.id
+      LEFT JOIN units u ON wo.unit_id = u.id
+      LEFT JOIN properties p ON wo.property_id = p.id
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
+      LEFT JOIN categories c ON wo.category_id = c.id
+      LEFT JOIN subcategories sc ON wo.subcategory_id = sc.id
+      LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+    `;
+    
+    const params = [];
+    const conditions = [];
+    
+    if (status && status !== 'all') {
+      if (status === 'pending') {
+        conditions.push(`wo.status IN ('pending', 'assigned', 'in_progress')`);
+      } else if (status === 'completed') {
+        conditions.push(`wo.status IN ('completed', 'closed')`);
+      } else {
+        conditions.push(`wo.status = ?`);
+        params.push(status);
+      }
+    }
+    
+    if (search && search.trim()) {
+      conditions.push(`(wo.work_order_id LIKE ? OR wo.customer_name LIKE ? OR wo.category_name LIKE ? OR wo.property_name LIKE ?)`);
+      const searchTerm = `%${search.trim()}%`;
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+    }
+    
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+    
+    query += ` ORDER BY wo.created_at DESC LIMIT 500`;
+
+    const [workOrders] = await pool.execute(query, params);
 
     res.json({
       success: true,
