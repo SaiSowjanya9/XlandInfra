@@ -138,112 +138,20 @@ const DesignConceptualization = () => {
             </p>
           </div>
 
-          {/* Primary Stages - Gold Highlighted - Diagonal Flow */}
-          <div className="mb-16">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-4 h-4 bg-gradient-to-br from-gold-400 to-gold-600 rounded-full shadow-[0_0_15px_rgba(216,178,92,0.5)]"></div>
-              <span className="text-gold-400 text-xs font-semibold tracking-[0.15em] uppercase">Strategic Planning Phase</span>
-              <div className="flex-1 h-px bg-gradient-to-r from-gold-400/40 via-gold-400/20 to-transparent"></div>
-            </div>
-
-            {/* Staggered Grid Layout */}
-            <div className="relative">
-              {/* Desktop - Diagonal Staggered Layout */}
-              <div className="hidden lg:block">
-                <div className="grid grid-cols-4 gap-4">
-                  {primaryStages.map((stage, index) => {
-                    const Icon = stage.icon;
-                    const offsetClass = index % 2 === 0 ? 'mt-0' : 'mt-12';
-                    return (
-                      <div key={stage.id} className={`relative group ${offsetClass}`}>
-                        {/* Connector */}
-                        {index < primaryStages.length - 1 && (
-                          <div className="absolute top-1/2 -right-2 z-10 hidden lg:block">
-                            <div className={`w-4 h-px ${index % 2 === 0 ? 'bg-gradient-to-r from-gold-400/50 to-gold-400/20 rotate-[30deg]' : 'bg-gradient-to-r from-gold-400/50 to-gold-400/20 -rotate-[30deg]'}`}></div>
-                          </div>
-                        )}
-
-                        {/* Card */}
-                        <div className="relative p-5 h-full rounded-2xl border border-gold-500/30 bg-gradient-to-br from-gold-500/[0.08] via-gold-600/[0.04] to-transparent bg-[#0D0D0D]/80 hover:border-gold-400/60 hover:shadow-[0_0_50px_-15px_rgba(216,178,92,0.3)] transition-all duration-500 group-hover:translate-y-[-6px]">
-                          {/* Gold Glow Overlay */}
-                          <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-gold-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                          
-                          
-                          {/* Icon */}
-                          <div className="w-14 h-14 mb-4 mt-4 bg-[#0D0D0D] border border-gold-400/30 rounded-xl flex items-center justify-center group-hover:border-gold-400/60 group-hover:shadow-[0_0_20px_-5px_rgba(216,178,92,0.4)] transition-all duration-300">
-                            <Icon className="w-7 h-7 text-gold-400" strokeWidth={1.5} />
-                          </div>
-                          
-                          {/* Content */}
-                          <h3 className="text-base font-semibold text-white mb-2 leading-tight group-hover:text-gold-400 transition-colors duration-300">{stage.title}</h3>
-                          <p className="text-gray-500 text-sm leading-relaxed">{stage.desc}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Mobile/Tablet - Vertical Flow */}
-              <div className="lg:hidden space-y-4">
-                {primaryStages.map((stage, index) => {
-                  const Icon = stage.icon;
-                  return (
-                    <div key={stage.id} className="group relative">
-                      <div className="flex gap-4">
-                        {/* Left - Number & Line */}
-                        <div className="flex flex-col items-center">
-<div className="w-3 h-3 bg-gradient-to-br from-gold-400 to-gold-600 rounded-full shadow-[0_0_10px_rgba(216,178,92,0.3)]"></div>
-                          {index < primaryStages.length - 1 && (
-                            <div className="w-px h-full bg-gradient-to-b from-gold-400/50 to-gold-400/10 mt-2"></div>
-                          )}
-                        </div>
-                        
-                        {/* Right - Card */}
-                        <div className="flex-1 pb-4">
-                          <div className="p-5 bg-gradient-to-br from-gold-500/[0.08] to-transparent border border-gold-500/30 rounded-xl hover:border-gold-400/50 transition-all duration-300">
-                            <div className="flex items-start gap-4">
-                              <div className="w-12 h-12 flex-shrink-0 bg-[#0D0D0D] border border-gold-400/30 rounded-lg flex items-center justify-center">
-                                <Icon className="w-6 h-6 text-gold-400" strokeWidth={1.5} />
-                              </div>
-                              <div>
-                                <h3 className="text-base font-semibold text-white mb-1">{stage.title}</h3>
-                                <p className="text-gray-500 text-sm">{stage.desc}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Transition Arrow */}
-          <div className="flex justify-center mb-12">
-            <div className="flex flex-col items-center">
-              <div className="w-px h-8 bg-gradient-to-b from-gold-400/50 to-zinc-600/30"></div>
-              <div className="w-3 h-3 border-2 border-zinc-600 rounded-full bg-[#0D0D0D]"></div>
-              <div className="w-px h-8 bg-gradient-to-b from-zinc-600/30 to-zinc-700/20"></div>
-            </div>
-          </div>
-
-          {/* Planning & Coordination - Silver (5 items) */}
+          {/* Primary Stages - Grey/Silver */}
           <div className="mb-12">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-3 h-3 bg-zinc-500 rounded-full"></div>
-              <span className="text-zinc-400 text-xs font-semibold tracking-wider uppercase">Planning & Coordination</span>
+              <span className="text-zinc-400 text-xs font-semibold tracking-wider uppercase">Strategic Planning Phase</span>
               <div className="flex-1 h-px bg-gradient-to-r from-zinc-600/30 to-transparent"></div>
             </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-              {planningStages.map((stage) => {
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {primaryStages.map((stage) => {
                 const Icon = stage.icon;
                 return (
                   <div key={stage.id} className="group">
-                    <div className="h-full p-4 bg-gradient-to-b from-zinc-800/40 to-zinc-900/30 border border-zinc-700/30 rounded-xl bg-[#0D0D0D]/80 hover:border-zinc-500/50 hover:bg-zinc-800/50 transition-all duration-300 group-hover:translate-y-[-2px]">
+                    <div className="h-full p-4 service-card-silver rounded-xl hover:border-zinc-500/50 transition-all duration-300 group-hover:translate-y-[-2px]">
                       <div className="flex items-center justify-between mb-3">
                         <div className="w-8 h-8 bg-zinc-800 border border-zinc-600/50 rounded-lg flex items-center justify-center group-hover:border-zinc-500 transition-colors">
                           <Icon className="w-4 h-4 text-zinc-400 group-hover:text-zinc-300 transition-colors" strokeWidth={1.5} />
@@ -258,12 +166,93 @@ const DesignConceptualization = () => {
             </div>
           </div>
 
+          {/* Transition Arrow */}
+          <div className="flex justify-center mb-12">
+            <div className="flex flex-col items-center">
+              <div className="w-px h-8 bg-gradient-to-b from-zinc-600/30 to-gold-400/50"></div>
+              <div className="w-3 h-3 border-2 border-gold-500 rounded-full bg-[#0D0D0D]"></div>
+              <div className="w-px h-8 bg-gradient-to-b from-gold-400/50 to-gold-400/30"></div>
+            </div>
+          </div>
+
+          {/* Planning & Coordination - Gold Highlighted (5 items) */}
+          <div className="mb-16">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-4 h-4 bg-gradient-to-br from-gold-400 to-gold-600 rounded-full shadow-[0_0_15px_rgba(216,178,92,0.5)]"></div>
+              <span className="text-gold-400 text-xs font-semibold tracking-[0.15em] uppercase">Planning & Coordination</span>
+              <div className="flex-1 h-px bg-gradient-to-r from-gold-400/40 via-gold-400/20 to-transparent"></div>
+            </div>
+
+            {/* Desktop - Staggered Layout */}
+            <div className="hidden lg:block">
+              <div className="grid grid-cols-5 gap-4">
+                {planningStages.map((stage, index) => {
+                  const Icon = stage.icon;
+                  const offsetClass = index % 2 === 0 ? 'mt-0' : 'mt-10';
+                  return (
+                    <div key={stage.id} className={`relative group ${offsetClass}`}>
+                      {/* Card */}
+                      <div className="relative p-5 h-full rounded-2xl service-card-gold hover:border-gold-400/60 transition-all duration-300 group-hover:translate-y-[-4px]">
+                        {/* Gold Glow Overlay */}
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-gold-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        
+                        {/* Icon */}
+                        <div className="w-12 h-12 mb-4 mt-2 bg-[#0D0D0D] border border-gold-400/30 rounded-xl flex items-center justify-center group-hover:border-gold-400/60 group-hover:shadow-[0_0_20px_-5px_rgba(216,178,92,0.4)] transition-all duration-300">
+                          <Icon className="w-6 h-6 text-gold-400" strokeWidth={1.5} />
+                        </div>
+                        
+                        {/* Content */}
+                        <h3 className="text-sm font-semibold text-white mb-2 leading-tight group-hover:text-gold-400 transition-colors duration-300">{stage.title}</h3>
+                        <p className="text-gray-500 text-xs leading-relaxed">{stage.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Mobile/Tablet - Vertical Flow */}
+            <div className="lg:hidden space-y-4">
+              {planningStages.map((stage, index) => {
+                const Icon = stage.icon;
+                return (
+                  <div key={stage.id} className="group relative">
+                    <div className="flex gap-4">
+                      {/* Left - Dot & Line */}
+                      <div className="flex flex-col items-center">
+                        <div className="w-3 h-3 bg-gradient-to-br from-gold-400 to-gold-600 rounded-full shadow-[0_0_10px_rgba(216,178,92,0.3)]"></div>
+                        {index < planningStages.length - 1 && (
+                          <div className="w-px h-full bg-gradient-to-b from-gold-400/50 to-gold-400/10 mt-2"></div>
+                        )}
+                      </div>
+                      
+                      {/* Right - Card */}
+                      <div className="flex-1 pb-4">
+                        <div className="p-5 service-card-gold rounded-xl hover:border-gold-400/50 transition-all duration-300">
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 flex-shrink-0 bg-[#0D0D0D] border border-gold-400/30 rounded-lg flex items-center justify-center">
+                              <Icon className="w-6 h-6 text-gold-400" strokeWidth={1.5} />
+                            </div>
+                            <div>
+                              <h3 className="text-base font-semibold text-white mb-1">{stage.title}</h3>
+                              <p className="text-gray-500 text-sm">{stage.desc}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Flow Connector */}
           <div className="flex justify-center mb-12">
             <div className="flex flex-col items-center">
-              <div className="w-px h-6 bg-gradient-to-b from-zinc-700/20 to-zinc-700/10"></div>
-              <div className="w-2 h-2 border border-zinc-700 rounded-full bg-[#0D0D0D]"></div>
-              <div className="w-px h-6 bg-gradient-to-b from-zinc-700/10 to-zinc-800/5"></div>
+              <div className="w-px h-8 bg-gradient-to-b from-gold-400/50 to-zinc-600/30"></div>
+              <div className="w-3 h-3 border-2 border-zinc-600 rounded-full bg-[#0D0D0D]"></div>
+              <div className="w-px h-8 bg-gradient-to-b from-zinc-600/30 to-zinc-700/20"></div>
             </div>
           </div>
 
@@ -281,7 +270,7 @@ const DesignConceptualization = () => {
                 const Icon = stage.icon;
                 return (
                   <div key={stage.id} className="group">
-                    <div className="h-full p-4 bg-gradient-to-b from-zinc-800/30 to-zinc-900/20 border border-zinc-800/40 rounded-xl hover:border-zinc-700/50 transition-all duration-300 group-hover:translate-y-[-2px]">
+                    <div className="h-full p-4 service-card-dark rounded-xl hover:border-zinc-600/50 transition-all duration-300 group-hover:translate-y-[-2px]">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 flex-shrink-0 bg-zinc-800/50 border border-zinc-700/30 rounded-lg flex items-center justify-center group-hover:border-zinc-600/50 transition-colors">
                           <Icon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-400 transition-colors" strokeWidth={1.5} />

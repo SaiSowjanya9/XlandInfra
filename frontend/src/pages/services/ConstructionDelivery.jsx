@@ -151,7 +151,7 @@ const ConstructionDelivery = () => {
                 const Icon = stage.icon;
                 return (
                   <div key={stage.id} className="group relative">
-                    <div className="h-full p-5 bg-gradient-to-b from-zinc-800/50 to-zinc-900/30 border border-zinc-700/30 rounded-xl hover:border-zinc-500/50 hover:bg-zinc-800/60 transition-all duration-300 group-hover:translate-y-[-3px]">
+                    <div className="h-full p-5 service-card-silver rounded-xl hover:border-zinc-500/50 transition-all duration-300 group-hover:translate-y-[-3px]">
                       <div className="flex items-center justify-between mb-3">
                         <div className="w-12 h-12 bg-zinc-800 border border-zinc-600/40 rounded-lg flex items-center justify-center group-hover:border-zinc-500/60 transition-colors">
                           <Icon className="w-6 h-6 text-zinc-400 group-hover:text-zinc-300 transition-colors" strokeWidth={1.5} />
@@ -211,7 +211,7 @@ const ConstructionDelivery = () => {
                 const Icon = stage.icon;
                 return (
                   <div key={stage.id} className="group relative">
-                    <div className="h-full p-4 bg-gradient-to-b from-zinc-800/50 to-zinc-900/30 border border-zinc-700/30 rounded-xl hover:border-zinc-500/50 hover:bg-zinc-800/60 transition-all duration-300 group-hover:translate-y-[-3px]">
+                    <div className="h-full p-4 service-card-silver rounded-xl hover:border-zinc-500/50 transition-all duration-300 group-hover:translate-y-[-3px]">
                       <div className="flex items-center justify-between mb-3">
                         <div className="w-10 h-10 bg-zinc-800 border border-zinc-600/40 rounded-lg flex items-center justify-center group-hover:border-zinc-500/60 transition-colors">
                           <Icon className="w-5 h-5 text-zinc-400 group-hover:text-zinc-300 transition-colors" strokeWidth={1.5} />

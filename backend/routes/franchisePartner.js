@@ -660,6 +660,107 @@ router.post('/vendors', requireFPScope, async (req, res) => {
   }
 });
 
+// Update/Modify vendor
+router.put('/vendors/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      companyName, contactPerson, email, phone, alternatePhone,
+      address, city, state, zipCode, serviceCategories,
+      gstNumber, panNumber, status
+    } = req.body;
+
+    // Verify vendor belongs to this FP
+    const [existing] = await pool.execute(
+      'SELECT id FROM vendors WHERE id = ? AND franchise_partner_id = ?',
+      [id, req.fpId]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found or access denied'
+      });
+    }
+
+    await pool.execute(
+      `UPDATE vendors SET 
+        company_name = COALESCE(?, company_name),
+        contact_person = COALESCE(?, contact_person),
+        email = COALESCE(?, email),
+        phone = COALESCE(?, phone),
+        alternate_phone = COALESCE(?, alternate_phone),
+        address = COALESCE(?, address),
+        city = COALESCE(?, city),
+        state = COALESCE(?, state),
+        zip_code = COALESCE(?, zip_code),
+        service_categories = COALESCE(?, service_categories),
+        gst_number = COALESCE(?, gst_number),
+        pan_number = COALESCE(?, pan_number),
+        status = COALESCE(?, status),
+        updated_at = NOW()
+      WHERE id = ? AND franchise_partner_id = ?`,
+      [
+        companyName, contactPerson, email, phone, alternatePhone,
+        address, city, state, zipCode,
+        serviceCategories ? JSON.stringify(serviceCategories) : null,
+        gstNumber, panNumber, status,
+        id, req.fpId
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Vendor updated successfully'
+    });
+  } catch (error) {
+    console.error('Update vendor error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update vendor',
+      error: error.message
+    });
+  }
+});
+
+// Delete vendor (soft delete)
+router.delete('/vendors/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verify vendor belongs to this FP
+    const [existing] = await pool.execute(
+      'SELECT id FROM vendors WHERE id = ? AND franchise_partner_id = ?',
+      [id, req.fpId]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found or access denied'
+      });
+    }
+
+    await pool.execute(
+      `UPDATE vendors SET status = 'deleted', is_active = FALSE, updated_at = NOW() 
+       WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Vendor deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete vendor error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete vendor',
+      error: error.message
+    });
+  }
+});
+
 // ============================================
 // EMPLOYEE MANAGEMENT
 // ============================================

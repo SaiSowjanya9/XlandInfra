@@ -282,6 +282,7 @@ const initOnboardingTables = async () => {
         subcategory_id INT NOT NULL,
         category_name VARCHAR(100),
         subcategory_name VARCHAR(100),
+        title VARCHAR(255) DEFAULT NULL,
         description TEXT,
         permission_to_enter ENUM('yes', 'no') DEFAULT 'no',
         entry_notes TEXT,
@@ -294,17 +295,23 @@ const initOnboardingTables = async () => {
         property_type VARCHAR(50),
         block VARCHAR(50),
         flat_number VARCHAR(50),
-        status ENUM('pending', 'assigned', 'in_progress', 'completed', 'closed') DEFAULT 'pending',
+        status ENUM('pending', 'requested', 'assigned', 'in_progress', 'completed', 'closed', 'cancelled') DEFAULT 'pending',
         source ENUM('customer', 'admin', 'system') DEFAULT 'customer',
         created_by VARCHAR(50) DEFAULT NULL,
+        franchise_partner_id INT DEFAULT NULL,
         assigned_vendor_id INT DEFAULT NULL,
+        assigned_by VARCHAR(50) DEFAULT NULL,
         assigned_at TIMESTAMP NULL,
+        scheduled_date DATE DEFAULT NULL,
         completed_at TIMESTAMP NULL,
+        completed_date TIMESTAMP NULL,
+        admin_notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_status (status),
         INDEX idx_property (property_id),
-        INDEX idx_created (created_at)
+        INDEX idx_created (created_at),
+        INDEX idx_franchise_partner (franchise_partner_id)
       )
     `);
     console.log('  ✅ Work orders table initialized');

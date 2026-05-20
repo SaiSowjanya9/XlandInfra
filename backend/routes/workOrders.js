@@ -536,7 +536,7 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
       }
 
       await pool.query(
-        `INSERT INTO work_order_history (work_order_id, to_status, changed_by, changed_by_type, notes)
+        `INSERT INTO work_order_history (work_order_id, to_status, changed_by_id, changed_by_type, notes)
          VALUES (?, 'pending', ?, 'admin', 'Work order created by admin')`,
         [workOrderId, adminId || null]
       );
@@ -547,16 +547,17 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
         data: { id: workOrderId, orderNumber, status: 'pending' }
       });
     } catch (dbError) {
-      console.error('Admin create DB error:', dbError.message);
-      return res.status(201).json({
-        success: true,
-        message: 'Work order created (Demo Mode)',
-        data: { id: uuidv4(), orderNumber, status: 'pending' }
+      console.error('❌ Admin create DB error:', dbError.message);
+      console.error('Full DB error:', dbError);
+      return res.status(500).json({
+        success: false,
+        message: 'Database error: ' + dbError.message,
+        error: dbError.message
       });
     }
   } catch (error) {
     console.error('Error creating work order:', error);
-    res.status(500).json({ success: false, message: 'Error creating work order' });
+    res.status(500).json({ success: false, message: 'Error creating work order', error: error.message });
   }
 });
 
@@ -578,13 +579,14 @@ router.post('/:id/assign', async (req, res) => {
       );
 
       await pool.execute(
-        `INSERT INTO work_order_history (work_order_id, from_status, to_status, changed_by, changed_by_type, notes)
+        `INSERT INTO work_order_history (work_order_id, from_status, to_status, changed_by_id, changed_by_type, notes)
          VALUES (?, 'pending', 'assigned', ?, 'admin', ?)`,
         [id, adminId || null, notes || 'Vendor assigned']
       );
 
       return res.json({ success: true, message: 'Vendor assigned successfully' });
     } catch (dbError) {
+      console.error('Assign vendor DB error:', dbError);
       return res.json({ success: true, message: 'Vendor assigned (Demo Mode)' });
     }
   } catch (error) {
@@ -610,13 +612,14 @@ router.post('/:id/close', async (req, res) => {
       );
 
       await pool.execute(
-        `INSERT INTO work_order_history (work_order_id, from_status, to_status, changed_by, changed_by_type, notes)
+        `INSERT INTO work_order_history (work_order_id, from_status, to_status, changed_by_id, changed_by_type, notes)
          VALUES (?, ?, 'closed', ?, 'admin', ?)`,
         [id, current?.status || 'completed', adminId || null, notes || 'Work order closed']
       );
 
       return res.json({ success: true, message: 'Work order closed successfully' });
     } catch (dbError) {
+      console.error('Close work order DB error:', dbError);
       return res.json({ success: true, message: 'Work order closed (Demo Mode)' });
     }
   } catch (error) {
@@ -640,13 +643,14 @@ router.post('/:id/reopen', async (req, res) => {
       );
 
       await pool.execute(
-        `INSERT INTO work_order_history (work_order_id, from_status, to_status, changed_by, changed_by_type, notes)
+        `INSERT INTO work_order_history (work_order_id, from_status, to_status, changed_by_id, changed_by_type, notes)
          VALUES (?, 'closed', 'pending', ?, 'admin', ?)`,
         [id, adminId || null, reason || 'Work order reopened']
       );
 
       return res.json({ success: true, message: 'Work order reopened successfully' });
     } catch (dbError) {
+      console.error('Reopen work order DB error:', dbError);
       return res.json({ success: true, message: 'Work order reopened (Demo Mode)' });
     }
   } catch (error) {
@@ -666,7 +670,7 @@ router.get('/:id/history', async (req, res) => {
       const [history] = await pool.execute(
         `SELECT h.*, a.first_name, a.last_name 
          FROM work_order_history h
-         LEFT JOIN admin_users a ON h.changed_by = a.id
+         LEFT JOIN admin_users a ON h.changed_by_id = a.id
          WHERE h.work_order_id = ? 
          ORDER BY h.created_at DESC`,
         [id]

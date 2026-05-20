@@ -3,7 +3,6 @@ import {
   Building2,
   Plus,
   Search,
-  Download,
   RefreshCw,
   ArrowLeft,
   Home,
@@ -70,23 +69,6 @@ const FPProperties = ({ user }) => {
     fetchZones();
   }, []);
 
-  const handleExport = async () => {
-    try {
-      const response = await fetch('/api/fp/export/properties', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      
-      const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'properties_export.json';
-      a.click();
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Export failed' });
-    }
-  };
 
   // Property type tabs
   const tabs = [
@@ -399,17 +381,10 @@ const FPProperties = ({ user }) => {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+            <div className="px-4 py-3 border-t border-gray-100">
               <p className="text-sm text-gray-500">
                 Showing {filteredProperties.length} of {properties.length} properties
               </p>
-              <button
-                onClick={handleExport}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-              >
-                <Download className="w-4 h-4" />
-                <span>Export All Properties</span>
-              </button>
             </div>
           </>
         )}
