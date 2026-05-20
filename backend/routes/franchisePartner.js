@@ -1016,10 +1016,451 @@ router.post('/employees', requireFPScope, async (req, res) => {
 });
 
 // ============================================
-// USER MANAGEMENT (FP Portal Users)
+// STAFF MANAGEMENT (FP Portal Staff - Manager, Coordinator, Supervisor, Executive)
 // ============================================
 
-// Get all FP users
+// FP Staff Roles (allowed roles for FP to create)
+const FP_STAFF_ROLES = {
+  manager: {
+    label: 'Manager',
+    description: 'Manages work orders, vendors, estimates, and schedules'
+  },
+  coordinator: {
+    label: 'Coordinator',
+    description: 'Manages assigned properties, work orders, and field operations'
+  },
+  supervisor: {
+    label: 'Supervisor',
+    description: 'Creates work order requests and tracks progress'
+  },
+  executive: {
+    label: 'Executive',
+    description: 'Basic data collection - Adds client and vendor details'
+  }
+};
+
+// Helper function to generate staff user ID
+const generateStaffUserId = (role) => {
+  const prefixes = {
+    manager: 'MGR',
+    coordinator: 'CRD',
+    supervisor: 'SUP',
+    executive: 'EXE'
+  };
+  const prefix = prefixes[role] || 'STF';
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${prefix}-${timestamp}${random}`;
+};
+
+// Helper function to generate staff temp password
+const generateStaffTempPassword = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
+// Get all FP staff members
+router.get('/staff', requireFPScope, async (req, res) => {
+  try {
+    const { role, isActive } = req.query;
+    
+    let query = `
+      SELECT u.id, u.user_id, u.username, u.email, u.first_name, u.last_name, 
+             u.phone, u.role, u.is_active, u.created_at, u.last_login,
+             u.must_change_password,
+             CONCAT(c.first_name, ' ', c.last_name) as created_by_name
+      FROM users u
+      LEFT JOIN users c ON u.created_by = c.id
+      WHERE u.franchise_partner_id = ?
+      AND u.role IN ('manager', 'coordinator', 'supervisor', 'executive')
+    `;
+    const params = [req.fpId];
+
+    if (role && FP_STAFF_ROLES[role]) {
+      query += ` AND u.role = ?`;
+      params.push(role);
+    }
+
+    if (isActive !== undefined) {
+      query += ` AND u.is_active = ?`;
+      params.push(isActive === 'true');
+    }
+
+    query += ` ORDER BY u.created_at DESC`;
+
+    const [staff] = await pool.execute(query, params);
+
+    // Format the response similar to admin UserManagement
+    const formattedStaff = staff.map(s => ({
+      id: s.id,
+      userId: s.user_id,
+      username: s.username,
+      email: s.email,
+      firstName: s.first_name,
+      lastName: s.last_name,
+      phone: s.phone,
+      role: s.role,
+      roleName: FP_STAFF_ROLES[s.role]?.label || s.role,
+      isActive: s.is_active === 1 || s.is_active === true,
+      lastLogin: s.last_login,
+      createdBy: s.created_by_name,
+      createdAt: s.created_at,
+      mustChangePassword: s.must_change_password
+    }));
+
+    res.json({
+      success: true,
+      data: formattedStaff
+    });
+  } catch (error) {
+    console.error('Get FP staff error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch staff members',
+      error: error.message
+    });
+  }
+});
+
+// Get single FP staff member
+router.get('/staff/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [staff] = await pool.execute(
+      `SELECT u.*, CONCAT(c.first_name, ' ', c.last_name) as created_by_name
+       FROM users u
+       LEFT JOIN users c ON u.created_by = c.id
+       WHERE u.id = ? AND u.franchise_partner_id = ?
+       AND u.role IN ('manager', 'coordinator', 'supervisor', 'executive')`,
+      [id, req.fpId]
+    );
+
+    if (staff.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff member not found'
+      });
+    }
+
+    const s = staff[0];
+    res.json({
+      success: true,
+      data: {
+        id: s.id,
+        userId: s.user_id,
+        username: s.username,
+        email: s.email,
+        firstName: s.first_name,
+        lastName: s.last_name,
+        phone: s.phone,
+        role: s.role,
+        roleName: FP_STAFF_ROLES[s.role]?.label || s.role,
+        isActive: s.is_active === 1 || s.is_active === true,
+        lastLogin: s.last_login,
+        createdBy: s.created_by_name,
+        createdAt: s.created_at
+      }
+    });
+  } catch (error) {
+    console.error('Get FP staff member error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch staff member',
+      error: error.message
+    });
+  }
+});
+
+// Create FP staff member with auto-generated password and email notification
+router.post('/staff', requireFPScope, async (req, res) => {
+  try {
+    const { username, email, firstName, lastName, phone, role, sendEmail = true } = req.body;
+
+    // Validation
+    if (!username || !email || !firstName || !lastName || !role) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username, email, first name, last name, and role are required'
+      });
+    }
+
+    // Validate role - only allow FP staff roles
+    if (!FP_STAFF_ROLES[role]) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be one of: manager, coordinator, supervisor, executive'
+      });
+    }
+
+    // Check if username or email already exists
+    const [existing] = await pool.execute(
+      `SELECT id FROM users WHERE username = ? OR email = ?`,
+      [username, email.toLowerCase()]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username or email already exists'
+      });
+    }
+
+    // Generate unique User ID and temporary password
+    const userId = generateStaffUserId(role);
+    const tempPassword = generateStaffTempPassword();
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    // Insert new staff member
+    const [result] = await pool.execute(
+      `INSERT INTO users (
+        user_id, username, email, password_hash, first_name, last_name, phone, role,
+        franchise_partner_id, must_change_password, is_active, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, ?)`,
+      [
+        userId, username, email.toLowerCase(), passwordHash, 
+        firstName, lastName, phone || null, role,
+        req.fpId, req.user.id
+      ]
+    );
+
+    // Get FP company name for email
+    let companyName = 'Franchise Partner';
+    try {
+      const [fpData] = await pool.execute(
+        'SELECT company_name FROM franchise_partners WHERE id = ?',
+        [req.fpId]
+      );
+      if (fpData.length > 0) {
+        companyName = fpData[0].company_name;
+      }
+    } catch (e) {
+      console.log('Could not fetch FP company name');
+    }
+
+    // Send welcome email with temporary password
+    let emailSent = false;
+    if (sendEmail) {
+      try {
+        const emailResult = await sendFPEmployeeWelcomeEmail({
+          email: email.toLowerCase(),
+          firstName,
+          lastName,
+          username,
+          userId,
+          tempPassword,
+          companyName,
+          role,
+          loginUrl: process.env.ADMIN_PORTAL_URL || 'http://localhost:5174'
+        });
+        emailSent = emailResult.success;
+      } catch (emailError) {
+        console.error('Email sending error:', emailError);
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: emailSent 
+        ? 'Staff member created successfully. Welcome email sent with login credentials.' 
+        : 'Staff member created successfully. Email notification could not be sent.',
+      data: {
+        id: result.insertId,
+        userId,
+        username,
+        email: email.toLowerCase(),
+        role,
+        roleName: FP_STAFF_ROLES[role].label,
+        emailSent
+      }
+    });
+  } catch (error) {
+    console.error('Create FP staff error:', error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({
+        success: false,
+        message: 'Username or email already exists'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create staff member',
+      error: error.message
+    });
+  }
+});
+
+// Update FP staff member
+router.put('/staff/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, email, password, firstName, lastName, phone, role, isActive } = req.body;
+
+    // Check if staff exists and belongs to this FP
+    const [existing] = await pool.execute(
+      `SELECT id, role FROM users WHERE id = ? AND franchise_partner_id = ?
+       AND role IN ('manager', 'coordinator', 'supervisor', 'executive')`,
+      [id, req.fpId]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff member not found'
+      });
+    }
+
+    // Check for duplicate username/email
+    if (username || email) {
+      const [duplicates] = await pool.execute(
+        `SELECT id FROM users WHERE (username = ? OR email = ?) AND id != ?`,
+        [username || '', email || '', id]
+      );
+
+      if (duplicates.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username or email already exists'
+        });
+      }
+    }
+
+    // Validate role if changing
+    if (role && !FP_STAFF_ROLES[role]) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be one of: manager, coordinator, supervisor, executive'
+      });
+    }
+
+    // Build update query
+    let updateFields = [];
+    let params = [];
+
+    if (username) { updateFields.push('username = ?'); params.push(username); }
+    if (email) { updateFields.push('email = ?'); params.push(email.toLowerCase()); }
+    if (firstName) { updateFields.push('first_name = ?'); params.push(firstName); }
+    if (lastName) { updateFields.push('last_name = ?'); params.push(lastName); }
+    if (phone !== undefined) { updateFields.push('phone = ?'); params.push(phone); }
+    if (role) { updateFields.push('role = ?'); params.push(role); }
+    if (isActive !== undefined) { updateFields.push('is_active = ?'); params.push(isActive); }
+
+    // Update password if provided
+    if (password) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      updateFields.push('password_hash = ?');
+      params.push(passwordHash);
+      updateFields.push('must_change_password = FALSE');
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No fields to update'
+      });
+    }
+
+    updateFields.push('updated_at = NOW()');
+    params.push(id, req.fpId);
+
+    await pool.execute(
+      `UPDATE users SET ${updateFields.join(', ')} WHERE id = ? AND franchise_partner_id = ?`,
+      params
+    );
+
+    res.json({
+      success: true,
+      message: 'Staff member updated successfully'
+    });
+  } catch (error) {
+    console.error('Update FP staff error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update staff member',
+      error: error.message
+    });
+  }
+});
+
+// Delete FP staff member
+router.delete('/staff/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if staff exists and belongs to this FP
+    const [existing] = await pool.execute(
+      `SELECT id, email, role FROM users WHERE id = ? AND franchise_partner_id = ?
+       AND role IN ('manager', 'coordinator', 'supervisor', 'executive')`,
+      [id, req.fpId]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff member not found'
+      });
+    }
+
+    // Permanently delete the staff member
+    const [result] = await pool.execute(
+      `DELETE FROM users WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff member not found'
+      });
+    }
+
+    console.log(`🗑️ FP Staff permanently deleted: ID ${id}, Email: ${existing[0].email}, FP: ${req.fpId}`);
+
+    res.json({
+      success: true,
+      message: 'Staff member permanently deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete FP staff error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete staff member',
+      error: error.message
+    });
+  }
+});
+
+// Get FP staff roles list
+router.get('/staff-roles', requireFPScope, async (req, res) => {
+  try {
+    const roles = Object.entries(FP_STAFF_ROLES).map(([key, value]) => ({
+      value: key,
+      label: value.label,
+      description: value.description
+    }));
+
+    res.json({
+      success: true,
+      data: roles
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching roles',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// LEGACY USER MANAGEMENT (FP Portal Users - fp_users table)
+// ============================================
+
+// Get all FP users (legacy)
 router.get('/users', requireFPScope, async (req, res) => {
   try {
     const [users] = await pool.execute(
@@ -1044,7 +1485,7 @@ router.get('/users', requireFPScope, async (req, res) => {
   }
 });
 
-// Create FP user
+// Create FP user (legacy)
 router.post('/users', requireFPScope, async (req, res) => {
   try {
     const {
