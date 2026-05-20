@@ -54,6 +54,20 @@ async function runMigration() {
       console.log('✅ Modified created_by column to VARCHAR(50)');
     }
 
+    if (!existingColumns.includes('category_name')) {
+      await connection.execute(
+        `ALTER TABLE work_orders ADD COLUMN category_name VARCHAR(100) DEFAULT NULL AFTER subcategory_id`
+      );
+      console.log('✅ Added category_name column');
+    }
+
+    if (!existingColumns.includes('subcategory_name')) {
+      await connection.execute(
+        `ALTER TABLE work_orders ADD COLUMN subcategory_name VARCHAR(100) DEFAULT NULL AFTER category_name`
+      );
+      console.log('✅ Added subcategory_name column');
+    }
+
     if (!existingColumns.includes('title')) {
       await connection.execute(
         `ALTER TABLE work_orders ADD COLUMN title VARCHAR(255) DEFAULT NULL AFTER subcategory_name`
