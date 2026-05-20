@@ -321,10 +321,10 @@ function CorporateLanding() {
         canonical="https://xlandinfra.com/"
       />
       {/* ============ PREMIUM NAVIGATION ============ */}
-      <nav className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-700 ${
+      <nav className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-500 ${
         isScrolled || servicesDropdownOpen
-          ? 'bg-[#0D0D0D]/98 backdrop-blur-2xl shadow-2xl shadow-black/80 border-b border-gold-500/20' 
-          : 'bg-gradient-to-b from-black/80 via-black/60 to-transparent'
+          ? 'bg-[#0D0D0D] shadow-2xl shadow-black/80 border-b border-gold-500/20' 
+          : 'bg-[#0D0D0D]/95 backdrop-blur-xl'
       }`}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-24">
@@ -334,7 +334,7 @@ function CorporateLanding() {
                 <div className="absolute inset-0 bg-gold-400/20 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="relative transition-transform duration-500 group-hover:scale-105">
                   <BrandLogo size="xl" className="hidden sm:flex" />
-                  <BrandLogo size="sm" showText={false} className="sm:hidden" />
+                  <BrandLogo size="sm" className="sm:hidden" />
                 </div>
               </div>
             </Link>
@@ -366,14 +366,13 @@ function CorporateLanding() {
                       </button>
                       
                       {/* Dropdown Menu */}
-                      <div className={`absolute top-full left-1/2 -translate-x-1/2 pt-3 transition-all duration-300 z-[1001] ${
-                        servicesDropdownOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'
+                      <div className={`absolute top-full left-0 pt-1 transition-opacity duration-150 z-[1001] ${
+                        servicesDropdownOpen ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'
                       }`}>
-                        <div className="w-64 bg-[#0D0D0D] border border-gold-500/20 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden">
-                          {/* Dropdown Arrow */}
-                          <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0D0D0D] border-l border-t border-gold-500/20 rotate-45"></div>
-                          
-                          <div className="py-2">
+                        {/* Invisible bridge to prevent gap */}
+                        <div className="absolute top-0 left-0 right-0 h-2 bg-transparent"></div>
+                        <div className="w-56 mt-1 bg-[#0D0D0D] border border-gold-500/20 rounded-lg shadow-xl overflow-hidden">
+                          <div className="py-1">
                             {servicePages.map((service, idx) => (
                               <button
                                 key={idx}
@@ -386,16 +385,16 @@ function CorporateLanding() {
                                   }
                                   setServicesDropdownOpen(false);
                                 }}
-                                className="w-full px-5 py-3 text-left text-sm text-gray-400 hover:text-gold-400 hover:bg-gold-500/5 transition-all duration-200 flex items-center gap-3 group"
+                                className="w-full px-4 py-2.5 text-left text-sm text-gray-300 hover:text-gold-400 hover:bg-white/5 transition-colors duration-150 flex items-center gap-3"
                               >
-                                <div className="w-1.5 h-1.5 rounded-full bg-gold-400/40 group-hover:bg-gold-400 group-hover:shadow-[0_0_8px_rgba(216,178,92,0.5)] transition-all"></div>
+                                <div className="w-1.5 h-1.5 rounded-full bg-gold-400/50"></div>
                                 <span className="font-medium">{service.label}</span>
                               </button>
                             ))}
                           </div>
                           
                           {/* View All Services */}
-                          <div className="border-t border-gold-500/10 px-5 py-3">
+                          <div className="border-t border-gold-500/10 px-4 py-2.5">
                             <button
                               onClick={() => {
                                 scrollToSection('services');

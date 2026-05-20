@@ -21,6 +21,29 @@
 
 html {
   scroll-behavior: smooth;
+  /* Prevent unwanted zoom on mobile */
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Mobile responsiveness and touch optimization */
+@media (max-width: 768px) {
+  html {
+    /* Prevent zoom-out issues */
+    touch-action: pan-x pan-y;
+  }
+  
+  body {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Prevent content overflow - scoped to avoid breaking dropdowns */
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
 }
 
 body {
@@ -721,4 +744,165 @@ body {
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
+}
+
+/* ============ MOBILE RESPONSIVENESS FIXES ============ */
+
+/* Fix content overflow in boxes and cards */
+.overflow-fix {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Mobile card and box fixes */
+@media (max-width: 640px) {
+  /* Prevent text from overflowing boxes */
+  [class*="rounded-xl"],
+  [class*="rounded-2xl"],
+  [class*="rounded-lg"] {
+    overflow: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* Reduce padding on mobile for better fit */
+  .p-8 {
+    padding: 1.25rem;
+  }
+  
+  .p-6 {
+    padding: 1rem;
+  }
+  
+  /* Fix grid items overflow */
+  [class*="grid"] > * {
+    min-width: 0;
+    overflow: hidden;
+  }
+  
+  /* Ensure icons don't cause overflow */
+  svg {
+    flex-shrink: 0;
+  }
+  
+  /* Fix text sizing on small screens */
+  .text-lg {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  
+  .text-xl {
+    font-size: 1.125rem;
+    line-height: 1.5;
+  }
+  
+  .text-2xl {
+    font-size: 1.25rem;
+    line-height: 1.4;
+  }
+}
+
+/* Tablet fixes */
+@media (min-width: 641px) and (max-width: 1024px) {
+  [class*="grid"] > * {
+    min-width: 0;
+    overflow: hidden;
+  }
+  
+  /* Fix comparison table spacing */
+  .grid-cols-3 > * {
+    padding: 0.75rem;
+  }
+}
+
+/* ============ PERFORMANCE OPTIMIZATIONS ============ */
+
+/* GPU acceleration for smooth animations */
+.animate-slide-in,
+.reveal,
+.premium-card,
+.service-card-premium {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Optimize transitions - use GPU compositing */
+button, a, [class*="hover:"] {
+  transform: translateZ(0);
+}
+
+/* Contain layout for cards to isolate repaints */
+.card, .card-gold, .card-premium, section {
+  contain: layout style;
+}
+
+/* Optimize images */
+img {
+  content-visibility: auto;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Mobile performance optimizations */
+@media (max-width: 768px) {
+  /* Simplify blur effects */
+  .blur-xl, .blur-2xl, .blur-3xl, [class*="blur-["] {
+    filter: blur(15px);
+  }
+  
+  /* Reduce backdrop blur */
+  .backdrop-blur-xl, .backdrop-blur-2xl {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  
+  /* Disable heavy shadows on mobile */
+  .shadow-2xl {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Simplify gradients */
+  [class*="bg-gradient"] {
+    background-attachment: scroll;
+  }
+}
+
+/* Safari mobile viewport fix */
+@supports (-webkit-touch-callout: none) {
+  body, .min-h-screen {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Prevent horizontal scroll */
+body, html, #root {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Smooth scrolling with performance */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Feature boxes */
+.feature-box {
+  overflow: hidden;
+  word-break: break-word;
 }

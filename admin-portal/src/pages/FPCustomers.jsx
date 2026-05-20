@@ -79,8 +79,8 @@ const COUNTRY_CODES = [
   { code: '+971', flag: '🇦🇪', label: 'UAE' }
 ];
 
-// Division options
-const DIVISIONS = ['Division A', 'Division B', 'Division C', 'Division D', 'Division E'];
+// Initial Division options
+const INITIAL_DIVISIONS = ['Division A', 'Division B', 'Division C', 'Division D', 'Division E'];
 
 const FPCustomers = ({ user }) => {
   const [customers, setCustomers] = useState([]);
@@ -125,6 +125,9 @@ const FPCustomers = ({ user }) => {
   const [zoneSuggestions, setZoneSuggestions] = useState([]);
   const [areaSuggestions, setAreaSuggestions] = useState([]);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [divisions, setDivisions] = useState(INITIAL_DIVISIONS);
+  const [showAddDivisionModal, setShowAddDivisionModal] = useState(false);
+  const [newDivision, setNewDivision] = useState('');
   const formRef = useRef(null);
 
   const token = localStorage.getItem('pm_auth_token');
@@ -573,7 +576,7 @@ const FPCustomers = ({ user }) => {
                         className={selectClass(hasError && !formData.division)}
                       >
                         <option value="">Select a division</option>
-                        {DIVISIONS.map(d => (
+                        {divisions.map(d => (
                           <option key={d} value={d}>{d}</option>
                         ))}
                       </select>
@@ -581,6 +584,7 @@ const FPCustomers = ({ user }) => {
                     </div>
                     <button
                       type="button"
+                      onClick={() => setShowAddDivisionModal(true)}
                       className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium flex items-center gap-1"
                     >
                       <Plus className="w-4 h-4" />
@@ -1104,6 +1108,50 @@ const FPCustomers = ({ user }) => {
             </div>
           </form>
         </div>
+
+        {/* Add Division Modal */}
+        {showAddDivisionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-sm p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Add New Division</h3>
+              <button onClick={() => setShowAddDivisionModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <input
+              type="text"
+              value={newDivision}
+              onChange={(e) => setNewDivision(e.target.value)}
+              placeholder="Enter division name"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none mb-4"
+              autoFocus
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowAddDivisionModal(false)}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (newDivision.trim() && !divisions.includes(newDivision.trim())) {
+                    setDivisions([...divisions, newDivision.trim()]);
+                    updateFormData('division', newDivision.trim());
+                    setNewDivision('');
+                    setShowAddDivisionModal(false);
+                  }
+                }}
+                disabled={!newDivision.trim()}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                Add Division
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     );
   }
