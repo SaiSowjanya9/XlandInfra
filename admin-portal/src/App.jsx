@@ -83,30 +83,79 @@ import Estimates from './pages/Estimates';
 import UserManagement from './pages/UserManagement';
 import QRManagement from './pages/QRManagement';
 
+// Session timeout in milliseconds (30 minutes)
+const SESSION_TIMEOUT = 30 * 60 * 1000;
+
 function App() {
   const [user, setUser] = useState(null);
   const [portal, setPortal] = useState(null); // 'employee' | 'vendor'
   const [loading, setLoading] = useState(true);
+
+  // Check if session is still valid
+  const isSessionValid = () => {
+    const lastActivity = sessionStorage.getItem('lastActivity');
+    if (!lastActivity) return false;
+    const elapsed = Date.now() - parseInt(lastActivity, 10);
+    return elapsed < SESSION_TIMEOUT;
+  };
+
+  // Update last activity timestamp
+  const updateActivity = () => {
+    sessionStorage.setItem('lastActivity', Date.now().toString());
+  };
 
   useEffect(() => {
     // Initialize seed data once on app load (only creates if none exists)
     seedTestData();
     
     try {
-      // Use sessionStorage for session-based auth (expires on browser close)
+      // Check if session is still valid (not expired)
       const savedUser = sessionStorage.getItem('adminUser');
       const savedPortal = sessionStorage.getItem('activePortal');
-      if (savedUser && savedPortal) {
+      
+      if (savedUser && savedPortal && isSessionValid()) {
         setUser(JSON.parse(savedUser));
         setPortal(savedPortal);
+        updateActivity(); // Refresh activity on load
+      } else {
+        // Session expired or invalid - clear everything
+        sessionStorage.clear();
       }
     } catch (error) {
       console.error('Error loading saved state:', error);
-      sessionStorage.removeItem('adminUser');
-      sessionStorage.removeItem('activePortal');
+      sessionStorage.clear();
     }
     setLoading(false);
   }, []);
+
+  // Track user activity to keep session alive
+  useEffect(() => {
+    if (!user) return;
+    
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    let activityTimeout;
+    
+    const handleActivity = () => {
+      clearTimeout(activityTimeout);
+      activityTimeout = setTimeout(updateActivity, 1000); // Debounce updates
+    };
+    
+    activityEvents.forEach(event => window.addEventListener(event, handleActivity));
+    
+    // Check session validity periodically
+    const intervalId = setInterval(() => {
+      if (!isSessionValid()) {
+        handleLogout();
+        alert('Session expired due to inactivity. Please log in again.');
+      }
+    }, 60000); // Check every minute
+    
+    return () => {
+      activityEvents.forEach(event => window.removeEventListener(event, handleActivity));
+      clearInterval(intervalId);
+      clearTimeout(activityTimeout);
+    };
+  }, [user]);
 
   const handleLogin = (userData) => {
     const portalType = userData.portal || portal;
@@ -115,6 +164,7 @@ function App() {
     // Use sessionStorage for session-based auth (expires on browser close)
     sessionStorage.setItem('adminUser', JSON.stringify(userData));
     sessionStorage.setItem('activePortal', portalType);
+    sessionStorage.setItem('lastActivity', Date.now().toString()); // Start session timer
     
     // Store token if provided
     if (userData.token) {
