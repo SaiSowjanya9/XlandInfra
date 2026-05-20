@@ -579,6 +579,17 @@ const initOnboardingTables = async () => {
     `);
     console.log('  ✅ FP users table initialized');
 
+    // Add franchise_partner_id to related tables for FP data isolation
+    const fpTables = ['properties', 'clients', 'vendors', 'work_orders', 'estimates', 'schedules'];
+    for (const table of fpTables) {
+      try {
+        await conn.execute(`ALTER TABLE ${table} ADD COLUMN franchise_partner_id INT DEFAULT NULL`);
+        console.log(`  ✅ Added franchise_partner_id to ${table} table`);
+      } catch (e) {
+        // Column already exists or table doesn't exist - ignore
+      }
+    }
+
     // Initialize QR Management tables
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS qr_codes (
