@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, Palette, Layers, PenTool, Eye, FileText, Building, Megaphone, Scale, 
-  LineChart, Droplets, Landmark, Frame, HardHat, RefreshCw, ChevronDown, ArrowDownRight
+  LineChart, Droplets, Landmark, Frame, HardHat, RefreshCw, ChevronDown, ArrowDownRight,
+  MapPin, BarChart3, Calculator, TrendingUp
 } from 'lucide-react';
 import MainHeader from '../../components/MainHeader';
 import BrandLogo from '../../components/BrandLogo';
@@ -17,20 +18,30 @@ const DesignConceptualization = () => {
   }, []);
 
   // Design Process Stages
+  // Strategic Planning Phase (Gold - 4 items)
   const primaryStages = [
-    { id: 1, title: 'Concept Planning', desc: 'Transforming ideas into structured architectural blueprints', icon: FileText },
-    { id: 2, title: 'Design Integration & Coordination', desc: 'Seamless alignment of all design disciplines', icon: Layers },
-    { id: 3, title: 'Approval Management', desc: 'Navigating permits and regulatory compliance', icon: Building },
-    { id: 4, title: 'Sales & Marketing Cycle Activation', desc: 'Strategic positioning for market success', icon: Megaphone },
-    { id: 5, title: 'Legal Coordination', desc: 'Comprehensive documentation and legal safeguards', icon: Scale },
+    { id: 1, title: 'Identifying Investment Areas & Sites', desc: 'Strategic location scouting for high-growth potential', icon: MapPin },
+    { id: 2, title: 'Feasibility Analysis', desc: 'Comprehensive viability assessment and risk evaluation', icon: BarChart3 },
+    { id: 3, title: 'Precision Cost Planning', desc: 'Detailed budgeting with transparent financial clarity', icon: Calculator },
+    { id: 4, title: 'ROI Analysis', desc: 'Return projections and value optimization strategy', icon: TrendingUp },
   ];
 
+  // Planning & Coordination (Silver - 5 items)
+  const planningStages = [
+    { id: 5, title: 'Concept Planning', desc: 'Transforming ideas into structured architectural blueprints', icon: FileText },
+    { id: 6, title: 'Design Integration & Coordination', desc: 'Seamless alignment of all design disciplines', icon: Layers },
+    { id: 7, title: 'Approval Management', desc: 'Navigating permits and regulatory compliance', icon: Building },
+    { id: 8, title: 'Sales & Marketing Activation', desc: 'Strategic positioning for market success', icon: Megaphone },
+    { id: 9, title: 'Legal Coordination', desc: 'Comprehensive documentation and legal safeguards', icon: Scale },
+  ];
+
+  // Execution & Delivery (Dark - 5 items)
   const secondaryStages = [
-    { id: 6, title: 'Financial Forecasting', desc: 'Precise budget modeling and cash flow projections', icon: LineChart },
-    { id: 7, title: 'Infrastructure Development', desc: 'Essential utilities and site preparation', icon: Droplets },
-    { id: 8, title: 'Foundation & Concrete Works', desc: 'Structural groundwork for lasting stability', icon: Landmark },
-    { id: 9, title: 'Structural Framing & Roofing', desc: 'Core assembly and weather protection systems', icon: Frame },
-    { id: 10, title: 'End-to-End Construction Management', desc: 'Complete project oversight and delivery', icon: HardHat },
+    { id: 10, title: 'Financial Forecasting', desc: 'Precise budget modeling and cash flow projections', icon: LineChart },
+    { id: 11, title: 'Infrastructure Development', desc: 'Essential utilities and site preparation', icon: Droplets },
+    { id: 12, title: 'Foundation & Concrete Works', desc: 'Structural groundwork for lasting stability', icon: Landmark },
+    { id: 13, title: 'Structural Framing & Roofing', desc: 'Core assembly and weather protection systems', icon: Frame },
+    { id: 14, title: 'End-to-End Construction Management', desc: 'Complete project oversight and delivery', icon: HardHat },
   ];
 
   return (
@@ -139,7 +150,7 @@ const DesignConceptualization = () => {
             <div className="relative">
               {/* Desktop - Diagonal Staggered Layout */}
               <div className="hidden lg:block">
-                <div className="grid grid-cols-5 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                   {primaryStages.map((stage, index) => {
                     const Icon = stage.icon;
                     const offsetClass = index % 2 === 0 ? 'mt-0' : 'mt-12';
@@ -153,14 +164,10 @@ const DesignConceptualization = () => {
                         )}
 
                         {/* Card */}
-                        <div className="relative p-5 h-full rounded-2xl border border-gold-500/30 bg-gradient-to-br from-gold-500/[0.08] via-gold-600/[0.04] to-transparent backdrop-blur-sm hover:border-gold-400/60 hover:shadow-[0_0_50px_-15px_rgba(216,178,92,0.3)] transition-all duration-500 group-hover:translate-y-[-6px]">
+                        <div className="relative p-5 h-full rounded-2xl border border-gold-500/30 bg-gradient-to-br from-gold-500/[0.08] via-gold-600/[0.04] to-transparent bg-[#0D0D0D]/80 hover:border-gold-400/60 hover:shadow-[0_0_50px_-15px_rgba(216,178,92,0.3)] transition-all duration-500 group-hover:translate-y-[-6px]">
                           {/* Gold Glow Overlay */}
                           <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-gold-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                           
-                          {/* Stage Number */}
-                          <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-gold-400 to-gold-600 rounded-xl flex items-center justify-center shadow-[0_0_25px_rgba(216,178,92,0.4)] rotate-3 group-hover:rotate-0 transition-transform duration-300">
-                            <span className="text-[#0D0D0D] text-sm font-bold">{String(stage.id).padStart(2, '0')}</span>
-                          </div>
                           
                           {/* Icon */}
                           <div className="w-14 h-14 mb-4 mt-4 bg-[#0D0D0D] border border-gold-400/30 rounded-xl flex items-center justify-center group-hover:border-gold-400/60 group-hover:shadow-[0_0_20px_-5px_rgba(216,178,92,0.4)] transition-all duration-300">
@@ -186,9 +193,7 @@ const DesignConceptualization = () => {
                       <div className="flex gap-4">
                         {/* Left - Number & Line */}
                         <div className="flex flex-col items-center">
-                          <div className="w-12 h-12 bg-gradient-to-br from-gold-400 to-gold-600 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(216,178,92,0.3)]">
-                            <span className="text-[#0D0D0D] text-sm font-bold">{String(stage.id).padStart(2, '0')}</span>
-                          </div>
+<div className="w-3 h-3 bg-gradient-to-br from-gold-400 to-gold-600 rounded-full shadow-[0_0_10px_rgba(216,178,92,0.3)]"></div>
                           {index < primaryStages.length - 1 && (
                             <div className="w-px h-full bg-gradient-to-b from-gold-400/50 to-gold-400/10 mt-2"></div>
                           )}
@@ -217,45 +222,75 @@ const DesignConceptualization = () => {
           </div>
 
           {/* Transition Arrow */}
-          <div className="flex justify-center mb-16">
+          <div className="flex justify-center mb-12">
             <div className="flex flex-col items-center">
-              <div className="w-px h-12 bg-gradient-to-b from-gold-400/40 to-zinc-600/30"></div>
-              <div className="w-10 h-10 border-2 border-zinc-600 rounded-full bg-[#0D0D0D] flex items-center justify-center">
-                <ChevronDown className="w-5 h-5 text-zinc-500" />
-              </div>
-              <div className="w-px h-12 bg-gradient-to-b from-zinc-600/30 to-zinc-700/10"></div>
+              <div className="w-px h-8 bg-gradient-to-b from-gold-400/50 to-zinc-600/30"></div>
+              <div className="w-3 h-3 border-2 border-zinc-600 rounded-full bg-[#0D0D0D]"></div>
+              <div className="w-px h-8 bg-gradient-to-b from-zinc-600/30 to-zinc-700/20"></div>
             </div>
           </div>
 
-          {/* Secondary Stages - Silver/Charcoal - Horizontal Flow */}
-          <div className="mb-16">
-            <div className="flex items-center gap-3 mb-8">
+          {/* Planning & Coordination - Silver (5 items) */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-6">
               <div className="w-3 h-3 bg-zinc-500 rounded-full"></div>
-              <span className="text-zinc-400 text-xs font-semibold tracking-[0.15em] uppercase">Execution & Delivery Phase</span>
-              <div className="flex-1 h-px bg-gradient-to-r from-zinc-600/40 to-transparent"></div>
+              <span className="text-zinc-400 text-xs font-semibold tracking-wider uppercase">Planning & Coordination</span>
+              <div className="flex-1 h-px bg-gradient-to-r from-zinc-600/30 to-transparent"></div>
             </div>
-
-            {/* Horizontal Scroll on Mobile, Grid on Desktop */}
-            <div className="hidden md:grid md:grid-cols-5 gap-3">
-              {secondaryStages.map((stage, index) => {
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {planningStages.map((stage) => {
                 const Icon = stage.icon;
                 return (
-                  <div key={stage.id} className="group relative">
-                    {/* Connector */}
-                    {index < secondaryStages.length - 1 && (
-                      <div className="absolute top-1/2 -right-1.5 w-3 h-px bg-zinc-700/50 hidden md:block"></div>
-                    )}
-                    
-                    {/* Card */}
-                    <div className="h-full p-4 bg-gradient-to-b from-zinc-800/50 to-zinc-900/30 border border-zinc-700/30 rounded-xl hover:border-zinc-500/50 hover:bg-zinc-800/60 transition-all duration-300 group-hover:translate-y-[-3px]">
+                  <div key={stage.id} className="group">
+                    <div className="h-full p-4 bg-gradient-to-b from-zinc-800/40 to-zinc-900/30 border border-zinc-700/30 rounded-xl bg-[#0D0D0D]/80 hover:border-zinc-500/50 hover:bg-zinc-800/50 transition-all duration-300 group-hover:translate-y-[-2px]">
                       <div className="flex items-center justify-between mb-3">
-                        <div className="w-10 h-10 bg-zinc-800 border border-zinc-600/40 rounded-lg flex items-center justify-center group-hover:border-zinc-500/60 transition-colors">
-                          <Icon className="w-5 h-5 text-zinc-400 group-hover:text-zinc-300 transition-colors" strokeWidth={1.5} />
+                        <div className="w-8 h-8 bg-zinc-800 border border-zinc-600/50 rounded-lg flex items-center justify-center group-hover:border-zinc-500 transition-colors">
+                          <Icon className="w-4 h-4 text-zinc-400 group-hover:text-zinc-300 transition-colors" strokeWidth={1.5} />
                         </div>
-                        <span className="text-zinc-700 text-[10px] font-bold tracking-wider">{String(stage.id).padStart(2, '0')}</span>
                       </div>
-                      <h3 className="text-sm font-medium text-zinc-300 mb-1.5 leading-tight group-hover:text-white transition-colors">{stage.title}</h3>
+                      <h3 className="text-sm font-medium text-zinc-300 mb-1 leading-tight group-hover:text-white transition-colors">{stage.title}</h3>
                       <p className="text-zinc-600 text-xs leading-relaxed">{stage.desc}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Flow Connector */}
+          <div className="flex justify-center mb-12">
+            <div className="flex flex-col items-center">
+              <div className="w-px h-6 bg-gradient-to-b from-zinc-700/20 to-zinc-700/10"></div>
+              <div className="w-2 h-2 border border-zinc-700 rounded-full bg-[#0D0D0D]"></div>
+              <div className="w-px h-6 bg-gradient-to-b from-zinc-700/10 to-zinc-800/5"></div>
+            </div>
+          </div>
+
+          {/* Execution & Delivery Phase (5 items) */}
+          <div className="mb-16">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-3 h-3 bg-zinc-600 rounded-full"></div>
+              <span className="text-zinc-500 text-xs font-semibold tracking-wider uppercase">Execution & Delivery</span>
+              <div className="flex-1 h-px bg-gradient-to-r from-zinc-700/20 to-transparent"></div>
+            </div>
+
+            {/* Desktop Grid */}
+            <div className="hidden md:grid md:grid-cols-5 gap-3">
+              {secondaryStages.map((stage) => {
+                const Icon = stage.icon;
+                return (
+                  <div key={stage.id} className="group">
+                    <div className="h-full p-4 bg-gradient-to-b from-zinc-800/30 to-zinc-900/20 border border-zinc-800/40 rounded-xl hover:border-zinc-700/50 transition-all duration-300 group-hover:translate-y-[-2px]">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 flex-shrink-0 bg-zinc-800/50 border border-zinc-700/30 rounded-lg flex items-center justify-center group-hover:border-zinc-600/50 transition-colors">
+                          <Icon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-400 transition-colors" strokeWidth={1.5} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-zinc-400 group-hover:text-zinc-300 transition-colors truncate">{stage.title}</h3>
+                          <p className="text-zinc-600 text-xs leading-relaxed mt-1">{stage.desc}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -274,7 +309,6 @@ const DesignConceptualization = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-medium text-zinc-300 truncate">{stage.title}</h3>
-                        <span className="text-zinc-700 text-[10px] font-bold">{String(stage.id).padStart(2, '0')}</span>
                       </div>
                       <p className="text-zinc-600 text-xs mt-0.5">{stage.desc}</p>
                     </div>
@@ -292,10 +326,8 @@ const DesignConceptualization = () => {
               
               {/* Loop Element */}
               <div className="relative">
-                {/* Outer Ring Animation */}
-                <div className="absolute inset-0 rounded-full border border-gold-400/20 animate-[ping_3s_ease-in-out_infinite]"></div>
                 
-                <div className="relative px-8 py-6 bg-gradient-to-br from-gold-500/[0.1] via-gold-400/[0.06] to-transparent border border-gold-500/30 rounded-full backdrop-blur-sm hover:border-gold-400/50 hover:shadow-[0_0_60px_-20px_rgba(216,178,92,0.35)] transition-all duration-500">
+                <div className="relative px-8 py-6 bg-gradient-to-br from-gold-500/[0.1] via-gold-400/[0.06] to-transparent border border-gold-500/30 rounded-full bg-[#0D0D0D]/80 hover:border-gold-400/50 hover:shadow-[0_0_60px_-20px_rgba(216,178,92,0.35)] transition-all duration-500">
                   <div className="flex items-center gap-5">
                     <div className="w-16 h-16 bg-[#0D0D0D] border-2 border-gold-400/40 rounded-full flex items-center justify-center group-hover:border-gold-400/70 group-hover:shadow-[0_0_30px_-8px_rgba(216,178,92,0.5)] transition-all duration-500">
                       <RefreshCw className="w-8 h-8 text-gold-400 group-hover:rotate-180 transition-transform duration-700" strokeWidth={1.5} />
@@ -325,7 +357,7 @@ const DesignConceptualization = () => {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[150px] bg-gold-400/10 rounded-full blur-[80px]"></div>
         
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center p-8 md:p-10 bg-gradient-to-b from-zinc-900/50 to-zinc-900/20 border border-gold-500/20 rounded-3xl backdrop-blur-sm hover:border-gold-400/40 transition-all duration-500">
+          <div className="text-center p-8 md:p-10 bg-gradient-to-b from-zinc-900/50 to-zinc-900/20 border border-gold-500/20 rounded-3xl bg-[#0D0D0D]/80 hover:border-gold-400/40 transition-all duration-500">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-white mb-3 tracking-tight">
               Let's Design Your <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Dream Space</span>
             </h2>

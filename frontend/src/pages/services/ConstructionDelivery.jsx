@@ -36,11 +36,11 @@ const ConstructionDelivery = () => {
 
   // Tertiary stages - Construction Phase
   const tertiaryStages = [
-    { id: 10, title: 'Financial Forecasting', desc: 'Cash flow modeling and tracking', icon: LineChart },
-    { id: 11, title: 'Infrastructure Development', desc: 'Utilities and site services', icon: Droplets },
-    { id: 12, title: 'Foundation & Concrete', desc: 'Structural groundwork', icon: Landmark },
-    { id: 13, title: 'Framing & Roofing', desc: 'Core structural assembly', icon: Frame },
-    { id: 14, title: 'Construction Management', desc: 'End-to-end project delivery', icon: HardHat },
+    { id: 1, title: 'Financial Forecasting', desc: 'Cash flow modeling and tracking', icon: LineChart },
+    { id: 2, title: 'Infrastructure Development', desc: 'Utilities and site services', icon: Droplets },
+    { id: 3, title: 'Foundation & Concrete', desc: 'Structural groundwork', icon: Landmark },
+    { id: 4, title: 'Framing & Roofing', desc: 'Core structural assembly', icon: Frame },
+    { id: 5, title: 'Construction Management', desc: 'End-to-end project delivery', icon: HardHat },
   ];
 
   return (
@@ -156,7 +156,6 @@ const ConstructionDelivery = () => {
                         <div className="w-12 h-12 bg-zinc-800 border border-zinc-600/40 rounded-lg flex items-center justify-center group-hover:border-zinc-500/60 transition-colors">
                           <Icon className="w-6 h-6 text-zinc-400 group-hover:text-zinc-300 transition-colors" strokeWidth={1.5} />
                         </div>
-                        <span className="text-zinc-600 text-xs font-bold tracking-wider">{String(stage.id).padStart(2, '0')}</span>
                       </div>
                       <h3 className="text-base font-semibold text-zinc-300 mb-2 leading-tight group-hover:text-white transition-colors">{stage.title}</h3>
                       <p className="text-zinc-600 text-sm leading-relaxed">{stage.desc}</p>
@@ -178,7 +177,6 @@ const ConstructionDelivery = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-medium text-zinc-300 truncate">{stage.title}</h3>
-                        <span className="text-zinc-700 text-[10px] font-bold">{String(stage.id).padStart(2, '0')}</span>
                       </div>
                       <p className="text-zinc-600 text-xs mt-0.5">{stage.desc}</p>
                     </div>
@@ -218,7 +216,6 @@ const ConstructionDelivery = () => {
                         <div className="w-10 h-10 bg-zinc-800 border border-zinc-600/40 rounded-lg flex items-center justify-center group-hover:border-zinc-500/60 transition-colors">
                           <Icon className="w-5 h-5 text-zinc-400 group-hover:text-zinc-300 transition-colors" strokeWidth={1.5} />
                         </div>
-                        <span className="text-zinc-700 text-[10px] font-bold tracking-wider">{String(stage.id).padStart(2, '0')}</span>
                       </div>
                       <h3 className="text-sm font-medium text-zinc-300 mb-1.5 leading-tight group-hover:text-white transition-colors">{stage.title}</h3>
                       <p className="text-zinc-600 text-xs leading-relaxed">{stage.desc}</p>
@@ -240,7 +237,6 @@ const ConstructionDelivery = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-medium text-zinc-300 truncate">{stage.title}</h3>
-                        <span className="text-zinc-700 text-[10px] font-bold">{String(stage.id).padStart(2, '0')}</span>
                       </div>
                       <p className="text-zinc-600 text-xs mt-0.5">{stage.desc}</p>
                     </div>
@@ -275,14 +271,10 @@ const ConstructionDelivery = () => {
                 const Icon = stage.icon;
                 return (
                   <div key={stage.id} className="group relative">
-                    <div className="relative p-5 h-full rounded-2xl border border-gold-500/30 bg-gradient-to-br from-gold-500/[0.08] via-gold-600/[0.04] to-transparent backdrop-blur-sm hover:border-gold-400/60 hover:shadow-[0_0_50px_-15px_rgba(216,178,92,0.3)] transition-all duration-500 group-hover:translate-y-[-6px]">
+                    <div className="relative p-5 h-full rounded-2xl border border-gold-500/30 bg-gradient-to-br from-gold-500/[0.08] via-gold-600/[0.04] to-transparent bg-[#0D0D0D]/80 hover:border-gold-400/60 hover:shadow-[0_0_50px_-15px_rgba(216,178,92,0.3)] transition-all duration-500 group-hover:translate-y-[-6px]">
                       {/* Gold Glow Overlay */}
                       <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-gold-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                       
-                      {/* Stage Number */}
-                      <div className="absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-br from-gold-400 to-gold-600 rounded-xl flex items-center justify-center shadow-[0_0_25px_rgba(216,178,92,0.4)] rotate-3 group-hover:rotate-0 transition-transform duration-300">
-                        <span className="text-[#0D0D0D] text-sm font-bold">{String(stage.id).padStart(2, '0')}</span>
-                      </div>
                       
                       {/* Icon */}
                       <div className="w-14 h-14 mb-4 mt-4 bg-[#0D0D0D] border border-gold-400/30 rounded-xl flex items-center justify-center group-hover:border-gold-400/60 group-hover:shadow-[0_0_20px_-5px_rgba(216,178,92,0.4)] transition-all duration-300">
@@ -307,9 +299,7 @@ const ConstructionDelivery = () => {
                     <div className="flex gap-4">
                       {/* Left - Number & Line */}
                       <div className="flex flex-col items-center">
-                        <div className="w-12 h-12 bg-gradient-to-br from-gold-400 to-gold-600 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(216,178,92,0.3)]">
-                          <span className="text-[#0D0D0D] text-sm font-bold">{String(stage.id).padStart(2, '0')}</span>
-                        </div>
+<div className="w-3 h-3 bg-gradient-to-br from-gold-400 to-gold-600 rounded-full shadow-[0_0_10px_rgba(216,178,92,0.3)]"></div>
                         {index < tertiaryStages.length - 1 && (
                           <div className="w-px h-full bg-gradient-to-b from-gold-400/50 to-gold-400/10 mt-2"></div>
                         )}
@@ -344,10 +334,8 @@ const ConstructionDelivery = () => {
               
               {/* Loop Element */}
               <div className="relative">
-                {/* Outer Ring Animation */}
-                <div className="absolute inset-0 rounded-full border border-gold-400/20 animate-[ping_3s_ease-in-out_infinite]"></div>
                 
-                <div className="relative px-8 py-6 bg-gradient-to-br from-gold-500/[0.1] via-gold-400/[0.06] to-transparent border border-gold-500/30 rounded-full backdrop-blur-sm hover:border-gold-400/50 hover:shadow-[0_0_60px_-20px_rgba(216,178,92,0.35)] transition-all duration-500">
+                <div className="relative px-8 py-6 bg-gradient-to-br from-gold-500/[0.1] via-gold-400/[0.06] to-transparent border border-gold-500/30 rounded-full bg-[#0D0D0D]/80 hover:border-gold-400/50 hover:shadow-[0_0_60px_-20px_rgba(216,178,92,0.35)] transition-all duration-500">
                   <div className="flex items-center gap-5">
                     <div className="w-16 h-16 bg-[#0D0D0D] border-2 border-gold-400/40 rounded-full flex items-center justify-center group-hover:border-gold-400/70 group-hover:shadow-[0_0_30px_-8px_rgba(216,178,92,0.5)] transition-all duration-500">
                       <RefreshCw className="w-8 h-8 text-gold-400 group-hover:rotate-180 transition-transform duration-700" strokeWidth={1.5} />
@@ -377,7 +365,7 @@ const ConstructionDelivery = () => {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[150px] bg-gold-400/10 rounded-full blur-[80px]"></div>
         
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center p-8 md:p-10 bg-gradient-to-b from-zinc-900/50 to-zinc-900/20 border border-gold-500/20 rounded-3xl backdrop-blur-sm hover:border-gold-400/40 transition-all duration-500">
+          <div className="text-center p-8 md:p-10 bg-gradient-to-b from-zinc-900/50 to-zinc-900/20 border border-gold-500/20 rounded-3xl bg-[#0D0D0D]/80 hover:border-gold-400/40 transition-all duration-500">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-white mb-3 tracking-tight">
               Ready to Build Your <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Dream Project</span>?
             </h2>

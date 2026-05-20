@@ -69,7 +69,7 @@ const CookieConsent = () => {
     <div className="fixed inset-0 z-[9999] flex items-end justify-center p-4 pointer-events-none">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
+        className="fixed inset-0 bg-black/70 pointer-events-auto"
         onClick={() => {}}
       />
       

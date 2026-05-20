@@ -61,7 +61,7 @@ const MainHeader = () => {
     <nav className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-500 ${
       isScrolled || isServicePage || servicesDropdownOpen
         ? 'bg-[#0D0D0D] shadow-2xl shadow-black/80 border-b border-gold-500/20' 
-        : 'bg-[#0D0D0D]/95 backdrop-blur-xl'
+        : 'bg-[#0D0D0D]'
     }`}>
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-24">
@@ -190,7 +190,7 @@ const MainHeader = () => {
       <div className={`lg:hidden overflow-hidden transition-all duration-500 ${
         mobileMenuOpen ? 'max-h-[700px] opacity-100' : 'max-h-0 opacity-0'
       }`}>
-        <div className="bg-[#0D0D0D]/98 backdrop-blur-2xl border-t border-gold-500/10 px-6 py-8 space-y-2">
+        <div className="bg-[#0D0D0D] border-t border-gold-500/10 px-6 py-8 space-y-2">
           {navLinks.map((link) => (
             <div key={link.id}>
               {link.hasDropdown ? (
