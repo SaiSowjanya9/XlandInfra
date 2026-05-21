@@ -7,7 +7,7 @@ import {
 import PhoneInput from '../common/PhoneInput';
 import { 
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
-  getAMCPackageByPropertyId, addService, FREQUENCY_TYPES,
+  getAMCPackageByPropertyId, addService, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP,
   getAMCPackages, getAddons, seedTestData, getAMCPackageByPropertyType,
   migratePackagesToServiceRows, getAMCPackagesByPropertyType
 } from '../../utils/estimateStore';
@@ -16,15 +16,6 @@ import { getProperties, getPropertyById, extractBlockNames, extractTotalUnits, e
 
 // Subcategory options for services
 const SUBCATEGORIES = ['Maintenance', 'Cleaning', 'Security', 'Landscaping', 'Utilities', 'Other'];
-
-// Auto-calculate frequency count based on frequency type
-const FREQUENCY_COUNT_MAP = {
-  'Monthly': 1,
-  'Quarterly': 3,
-  'Half-yearly': 6,
-  'Yearly': 12,
-  'Custom Months': null // User enters manually
-};
 
 const PROPERTY_ICONS = {
   APT: Home,
@@ -53,9 +44,29 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
   const [availableAddons, setAvailableAddons] = useState([]); // Add-ons from Add-ons manager
   const [selectedPackage, setSelectedPackage] = useState(null); // Selected AMC Package
   const [selectedAddons, setSelectedAddons] = useState([]); // Selected add-ons
+  const [showCustomAddon, setShowCustomAddon] = useState(false); // Show custom addon form
+  const [customAddonForm, setCustomAddonForm] = useState({
+    serviceName: '',
+    frequencyType: 'Monthly',
+    frequencyCount: 1,
+    price: ''
+  });
   const [discount, setDiscount] = useState(''); // Discount percentage
   const [gstRate, setGstRate] = useState('18'); // GST percentage - customizable
   const [subcategories, setSubcategories] = useState(SUBCATEGORIES); // Dynamic subcategories
+  const [directSelectedPackage, setDirectSelectedPackage] = useState(null); // Package for Direct estimate
+  const [directSelectedAddons, setDirectSelectedAddons] = useState([]); // Add-ons for Direct estimate
+  const [directShowCustomAddon, setDirectShowCustomAddon] = useState(false);
+  const [directCustomAddonForm, setDirectCustomAddonForm] = useState({
+    serviceName: '',
+    frequencyType: 'Monthly',
+    frequencyCount: 1,
+    price: ''
+  });
+  const [directDiscount, setDirectDiscount] = useState('');
+  const [directGstRate, setDirectGstRate] = useState('18');
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [estimateForm, setEstimateForm] = useState({
     // Property-based auto-populated fields
     propertyId: '',
@@ -289,15 +300,237 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
   // Handle adding an add-on from dropdown
   const handleAddAddon = (addonId) => {
     if (!addonId) return;
+    if (addonId === 'OTHER') {
+      setShowCustomAddon(true);
+      return;
+    }
     const addon = availableAddons.find(a => a.addonId === addonId);
     if (addon && !selectedAddons.find(a => a.addonId === addonId)) {
       setSelectedAddons([...selectedAddons, addon]);
     }
   };
 
+  // Handle custom addon form changes
+  const handleCustomAddonChange = (field, value) => {
+    if (field === 'frequencyType') {
+      const autoCount = FREQUENCY_COUNT_MAP[value];
+      setCustomAddonForm(prev => ({
+        ...prev,
+        frequencyType: value,
+        frequencyCount: autoCount !== null ? autoCount : prev.frequencyCount
+      }));
+    } else {
+      setCustomAddonForm(prev => ({ ...prev, [field]: value }));
+    }
+  };
+
+  // Handle adding custom addon
+  const handleAddCustomAddon = () => {
+    if (!customAddonForm.serviceName.trim()) {
+      showToast?.('Please enter a service name', 'error');
+      return;
+    }
+    if (!customAddonForm.price || parseFloat(customAddonForm.price) <= 0) {
+      showToast?.('Please enter a valid price', 'error');
+      return;
+    }
+
+    const customAddon = {
+      addonId: `CUSTOM-${Date.now()}`,
+      isCustom: true,
+      services: [{
+        name: customAddonForm.serviceName.trim(),
+        frequencyType: customAddonForm.frequencyType,
+        frequency: parseInt(customAddonForm.frequencyCount) || 1,
+        price: parseFloat(customAddonForm.price)
+      }],
+      totalPrice: parseFloat(customAddonForm.price)
+    };
+
+    setSelectedAddons([...selectedAddons, customAddon]);
+    setShowCustomAddon(false);
+    setCustomAddonForm({
+      serviceName: '',
+      frequencyType: 'Monthly',
+      frequencyCount: 1,
+      price: ''
+    });
+  };
+
+  // Cancel custom addon
+  const handleCancelCustomAddon = () => {
+    setShowCustomAddon(false);
+    setCustomAddonForm({
+      serviceName: '',
+      frequencyType: 'Monthly',
+      frequencyCount: 1,
+      price: ''
+    });
+  };
+
   // Handle removing an add-on
   const handleRemoveAddon = (addonId) => {
     setSelectedAddons(selectedAddons.filter(a => a.addonId !== addonId));
+  };
+
+  // Phone validation - 10 digits only
+  const validatePhone = (phone) => {
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phone) return '';
+    if (!phoneRegex.test(phone)) {
+      return 'Phone must be exactly 10 digits';
+    }
+    return '';
+  };
+
+  // Email validation
+  const validateEmail = (email) => {
+    if (!email) return '';
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      return 'Please enter a valid email address';
+    }
+    return '';
+  };
+
+  // Handle phone change with validation
+  const handlePhoneChange = (value) => {
+    const numericValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+    setEstimateForm({ ...estimateForm, phone: numericValue });
+    setPhoneError(validatePhone(numericValue));
+  };
+
+  // Handle email change with validation
+  const handleEmailChange = (value) => {
+    setEstimateForm({ ...estimateForm, email: value });
+    setEmailError(validateEmail(value));
+  };
+
+  // Direct Estimate - Package selection handler
+  const handleDirectPackageSelect = (packageId) => {
+    if (!packageId) {
+      setDirectSelectedPackage(null);
+      return;
+    }
+    const pkg = availablePackages.find(p => p.packageId === packageId);
+    setDirectSelectedPackage(pkg || null);
+  };
+
+  // Direct Estimate - Get package price
+  const getDirectPackagePrice = () => {
+    if (!directSelectedPackage) return 0;
+    return directSelectedPackage.rate || directSelectedPackage.totalPrice || 0;
+  };
+
+  // Direct Estimate - Get add-ons total
+  const getDirectAddonsTotal = () => {
+    return directSelectedAddons.reduce((sum, addon) => {
+      const addonTotal = addon.services?.reduce((s, service) => {
+        const price = parseFloat(service.price) || 0;
+        const frequency = parseInt(service.frequency) || 1;
+        return s + (price * frequency);
+      }, 0) || addon.totalPrice || 0;
+      return sum + addonTotal;
+    }, 0);
+  };
+
+  // Direct Estimate - Calculate subtotal
+  const calculateDirectSubTotal = () => {
+    return getDirectPackagePrice() + getDirectAddonsTotal();
+  };
+
+  // Direct Estimate - Get discount amount
+  const getDirectDiscountAmount = () => {
+    const subtotal = calculateDirectSubTotal();
+    const discountPercent = parseFloat(directDiscount) || 0;
+    return Math.round(subtotal * (discountPercent / 100));
+  };
+
+  // Direct Estimate - Calculate GST
+  const calculateDirectGST = () => {
+    const subtotal = calculateDirectSubTotal();
+    const discountAmount = getDirectDiscountAmount();
+    const gst = parseFloat(directGstRate) || 18;
+    return Math.round((subtotal - discountAmount) * (gst / 100));
+  };
+
+  // Direct Estimate - Calculate total
+  const calculateDirectTotal = () => {
+    return calculateDirectSubTotal() - getDirectDiscountAmount() + calculateDirectGST();
+  };
+
+  // Direct Estimate - Add addon
+  const handleDirectAddAddon = (addonId) => {
+    if (!addonId) return;
+    if (addonId === 'OTHER') {
+      setDirectShowCustomAddon(true);
+      return;
+    }
+    const addon = availableAddons.find(a => a.addonId === addonId);
+    if (addon && !directSelectedAddons.find(a => a.addonId === addonId)) {
+      setDirectSelectedAddons([...directSelectedAddons, addon]);
+    }
+  };
+
+  // Direct Estimate - Remove addon
+  const handleDirectRemoveAddon = (addonId) => {
+    setDirectSelectedAddons(directSelectedAddons.filter(a => a.addonId !== addonId));
+  };
+
+  // Direct Estimate - Custom addon handlers
+  const handleDirectCustomAddonChange = (field, value) => {
+    if (field === 'frequencyType') {
+      const autoCount = FREQUENCY_COUNT_MAP[value];
+      setDirectCustomAddonForm(prev => ({
+        ...prev,
+        frequencyType: value,
+        frequencyCount: autoCount !== null ? autoCount : prev.frequencyCount
+      }));
+    } else {
+      setDirectCustomAddonForm(prev => ({ ...prev, [field]: value }));
+    }
+  };
+
+  const handleDirectAddCustomAddon = () => {
+    if (!directCustomAddonForm.serviceName.trim()) {
+      showToast?.('Please enter a service name', 'error');
+      return;
+    }
+    if (!directCustomAddonForm.price || parseFloat(directCustomAddonForm.price) <= 0) {
+      showToast?.('Please enter a valid price', 'error');
+      return;
+    }
+
+    const customAddon = {
+      addonId: `CUSTOM-${Date.now()}`,
+      isCustom: true,
+      services: [{
+        name: directCustomAddonForm.serviceName.trim(),
+        frequencyType: directCustomAddonForm.frequencyType,
+        frequency: parseInt(directCustomAddonForm.frequencyCount) || 1,
+        price: parseFloat(directCustomAddonForm.price)
+      }],
+      totalPrice: parseFloat(directCustomAddonForm.price)
+    };
+
+    setDirectSelectedAddons([...directSelectedAddons, customAddon]);
+    setDirectShowCustomAddon(false);
+    setDirectCustomAddonForm({
+      serviceName: '',
+      frequencyType: 'Monthly',
+      frequencyCount: 1,
+      price: ''
+    });
+  };
+
+  const handleDirectCancelCustomAddon = () => {
+    setDirectShowCustomAddon(false);
+    setDirectCustomAddonForm({
+      serviceName: '',
+      frequencyType: 'Monthly',
+      frequencyCount: 1,
+      price: ''
+    });
   };
 
   const handleSave = () => {
@@ -321,9 +554,21 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       showToast?.('Phone number is required', 'error');
       return;
     }
+    if (estimateType === 'direct' && estimateForm.phone.length !== 10) {
+      showToast?.('Phone must be exactly 10 digits', 'error');
+      return;
+    }
+    if (estimateType === 'direct' && estimateForm.email && emailError) {
+      showToast?.('Please enter a valid email address', 'error');
+      return;
+    }
+    if (estimateType === 'direct' && !directSelectedPackage) {
+      showToast?.('Please select an AMC Package', 'error');
+      return;
+    }
 
     // For property-based: use package + addons
-    // For direct: use individual services
+    // For direct: use package + addons (same as property-based)
     let allServices = [];
     if (estimateType === 'property' && selectedPackage) {
       // Package services (auto-populated from package)
@@ -333,25 +578,28 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
         services: selectedPackage.services,
         price: selectedPackage.rate
       }];
+    } else if (estimateType === 'direct' && directSelectedPackage) {
+      // Direct estimate with package
+      allServices = [{
+        name: directSelectedPackage.packageName,
+        type: 'package',
+        services: directSelectedPackage.services,
+        price: directSelectedPackage.rate
+      }];
     } else {
-      // Combine locked services with new services
-      const newValidServices = estimateForm.services.filter(s => s.name && s.name.trim() && s.price);
-      allServices = [...lockedServices, ...newValidServices];
-      
-      if (allServices.length === 0) {
-        showToast?.('At least one service with price is required', 'error');
-        return;
-      }
+      // Fallback - should not reach here with new validation
+      showToast?.('Please select an AMC Package', 'error');
+      return;
     }
 
     const estimateData = {
       estimateType: estimateType === 'property' ? 'property-based' : 'direct',
       services: allServices,
       notes: estimateForm.notes,
-      subTotal: calculateSubTotal(),
-      gst: calculateGST(),
-      discount: getDiscountAmount(),
-      totalPrice: calculateTotal(),
+      subTotal: estimateType === 'direct' ? calculateDirectSubTotal() : calculateSubTotal(),
+      gst: estimateType === 'direct' ? calculateDirectGST() : calculateGST(),
+      discount: estimateType === 'direct' ? getDirectDiscountAmount() : getDiscountAmount(),
+      totalPrice: estimateType === 'direct' ? calculateDirectTotal() : calculateTotal(),
       status: estimateType === 'direct' ? 'Archived' : 'Draft'
     };
 
@@ -390,7 +638,8 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       estimateData.email = estimateForm.email;
       estimateData.customerEmail = estimateForm.email;
       estimateData.propertyName = estimateForm.propertyName;
-      estimateData.entryType = estimateForm.entryType;
+      estimateData.propertyType = estimateForm.propertyType;
+      estimateData.entryType = estimateForm.propertyType;
       estimateData.zone = estimateForm.zone;
       estimateData.areaName = estimateForm.areaName;
       estimateData.division = estimateForm.division;
@@ -400,6 +649,23 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       estimateData.blockTower = estimateForm.blockTower;
       estimateData.blockNumber = estimateForm.blockNumber;
       estimateData.flatUnit = estimateForm.flatUnit;
+      
+      // Package info for direct estimate
+      if (directSelectedPackage) {
+        estimateData.packageId = directSelectedPackage.packageId;
+        estimateData.packageName = directSelectedPackage.packageName;
+        estimateData.packageRate = getDirectPackagePrice();
+      }
+      
+      // Add-ons info for direct estimate
+      if (directSelectedAddons.length > 0) {
+        estimateData.addons = directSelectedAddons.map(a => ({
+          addonId: a.addonId,
+          services: a.services,
+          totalPrice: a.totalPrice
+        }));
+        estimateData.addonsTotal = getDirectAddonsTotal();
+      }
     }
 
     const createdEstimate = createEstimate(estimateData);
@@ -1061,7 +1327,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     <select
                       onChange={(e) => {
                         handleAddAddon(e.target.value);
-                        e.target.value = '';
+                        if (e.target.value !== 'OTHER') e.target.value = '';
                       }}
                       className="w-full px-4 py-2.5 text-sm border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 appearance-none bg-white"
                     >
@@ -1073,16 +1339,95 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                             {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
                           </option>
                         ))}
+                      <option value="OTHER" className="font-semibold text-blue-600">➕ Other (Custom Service)</option>
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 pointer-events-none" />
                   </div>
                   
-                  {availableAddons.length === 0 && (
+                  {availableAddons.length === 0 && !showCustomAddon && (
                     <p className="text-xs text-amber-600 mt-2">
-                      No add-ons available. Create add-ons in the Add-ons section first.
+                      No add-ons available. Create add-ons in the Add-ons section or select "Other" for custom service.
                     </p>
                   )}
                 </div>
+
+                {/* Custom Add-on Form - Shows when "Other" is selected */}
+                {showCustomAddon && (
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-blue-800">Add Custom Service</h4>
+                      <button
+                        onClick={handleCancelCustomAddon}
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-12 gap-3">
+                      {/* Service Name */}
+                      <div className="col-span-4">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Service Name *</label>
+                        <input
+                          type="text"
+                          value={customAddonForm.serviceName}
+                          onChange={(e) => handleCustomAddonChange('serviceName', e.target.value)}
+                          placeholder="Enter service name"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                        />
+                      </div>
+                      {/* Frequency Type */}
+                      <div className="col-span-3">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Frequency</label>
+                        <select
+                          value={customAddonForm.frequencyType}
+                          onChange={(e) => handleCustomAddonChange('frequencyType', e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 bg-white"
+                        >
+                          {FREQUENCY_TYPES.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {/* Count */}
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Count</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={customAddonForm.frequencyCount}
+                          onChange={(e) => handleCustomAddonChange('frequencyCount', e.target.value)}
+                          readOnly={customAddonForm.frequencyType !== 'Custom Months'}
+                          className={`w-full px-3 py-2 text-sm border rounded-md text-center ${
+                            customAddonForm.frequencyType === 'Custom Months'
+                              ? 'border-blue-300 bg-white focus:ring-2 focus:ring-blue-200'
+                              : 'border-gray-200 bg-gray-100 cursor-not-allowed'
+                          }`}
+                        />
+                      </div>
+                      {/* Price */}
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Price (₹) *</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={customAddonForm.price}
+                          onChange={(e) => handleCustomAddonChange('price', e.target.value.replace(/[^0-9]/g, ''))}
+                          placeholder="0"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                        />
+                      </div>
+                      {/* Add Button */}
+                      <div className="col-span-1 flex items-end">
+                        <button
+                          onClick={handleAddCustomAddon}
+                          className="w-full px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Selected Add-ons Table - Blue theme */}
                 {selectedAddons.length > 0 && (
@@ -1254,22 +1599,25 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                   <input
                     type="text"
                     value={estimateForm.phone}
-                    onChange={(e) => setEstimateForm({ ...estimateForm, phone: e.target.value })}
-                    className="flex-1 px-3 py-2 text-sm border border-l-0 border-gray-300 rounded-r-md focus:ring-2 focus:ring-blue-200"
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    className={`flex-1 px-3 py-2 text-sm border border-l-0 rounded-r-md focus:ring-2 focus:ring-blue-200 ${phoneError ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                     placeholder="10-digit phone number"
+                    maxLength={10}
                     required
                   />
                 </div>
+                {phoneError && <p className="text-xs text-red-500 mt-1">{phoneError}</p>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
                 <input
                   type="email"
                   value={estimateForm.email}
-                  onChange={(e) => setEstimateForm({ ...estimateForm, email: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 ${emailError ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                   placeholder="Enter email address"
                 />
+                {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
               </div>
             </div>
           </div>
@@ -1496,178 +1844,346 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
             </div>
           </div>
 
-          {/* AMC Services Section */}
+          {/* AMC Package Section - Same as Property-Based */}
           <>
             <div className="px-6 py-3 bg-gray-100 border-b border-gray-200">
-              <h3 className="text-base font-semibold text-gray-800">AMC Services</h3>
+              <h3 className="text-base font-semibold text-gray-800">AMC Package</h3>
             </div>
             
             <div className="px-6 py-4">
-              {/* Table Header */}
-              <div className="grid grid-cols-12 gap-2 mb-2 px-2 py-2 bg-gray-100 rounded-t-md">
-                <div className="col-span-1 text-xs font-semibold text-gray-700">#</div>
-                <div className="col-span-2 text-xs font-semibold text-gray-700">
-                  Subcategory
+              {/* AMC Package Dropdown - Filtered by Property Type */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select AMC Package <span className="text-red-500">*</span>
+                </label>
+                <div className="relative max-w-md">
+                  <select
+                    value={directSelectedPackage?.packageId || ''}
+                    onChange={(e) => handleDirectPackageSelect(e.target.value)}
+                    className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
+                  >
+                    <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                    {(() => {
+                      const propertyType = estimateForm.propertyType;
+                      const filteredPkgs = propertyType 
+                        ? availablePackages.filter(pkg => {
+                            const pkgType = pkg.propertyType?.toUpperCase();
+                            const searchType = propertyType.toUpperCase();
+                            return pkgType === searchType || 
+                                   (pkgType === 'GC' && searchType === 'GC') ||
+                                   (pkgType === 'APT' && (searchType === 'APT' || searchType === 'APARTMENT')) ||
+                                   (pkgType === 'VILLA' && (searchType === 'VILLA' || searchType === 'VILLAS')) ||
+                                   (pkgType === 'FLAT' && (searchType === 'FLAT' || searchType === 'FLATS')) ||
+                                   (pkgType === 'PLOT' && (searchType === 'PLOT' || searchType === 'PLOTS'));
+                          })
+                        : availablePackages;
+                      
+                      const remainingPkgs = propertyType 
+                        ? availablePackages.filter(pkg => !filteredPkgs.includes(pkg))
+                        : [];
+                      
+                      return (
+                        <>
+                          {filteredPkgs.length > 0 && propertyType && (
+                            <optgroup label={`Recommended for ${propertyType}`}>
+                              {filteredPkgs.map(pkg => (
+                                <option key={pkg.packageId} value={pkg.packageId}>
+                                  {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                          {remainingPkgs.length > 0 && (
+                            <optgroup label="Other Packages">
+                              {remainingPkgs.map(pkg => (
+                                <option key={pkg.packageId} value={pkg.packageId}>
+                                  {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                          {!propertyType && availablePackages.map(pkg => (
+                            <option key={pkg.packageId} value={pkg.packageId}>
+                              {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
+                            </option>
+                          ))}
+                        </>
+                      );
+                    })()}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
-                <div className="col-span-2 text-xs font-semibold text-gray-700">
-                  Service <span className="text-red-500">*</span>
-                </div>
-                <div className="col-span-2 text-xs font-semibold text-gray-700">
-                  Frequency Type <span className="text-red-500">*</span>
-                </div>
-                <div className="col-span-2 text-xs font-semibold text-gray-700">
-                  Frequency Count <span className="text-red-500">*</span>
-                </div>
-                <div className="col-span-1 text-xs font-semibold text-gray-700">
-                  Price (₹) <span className="text-red-500">*</span>
-                </div>
-                <div className="col-span-1 text-xs font-semibold text-gray-700">Total</div>
-                <div className="col-span-1 text-xs font-semibold text-gray-700 text-center">Action</div>
+                
+                {availablePackages.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    No packages available. Create packages in AMC Packages first.
+                  </p>
+                )}
               </div>
 
-              {/* Service Rows */}
-              <div className="border border-gray-200 rounded-b-md divide-y divide-gray-100">
-                {estimateForm.services.map((service, index) => (
-                  <div key={`new-${index}`} className="grid grid-cols-12 gap-2 items-center p-3 bg-white hover:bg-gray-50">
-                    <div className="col-span-1 text-sm text-gray-600 font-medium pl-2">
-                      {index + 1}
+              {/* Selected Package Details - Auto-populated */}
+              {directSelectedPackage && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Package className="w-5 h-5 text-blue-600" />
+                    <span className="font-semibold text-blue-800">{directSelectedPackage.packageName}</span>
+                    <span className="text-xs bg-blue-200 text-blue-700 px-2 py-0.5 rounded">{directSelectedPackage.packageId}</span>
+                  </div>
+                  {/* Services Table */}
+                  <div className="bg-white rounded border border-blue-100 overflow-hidden">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-10 gap-2 px-3 py-2 bg-blue-100/50 border-b border-blue-200">
+                      <div className="col-span-6 text-xs font-semibold text-blue-800 uppercase">Service</div>
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency Type</div>
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Count</div>
                     </div>
-                    {/* Subcategory Dropdown with + Add */}
-                    <div className="col-span-2">
-                      <select
-                        value={service.subcategory || ''}
-                        onChange={(e) => {
-                          if (e.target.value === '__add_subcategory__') {
-                            const newSubcat = prompt('Enter new subcategory:');
-                            if (newSubcat && newSubcat.trim()) {
-                              setSubcategories(prev => [...prev, newSubcat.trim()]);
-                              updateServiceRow(index, 'subcategory', newSubcat.trim());
-                            }
-                          } else {
-                            updateServiceRow(index, 'subcategory', e.target.value);
-                          }
-                        }}
-                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                      >
-                        <option value="">Select</option>
-                        {subcategories.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                        <option value="__add_subcategory__" className="text-blue-600 font-medium">+ Add</option>
-                      </select>
+                    {/* Table Body */}
+                    {directSelectedPackage.serviceRows && directSelectedPackage.serviceRows.length > 0 ? (
+                      directSelectedPackage.serviceRows.filter(s => s.service?.trim()).map((service, idx) => (
+                        <div key={idx} className="grid grid-cols-10 gap-2 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                          <div className="col-span-6 text-sm font-medium text-gray-800">{service.service}</div>
+                          <div className="col-span-2 text-sm text-gray-600">{service.frequencyType || 'Monthly'}</div>
+                          <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequencyCount || 1}</div>
+                        </div>
+                      ))
+                    ) : (
+                      (typeof directSelectedPackage.services === 'string' ? directSelectedPackage.services.split(',') : 
+                       Array.isArray(directSelectedPackage.services) ? directSelectedPackage.services.map(s => s.name || s) : []
+                      ).filter(s => s?.trim()).map((serviceName, idx) => (
+                        <div key={idx} className="grid grid-cols-10 gap-2 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                          <div className="col-span-6 text-sm font-medium text-gray-800">{serviceName.trim()}</div>
+                          <div className="col-span-2 text-sm text-gray-400">Monthly</div>
+                          <div className="col-span-2 text-sm text-gray-400 text-center">1</div>
+                        </div>
+                      ))
+                    )}
+                    {/* Total Row */}
+                    <div className="flex justify-between px-3 py-2.5 bg-blue-50 border-t border-blue-200">
+                      <span className="text-sm font-semibold text-blue-800">Total Package Price</span>
+                      <span className="text-sm font-bold text-blue-700">₹{getDirectPackagePrice().toLocaleString()}</span>
                     </div>
-                    {/* Service Dropdown */}
-                    <div className="col-span-2">
-                      <select
-                        value={service.name}
-                        onChange={(e) => {
-                          if (e.target.value === '__add_new__') {
-                            const newService = prompt('Enter new service name:');
-                            if (newService) {
-                              handleAddNewService(newService);
-                              updateServiceRow(index, 'name', newService);
-                            }
-                          } else {
-                            updateServiceRow(index, 'name', e.target.value);
-                          }
-                        }}
-                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                      >
-                        <option value="">Select Service</option>
-                        {availableServices.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                        <option value="__add_new__">+ Add New Service</option>
-                      </select>
+                  </div>
+                  {directSelectedPackage.billingDuration && (
+                    <p className="text-xs text-blue-600 mt-2">
+                      Service Period: {directSelectedPackage.billingDuration.charAt(0).toUpperCase() + directSelectedPackage.billingDuration.slice(1)}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Additional Services Section - Add-ons */}
+            <div className="px-6 py-4 border-t border-gray-100">
+              {/* Add-on Dropdown */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Add Service from Add-ons
+                </label>
+                <div className="relative max-w-sm">
+                  <select
+                    onChange={(e) => {
+                      handleDirectAddAddon(e.target.value);
+                      if (e.target.value !== 'OTHER') e.target.value = '';
+                    }}
+                    className="w-full px-4 py-2.5 text-sm border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 appearance-none bg-white"
+                  >
+                    <option value="">+ Select Add-on to add</option>
+                    {availableAddons
+                      .filter(addon => !directSelectedAddons.find(a => a.addonId === addon.addonId))
+                      .map(addon => (
+                        <option key={addon.addonId} value={addon.addonId}>
+                          {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
+                        </option>
+                      ))}
+                    <option value="OTHER" className="font-semibold text-blue-600">➕ Other (Custom Service)</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 pointer-events-none" />
+                </div>
+                
+                {availableAddons.length === 0 && !directShowCustomAddon && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    No add-ons available. Create add-ons in the Add-ons section or select "Other" for custom service.
+                  </p>
+                )}
+              </div>
+
+              {/* Custom Add-on Form */}
+              {directShowCustomAddon && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-blue-800">Add Custom Service</h4>
+                    <button
+                      onClick={handleDirectCancelCustomAddon}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-12 gap-3">
+                    <div className="col-span-4">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Service Name *</label>
+                      <input
+                        type="text"
+                        value={directCustomAddonForm.serviceName}
+                        onChange={(e) => handleDirectCustomAddonChange('serviceName', e.target.value)}
+                        placeholder="Enter service name"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                      />
                     </div>
-                    {/* Frequency Type - First to trigger auto-calculation */}
-                    <div className="col-span-2">
+                    <div className="col-span-3">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Frequency</label>
                       <select
-                        value={service.frequencyType}
-                        onChange={(e) => updateServiceRow(index, 'frequencyType', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                        value={directCustomAddonForm.frequencyType}
+                        onChange={(e) => handleDirectCustomAddonChange('frequencyType', e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 bg-white"
                       >
                         {FREQUENCY_TYPES.map(type => (
                           <option key={type} value={type}>{type}</option>
                         ))}
                       </select>
                     </div>
-                    {/* Frequency Count - Auto-set based on type, manual only for 'Custom Months' */}
                     <div className="col-span-2">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Count</label>
                       <input
                         type="number"
                         min="1"
-                        value={service.frequency}
-                        onChange={(e) => updateServiceRow(index, 'frequency', parseInt(e.target.value) || 1)}
-                        placeholder={service.frequencyType === 'Custom Months' ? 'Enter months' : ''}
-                        readOnly={service.frequencyType !== 'Custom Months'}
-                        title={service.frequencyType === 'Custom Months' ? 'Enter the number of months manually' : `Auto-set to ${FREQUENCY_COUNT_MAP[service.frequencyType] || 1}`}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-200 text-center ${
-                          service.frequencyType === 'Custom Months' 
-                            ? 'border-blue-300 bg-blue-50' 
-                            : 'border-gray-300 bg-gray-100 cursor-not-allowed'
+                        value={directCustomAddonForm.frequencyCount}
+                        onChange={(e) => handleDirectCustomAddonChange('frequencyCount', e.target.value)}
+                        readOnly={directCustomAddonForm.frequencyType !== 'Custom Months'}
+                        className={`w-full px-3 py-2 text-sm border rounded-md text-center ${
+                          directCustomAddonForm.frequencyType === 'Custom Months'
+                            ? 'border-blue-300 bg-white focus:ring-2 focus:ring-blue-200'
+                            : 'border-gray-200 bg-gray-100 cursor-not-allowed'
                         }`}
                       />
                     </div>
-                    <div className="col-span-1">
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Price (₹) *</label>
                       <input
-                        type="number"
-                        min="0"
-                        value={service.price}
-                        onChange={(e) => updateServiceRow(index, 'price', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                        type="text"
+                        inputMode="numeric"
+                        value={directCustomAddonForm.price}
+                        onChange={(e) => handleDirectCustomAddonChange('price', e.target.value.replace(/[^0-9]/g, ''))}
                         placeholder="0"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
                       />
                     </div>
-                    <div className="col-span-1 text-sm text-gray-800 font-medium">
-                      {calculateServiceTotal(service).toLocaleString()}
-                    </div>
-                    <div className="col-span-1 flex justify-center">
+                    <div className="col-span-1 flex items-end">
                       <button
-                        type="button"
-                        onClick={() => removeServiceRow(index)}
-                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                        title="Remove service"
+                        onClick={handleDirectAddCustomAddon}
+                        className="w-full px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        Add
                       </button>
                     </div>
                   </div>
-                ))}
-                
-                {/* Empty state */}
-                {estimateForm.services.length === 0 && (
-                  <div className="p-6 text-center text-gray-500">
-                    <p className="text-sm">No services added. Click "Add Service" to add a new service.</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* Add Service Button */}
-              <button
-                type="button"
-                onClick={addServiceRow}
-                className="mt-4 flex items-center gap-2 px-4 py-2 text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Service
-              </button>
+              {/* Selected Add-ons Table */}
+              {directSelectedAddons.length > 0 && (
+                <div className="bg-blue-50/50 border border-blue-200 rounded-lg overflow-hidden">
+                  <div className="px-3 py-2 bg-blue-100/60 border-b border-blue-200">
+                    <p className="text-sm font-semibold text-blue-800">Additional Services (Add-ons)</p>
+                  </div>
+                  {/* Table Header */}
+                  <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-white border-b border-blue-100">
+                    <div className="col-span-4 text-xs font-semibold text-blue-800 uppercase">Service</div>
+                    <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency Type</div>
+                    <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Count</div>
+                    <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-right">Price</div>
+                    <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Action</div>
+                  </div>
+                  {/* Table Body */}
+                  {directSelectedAddons.map((addon) => (
+                    addon.services?.map((service, sIdx) => (
+                      <div key={`${addon.addonId}-${sIdx}`} className="grid grid-cols-12 gap-2 px-3 py-2.5 bg-white border-b border-gray-100 last:border-0 hover:bg-blue-50/30">
+                        <div className="col-span-4 text-sm font-medium text-gray-800">{service.name}</div>
+                        <div className="col-span-2 text-sm text-gray-600">{service.frequencyType || 'Monthly'}</div>
+                        <div className="col-span-2 text-sm text-gray-600 text-center">{service.frequency || 1}</div>
+                        <div className="col-span-2 text-sm font-medium text-blue-700 text-right">₹{(service.price || 0).toLocaleString()}</div>
+                        <div className="col-span-2 text-center">
+                          <button
+                            onClick={() => handleDirectRemoveAddon(addon.addonId)}
+                            className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
+                            title="Remove"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ))}
+                  {/* Total Row */}
+                  <div className="grid grid-cols-12 gap-2 px-3 py-2.5 bg-blue-50 border-t border-blue-200">
+                    <div className="col-span-8 text-sm font-semibold text-blue-800">Total Add-ons</div>
+                    <div className="col-span-2 text-sm font-bold text-blue-700 text-right">₹{getDirectAddonsTotal().toLocaleString()}</div>
+                    <div className="col-span-2"></div>
+                  </div>
+                </div>
+              )}
+
+              {directSelectedAddons.length === 0 && (
+                <div className="p-3 text-center text-gray-400 border border-dashed border-blue-200 rounded-lg bg-blue-50/30">
+                  <p className="text-sm">No add-ons selected. Use the dropdown above to add services.</p>
+                </div>
+              )}
             </div>
 
-            {/* Summary and Actions */}
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            {/* Dynamic Summary Section */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
+              <h3 className="text-sm font-semibold text-gray-800 mb-4">Price Summary</h3>
+              
               <div className="flex justify-end">
-                <div className="w-80">
-                  {/* Calculation Section - GST calculated in backend, not shown */}
-                  <div className="text-right space-y-2 mb-4">
-                    <div className="flex justify-between text-sm bg-blue-100 px-3 py-2 rounded-md">
-                      <span className="font-semibold text-blue-700">Total Price (₹)</span>
-                      <span className="font-bold text-blue-700">{calculateSubTotal().toLocaleString()}</span>
+                <div className="w-96">
+                  {/* Sub Total (Package + Add-ons) */}
+                  <div className="flex justify-between text-sm py-2 border-b border-gray-200">
+                    <span className="text-gray-600">Sub Total</span>
+                    <span className="font-medium text-gray-800">₹{calculateDirectSubTotal().toLocaleString()}</span>
+                  </div>
+                  
+                  {/* Discount (Percentage) */}
+                  <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                    <span className="text-gray-600">Discount (%)</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={directDiscount}
+                        onChange={(e) => setDirectDiscount(e.target.value)}
+                        placeholder="0"
+                        className="w-20 px-3 py-1.5 text-sm text-right border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                      />
+                      <span className="text-sm text-gray-500 w-24 text-right">- ₹{getDirectDiscountAmount().toLocaleString()}</span>
                     </div>
                   </div>
+                  
+                  {/* GST (Customizable) */}
+                  <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                    <span className="text-gray-600">GST (%)</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={directGstRate}
+                        onChange={(e) => setDirectGstRate(e.target.value)}
+                        placeholder="18"
+                        className="w-20 px-3 py-1.5 text-sm text-right border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200"
+                      />
+                      <span className="text-sm text-gray-500 w-24 text-right">+ ₹{calculateDirectGST().toLocaleString()}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Total */}
+                  <div className="flex justify-between text-base py-3 bg-gray-700 text-white px-3 rounded-md mt-2">
+                    <span className="font-semibold">Total Amount</span>
+                    <span className="font-bold">₹{calculateDirectTotal().toLocaleString()}</span>
+                  </div>
 
-                  {/* Action Buttons - Only Save and Cancel */}
-                  <div className="flex gap-3 justify-end">
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 justify-end mt-4">
                     <button
                       onClick={resetForm}
                       className="px-6 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
@@ -1678,7 +2194,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                       onClick={handleSave}
                       className="px-6 py-2.5 text-sm font-medium text-white bg-gray-700 rounded-md hover:bg-gray-800 transition-colors"
                     >
-                      Save to Archive
+                      Save
                     </button>
                   </div>
                 </div>
@@ -1688,7 +2204,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
             {/* Footer Note */}
             <div className="px-6 py-3 border-t border-gray-200 bg-white">
               <p className="text-xs text-gray-500">
-                * Currency: INR (₹) | Price Input: Per selected frequency | Fields marked with * are mandatory | Direct estimates are saved to Archive section
+                * Currency: INR (₹) | GST: 18% applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section
               </p>
             </div>
           </>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Trash2, PlusCircle, ChevronDown, Plus, Layers, Edit2, X } from 'lucide-react';
 import {
   getAddons, createAddon, deleteAddon, updateAddon,
-  getServices, FREQUENCY_TYPES
+  getServices, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP
 } from '../../utils/estimateStore';
 
 // Property Type options for Add-ons (simple style matching other sections)
@@ -13,15 +13,6 @@ const PROPERTY_TYPE_OPTIONS = [
   { id: 'Flat', label: 'Flat' },
   { id: 'Plot', label: 'Plot' },
 ];
-
-// Auto-calculate frequency count based on frequency type
-const FREQUENCY_COUNT_MAP = {
-  'Monthly': 1,
-  'Quarterly': 3,
-  'Half-yearly': 6,
-  'Yearly': 12,
-  'Custom Months': null // User enters manually
-};
 
 const AddonsManager = ({ showToast }) => {
   const [activeTab, setActiveTab] = useState('create'); // 'create' or 'all-addons'
