@@ -50,7 +50,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
     { path: '/employee/user-management', icon: Shield, label: 'User Management' },
-    { path: '/employee/employee-management', icon: UserCog, label: 'Employee Management' },
     { path: '/employee/qr-management', icon: QrCode, label: 'QR Management' },
   ];
 

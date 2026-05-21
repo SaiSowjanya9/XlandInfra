@@ -857,7 +857,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
             {selectedProperty && (
               <>
                 {/* First Row - Contact Name, Property ID, Type, Zone, Area */}
-                <div className="grid grid-cols-5 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Contact Name</label>
                     <input
@@ -906,7 +906,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                 </div>
 
                 {/* Second Row - Community Name, Division, Property Type, Units, City */}
-                <div className="grid grid-cols-5 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Community Name</label>
                     <input
@@ -1572,7 +1572,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
           
           <div className="px-6 py-4">
             {/* Customer Information Row */}
-            <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Customer Name *</label>
                 <input
@@ -1629,7 +1629,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
           
           <div className="px-6 py-4">
             {/* Property Type Selection */}
-            <div className="grid grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Property Type *</label>
                 <select
@@ -1680,7 +1680,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
 
             {/* Dynamic Fields Based on Property Type */}
             {estimateForm.propertyType === 'GC' && (
-              <div className="grid grid-cols-4 gap-4 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Number of Blocks *</label>
                   <input
@@ -1732,8 +1732,8 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
               </div>
             )}
 
-            {(estimateForm.propertyType === 'APT' || estimateForm.propertyType === 'FLAT') && (
-              <div className="grid grid-cols-4 gap-4 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            {estimateForm.propertyType === 'APT' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Tower/Building Name</label>
                   <input
@@ -1785,7 +1785,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
             )}
 
             {estimateForm.propertyType === 'VILLA' && (
-              <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-amber-50 rounded-lg border border-amber-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 p-3 bg-amber-50 rounded-lg border border-amber-100">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Villa Number *</label>
                   <input
@@ -1800,7 +1800,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
             )}
 
             {estimateForm.propertyType === 'PLOT' && (
-              <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-rose-50 rounded-lg border border-rose-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 p-3 bg-rose-50 rounded-lg border border-rose-100">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Plot Number *</label>
                   <input
@@ -1815,7 +1815,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
             )}
 
             {estimateForm.propertyType === 'FLAT' && (
-              <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-cyan-50 rounded-lg border border-cyan-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 p-3 bg-cyan-50 rounded-lg border border-cyan-100">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Flat Number *</label>
                   <input
@@ -2019,8 +2019,8 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                       Cancel
                     </button>
                   </div>
-                  <div className="grid grid-cols-12 gap-3">
-                    <div className="col-span-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+                    <div className="lg:col-span-4">
                       <label className="block text-xs font-medium text-gray-600 mb-1">Service Name *</label>
                       <input
                         type="text"
@@ -2030,7 +2030,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
                       />
                     </div>
-                    <div className="col-span-3">
+                    <div className="lg:col-span-3">
                       <label className="block text-xs font-medium text-gray-600 mb-1">Frequency</label>
                       <select
                         value={directCustomAddonForm.frequencyType}
@@ -2042,7 +2042,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                         ))}
                       </select>
                     </div>
-                    <div className="col-span-2">
+                    <div className="lg:col-span-2">
                       <label className="block text-xs font-medium text-gray-600 mb-1">Count</label>
                       <input
                         type="number"
@@ -2057,7 +2057,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                         }`}
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="lg:col-span-2">
                       <label className="block text-xs font-medium text-gray-600 mb-1">Price (₹) *</label>
                       <input
                         type="text"
@@ -2068,7 +2068,7 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
                       />
                     </div>
-                    <div className="col-span-1 flex items-end">
+                    <div className="lg:col-span-1 flex items-end">
                       <button
                         onClick={handleDirectAddCustomAddon}
                         className="w-full px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
