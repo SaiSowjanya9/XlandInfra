@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 
 const FPProperties = ({ user }) => {
+  // Check if user is FP Manager (restricted access - view only)
+  const isFPManager = user?.role === 'manager';
+  
   const [properties, setProperties] = useState([]);
   const [zones, setZones] = useState([]);
   const [divisions, setDivisions] = useState([]);
