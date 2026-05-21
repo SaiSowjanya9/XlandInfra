@@ -14,8 +14,12 @@ const PROPERTY_TYPE_OPTIONS = [
   { id: 'Plot', label: 'Plot' },
 ];
 
-const AddonsManager = ({ showToast }) => {
-  const [activeTab, setActiveTab] = useState('create'); // 'create' or 'all-addons'
+const AddonsManager = ({ admin, showToast }) => {
+  // Check if user is Operations Manager (restricted access - view only)
+  const isOpsManager = admin?.role === 'operations_manager';
+  
+  // Operations Manager defaults to 'all-addons' tab (no create access)
+  const [activeTab, setActiveTab] = useState(isOpsManager ? 'all-addons' : 'create'); // 'create' or 'all-addons'
   const [addons, setAddons] = useState([]);
   const [services, setServices] = useState([]);
   const [selectedPropertyType, setSelectedPropertyType] = useState(null);
@@ -179,21 +183,23 @@ const AddonsManager = ({ showToast }) => {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - Create tab hidden for Operations Manager */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit mb-6">
-        <button
-          onClick={() => setActiveTab('create')}
-          className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
-            activeTab === 'create'
-              ? 'bg-white text-stone-700 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Create Add-on
-          </div>
-        </button>
+        {!isOpsManager && (
+          <button
+            onClick={() => setActiveTab('create')}
+            className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
+              activeTab === 'create'
+                ? 'bg-white text-stone-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Create Add-on
+            </div>
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('all-addons')}
           className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
@@ -399,20 +405,25 @@ const AddonsManager = ({ showToast }) => {
                               ₹{(addon.totalPrice || addon.services?.[0]?.price || 0).toLocaleString()}
                             </p>
                           </div>
-                          <button
-                            onClick={() => handleEditAddon(addon)}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAddon(addon.addonId)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                          {/* Edit/Delete buttons - Hidden for Operations Manager */}
+                          {!isOpsManager && (
+                            <>
+                              <button
+                                onClick={() => handleEditAddon(addon)}
+                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Edit"
+                              >
+                                <Edit2 className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAddon(addon.addonId)}
+                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -522,9 +533,12 @@ const AddonsManager = ({ showToast }) => {
                           <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
                             Total Rate
                           </th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                            Actions
-                          </th>
+                          {/* Actions column - Hidden for Operations Manager */}
+                          {!isOpsManager && (
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          )}
                         </tr>
                       </thead>
                       {/* Table Body */}
@@ -554,24 +568,27 @@ const AddonsManager = ({ showToast }) => {
                                 ₹{(addon.totalPrice || addon.services?.[0]?.price || 0).toLocaleString()}
                               </span>
                             </td>
-                            <td className="px-4 py-4">
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  onClick={() => handleEditAddon(addon)}
-                                  className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                                  title="Edit"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteAddon(addon.addonId)}
-                                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
+                            {/* Actions column - Hidden for Operations Manager */}
+                            {!isOpsManager && (
+                              <td className="px-4 py-4">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    onClick={() => handleEditAddon(addon)}
+                                    className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                    title="Edit"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteAddon(addon.addonId)}
+                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>

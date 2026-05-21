@@ -25,7 +25,10 @@ const STATUS_STYLES = {
   Archived: 'bg-slate-100 text-slate-700'
 };
 
-const ArchivedEstimates = ({ onRefresh, showToast }) => {
+const ArchivedEstimates = ({ admin, onRefresh, showToast }) => {
+  // Check if user is Operations Manager (restricted access - view only)
+  const isOpsManager = admin?.role === 'operations_manager';
+  
   const [archivedEstimates, setArchivedEstimates] = useState([]);
   const [viewEstimate, setViewEstimate] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -119,20 +122,25 @@ const ArchivedEstimates = ({ onRefresh, showToast }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleRestoreEstimate(estimate.estimateId)}
-                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"
-                          title="Restore"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm(estimate)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Delete Permanently"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {/* Restore/Delete buttons - Hidden for Operations Manager */}
+                        {!isOpsManager && (
+                          <>
+                            <button
+                              onClick={() => handleRestoreEstimate(estimate.estimateId)}
+                              className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"
+                              title="Restore"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(estimate)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                              title="Delete Permanently"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
