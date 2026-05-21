@@ -324,23 +324,6 @@ const AddonsManager = ({ showToast }) => {
                     )}
                   </div>
 
-                  {/* Service Period */}
-                  <div className="sm:col-span-1 lg:col-span-2">
-                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Period</label>
-                    <div className="relative">
-                      <select
-                        value={addonForm.billingCycle}
-                        onChange={(e) => setAddonForm({ ...addonForm, billingCycle: e.target.value })}
-                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 bg-white appearance-none"
-                      >
-                        {SERVICE_PERIODS.map(period => (
-                          <option key={period} value={period}>{period}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    </div>
-                  </div>
-
                   {/* Price */}
                   <div className="sm:col-span-1 lg:col-span-2">
                     <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (₹)</label>
@@ -687,34 +670,20 @@ const AddonsManager = ({ showToast }) => {
                 </select>
               </div>
 
-              {/* Service Period & Price */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Service Period</label>
-                  <select
-                    value={editForm.billingCycle}
-                    onChange={(e) => setEditForm({ ...editForm, billingCycle: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
-                  >
-                    {SERVICE_PERIODS.map(period => (
-                      <option key={period} value={period}>{period}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹) *</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={editForm.price}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, '');
-                      setEditForm({ ...editForm, price: value });
-                    }}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
-                    placeholder="0"
-                  />
-                </div>
+              {/* Price */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹) *</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={editForm.price}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    setEditForm({ ...editForm, price: value });
+                  }}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
+                  placeholder="0"
+                />
               </div>
 
               {/* Actions */}
