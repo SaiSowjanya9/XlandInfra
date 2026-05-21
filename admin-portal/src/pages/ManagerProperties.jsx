@@ -14,15 +14,26 @@ import {
   AlertCircle,
   CheckCircle,
   User,
-  Store
+  Store,
+  Home,
+  Building,
+  Lock,
+  ArrowLeft,
+  FileText
 } from 'lucide-react';
 
 const ManagerProperties = ({ user }) => {
   // Check if this is an FP-created Manager (has franchisePartnerId)
   const isFPManager = !!user?.franchisePartnerId;
 
+  const [selectedCategory, setSelectedCategory] = useState(null); // 'residential' or 'commercial'
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'gated', 'apartment', 'villa', 'plot', 'flat'
+  const [divisionFilter, setDivisionFilter] = useState('all');
+  const [zoneFilter, setZoneFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [properties, setProperties] = useState([]);
   const [zones, setZones] = useState([]);
+  const [divisions, setDivisions] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +44,16 @@ const ManagerProperties = ({ user }) => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [editingProperty, setEditingProperty] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  // Property type tabs config
+  const propertyTabs = [
+    { id: 'all', label: 'All Customers', icon: User },
+    { id: 'gated_community', label: 'Gated Communities', icon: Building2 },
+    { id: 'apartment', label: 'Apartments', icon: Building },
+    { id: 'villa', label: 'Villas', icon: Home },
+    { id: 'plot', label: 'Plots', icon: MapPin },
+    { id: 'flat', label: 'Flats', icon: Building }
+  ];
   const [formData, setFormData] = useState({
     name: '',
     propertyType: 'residential',
@@ -221,32 +242,105 @@ const ManagerProperties = ({ user }) => {
     });
   };
 
-  const filteredProperties = properties.filter(p =>
-    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.property_id?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter properties based on search, tab, and filters
+  const filteredProperties = properties.filter(p => {
+    // Search filter
+    const matchesSearch = !searchTerm || 
+      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.property_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.zone_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.address?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Tab filter (property type)
+    const matchesTab = activeTab === 'all' || p.property_type === activeTab;
+    
+    // Zone filter
+    const matchesZone = zoneFilter === 'all' || p.zone_id?.toString() === zoneFilter;
+    
+    // Division filter
+    const matchesDivision = divisionFilter === 'all' || p.division_id?.toString() === divisionFilter;
+    
+    return matchesSearch && matchesTab && matchesZone && matchesDivision;
+  });
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  // Get counts for each tab
+  const getTabCount = (tabId) => {
+    if (tabId === 'all') return properties.length;
+    return properties.filter(p => p.property_type === tabId).length;
+  };
+
+  // Category Selection Screen
+  if (!selectedCategory) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-gray-500 mt-1">Manage your properties</p>
+          <p className="text-gray-500 mt-1">View and manage created customers</p>
         </div>
-        {/* Add Property button - Hidden for FP Manager */}
-        {!isFPManager && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => { resetForm(); setShowModal(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Property</span>
+
+        {/* Message */}
+        {message.text && (
+          <div className={`p-4 rounded-lg flex items-center gap-3 ${
+            message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            <span>{message.text}</span>
+            <button onClick={() => setMessage({ type: '', text: '' })} className="ml-auto">
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
+
+        {/* Category Selection */}
+        <div className="bg-gray-50 rounded-2xl p-8 min-h-[400px] flex flex-col items-center justify-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Category</h2>
+          <p className="text-gray-500 mb-8">Choose the customer category to view</p>
+          
+          <div className="flex gap-6">
+            {/* Residential Card */}
+            <button
+              onClick={() => setSelectedCategory('residential')}
+              className="w-48 p-6 bg-white rounded-xl border-2 border-teal-500 hover:shadow-lg transition-all flex flex-col items-center"
+            >
+              <div className="w-16 h-16 bg-teal-500 rounded-xl flex items-center justify-center mb-4">
+                <Home className="w-8 h-8 text-white" />
+              </div>
+              <span className="font-semibold text-gray-900">Residential</span>
+            </button>
+
+            {/* Commercial Card - Coming Soon */}
+            <div className="w-48 p-6 bg-white rounded-xl border-2 border-gray-200 opacity-60 cursor-not-allowed flex flex-col items-center relative">
+              <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-blue-100 text-blue-600 text-xs font-medium rounded-full flex items-center gap-1">
+                <Lock className="w-3 h-3" />
+                Coming Soon
+              </div>
+              <div className="w-16 h-16 bg-gray-200 rounded-xl flex items-center justify-center mb-4">
+                <Building className="w-8 h-8 text-gray-400" />
+              </div>
+              <span className="font-semibold text-gray-400">Commercial</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header with Back Button */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => setSelectedCategory(null)}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Property Management</h1>
+          <p className="text-blue-600 text-sm">{properties.length} total customers</p>
+        </div>
       </div>
 
       {/* Message */}
@@ -262,21 +356,80 @@ const ManagerProperties = ({ user }) => {
         </div>
       )}
 
-      {/* Search - Hidden for FP Manager */}
-      {!isFPManager && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search properties..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+      {/* Property Type Tabs */}
+      <div className="flex items-center gap-1 border-b border-gray-200 overflow-x-auto">
+        {propertyTabs.map((tab) => {
+          const Icon = tab.icon;
+          const count = getTabCount(tab.id);
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+              <span className={`px-1.5 py-0.5 rounded text-xs ${
+                activeTab === tab.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search and Filters Row */}
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Search */}
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name, ID, zone, or address..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+          />
         </div>
-      )}
+        
+        {/* Filters */}
+        <div className="flex gap-2">
+          <select
+            value={divisionFilter}
+            onChange={(e) => setDivisionFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Divisions</option>
+            {divisions.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+          <select
+            value={zoneFilter}
+            onChange={(e) => setZoneFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Zones</option>
+            {zones.map(z => (
+              <option key={z.id} value={z.id}>{z.name}</option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="active">Active Customers</option>
+            <option value="inactive">Inactive Customers</option>
+            <option value="all">All Customers</option>
+          </select>
+        </div>
+      </div>
 
       {/* Properties List */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -285,9 +438,11 @@ const ManagerProperties = ({ user }) => {
             <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
           </div>
         ) : filteredProperties.length === 0 ? (
-          <div className="text-center py-12">
-            <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No properties found</p>
+          <div className="text-center py-16">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-blue-600 font-medium">No properties found</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
