@@ -21,6 +21,8 @@ const attachFPScope = async (req, res, next) => {
       // The FP ID should be stored in the user token or fetched from database
       if (req.user.franchisePartnerId) {
         req.fpId = req.user.franchisePartnerId;
+      } else if (req.user.fpId) {
+        req.fpId = req.user.fpId;
       } else {
         // Fetch from franchise_partners table using user info
         try {
@@ -35,6 +37,12 @@ const attachFPScope = async (req, res, next) => {
           console.error('Error fetching FP ID:', dbError.message);
         }
       }
+    }
+    
+    // Also handle FP-created staff (manager, coordinator, supervisor, executive)
+    // These users have franchise_partner_id in their record but role != 'franchise_partner'
+    if (!req.fpId && req.user.franchisePartnerId) {
+      req.fpId = req.user.franchisePartnerId;
     }
 
     next();
