@@ -14,7 +14,8 @@ import {
   CheckCircle,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  Eye
 } from 'lucide-react';
 
 const ManagerVendors = ({ user }) => {
@@ -23,7 +24,9 @@ const ManagerVendors = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
+  const [selectedVendor, setSelectedVendor] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formData, setFormData] = useState({
     companyName: '',
@@ -288,6 +291,7 @@ const ManagerVendors = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Location</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -339,6 +343,31 @@ const ManagerVendors = ({ user }) => {
                       }`}>
                         {vendor.is_active ? 'Active' : 'Inactive'}
                       </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => { setSelectedVendor(vendor); setShowViewModal(true); }}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openEditModal(vendor)}
+                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
+                          title="Edit"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(vendor.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -486,6 +515,86 @@ const ManagerVendors = ({ user }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Vendor Modal */}
+      {showViewModal && selectedVendor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Vendor Details</h2>
+                <button onClick={() => { setShowViewModal(false); setSelectedVendor(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Vendor ID</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.vendor_id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                    selectedVendor.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {selectedVendor.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Company Name</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.company_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Contact Person</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.contact_person || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.email || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Phone</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.phone || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Service Type</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.service_type || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Zone</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.zone || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Area</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.area || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Rate/Visit</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.rate_per_visit || '-'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Address</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedVendor.address ? `${selectedVendor.address}, ${selectedVendor.city || ''}, ${selectedVendor.state || ''}` : '-'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => { setShowViewModal(false); setSelectedVendor(null); }}
+                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
