@@ -43,7 +43,6 @@ import ManagerProperties from './pages/ManagerProperties';
 import ManagerWorkOrders from './pages/ManagerWorkOrders';
 import ManagerCustomers from './pages/ManagerCustomers';
 import ManagerVendors from './pages/ManagerVendors';
-import ManagerEmployees from './pages/ManagerEmployees';
 import ManagerEstimates from './pages/ManagerEstimates';
 
 import CoordinatorLogin from './pages/CoordinatorLogin';

@@ -10,10 +10,10 @@ import {
   Save,
   AlertCircle,
   CheckCircle,
-  User,
   ChevronDown,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  Eye
 } from 'lucide-react';
 
 const ManagerWorkOrders = ({ user }) => {
@@ -22,12 +22,11 @@ const ManagerWorkOrders = ({ user }) => {
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formData, setFormData] = useState({
@@ -93,21 +92,19 @@ const ManagerWorkOrders = ({ user }) => {
 
   const fetchDependencies = async () => {
     try {
-      const [propRes, catRes, custRes, vendRes] = await Promise.all([
+      const [propRes, catRes, custRes] = await Promise.all([
         fetch('/api/manager/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/manager/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/customers', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/vendors', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch('/api/manager/customers', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
-      const [propData, catData, custData, vendData] = await Promise.all([
-        propRes.json(), catRes.json(), custRes.json(), vendRes.json()
+      const [propData, catData, custData] = await Promise.all([
+        propRes.json(), catRes.json(), custRes.json()
       ]);
 
       if (propData.success) setProperties(propData.data);
       if (catData.success) setCategories(catData.data);
       if (custData.success) setCustomers(custData.data);
-      if (vendData.success) setVendors(vendData.data.all || []);
     } catch (error) {
       console.error('Fetch dependencies error:', error);
     }
@@ -168,34 +165,6 @@ const ManagerWorkOrders = ({ user }) => {
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to update status' });
-    }
-  };
-
-  const handleAssignVendor = async (vendorId) => {
-    if (!selectedWorkOrder) return;
-
-    try {
-      const response = await fetch(`/api/manager/work-orders/${selectedWorkOrder.id}/assign-vendor`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ vendorId })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setMessage({ type: 'success', text: 'Vendor assigned successfully!' });
-        setShowAssignModal(false);
-        setSelectedWorkOrder(null);
-        fetchWorkOrders();
-      } else {
-        setMessage({ type: 'error', text: result.message || 'Assignment failed' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to assign vendor' });
     }
   };
 
@@ -397,14 +366,13 @@ const ManagerWorkOrders = ({ user }) => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-end gap-2">
-                        {!wo.assigned_vendor_id && wo.status !== 'closed' && wo.status !== 'cancelled' && (
-                          <button
-                            onClick={() => { setSelectedWorkOrder(wo); setShowAssignModal(true); }}
-                            className="px-3 py-1 text-sm text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50"
-                          >
-                            Assign Vendor
-                          </button>
-                        )}
+                        <button
+                          onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
+                          className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
+                        >
+                          <Eye className="w-3 h-3" />
+                          View
+                        </button>
                         {wo.status === 'completed' && (
                           <button
                             onClick={() => handleStatusUpdate(wo.id, 'closed')}
@@ -573,48 +541,76 @@ const ManagerWorkOrders = ({ user }) => {
         </div>
       )}
 
-      {/* Assign Vendor Modal */}
-      {showAssignModal && selectedWorkOrder && (
+      {/* View Work Order Modal */}
+      {showViewModal && selectedWorkOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Assign Vendor</h2>
-                <button onClick={() => { setShowAssignModal(false); setSelectedWorkOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
+                <button onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                Work Order: {selectedWorkOrder.work_order_id}
-              </p>
             </div>
 
-            <div className="p-6">
-              {vendors.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No vendors available</p>
-              ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {vendors.map((vendor) => (
-                    <button
-                      key={vendor.id}
-                      onClick={() => handleAssignVendor(vendor.id)}
-                      className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
-                    >
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{vendor.company_name}</p>
-                        <p className="text-sm text-gray-500">{vendor.contact_person || vendor.email}</p>
-                      </div>
-                    </button>
-                  ))}
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Work Order ID</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.work_order_id}</p>
                 </div>
-              )}
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedWorkOrder.status)}`}>
+                    {selectedWorkOrder.status?.replace(/_/g, ' ').toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Title</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.title || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Priority</p>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(selectedWorkOrder.priority)}`}>
+                    {selectedWorkOrder.priority?.toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Property</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.property_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Category</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.category_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Vendor</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.vendor_name || 'Not Assigned'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Created</p>
+                  <p className="font-medium text-gray-900">{formatDate(selectedWorkOrder.created_at)}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Description</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.description || '-'}</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }}
+                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };

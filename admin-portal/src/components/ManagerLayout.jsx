@@ -6,7 +6,6 @@ import {
   ClipboardList,
   UserPlus,
   Store,
-  Users,
   FileText,
   LogOut,
   Menu,
@@ -15,9 +14,6 @@ import {
   FileInput,
   Hammer,
   ClipboardCheck,
-  Shield,
-  MapPin,
-  QrCode,
   Plus,
   List,
   Package,
@@ -37,8 +33,6 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     { path: '/manager/properties', icon: Building2, label: 'Property Management' },
     { path: '/manager/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/manager/customers', icon: FileInput, label: 'Add Customer' },
-    { path: '/manager/user-management', icon: Shield, label: 'User Management' },
-    { path: '/manager/qr-management', icon: QrCode, label: 'QR Management' },
   ];
 
   const vendorSubItems = [
@@ -47,11 +41,6 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     { path: '/manager/vendors/assigned', icon: ClipboardCheck, label: 'Assigned Vendors' }
   ];
 
-  const employeeSubItems = [
-    { path: '/manager/employees/add', icon: UserPlus, label: 'Add Employee' },
-    { path: '/manager/employees', icon: Users, label: 'Employee Details' },
-    { path: '/manager/employees/zones', icon: MapPin, label: 'Employee Zone Management' }
-  ];
 
   const estimatesSubItems = [
     { path: '/manager/estimates/create', icon: Plus, label: 'Create Estimate' },
@@ -62,12 +51,10 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   ];
 
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
-  const isEmployeeActive = employeeSubItems.some(item => location.pathname === item.path);
   const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/manager/estimates';
 
   useEffect(() => {
     if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
-    if (isEmployeeActive) setExpandedMenus(prev => ({ ...prev, employees: true }));
     if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
   }, [location.pathname]);
 
@@ -100,7 +87,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
           </button>
           <div className="flex items-center space-x-2">
             <Settings className="w-6 h-6 text-primary-600" />
-            <span className="font-bold text-gray-900">Operations Manager</span>
+            <span className="font-bold text-gray-900">Manager</span>
           </div>
           <div className="w-10" />
         </div>
@@ -122,7 +109,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
           <div className="flex items-center justify-between px-6 h-16 border-b border-gray-200">
             <div className="flex items-center space-x-2">
               <Settings className="w-8 h-8 text-primary-600" />
-              <span className="font-bold text-lg text-gray-900">Operations Manager</span>
+              <span className="font-bold text-lg text-gray-900">Manager</span>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
               <X className="w-5 h-5" />
@@ -136,7 +123,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
               {admin?.firstName} {admin?.lastName}
             </p>
             <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
-              Operations Manager
+              Manager
             </span>
           </div>
 
@@ -165,46 +152,6 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
               {expandedMenus.vendors && (
                 <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
                   {vendorSubItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setSidebarOpen(false)}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-                          location.pathname === item.path
-                            ? 'bg-primary-600 text-white'
-                            : 'text-gray-600 hover:bg-gray-100'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Employee Management Section */}
-            <div className="mt-2">
-              <button
-                onClick={() => setExpandedMenus(prev => ({ ...prev, employees: !prev.employees }))}
-                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
-                  isEmployeeActive && !expandedMenus.employees
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <Users className="w-5 h-5" />
-                  <span className="font-medium">Employee Management</span>
-                </div>
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.employees ? 'rotate-180' : ''}`} />
-              </button>
-              {expandedMenus.employees && (
-                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
-                  {employeeSubItems.map((item) => {
                     const Icon = item.icon;
                     return (
                       <Link
