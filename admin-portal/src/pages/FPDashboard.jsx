@@ -16,6 +16,9 @@ import {
 import { Link } from 'react-router-dom';
 
 const FPDashboard = ({ user }) => {
+  // Check if user is FP Manager (restricted access)
+  const isFPManager = user?.role === 'manager';
+  
   const [stats, setStats] = useState(null);
   const [recentWorkOrders, setRecentWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -219,13 +222,16 @@ const FPDashboard = ({ user }) => {
       <div className="bg-white rounded-xl border border-gray-100 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Link
-            to="/fp/properties"
-            className="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-          >
-            <Building2 className="w-8 h-8 text-blue-600 mb-2" />
-            <span className="text-sm font-medium text-blue-700">Add Property</span>
-          </Link>
+          {/* Add Property - Hidden for FP Manager */}
+          {!isFPManager && (
+            <Link
+              to="/fp/properties"
+              className="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <Building2 className="w-8 h-8 text-blue-600 mb-2" />
+              <span className="text-sm font-medium text-blue-700">Add Property</span>
+            </Link>
+          )}
           <Link
             to="/fp/work-orders"
             className="flex flex-col items-center p-4 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
@@ -233,13 +239,16 @@ const FPDashboard = ({ user }) => {
             <ClipboardList className="w-8 h-8 text-indigo-600 mb-2" />
             <span className="text-sm font-medium text-indigo-700">Create Work Order</span>
           </Link>
-          <Link
-            to="/fp/customers"
-            className="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
-          >
-            <Users className="w-8 h-8 text-blue-600 mb-2" />
-            <span className="text-sm font-medium text-blue-700">Add Customer</span>
-          </Link>
+          {/* Add Customer - Hidden for FP Manager */}
+          {!isFPManager && (
+            <Link
+              to="/fp/customers"
+              className="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+            >
+              <Users className="w-8 h-8 text-blue-600 mb-2" />
+              <span className="text-sm font-medium text-blue-700">Add Customer</span>
+            </Link>
+          )}
           <Link
             to="/fp/estimates/create"
             className="flex flex-col items-center p-4 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors"

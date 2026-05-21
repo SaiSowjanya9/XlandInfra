@@ -87,21 +87,35 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
   const formatCurrency = (amt) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(amt || 0);
 
-  // CREATE ESTIMATE
+  // Estimate form state
+  const [estimateForm, setEstimateForm] = useState({
+    customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '',
+    selectedPackage: '', selectedAddons: [], discount: 0, gst: 18
+  });
+
+  const calculatePricing = () => {
+    const pkgPrice = amcPackages.find(p => p.id === estimateForm.selectedPackage)?.price || 0;
+    const addonsPrice = estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id === id)?.price || 0), 0);
+    const subtotal = pkgPrice + addonsPrice;
+    const discountAmt = (subtotal * estimateForm.discount) / 100;
+    const gstAmt = ((subtotal - discountAmt) * estimateForm.gst) / 100;
+    return { subtotal, discountAmt, gstAmt, total: subtotal - discountAmt + gstAmt };
+  };
+
+  // CREATE ESTIMATE - Both Property-Based and Direct-Based available for FP Manager
   const renderCreateEstimate = () => (
     <div className="space-y-6">
       {!estimateType && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Select Estimate Type</h2>
-          <div className={`grid gap-4 mt-4 ${isFPManager ? 'grid-cols-1 max-w-md' : 'grid-cols-2'}`}>
-            {/* Property-Based Estimate - Hidden for FP Manager */}
-            {!isFPManager && (
-              <button onClick={() => setEstimateType('property-based')} className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group">
-                <Building2 className="w-10 h-10 text-gray-400 group-hover:text-indigo-500 mx-auto mb-3" />
-                <p className="font-semibold text-gray-800 group-hover:text-indigo-600">Property-Based Estimate</p>
-                <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
-              </button>
-            )}
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            {/* Property-Based Estimate */}
+            <button onClick={() => setEstimateType('property-based')} className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group">
+              <Building2 className="w-10 h-10 text-gray-400 group-hover:text-indigo-500 mx-auto mb-3" />
+              <p className="font-semibold text-gray-800 group-hover:text-indigo-600">Property-Based Estimate</p>
+              <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
+            </button>
+            {/* Direct-Based Estimate */}
             <button onClick={() => setEstimateType('direct')} className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group">
               <User className="w-10 h-10 text-gray-400 group-hover:text-indigo-500 mx-auto mb-3" />
               <p className="font-semibold text-gray-800 group-hover:text-indigo-600">Direct-Based Estimate</p>
@@ -110,38 +124,365 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
         </div>
       )}
+
+      {/* Property-Based Estimate Form */}
       {estimateType === 'property-based' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Property-Based Estimate</h2>
-            <button onClick={() => { setEstimateType(null); setSelectedProperty(null); setPropertyIdInput(''); }} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
+        <div className="space-y-6">
+          {/* Estimate Details */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">Estimate Details</h2>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* Property ID Search */}
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1.5">Property ID <span className="text-red-500">*</span></label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input 
+                    type="text" 
+                    value={propertyIdInput} 
+                    onChange={(e) => { 
+                      setPropertyIdInput(e.target.value); 
+                      const m = properties.find(p => p.property_id?.toLowerCase() === e.target.value.toLowerCase()); 
+                      setSelectedProperty(m || null); 
+                    }} 
+                    placeholder="GC-DMMN-20260520" 
+                    className="w-full pl-10 pr-4 py-2.5 border-2 border-blue-500 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-600 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Auto-populated fields */}
+              {selectedProperty && (
+                <>
+                  <div className="grid grid-cols-5 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Contact Name</label>
+                      <input type="text" value={selectedProperty.contact_name || selectedProperty.customer_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Property ID</label>
+                      <input type="text" value={selectedProperty.property_id || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Entry Type</label>
+                      <input type="text" value={selectedProperty.entry_type || selectedProperty.property_type?.substring(0,2).toUpperCase() || 'GC'} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Zone</label>
+                      <input type="text" value={selectedProperty.zone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Area</label>
+                      <input type="text" value={selectedProperty.area || selectedProperty.area_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-5 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Community Name</label>
+                      <input type="text" value={selectedProperty.community_name || selectedProperty.property_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Division</label>
+                      <input type="text" value={selectedProperty.division || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Property Type</label>
+                      <input type="text" value={selectedProperty.property_type || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Units</label>
+                      <input type="text" value={selectedProperty.units || selectedProperty.total_units || '1'} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">City</label>
+                      <input type="text" value={selectedProperty.city || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Address</label>
+                      <input type="text" value={selectedProperty.address || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Contact Phone</label>
+                      <input type="text" value={selectedProperty.contact_phone || selectedProperty.phone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Contact Email</label>
+                      <input type="text" value={selectedProperty.contact_email || selectedProperty.email || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                    </div>
+                  </div>
+
+                  {/* Unit Details */}
+                  <div className="bg-slate-50 rounded-lg p-4 mt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Building2 className="w-4 h-4 text-slate-600" />
+                      <span className="text-sm font-medium text-slate-700">Unit Details</span>
+                      <span className="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded">{selectedProperty.property_type?.substring(0,2).toUpperCase() || 'GC'}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
+                        <input type="text" value={selectedProperty.block_name || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
+                        <input type="text" value={`${selectedProperty.units || selectedProperty.total_units || 1} Units`} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Property ID</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input type="text" value={propertyIdInput} onChange={(e) => { setPropertyIdInput(e.target.value); const m = properties.find(p => p.property_id?.toLowerCase() === e.target.value.toLowerCase()); setSelectedProperty(m || null); }} placeholder="Enter property ID..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500" />
+
+          {/* AMC Package */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">AMC Package</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
+                <select 
+                  value={estimateForm.selectedPackage} 
+                  onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value})}
+                  className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
+                >
+                  <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                  {amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1.5">Add Service from Add-ons</label>
+                <select 
+                  onChange={(e) => { if (e.target.value && !estimateForm.selectedAddons.includes(e.target.value)) setEstimateForm({...estimateForm, selectedAddons: [...estimateForm.selectedAddons, e.target.value]}); e.target.value = ''; }}
+                  className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
+                >
+                  <option value="">+ Select Add-on to add</option>
+                  {addons.filter(a => !estimateForm.selectedAddons.includes(a.id)).map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}
+                </select>
+              </div>
+              {estimateForm.selectedAddons.length === 0 ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center text-sm text-amber-700">
+                  No add-ons selected. Use the dropdown above to add services.
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {estimateForm.selectedAddons.map(id => {
+                    const addon = addons.find(a => a.id === id);
+                    return addon ? (
+                      <span key={id} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
+                        {addon.service_name}
+                        <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter(a => a !== id)})} className="hover:text-blue-900"><X className="w-3 h-3" /></button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Price Summary */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">Price Summary</h2>
+            </div>
+            <div className="p-6">
+              <div className="max-w-md ml-auto space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Sub Total</span>
+                  <span className="font-medium">₹{calculatePricing().subtotal}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Discount (%)</span>
+                  <div className="flex items-center gap-2">
+                    <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" min="0" max="100" />
+                    <span className="text-gray-500">- ₹{calculatePricing().discountAmt.toFixed(0)}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">GST (%)</span>
+                  <div className="flex items-center gap-2">
+                    <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-blue-300 bg-blue-50 rounded text-sm text-center text-blue-700" />
+                    <span className="text-gray-500">+ ₹{calculatePricing().gstAmt.toFixed(0)}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center bg-slate-800 text-white px-4 py-3 rounded-lg mt-4">
+                  <span className="font-medium">Total Amount</span>
+                  <span className="text-lg font-bold">₹{calculatePricing().total.toFixed(0)}</span>
+                </div>
               </div>
             </div>
-            {selectedProperty && <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4"><p className="font-semibold text-indigo-800">{selectedProperty.community_name || selectedProperty.property_name}</p><p className="text-sm text-indigo-600">{selectedProperty.property_id} • {selectedProperty.property_type}</p></div>}
-            <div className="pt-4 border-t border-gray-100"><button onClick={() => navigate('/fp/estimates/amc')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">Continue to AMC Packages</button></div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3">
+            <button onClick={() => { setEstimateType(null); setSelectedProperty(null); setPropertyIdInput(''); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
           </div>
         </div>
       )}
+
+      {/* Direct-Based Estimate Form */}
       {estimateType === 'direct' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Direct-Based Estimate</h2>
-            <button onClick={() => setEstimateType(null)} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
+        <div className="space-y-6">
+          {/* Customer Information */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">Customer Information</h2>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Customer Name <span className="text-red-500">*</span></label>
+                  <input type="text" placeholder="Enter customer name" value={estimateForm.customerName} onChange={(e) => setEstimateForm({...estimateForm, customerName: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Phone <span className="text-red-500">*</span></label>
+                  <div className="flex">
+                    <select className="px-2 py-2.5 border border-gray-300 border-r-0 rounded-l-lg text-sm bg-gray-50">
+                      <option>+91</option>
+                    </select>
+                    <input type="tel" placeholder="10-digit phone number" value={estimateForm.phone} onChange={(e) => setEstimateForm({...estimateForm, phone: e.target.value})} className="flex-1 px-3 py-2.5 border border-gray-300 rounded-r-lg text-sm" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Email</label>
+                  <input type="email" placeholder="Enter email address" value={estimateForm.email} onChange={(e) => setEstimateForm({...estimateForm, email: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Customer Name *</label><input type="text" placeholder="Enter customer name" className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label><input type="tel" placeholder="Enter phone number" className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" placeholder="Enter email" className="w-full px-4 py-2 border border-gray-300 rounded-lg" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label><select className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white"><option value="">Select</option>{PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
+
+          {/* Property Details */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">Property Details</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Property Type <span className="text-red-500">*</span></label>
+                  <select value={estimateForm.propertyType} onChange={(e) => setEstimateForm({...estimateForm, propertyType: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white">
+                    <option value="">Select Property Type</option>
+                    {PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Property Name</label>
+                  <input type="text" placeholder="Enter property name" value={estimateForm.propertyName} onChange={(e) => setEstimateForm({...estimateForm, propertyName: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Zone</label>
+                  <input type="text" placeholder="Enter zone" value={estimateForm.zone} onChange={(e) => setEstimateForm({...estimateForm, zone: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1.5">City</label>
+                  <input type="text" placeholder="Enter city" value={estimateForm.city} onChange={(e) => setEstimateForm({...estimateForm, city: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1.5">Address</label>
+                <input type="text" placeholder="Enter full address" value={estimateForm.address} onChange={(e) => setEstimateForm({...estimateForm, address: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+              </div>
+            </div>
           </div>
-          <div className="pt-4 mt-4 border-t border-gray-100"><button onClick={() => navigate('/fp/estimates/amc')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">Continue to AMC Packages</button></div>
+
+          {/* AMC Package */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">AMC Package</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
+                <select 
+                  value={estimateForm.selectedPackage} 
+                  onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value})}
+                  className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
+                >
+                  <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                  {amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1.5">Add Service from Add-ons</label>
+                <select 
+                  onChange={(e) => { if (e.target.value && !estimateForm.selectedAddons.includes(e.target.value)) setEstimateForm({...estimateForm, selectedAddons: [...estimateForm.selectedAddons, e.target.value]}); e.target.value = ''; }}
+                  className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
+                >
+                  <option value="">+ Select Add-on to add</option>
+                  {addons.filter(a => !estimateForm.selectedAddons.includes(a.id)).map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}
+                </select>
+              </div>
+              {estimateForm.selectedAddons.length === 0 ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center text-sm text-amber-700">
+                  No add-ons selected. Use the dropdown above to add services.
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {estimateForm.selectedAddons.map(id => {
+                    const addon = addons.find(a => a.id === id);
+                    return addon ? (
+                      <span key={id} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
+                        {addon.service_name}
+                        <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter(a => a !== id)})} className="hover:text-blue-900"><X className="w-3 h-3" /></button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Price Summary */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">Price Summary</h2>
+            </div>
+            <div className="p-6">
+              <div className="max-w-md ml-auto space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Sub Total</span>
+                  <span className="font-medium">₹{calculatePricing().subtotal}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Discount (%)</span>
+                  <div className="flex items-center gap-2">
+                    <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" min="0" max="100" />
+                    <span className="text-gray-500">- ₹{calculatePricing().discountAmt.toFixed(0)}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">GST (%)</span>
+                  <div className="flex items-center gap-2">
+                    <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-blue-300 bg-blue-50 rounded text-sm text-center text-blue-700" />
+                    <span className="text-gray-500">+ ₹{calculatePricing().gstAmt.toFixed(0)}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center bg-slate-800 text-white px-4 py-3 rounded-lg mt-4">
+                  <span className="font-medium">Total Amount</span>
+                  <span className="text-lg font-bold">₹{calculatePricing().total.toFixed(0)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Note */}
+          <div className="text-xs text-gray-500 border-t border-gray-200 pt-4">
+            * Currency: INR (₹) | GST: 18% applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setEstimateType(null)} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
+          </div>
         </div>
       )}
     </div>

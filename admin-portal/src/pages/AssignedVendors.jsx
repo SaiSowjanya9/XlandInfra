@@ -36,7 +36,10 @@ import {
 } from '../utils/assignmentStore';
 import { getVendors } from '../utils/vendorStore';
 
-const AssignedVendors = () => {
+const AssignedVendors = ({ user }) => {
+  // Check if user is FP Manager (view-only mode)
+  const isFPManager = user?.role === 'manager';
+  
   const [activeTab, setActiveTab] = useState('service'); // 'service' or 'property'
   const [assignments, setAssignments] = useState([]);
   const [serviceAssignments, setServiceAssignments] = useState([]);
@@ -392,28 +395,31 @@ const AssignedVendors = () => {
                               <p className="text-xs text-gray-500 truncate">{assignment.serviceType}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => setEditModalData(assignment)}
-                              className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-100 rounded transition-colors"
-                              title="Edit assignment"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => setRemoveConfirm({ ...assignment, type: 'service' })}
-                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded transition-colors"
-                              title="Remove assignment"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                          {/* Edit/Remove buttons - Hidden for FP Manager */}
+                          {!isFPManager && (
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => setEditModalData(assignment)}
+                                className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-100 rounded transition-colors"
+                                title="Edit assignment"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setRemoveConfirm({ ...assignment, type: 'service' })}
+                                className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded transition-colors"
+                                title="Remove assignment"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* Card Actions */}
+                  {/* Card Actions - Modify hidden for FP Manager */}
                   <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                     <button
                       onClick={() => setViewAssignment(group.assignments[0])}
@@ -422,13 +428,15 @@ const AssignedVendors = () => {
                       <Eye className="w-4 h-4" />
                       View Details
                     </button>
-                    <button
-                      onClick={() => setEditModalData(group.assignments[0])}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                    >
-                      <Edit className="w-4 h-4" />
-                      Modify
-                    </button>
+                    {!isFPManager && (
+                      <button
+                        onClick={() => setEditModalData(group.assignments[0])}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Modify
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
