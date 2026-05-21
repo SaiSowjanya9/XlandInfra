@@ -4,22 +4,22 @@ import {
   LayoutDashboard,
   Building2,
   ClipboardList,
-  UserPlus,
-  Store,
   FileText,
   LogOut,
   Menu,
   X,
   ChevronDown,
   FileInput,
-  Hammer,
-  ClipboardCheck,
   Plus,
   List,
   Package,
   PlusCircle,
   Archive,
-  Settings
+  Settings,
+  Store,
+  UserPlus,
+  Hammer,
+  ClipboardCheck
 } from 'lucide-react';
 
 const ManagerLayout = ({ admin, onLogout, children }) => {
@@ -40,7 +40,6 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     { path: '/manager/vendors', icon: Hammer, label: 'Vendor Details' },
     { path: '/manager/vendors/assigned', icon: ClipboardCheck, label: 'Assigned Vendors' }
   ];
-
 
   const estimatesSubItems = [
     { path: '/manager/estimates/create', icon: Plus, label: 'Create Estimate' },

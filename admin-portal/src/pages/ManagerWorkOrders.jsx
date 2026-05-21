@@ -1,31 +1,25 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import {
   ClipboardList,
   Plus,
   Search,
-  Filter,
   RefreshCw,
   X,
-  Save,
   AlertCircle,
   CheckCircle,
-  ChevronDown,
   Clock,
-  CheckCircle2,
   Eye
 } from 'lucide-react';
 
 const ManagerWorkOrders = ({ user }) => {
-  const location = useLocation();
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('pending');
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -40,11 +34,6 @@ const ManagerWorkOrders = ({ user }) => {
     hasPet: 'no',
     scheduledDate: ''
   });
-
-  // Determine view type based on URL
-  const viewType = location.pathname.includes('/pending') ? 'pending' 
-                 : location.pathname.includes('/completed') ? 'completed' 
-                 : 'all';
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -71,12 +60,7 @@ const ManagerWorkOrders = ({ user }) => {
   const fetchWorkOrders = async () => {
     setLoading(true);
     try {
-      let endpoint = '/api/manager/work-orders';
-      if (viewType === 'pending') endpoint = '/api/manager/work-orders/pending';
-      else if (viewType === 'completed') endpoint = '/api/manager/work-orders/completed';
-      else if (statusFilter) endpoint += `?status=${statusFilter}`;
-      
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/manager/work-orders', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -113,7 +97,43 @@ const ManagerWorkOrders = ({ user }) => {
   useEffect(() => {
     fetchWorkOrders();
     fetchDependencies();
-  }, [viewType, statusFilter]);
+  }, []);
+
+  // Count work orders by status
+  const pendingCount = workOrders.filter(wo => 
+    ['draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)
+  ).length;
+  const completedCount = workOrders.filter(wo => 
+    ['completed', 'verified', 'closed'].includes(wo.status)
+  ).length;
+
+  // Filter work orders by active tab and search term
+  const filteredWorkOrders = workOrders.filter(wo => {
+    const isPending = ['draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status);
+    const isCompleted = ['completed', 'verified', 'closed'].includes(wo.status);
+    
+    if (activeTab === 'pending' && !isPending) return false;
+    if (activeTab === 'completed' && !isCompleted) return false;
+
+    if (searchTerm) {
+      return (
+        wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        wo.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    return true;
+  });
+
+  const handleSearch = () => {
+    setSearchTerm(searchInput);
+  };
+
+  const handleClear = () => {
+    setSearchInput('');
+    setSearchTerm('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -133,8 +153,8 @@ const ManagerWorkOrders = ({ user }) => {
 
       if (result.success) {
         setMessage({ type: 'success', text: 'Work order created successfully!' });
-        setShowModal(false);
         resetForm();
+        setActiveTab('pending');
         fetchWorkOrders();
       } else {
         setMessage({ type: 'error', text: result.message || 'Operation failed' });
@@ -210,50 +230,17 @@ const ManagerWorkOrders = ({ user }) => {
     });
   };
 
-  const filteredWorkOrders = workOrders.filter(wo =>
-    wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getViewTitle = () => {
-    if (viewType === 'pending') return 'Pending Work Orders';
-    if (viewType === 'completed') return 'Completed Work Orders';
-    return 'All Work Orders';
-  };
-
-  const getViewIcon = () => {
-    if (viewType === 'pending') return Clock;
-    if (viewType === 'completed') return CheckCircle2;
-    return ClipboardList;
-  };
-
-  const ViewIcon = getViewIcon();
-
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-            viewType === 'pending' ? 'bg-orange-100' : viewType === 'completed' ? 'bg-green-100' : 'bg-blue-100'
-          }`}>
-            <ViewIcon className={`w-5 h-5 ${
-              viewType === 'pending' ? 'text-orange-600' : viewType === 'completed' ? 'text-green-600' : 'text-blue-600'
-            }`} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{getViewTitle()}</h1>
-            <p className="text-gray-500 mt-1">Manage your work orders</p>
-          </div>
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+          <ClipboardList className="w-6 h-6 text-white" />
         </div>
-        <button
-          onClick={() => { resetForm(); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Work Order</span>
-        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
+          <p className="text-gray-500">Manage and track all work orders</p>
+        </div>
       </div>
 
       {/* Message */}
@@ -269,53 +256,96 @@ const ManagerWorkOrders = ({ user }) => {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search work orders..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          {viewType === 'all' && (
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="pl-9 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 appearance-none bg-white"
-              >
-                {statusOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-          )}
-          <button
-            onClick={fetchWorkOrders}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Refresh</span>
-          </button>
-        </div>
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'pending'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Pending</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${
+            activeTab === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+          }`}>
+            {pendingCount}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('completed')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'completed'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <CheckCircle className="w-4 h-4" />
+          <span>Completed</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${
+            activeTab === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+          }`}>
+            {completedCount}
+          </span>
+        </button>
+        <button
+          onClick={() => { resetForm(); setActiveTab('create'); }}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'create'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Plus className="w-4 h-4" />
+          <span>Create Work Order</span>
+        </button>
       </div>
 
-      {/* Work Orders List */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
+      {/* Search - shown for pending/completed tabs */}
+      {(activeTab === 'pending' || activeTab === 'completed') && (
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="flex gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by Work Order ID, category, or name..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Search className="w-4 h-4" />
+              <span>Search</span>
+            </button>
+            <button
+              onClick={handleClear}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Clear</span>
+            </button>
           </div>
-        ) : filteredWorkOrders.length === 0 ? (
-          <div className="text-center py-12">
-            <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+        </div>
+      )}
+
+      {/* Work Orders List - shown for pending/completed tabs */}
+      {(activeTab === 'pending' || activeTab === 'completed') && (
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
+            </div>
+          ) : filteredWorkOrders.length === 0 ? (
+            <div className="text-center py-12">
+              <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No work orders found</p>
           </div>
         ) : (
@@ -389,20 +419,21 @@ const ManagerWorkOrders = ({ user }) => {
             </table>
           </div>
         )}
-      </div>
+        </div>
+      )}
 
-      {/* Create Work Order Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Create Work Order</h2>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+      {/* Create Work Order Form - shown for create tab */}
+      {activeTab === 'create' && (
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <div className="flex items-start gap-3 mb-6">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Plus className="w-5 h-5 text-blue-600" />
             </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Create Work Order</h2>
+              <p className="text-sm text-gray-500">Fill in the details to create a new work order</p>
+            </div>
+          </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -523,7 +554,7 @@ const ManagerWorkOrders = ({ user }) => {
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => { resetForm(); setActiveTab('pending'); }}
                   className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
                 >
                   Cancel
@@ -532,12 +563,11 @@ const ManagerWorkOrders = ({ user }) => {
                   type="submit"
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  <Save className="w-4 h-4" />
+                  <Plus className="w-4 h-4" />
                   <span>Create Work Order</span>
                 </button>
               </div>
             </form>
-          </div>
         </div>
       )}
 

@@ -42,13 +42,6 @@ const CATEGORIES = [
     icon: Store,
     color: 'bg-blue-500',
     locked: true
-  },
-  {
-    id: 'vendor',
-    name: 'Vendor',
-    icon: Truck,
-    color: 'bg-purple-500',
-    locked: true
   }
 ];
 
