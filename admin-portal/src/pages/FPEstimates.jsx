@@ -608,8 +608,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const renderAddons = () => (
     <div className="space-y-6">
       <div className="flex items-center gap-3"><div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center"><PlusCircle className="w-5 h-5 text-stone-600" /></div><div><h2 className="text-xl font-bold text-gray-900">Add-ons</h2><p className="text-sm text-gray-500">Create optional services for AMC packages by property type</p></div></div>
+      {/* Tabs - Create Add-on hidden for FP Manager */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-        <button onClick={() => setAddonActiveTab('create')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${addonActiveTab === 'create' ? 'bg-white text-stone-700 shadow-sm' : 'text-gray-600'}`}><Plus className="w-4 h-4" />Create Add-on</button>
+        {!isFPManager && (
+          <button onClick={() => setAddonActiveTab('create')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${addonActiveTab === 'create' ? 'bg-white text-stone-700 shadow-sm' : 'text-gray-600'}`}><Plus className="w-4 h-4" />Create Add-on</button>
+        )}
         <button onClick={() => setAddonActiveTab('all-addons')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white text-stone-700 shadow-sm' : 'text-gray-600'}`}><Layers className="w-4 h-4" />All Add-ons{addons.length > 0 && <span className="px-1.5 py-0.5 bg-stone-600 text-white rounded-full text-xs">{addons.length}</span>}</button>
       </div>
       {addonActiveTab === 'create' && (

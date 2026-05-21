@@ -73,36 +73,40 @@ const FPLayout = ({ admin, onLogout, children }) => {
     { path: '/fp/user-management', icon: Shield, label: 'Manage Users' },
   ];
 
-  // Vendor sub-items - Add Vendor hidden for FP Manager
+  // Vendor sub-items - Add Vendor & Assigned Vendors hidden for FP Manager
   const allVendorSubItems = [
     { path: '/fp/vendors/add', icon: UserPlus, label: 'Add Vendor', fpOnly: true },
     { path: '/fp/vendors', icon: Hammer, label: 'Vendor Details' },
-    { path: '/fp/vendors/assigned', icon: ClipboardCheck, label: 'Assigned Vendors' },
+    { path: '/fp/vendors/assigned', icon: ClipboardCheck, label: 'Assigned Vendors', fpOnly: true }, // No assignment access for FP Manager
   ];
   
   const vendorSubItems = isFPManager
     ? allVendorSubItems.filter(item => !item.fpOnly)
     : allVendorSubItems;
 
-  // Employee sub-items - Add Employee hidden for FP Manager
+  // Employee sub-items - Add Employee & Zone Management hidden for FP Manager
   const allEmployeeSubItems = [
     { path: '/fp/employees/add', icon: UserPlus, label: 'Add Employee', fpOnly: true },
     { path: '/fp/employees', icon: Users, label: 'Employee Details' },
-    { path: '/fp/employees/zones', icon: MapPin, label: 'Employee Zone Management' },
+    { path: '/fp/employees/zones', icon: MapPin, label: 'Employee Zone Management', fpOnly: true }, // No management access for FP Manager
   ];
   
   const employeeSubItems = isFPManager
     ? allEmployeeSubItems.filter(item => !item.fpOnly)
     : allEmployeeSubItems;
 
-  // Estimates sub-items
-  const estimatesSubItems = [
-    { path: '/fp/estimates/create', icon: Plus, label: 'Create Estimate' },
+  // Estimates sub-items - Create Estimate hidden for FP Manager (no estimate creation access)
+  const allEstimatesSubItems = [
+    { path: '/fp/estimates/create', icon: Plus, label: 'Create Estimate', fpOnly: true }, // No estimate creation for FP Manager
     { path: '/fp/estimates', icon: List, label: 'All Estimates' },
     { path: '/fp/estimates/amc', icon: Package, label: 'AMC Packages' },
     { path: '/fp/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
     { path: '/fp/estimates/archived', icon: Archive, label: 'Archived' },
   ];
+  
+  const estimatesSubItems = isFPManager
+    ? allEstimatesSubItems.filter(item => !item.fpOnly)
+    : allEstimatesSubItems;
 
   const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEmployeeSectionActive = employeeSubItems.some(item => location.pathname === item.path);

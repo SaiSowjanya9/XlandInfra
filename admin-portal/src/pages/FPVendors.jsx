@@ -263,8 +263,13 @@ const FPVendors = ({ user }) => {
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Owner</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Zone</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Area</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Rate/Visit</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Coverage/Day</th>
+                  {/* Rate/Coverage columns - Hidden for FP Manager */}
+                  {!isFPManager && (
+                    <>
+                      <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Rate/Visit</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Coverage/Day</th>
+                    </>
+                  )}
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created By</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Status</th>
@@ -292,12 +297,17 @@ const FPVendors = ({ user }) => {
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                       {vendor.areaName || vendor.area_name || '-'}
                     </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                      ₹{vendor.ratePerVisit || vendor.rate_per_visit || 0}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
-                      {vendor.coveragePerDay || vendor.coverage_per_day || 0}
-                    </td>
+                    {/* Rate/Coverage data - Hidden for FP Manager */}
+                    {!isFPManager && (
+                      <>
+                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                          ₹{vendor.ratePerVisit || vendor.rate_per_visit || 0}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
+                          {vendor.coveragePerDay || vendor.coverage_per_day || 0}
+                        </td>
+                      </>
+                    )}
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                       {vendor.createdBy || 'Manager'}
                     </td>
@@ -539,20 +549,22 @@ const FPVendors = ({ user }) => {
                 </div>
               </div>
 
-              {/* Rate & Coverage */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate & Coverage</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Rate Per Visit</p>
-                    <p className="font-medium">₹{viewVendor.ratePerVisit || viewVendor.rate_per_visit || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Coverage Per Day</p>
-                    <p className="font-medium">{viewVendor.coveragePerDay || viewVendor.coverage_per_day || 0}</p>
+              {/* Rate & Coverage - Hidden for FP Manager */}
+              {!isFPManager && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate & Coverage</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Rate Per Visit</p>
+                      <p className="font-medium">₹{viewVendor.ratePerVisit || viewVendor.rate_per_visit || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Coverage Per Day</p>
+                      <p className="font-medium">{viewVendor.coveragePerDay || viewVendor.coverage_per_day || 0}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Contact Info */}
               <div>
