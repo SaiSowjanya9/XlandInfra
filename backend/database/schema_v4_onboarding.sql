@@ -11,7 +11,7 @@ USE customer_portal;
 CREATE TABLE IF NOT EXISTS onboarded_properties (
   id INT AUTO_INCREMENT PRIMARY KEY,
   property_id VARCHAR(50) UNIQUE NOT NULL,       -- e.g. GC-AB12-20250422
-  entry_type ENUM('GC','APT','VILLA','PLOT') NOT NULL,
+  entry_type ENUM('GC','APT','VILLA','PLOT','FLAT') NOT NULL,
   category VARCHAR(50) DEFAULT 'residential',     -- residential / commercial / vendor
 
   -- Step 1-5: Core fields

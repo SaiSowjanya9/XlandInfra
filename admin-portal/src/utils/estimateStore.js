@@ -7,6 +7,24 @@ const ADDONS_KEY = 'xland_addons';
 const SERVICES_KEY = 'xland_services';
 const ESTIMATE_COUNTER_KEY = 'xland_estimate_counter';
 const GST_CONFIG_KEY = 'xland_gst_config';
+const ADDONS_VERSION_KEY = 'xland_addons_version';
+const CURRENT_ADDONS_VERSION = 2; // Increment this to force re-migration
+
+// Auto-migrate addons on load - clears old data and regenerates with correct frequency counts
+(function migrateAddonsData() {
+  try {
+    const storedVersion = parseInt(localStorage.getItem(ADDONS_VERSION_KEY) || '0', 10);
+    if (storedVersion < CURRENT_ADDONS_VERSION) {
+      // Clear old addons data
+      localStorage.removeItem(ADDONS_KEY);
+      // Set new version
+      localStorage.setItem(ADDONS_VERSION_KEY, CURRENT_ADDONS_VERSION.toString());
+      console.log('[EstimateStore] Migrated addons data to version', CURRENT_ADDONS_VERSION);
+    }
+  } catch (e) {
+    console.error('[EstimateStore] Migration error:', e);
+  }
+})();
 
 // Default services list
 const DEFAULT_SERVICES = [
@@ -32,6 +50,15 @@ export const PROPERTY_TYPES = ['APT', 'Flats', 'GC', 'Villas', 'Plots', 'Commerc
 
 // Frequency types
 export const FREQUENCY_TYPES = ['Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'Custom Months'];
+
+// Auto-calculate frequency count based on frequency type
+export const FREQUENCY_COUNT_MAP = {
+  'Monthly': 1,
+  'Quarterly': 3,
+  'Half-yearly': 6,
+  'Yearly': 12,
+  'Custom Months': null // User enters manually
+};
 
 // Billing duration options with multipliers
 export const BILLING_DURATIONS = [
@@ -376,6 +403,12 @@ export const deleteAddon = (addonId) => {
   let addons = getStorageData(ADDONS_KEY);
   addons = addons.filter(addon => addon.addonId !== addonId);
   setStorageData(ADDONS_KEY, addons);
+  return true;
+};
+
+// Clear all addons data
+export const clearAllAddons = () => {
+  setStorageData(ADDONS_KEY, []);
   return true;
 };
 
@@ -935,49 +968,59 @@ export const seedTestData = () => {
   
   // Only seed addons if none exist
   if (existingAddons.length === 0) {
-    // Create sample Add-ons
+    // Create sample Add-ons with correct frequency counts based on frequency type
     const sampleAddons = [
       {
         addonId: 'ADDON-SEC-001',
+        propertyType: 'GC',
         services: [
           { name: 'Security Service', frequency: 1, frequencyType: 'Monthly', price: 5000 }
         ],
+        billingCycle: 'Monthly',
         totalPrice: 5000,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       },
       {
         addonId: 'ADDON-PEST-002',
+        propertyType: 'Apt',
         services: [
-          { name: 'Pest Control', frequency: 1, frequencyType: 'Quarterly', price: 2500 }
+          { name: 'Pest Control', frequency: 3, frequencyType: 'Quarterly', price: 2500 }
         ],
+        billingCycle: 'Quarterly',
         totalPrice: 2500,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       },
       {
         addonId: 'ADDON-WIN-003',
+        propertyType: 'Villa',
         services: [
           { name: 'Window Cleaning', frequency: 1, frequencyType: 'Monthly', price: 3000 }
         ],
+        billingCycle: 'Monthly',
         totalPrice: 3000,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       },
       {
         addonId: 'ADDON-HVAC-004',
+        propertyType: 'Apt',
         services: [
-          { name: 'HVAC Deep Cleaning', frequency: 1, frequencyType: 'Quarterly', price: 8000 }
+          { name: 'HVAC Deep Cleaning', frequency: 3, frequencyType: 'Quarterly', price: 8000 }
         ],
+        billingCycle: 'Quarterly',
         totalPrice: 8000,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       },
       {
         addonId: 'ADDON-PAINT-005',
+        propertyType: 'Villa',
         services: [
-          { name: 'Touch-up Painting', frequency: 1, frequencyType: 'Yearly', price: 15000 }
+          { name: 'Touch-up Painting', frequency: 12, frequencyType: 'Yearly', price: 15000 }
         ],
+        billingCycle: 'Yearly',
         totalPrice: 15000,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()

@@ -99,7 +99,7 @@ const initOnboardingTables = async () => {
       CREATE TABLE IF NOT EXISTS onboarded_properties (
         id INT AUTO_INCREMENT PRIMARY KEY,
         property_id VARCHAR(50) UNIQUE NOT NULL,
-        entry_type ENUM('GC','APT','VILLA','PLOT') NOT NULL,
+        entry_type ENUM('GC','APT','VILLA','PLOT','FLAT') NOT NULL,
         category VARCHAR(50) DEFAULT 'residential',
         zone VARCHAR(100) NOT NULL,
         area_name VARCHAR(255) NOT NULL,
@@ -189,6 +189,21 @@ const initOnboardingTables = async () => {
       }
     } catch (e) {
       console.log(`  - created_by column type check failed:`, e.message);
+    }
+
+    // Add FLAT to entry_type ENUM if not present
+    try {
+      const [enumCheck] = await conn.execute(
+        `SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'onboarded_properties' AND COLUMN_NAME = 'entry_type'`,
+        [dbConfig.database]
+      );
+      if (enumCheck.length > 0 && !enumCheck[0].COLUMN_TYPE.includes('FLAT')) {
+        await conn.execute(`ALTER TABLE onboarded_properties MODIFY COLUMN entry_type ENUM('GC','APT','VILLA','PLOT','FLAT') NOT NULL`);
+        console.log(`  ✓ Added FLAT to entry_type ENUM`);
+      }
+    } catch (e) {
+      console.log(`  - entry_type ENUM update failed:`, e.message);
     }
 
     // Create property_contacts table

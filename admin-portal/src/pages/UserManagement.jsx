@@ -60,6 +60,9 @@ const UserManagement = () => {
     filterUsers();
   }, [users, searchQuery, roleFilter, statusFilter]);
 
+  // User Management only shows: Admin, Operations Manager, and Franchise Partner roles
+  const USER_MANAGEMENT_ROLES = ['admin', 'operations_manager', 'franchise_partner', 'franchise'];
+
   const loadUsers = async () => {
     setLoading(true);
     try {
@@ -69,26 +72,29 @@ const UserManagement = () => {
       const result = await response.json();
       
       if (result.success) {
-        const loadedUsers = result.data.map(u => ({
-          id: u.id,
-          userId: u.userId,
-          username: u.username,
-          email: u.email,
-          name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
-          firstName: u.firstName,
-          lastName: u.lastName,
-          phone: u.phone,
-          role: u.role,
-          roleName: u.roleName,
-          status: u.isActive ? 'active' : 'inactive',
-          isActive: u.isActive,
-          lastLogin: u.lastLogin,
-          createdAt: u.createdAt,
-          createdBy: u.createdBy
-        }));
+        // Filter to only show Admin, Operations Manager, and Franchise Partner users
+        const loadedUsers = result.data
+          .filter(u => USER_MANAGEMENT_ROLES.includes(u.role))
+          .map(u => ({
+            id: u.id,
+            userId: u.userId,
+            username: u.username,
+            email: u.email,
+            name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+            firstName: u.firstName,
+            lastName: u.lastName,
+            phone: u.phone,
+            role: u.role,
+            roleName: u.roleName,
+            status: u.isActive ? 'active' : 'inactive',
+            isActive: u.isActive,
+            lastLogin: u.lastLogin,
+            createdAt: u.createdAt,
+            createdBy: u.createdBy
+          }));
         setUsers(loadedUsers);
         
-        // Calculate stats
+        // Calculate stats for User Management roles only
         const statsData = {
           total: loadedUsers.length,
           active: loadedUsers.filter(u => u.status === 'active').length,
@@ -437,7 +443,7 @@ const UserManagement = () => {
               <option value="all">All Roles</option>
               <option value="admin">Admin</option>
               <option value="operations_manager">Operations Manager</option>
-              <option value="franchise_partner">Franchise Partner</option>
+              <option value="franchise_partner">FP User</option>
             </select>
             <select
               value={statusFilter}
@@ -601,7 +607,9 @@ const UserManagement = () => {
                   className="w-full max-w-xs px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
                   required
                 >
-                  {Object.keys(USER_ROLES).map(role => (
+                  {Object.keys(USER_ROLES)
+                    .filter(role => USER_MANAGEMENT_ROLES.includes(role))
+                    .map(role => (
                       <option key={role} value={role}>{getRoleLabel(role)}</option>
                     ))}
                 </select>
