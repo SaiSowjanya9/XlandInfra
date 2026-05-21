@@ -31,6 +31,9 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Check if user is Operations Manager (restricted access)
+  const isOpsManager = admin?.role === 'operations_manager';
 
   const [vendorOpen, setVendorOpen] = useState(
     location.pathname.startsWith('/employee/add-vendor') ||
@@ -44,40 +47,61 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     location.pathname.startsWith('/employee/employee-zone-management')
   );
 
-  const navItems = [
+  // Base nav items - filtered based on role
+  const allNavItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/employee/customer-submissions', icon: Building2, label: 'Property Management' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
-    { path: '/employee/user-management', icon: Shield, label: 'User Management' },
+    { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer', adminOnly: true },
+    { path: '/employee/user-management', icon: Shield, label: 'User Management', adminOnly: true },
     { path: '/employee/qr-management', icon: QrCode, label: 'QR Management' },
   ];
+  
+  // Filter nav items for Operations Manager
+  const navItems = isOpsManager 
+    ? allNavItems.filter(item => !item.adminOnly)
+    : allNavItems;
 
   const [estimatesOpen, setEstimatesOpen] = useState(
     location.pathname.startsWith('/employee/estimates')
   );
 
-  const estimatesSubItems = [
-    { path: '/employee/estimates/create', icon: Plus, label: 'Create Estimate' },
+  // Estimates sub-items - Create Estimate hidden for Ops Manager
+  const allEstimatesSubItems = [
+    { path: '/employee/estimates/create', icon: Plus, label: 'Create Estimate', adminOnly: true },
     { path: '/employee/estimates/list', icon: List, label: 'All Estimates' },
     { path: '/employee/estimates/amc-manager', icon: Package, label: 'AMC Packages' },
     { path: '/employee/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
     { path: '/employee/estimates/archived', icon: Archive, label: 'Archived' },
   ];
+  
+  const estimatesSubItems = isOpsManager
+    ? allEstimatesSubItems.filter(item => !item.adminOnly)
+    : allEstimatesSubItems;
 
   const isEstimatesSectionActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/employee/estimates';
 
-  const vendorSubItems = [
-    { path: '/employee/add-vendor', icon: UserPlus, label: 'Add Vendor' },
+  // Vendor sub-items - Add Vendor hidden for Ops Manager
+  const allVendorSubItems = [
+    { path: '/employee/add-vendor', icon: UserPlus, label: 'Add Vendor', adminOnly: true },
     { path: '/employee/vendor-details', icon: Hammer, label: 'Vendor Details' },
     { path: '/employee/assigned-vendors', icon: ClipboardCheck, label: 'Assigned Vendors' },
   ];
+  
+  const vendorSubItems = isOpsManager
+    ? allVendorSubItems.filter(item => !item.adminOnly)
+    : allVendorSubItems;
 
-  const employeeSubItems = [
-    { path: '/employee/add-employee', icon: UserPlus, label: 'Add Employee' },
+  // Employee sub-items - Add Employee hidden for Ops Manager
+  const allEmployeeSubItems = [
+    { path: '/employee/add-employee', icon: UserPlus, label: 'Add Employee', adminOnly: true },
     { path: '/employee/employee-details', icon: Users, label: 'Employee Details' },
     { path: '/employee/employee-zone-management', icon: MapPin, label: 'Employee Zone Management' },
   ];
+  
+  const employeeSubItems = isOpsManager
+    ? allEmployeeSubItems.filter(item => !item.adminOnly)
+    : allEmployeeSubItems;
 
   const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEmployeeSectionActive = employeeSubItems.some(item => location.pathname === item.path);

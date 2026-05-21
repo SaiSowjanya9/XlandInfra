@@ -30,6 +30,15 @@ const FPLayout = ({ admin, onLogout, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Check if user is FP Manager (restricted access - created under FP)
+  const isFPManager = admin?.role === 'manager';
+  
+  // Get display role name
+  const getRoleDisplay = () => {
+    if (isFPManager) return 'Manager';
+    return 'Franchise Partner';
+  };
 
   const [vendorOpen, setVendorOpen] = useState(
     location.pathname.startsWith('/fp/vendors')
@@ -47,29 +56,46 @@ const FPLayout = ({ admin, onLogout, children }) => {
     location.pathname.startsWith('/fp/user-management')
   );
 
-  const navItems = [
+  // Base nav items - filtered based on role
+  const allNavItems = [
     { path: '/fp', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/fp/properties', icon: Building2, label: 'Property Management' },
     { path: '/fp/work-orders', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/fp/customers', icon: UserPlus, label: 'Add Customer' },
+    { path: '/fp/customers', icon: UserPlus, label: 'Add Customer', fpOnly: true }, // Hidden for FP Manager
   ];
+  
+  // Filter nav items for FP Manager (remove Add Customer)
+  const navItems = isFPManager 
+    ? allNavItems.filter(item => !item.fpOnly)
+    : allNavItems;
 
   const userMgmtSubItems = [
     { path: '/fp/user-management', icon: Shield, label: 'Manage Users' },
   ];
 
-  const vendorSubItems = [
-    { path: '/fp/vendors/add', icon: UserPlus, label: 'Add Vendor' },
+  // Vendor sub-items - Add Vendor hidden for FP Manager
+  const allVendorSubItems = [
+    { path: '/fp/vendors/add', icon: UserPlus, label: 'Add Vendor', fpOnly: true },
     { path: '/fp/vendors', icon: Hammer, label: 'Vendor Details' },
     { path: '/fp/vendors/assigned', icon: ClipboardCheck, label: 'Assigned Vendors' },
   ];
+  
+  const vendorSubItems = isFPManager
+    ? allVendorSubItems.filter(item => !item.fpOnly)
+    : allVendorSubItems;
 
-  const employeeSubItems = [
-    { path: '/fp/employees/add', icon: UserPlus, label: 'Add Employee' },
+  // Employee sub-items - Add Employee hidden for FP Manager
+  const allEmployeeSubItems = [
+    { path: '/fp/employees/add', icon: UserPlus, label: 'Add Employee', fpOnly: true },
     { path: '/fp/employees', icon: Users, label: 'Employee Details' },
     { path: '/fp/employees/zones', icon: MapPin, label: 'Employee Zone Management' },
   ];
+  
+  const employeeSubItems = isFPManager
+    ? allEmployeeSubItems.filter(item => !item.fpOnly)
+    : allEmployeeSubItems;
 
+  // Estimates sub-items
   const estimatesSubItems = [
     { path: '/fp/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/fp/estimates', icon: List, label: 'All Estimates' },
@@ -124,7 +150,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
           </button>
           <div className="flex items-center space-x-2">
             <Briefcase className="w-6 h-6 text-primary-600" />
-            <span className="font-bold text-gray-900">Franchise Partner</span>
+            <span className="font-bold text-gray-900">{getRoleDisplay()}</span>
           </div>
           <div className="w-10" />
         </div>
@@ -146,7 +172,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
           <div className="flex items-center justify-between px-6 h-16 border-b border-gray-200">
             <div className="flex items-center space-x-2">
               <Briefcase className="w-8 h-8 text-primary-600" />
-              <span className="font-bold text-lg text-gray-900">Franchise Partner</span>
+              <span className="font-bold text-lg text-gray-900">{getRoleDisplay()}</span>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
               <X className="w-5 h-5" />
@@ -156,8 +182,8 @@ const FPLayout = ({ admin, onLogout, children }) => {
           {/* Admin Info */}
           <div className="px-6 py-4 border-b border-gray-200">
             <p className="text-sm text-gray-500">Logged in as</p>
-            <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
-              Franchise Partner
+            <span className={`inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full ${isFPManager ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+              {getRoleDisplay()}
             </span>
           </div>
 
@@ -167,34 +193,36 @@ const FPLayout = ({ admin, onLogout, children }) => {
               <NavLink key={item.path} item={item} mobile />
             ))}
 
-            {/* User Management Section */}
-            <div className="mt-2">
-              <button
-                onClick={() => setUserMgmtOpen(!userMgmtOpen)}
-                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
-                  isUserMgmtSectionActive && !userMgmtOpen
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <UserCog className="w-5 h-5" />
-                  <span className="font-medium">User Management</span>
-                </div>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    userMgmtOpen ? 'rotate-180' : ''
+            {/* User Management Section - Hidden for FP Manager */}
+            {!isFPManager && (
+              <div className="mt-2">
+                <button
+                  onClick={() => setUserMgmtOpen(!userMgmtOpen)}
+                  className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
+                    isUserMgmtSectionActive && !userMgmtOpen
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-600 hover:bg-gray-100'
                   }`}
-                />
-              </button>
-              {userMgmtOpen && (
-                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
-                  {userMgmtSubItems.map((item) => (
-                    <NavLink key={item.path} item={item} mobile />
-                  ))}
-                </div>
-              )}
-            </div>
+                >
+                  <div className="flex items-center space-x-3">
+                    <UserCog className="w-5 h-5" />
+                    <span className="font-medium">User Management</span>
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      userMgmtOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+                {userMgmtOpen && (
+                  <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                    {userMgmtSubItems.map((item) => (
+                      <NavLink key={item.path} item={item} mobile />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Vendor Management Section */}
             <div className="mt-2">

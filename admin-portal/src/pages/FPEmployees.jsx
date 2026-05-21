@@ -21,6 +21,10 @@ import { useNavigate } from 'react-router-dom';
 
 const FPEmployees = ({ user }) => {
   const navigate = useNavigate();
+  
+  // Check if user is FP Manager (restricted access - view only)
+  const isFPManager = user?.role === 'manager';
+  
   const [employees, setEmployees] = useState([]);
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -363,30 +367,35 @@ const FPEmployees = ({ user }) => {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {empStatus === 'active' ? (
-                            <button
-                              onClick={() => handleDeactivate(employee)}
-                              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                              title="Deactivate"
-                            >
-                              <UserX className="w-4 h-4" />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleReactivate(employee)}
-                              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                              title="Reactivate"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </button>
+                          {/* Deactivate/Reactivate/Delete buttons - Hidden for FP Manager */}
+                          {!isFPManager && (
+                            <>
+                              {empStatus === 'active' ? (
+                                <button
+                                  onClick={() => handleDeactivate(employee)}
+                                  className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                                  title="Deactivate"
+                                >
+                                  <UserX className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleReactivate(employee)}
+                                  className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                                  title="Reactivate"
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setDeleteConfirm(employee)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
                           )}
-                          <button
-                            onClick={() => setDeleteConfirm(employee)}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </div>
                       </td>
                     </tr>

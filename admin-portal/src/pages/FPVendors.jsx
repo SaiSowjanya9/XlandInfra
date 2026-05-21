@@ -33,6 +33,10 @@ const TABS = [
 
 const FPVendors = ({ user }) => {
   const navigate = useNavigate();
+  
+  // Check if user is FP Manager (restricted access - view only)
+  const isFPManager = user?.role === 'manager';
+  
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -318,7 +322,8 @@ const FPVendors = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {vendor.status !== 'deleted' && (
+                        {/* Edit/Delete buttons - Hidden for FP Manager */}
+                        {!isFPManager && vendor.status !== 'deleted' && (
                           <>
                             <button
                               onClick={() => setEditVendor(vendor)}

@@ -64,6 +64,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
       case 'create':
         return (
           <CreateEstimate
+            admin={admin}
             onSuccess={handleEstimateCreated}
             showToast={showToast}
           />
@@ -71,21 +72,23 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
       case 'list':
         return (
           <EstimatesList
+            admin={admin}
             onRefresh={handleRefresh}
             showToast={showToast}
           />
         );
       case 'amc-manager':
         return (
-          <AMCPackageManager showToast={showToast} />
+          <AMCPackageManager admin={admin} showToast={showToast} />
         );
       case 'addons':
         return (
-          <AddonsManager showToast={showToast} />
+          <AddonsManager admin={admin} showToast={showToast} />
         );
       case 'archived':
         return (
           <ArchivedEstimates
+            admin={admin}
             onRefresh={handleRefresh}
             showToast={showToast}
           />

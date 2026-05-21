@@ -29,6 +29,10 @@ const TAB_TITLES = {
 
 const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const navigate = useNavigate();
+  
+  // Check if user is FP Manager (restricted access)
+  const isFPManager = user?.role === 'manager';
+  
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [estimates, setEstimates] = useState([]);
@@ -42,11 +46,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [estimateType, setEstimateType] = useState(null);
   const [propertyIdInput, setPropertyIdInput] = useState('');
   const [selectedProperty, setSelectedProperty] = useState(null);
-  const [amcActiveTab, setAmcActiveTab] = useState('create');
+  // FP Manager defaults to 'all-packages' (no create access)
+  const [amcActiveTab, setAmcActiveTab] = useState(isFPManager ? 'all-packages' : 'create');
   const [selectedPropertyType, setSelectedPropertyType] = useState(null);
   const [amcForm, setAmcForm] = useState({ packageName: '', serviceRows: [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' });
   const [filterPropertyType, setFilterPropertyType] = useState('all');
-  const [addonActiveTab, setAddonActiveTab] = useState('create');
+  // FP Manager defaults to 'all-addons' (no create access)
+  const [addonActiveTab, setAddonActiveTab] = useState(isFPManager ? 'all-addons' : 'create');
   const [addonSelectedPropertyType, setAddonSelectedPropertyType] = useState(null);
   const [addonFilterPropertyType, setAddonFilterPropertyType] = useState('all');
   const [addonForm, setAddonForm] = useState({ serviceName: '', frequencyCount: 1, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '' });
@@ -87,12 +93,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       {!estimateType && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Select Estimate Type</h2>
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <button onClick={() => setEstimateType('property-based')} className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group">
-              <Building2 className="w-10 h-10 text-gray-400 group-hover:text-indigo-500 mx-auto mb-3" />
-              <p className="font-semibold text-gray-800 group-hover:text-indigo-600">Property-Based Estimate</p>
-              <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
-            </button>
+          <div className={`grid gap-4 mt-4 ${isFPManager ? 'grid-cols-1 max-w-md' : 'grid-cols-2'}`}>
+            {/* Property-Based Estimate - Hidden for FP Manager */}
+            {!isFPManager && (
+              <button onClick={() => setEstimateType('property-based')} className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group">
+                <Building2 className="w-10 h-10 text-gray-400 group-hover:text-indigo-500 mx-auto mb-3" />
+                <p className="font-semibold text-gray-800 group-hover:text-indigo-600">Property-Based Estimate</p>
+                <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
+              </button>
+            )}
             <button onClick={() => setEstimateType('direct')} className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group">
               <User className="w-10 h-10 text-gray-400 group-hover:text-indigo-500 mx-auto mb-3" />
               <p className="font-semibold text-gray-800 group-hover:text-indigo-600">Direct-Based Estimate</p>
@@ -206,17 +215,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - Create Package hidden for FP Manager */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit mb-6">
-        <button
-          onClick={() => setAmcActiveTab('create')}
-          className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${amcActiveTab === 'create' ? 'bg-white text-slate-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
-        >
-          <div className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Create Package
-          </div>
-        </button>
+        {!isFPManager && (
+          <button
+            onClick={() => setAmcActiveTab('create')}
+            className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${amcActiveTab === 'create' ? 'bg-white text-slate-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+          >
+            <div className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Create Package
+            </div>
+          </button>
+        )}
         <button
           onClick={() => setAmcActiveTab('all-packages')}
           className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${amcActiveTab === 'all-packages' ? 'bg-white text-slate-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
@@ -319,22 +330,25 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <td className="px-4 py-4 text-right">
                           <span className="text-lg font-bold text-slate-800">{formatCurrency(pkg.price)}</span>
                         </td>
-                        <td className="px-4 py-4">
-                          <div className="flex items-center justify-center gap-1">
-                            <button className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Edit">
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Export PDF">
-                              <Download className="w-4 h-4" />
-                            </button>
-                            <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Email">
-                              <Mail className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => handleDeleteAmcPackage(pkg.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
+                        {/* Action buttons - Hidden for FP Manager */}
+                        {!isFPManager && (
+                          <td className="px-4 py-4">
+                            <div className="flex items-center justify-center gap-1">
+                              <button className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Edit">
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Export PDF">
+                                <Download className="w-4 h-4" />
+                              </button>
+                              <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Email">
+                                <Mail className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleDeleteAmcPackage(pkg.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

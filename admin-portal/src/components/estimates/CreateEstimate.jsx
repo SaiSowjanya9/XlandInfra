@@ -26,7 +26,10 @@ const PROPERTY_ICONS = {
   Commercial: Briefcase
 };
 
-const CreateEstimate = ({ onSuccess, showToast }) => {
+const CreateEstimate = ({ admin, onSuccess, showToast }) => {
+  // Check if user is Operations Manager (restricted access)
+  const isOpsManager = admin?.role === 'operations_manager';
+  
   const [estimateType, setEstimateType] = useState(null);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [propertyIdInput, setPropertyIdInput] = useState('');
@@ -772,19 +775,22 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
       {!hasStartedTyping && (
         <div className={`bg-white rounded-xl p-6 shadow-sm border border-gray-100 transition-all duration-300 ${estimateType ? 'opacity-100' : 'opacity-100'}`}>
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Estimate Type</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => { setEstimateType('property'); }}
-              className={`p-6 rounded-xl border-2 transition-all ${
-                estimateType === 'property'
-                  ? 'border-gray-400 bg-gray-50'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <Building2 className={`w-8 h-8 mx-auto mb-3 ${estimateType === 'property' ? 'text-gray-700' : 'text-gray-400'}`} />
-              <p className="font-medium text-gray-800">Property-Based Estimate</p>
-              <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
-            </button>
+          <div className={`grid gap-4 ${isOpsManager ? 'grid-cols-1 max-w-md' : 'grid-cols-2'}`}>
+            {/* Property-Based Estimate - Hidden for Operations Manager */}
+            {!isOpsManager && (
+              <button
+                onClick={() => { setEstimateType('property'); }}
+                className={`p-6 rounded-xl border-2 transition-all ${
+                  estimateType === 'property'
+                    ? 'border-gray-400 bg-gray-50'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <Building2 className={`w-8 h-8 mx-auto mb-3 ${estimateType === 'property' ? 'text-gray-700' : 'text-gray-400'}`} />
+                <p className="font-medium text-gray-800">Property-Based Estimate</p>
+                <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
+              </button>
+            )}
             <button
               onClick={() => { setEstimateType('direct'); setHasStartedTyping(true); }}
               className={`p-6 rounded-xl border-2 transition-all ${
@@ -2190,12 +2196,15 @@ const CreateEstimate = ({ onSuccess, showToast }) => {
                     >
                       Cancel
                     </button>
-                    <button
-                      onClick={handleSave}
-                      className="px-6 py-2.5 text-sm font-medium text-white bg-gray-700 rounded-md hover:bg-gray-800 transition-colors"
-                    >
-                      Save
-                    </button>
+                    {/* Save button - Hidden for Operations Manager */}
+                    {!isOpsManager && (
+                      <button
+                        onClick={handleSave}
+                        className="px-6 py-2.5 text-sm font-medium text-white bg-gray-700 rounded-md hover:bg-gray-800 transition-colors"
+                      >
+                        Save
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

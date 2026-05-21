@@ -46,8 +46,12 @@ const FREQUENCY_COUNT_MAP = {
   'Custom Months': null // User enters manually
 };
 
-const AMCPackageManager = ({ showToast }) => {
-  const [activeTab, setActiveTab] = useState('create'); // 'create' or 'all-packages'
+const AMCPackageManager = ({ admin, showToast }) => {
+  // Check if user is Operations Manager (restricted access - view only)
+  const isOpsManager = admin?.role === 'operations_manager';
+  
+  // Operations Manager defaults to 'all-packages' tab (no create access)
+  const [activeTab, setActiveTab] = useState(isOpsManager ? 'all-packages' : 'create'); // 'create' or 'all-packages'
   const [amcPackages, setAmcPackages] = useState([]);
   const [filterPropertyType, setFilterPropertyType] = useState('all'); // Filter for All Packages tab
   const [exportingId, setExportingId] = useState(null); // Track PDF export state
@@ -270,21 +274,23 @@ const AMCPackageManager = ({ showToast }) => {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - Create tab hidden for Operations Manager */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit mb-6">
-        <button
-          onClick={() => setActiveTab('create')}
-          className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
-            activeTab === 'create'
-              ? 'bg-white text-slate-700 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Create Package
-          </div>
-        </button>
+        {!isOpsManager && (
+          <button
+            onClick={() => setActiveTab('create')}
+            className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
+              activeTab === 'create'
+                ? 'bg-white text-slate-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Create Package
+            </div>
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('all-packages')}
           className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
@@ -402,9 +408,12 @@ const AMCPackageManager = ({ showToast }) => {
                           <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
                             Total Rate
                           </th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                            Actions
-                          </th>
+                          {/* Actions column - Hidden for Operations Manager */}
+                          {!isOpsManager && (
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          )}
                         </tr>
                       </thead>
                       {/* Table Body */}
@@ -447,39 +456,42 @@ const AMCPackageManager = ({ showToast }) => {
                                   ₹{totalRate.toLocaleString()}
                                 </span>
                               </td>
-                              <td className="px-4 py-4">
-                                <div className="flex items-center justify-center gap-1">
-                                  <button
-                                    onClick={() => handleOpenEditModal(pkg)}
-                                    className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                                    title="Edit"
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => handleExportPDF(e, pkg)}
-                                    disabled={exportingId === pkg.packageId}
-                                    className={`p-2 rounded-lg transition-colors ${exportingId === pkg.packageId ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
-                                    title="Export PDF"
-                                  >
-                                    <Download className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleEmailPackage(pkg)}
-                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                    title="Email"
-                                  >
-                                    <Mail className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeletePackage(pkg.packageId)}
-                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                    title="Delete"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </td>
+                              {/* Actions column - Hidden for Operations Manager */}
+                              {!isOpsManager && (
+                                <td className="px-4 py-4">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button
+                                      onClick={() => handleOpenEditModal(pkg)}
+                                      className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                      title="Edit"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => handleExportPDF(e, pkg)}
+                                      disabled={exportingId === pkg.packageId}
+                                      className={`p-2 rounded-lg transition-colors ${exportingId === pkg.packageId ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
+                                      title="Export PDF"
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleEmailPackage(pkg)}
+                                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                      title="Email"
+                                    >
+                                      <Mail className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeletePackage(pkg.packageId)}
+                                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              )}
                             </tr>
                           );
                         })}
