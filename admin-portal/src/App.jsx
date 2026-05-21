@@ -81,7 +81,6 @@ import EmployeeDetails from './pages/EmployeeDetails';
 import EmployeeZoneManagement from './pages/EmployeeZoneManagement';
 import Estimates from './pages/Estimates';
 import UserManagement from './pages/UserManagement';
-import EmployeeManagement from './pages/EmployeeManagement';
 import QRManagement from './pages/QRManagement';
 
 // Session timeout in milliseconds (30 minutes)
@@ -255,7 +254,6 @@ function App() {
             <Route path="/employee/employee-details" element={<EmployeeDetails />} />
             <Route path="/employee/employee-zone-management" element={<EmployeeZoneManagement />} />
             <Route path="/employee/user-management" element={<UserManagement />} />
-            <Route path="/employee/employee-management" element={<EmployeeManagement />} />
             <Route path="/employee/qr-management" element={<QRManagement />} />
             <Route path="/employee/estimates" element={<Navigate to="/employee/estimates/list" replace />} />
             <Route path="/employee/estimates/create" element={<Estimates admin={user} defaultTab="create" />} />
