@@ -811,11 +811,59 @@ const generateTempPassword = () => {
   return password;
 };
 
-// Helper function to generate user ID
-const generateUserId = (prefix = 'FPE') => {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${prefix}-${timestamp}${random}`;
+// Helper function to generate GLOBAL SEQUENTIAL user ID
+// All FP-created staff share the same sequence as Admin-created staff (001, 002, 003...)
+const generateUserId = async (role) => {
+  const employeeRoles = ['manager', 'coordinator', 'supervisor', 'executive'];
+  const isEmployee = employeeRoles.includes(role);
+  
+  try {
+    if (isEmployee) {
+      // For employees: Generate numeric-only ID (001, 002, 003...) - GLOBAL sequence
+      const [rows] = await pool.execute(
+        `SELECT user_id FROM users 
+         WHERE role IN ('manager', 'coordinator', 'supervisor', 'executive') 
+         AND user_id REGEXP '^[0-9]+$'
+         ORDER BY CAST(user_id AS UNSIGNED) DESC LIMIT 1`
+      );
+      
+      let nextSequence = 1;
+      if (rows.length > 0) {
+        const existingId = rows[0].user_id;
+        const numericPart = parseInt(existingId, 10);
+        if (!isNaN(numericPart)) {
+          nextSequence = numericPart + 1;
+        }
+      }
+      
+      // Format with leading zeros (3 digits minimum)
+      return String(nextSequence).padStart(3, '0');
+    }
+    
+    // For non-employees: Use FPE prefix
+    const prefix = 'FPE';
+    const [rows] = await pool.execute(
+      `SELECT user_id FROM users WHERE user_id LIKE ? ORDER BY user_id DESC LIMIT 1`,
+      [`${prefix}%`]
+    );
+    
+    let nextSequence = 1;
+    if (rows.length > 0) {
+      const existingId = rows[0].user_id;
+      const numericPart = parseInt(existingId.replace(prefix, ''), 10);
+      if (!isNaN(numericPart)) {
+        nextSequence = numericPart + 1;
+      }
+    }
+    
+    return `${prefix}${String(nextSequence).padStart(3, '0')}`;
+  } catch (error) {
+    console.error('Error generating user ID:', error);
+    // Fallback to timestamp-based ID
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return isEmployee ? `${Date.now() % 100000}` : `FPE-${timestamp}${random}`;
+  }
 };
 
 // Create employee with full onboarding (user account + email)
@@ -879,7 +927,7 @@ router.post('/employees', requireFPScope, async (req, res) => {
 
     // Generate employee code, user ID, and temporary password
     const employeeCode = `FP${req.fpId}-EMP-${Date.now()}`;
-    const userId = generateUserId('FPE');
+    const userId = await generateUserId(role || 'executive');  // Global sequential ID
     const tempPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
@@ -1039,18 +1087,10 @@ const FP_STAFF_ROLES = {
   }
 };
 
-// Helper function to generate staff user ID
-const generateStaffUserId = (role) => {
-  const prefixes = {
-    manager: 'MGR',
-    coordinator: 'CRD',
-    supervisor: 'SUP',
-    executive: 'EXE'
-  };
-  const prefix = prefixes[role] || 'STF';
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${prefix}-${timestamp}${random}`;
+// Helper function to generate staff user ID - uses global sequential IDs
+// Reuses generateUserId for consistency
+const generateStaffUserId = async (role) => {
+  return await generateUserId(role);
 };
 
 // Helper function to generate staff temp password
@@ -1210,8 +1250,8 @@ router.post('/staff', requireFPScope, async (req, res) => {
       });
     }
 
-    // Generate unique User ID and temporary password
-    const userId = generateStaffUserId(role);
+    // Generate unique User ID (global sequential) and temporary password
+    const userId = await generateStaffUserId(role);
     const tempPassword = generateStaffTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 

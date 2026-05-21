@@ -271,7 +271,7 @@ router.post('/login', async (req, res) => {
       });
     }
     
-    // Generate token for regular database user
+    // Generate token for regular database user (including FP staff with franchise_partner_id)
     const token = generateToken({
       id: user.id,
       userId: user.user_id,
@@ -279,7 +279,8 @@ router.post('/login', async (req, res) => {
       email: user.email,
       role: user.role,
       first_name: user.first_name,
-      last_name: user.last_name
+      last_name: user.last_name,
+      franchisePartnerId: user.franchise_partner_id || null  // Include FP ID for FP-created staff
     });
 
     res.json({
