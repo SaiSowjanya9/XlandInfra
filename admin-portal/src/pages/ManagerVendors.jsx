@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 
 const ManagerVendors = ({ user }) => {
+  // Check if this is an FP-created Manager (has franchisePartnerId)
+  const isFPManager = !!user?.franchisePartnerId;
+  
   const location = useLocation();
   const [vendors, setVendors] = useState({ own: [], assigned: [], all: [] });
   const [loading, setLoading] = useState(true);
@@ -353,20 +356,25 @@ const ManagerVendors = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => openEditModal(vendor)}
-                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(vendor.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {/* Edit/Delete buttons - Hidden for FP Manager */}
+                        {!isFPManager && (
+                          <>
+                            <button
+                              onClick={() => openEditModal(vendor)}
+                              className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(vendor.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -574,10 +582,13 @@ const ManagerVendors = ({ user }) => {
                   <p className="text-sm text-gray-500">Area</p>
                   <p className="font-medium text-gray-900">{selectedVendor.area || '-'}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Rate/Visit</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.rate_per_visit || '-'}</p>
-                </div>
+                {/* Rate/Visit - Hidden for FP Manager */}
+                {!isFPManager && (
+                  <div>
+                    <p className="text-sm text-gray-500">Rate/Visit</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.rate_per_visit || '-'}</p>
+                  </div>
+                )}
                 <div className="col-span-2">
                   <p className="text-sm text-gray-500">Address</p>
                   <p className="font-medium text-gray-900">

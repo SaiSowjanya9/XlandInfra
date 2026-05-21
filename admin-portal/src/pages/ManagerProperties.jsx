@@ -18,6 +18,9 @@ import {
 } from 'lucide-react';
 
 const ManagerProperties = ({ user }) => {
+  // Check if this is an FP-created Manager (has franchisePartnerId)
+  const isFPManager = !!user?.franchisePartnerId;
+
   const [properties, setProperties] = useState([]);
   const [zones, setZones] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -232,15 +235,18 @@ const ManagerProperties = ({ user }) => {
           <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
           <p className="text-gray-500 mt-1">Manage your properties</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => { resetForm(); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Property</span>
-          </button>
-        </div>
+        {/* Add Property button - Hidden for FP Manager */}
+        {!isFPManager && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => { resetForm(); setShowModal(true); }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Property</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Message */}
@@ -256,19 +262,21 @@ const ManagerProperties = ({ user }) => {
         </div>
       )}
 
-      {/* Search */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search properties..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
+      {/* Search - Hidden for FP Manager */}
+      {!isFPManager && (
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search properties..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Properties List */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -330,27 +338,33 @@ const ManagerProperties = ({ user }) => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => openAssignModal(property, 'vendor')}
-                          className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
-                          title="Assign Vendor"
-                        >
-                          <Store className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => openAssignModal(property, 'employee')}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
-                          title="Assign Employee"
-                        >
-                          <User className="w-4 h-4" />
-                        </button>
+                        {/* View Details - always visible */}
                         <button
                           onClick={() => openEditModal(property)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                          title="Edit Property"
+                          title="View Details"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
+                        {/* Assign/Edit buttons - Hidden for FP Manager */}
+                        {!isFPManager && (
+                          <>
+                            <button
+                              onClick={() => openAssignModal(property, 'vendor')}
+                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
+                              title="Assign Vendor"
+                            >
+                              <Store className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openAssignModal(property, 'employee')}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                              title="Assign Employee"
+                            >
+                              <User className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

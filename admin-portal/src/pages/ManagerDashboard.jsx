@@ -17,6 +17,9 @@ import {
 
 const ManagerDashboard = ({ user }) => {
   const navigate = useNavigate();
+  // Check if this is an FP-created Manager (has franchisePartnerId)
+  const isFPManager = !!user?.franchisePartnerId;
+
   const [stats, setStats] = useState(null);
   const [recentWorkOrders, setRecentWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,12 +94,14 @@ const ManagerDashboard = ({ user }) => {
     });
   };
 
-  const quickActions = [
-    { label: 'Add Property', icon: Building2, path: '/manager/properties', color: 'blue' },
+  // Quick actions - Add Property and Add Customer hidden for FP Manager
+  const allQuickActions = [
+    { label: 'Add Property', icon: Building2, path: '/manager/properties', color: 'blue', adminOnly: true },
     { label: 'Create Work Order', icon: ClipboardList, path: '/manager/work-orders', color: 'indigo' },
-    { label: 'Add Customer', icon: Users, path: '/manager/customers', color: 'green' },
+    { label: 'Add Customer', icon: Users, path: '/manager/customers', color: 'green', adminOnly: true },
     { label: 'Create Estimate', icon: FileText, path: '/manager/estimates/create', color: 'purple' }
   ];
+  const quickActions = isFPManager ? allQuickActions.filter(a => !a.adminOnly) : allQuickActions;
 
   if (loading) {
     return (

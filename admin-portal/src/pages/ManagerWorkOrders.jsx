@@ -12,6 +12,9 @@ import {
 } from 'lucide-react';
 
 const ManagerWorkOrders = ({ user }) => {
+  // Check if this is an FP-created Manager (has franchisePartnerId)
+  const isFPManager = !!user?.franchisePartnerId;
+
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -290,6 +293,7 @@ const ManagerWorkOrders = ({ user }) => {
             {completedCount}
           </span>
         </button>
+        {/* Create Work Order - Allowed for FP Manager */}
         <button
           onClick={() => { resetForm(); setActiveTab('create'); }}
           className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
