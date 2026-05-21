@@ -15,7 +15,13 @@ import {
   Phone,
   Mail,
   MapPin,
-  Eye
+  Eye,
+  Truck,
+  Wrench,
+  Zap,
+  Wind,
+  Sparkles,
+  Shield
 } from 'lucide-react';
 
 const ManagerVendors = ({ user }) => {
@@ -26,6 +32,12 @@ const ManagerVendors = ({ user }) => {
   const [vendors, setVendors] = useState({ own: [], assigned: [], all: [] });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [divisionFilter, setDivisionFilter] = useState('all');
+  const [zoneFilter, setZoneFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [zones, setZones] = useState([]);
+  const [divisions, setDivisions] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
@@ -44,6 +56,16 @@ const ManagerVendors = ({ user }) => {
     gstNumber: '',
     panNumber: ''
   });
+
+  // Service type tabs config
+  const serviceTabs = [
+    { id: 'all', label: 'All Vendors', icon: Store },
+    { id: 'plumbing', label: 'Plumbing', icon: Wrench },
+    { id: 'electrical', label: 'Electrical', icon: Zap },
+    { id: 'hvac', label: 'HVAC', icon: Wind },
+    { id: 'cleaning', label: 'Cleaning', icon: Sparkles },
+    { id: 'security', label: 'Security', icon: Shield }
+  ];
 
   // Determine view type based on URL
   const viewType = location.pathname.includes('/add') ? 'add' 
@@ -192,35 +214,54 @@ const ManagerVendors = ({ user }) => {
     }
   };
 
-  const filteredVendors = getVendorList().filter(v =>
-    v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter vendors based on search and service type tab
+  const filteredVendors = getVendorList().filter(v => {
+    const matchesSearch = !searchTerm ||
+      v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.vendor_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.zone_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesTab = activeTab === 'all' || v.service_type?.toLowerCase() === activeTab;
+    const matchesZone = zoneFilter === 'all' || v.zone_id?.toString() === zoneFilter;
+    
+    return matchesSearch && matchesTab && matchesZone;
+  });
 
-  const getViewTitle = () => {
-    if (viewType === 'assigned') return 'Assigned Vendors';
-    return 'Vendor Management';
+  // Get count for each service tab
+  const getTabCount = (tabId) => {
+    const list = getVendorList();
+    if (tabId === 'all') return list.length;
+    return list.filter(v => v.service_type?.toLowerCase() === tabId).length;
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{getViewTitle()}</h1>
-          <p className="text-gray-500 mt-1">
-            {viewType === 'assigned' ? 'Vendors assigned to you' : 'Manage your vendors'}
-          </p>
+          <h1 className="text-xl font-bold text-gray-900">Vendor Details</h1>
+          <p className="text-blue-600 text-sm">{getVendorList().length} total vendors</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => { resetForm(); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            onClick={fetchVendors}
+            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+            title="Refresh"
           >
-            <Plus className="w-4 h-4" />
-            <span>Add Vendor</span>
+            <RefreshCw className="w-5 h-5 text-gray-600" />
           </button>
+          {/* Add Vendor - Hidden for FP Manager */}
+          {!isFPManager && (
+            <button
+              onClick={() => { resetForm(); setShowModal(true); }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Vendor</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -237,39 +278,78 @@ const ManagerVendors = ({ user }) => {
         </div>
       )}
 
-      {/* Tabs */}
-      {viewType !== 'add' && (
-        <div className="bg-white rounded-xl border border-gray-100 p-1">
-          <div className="flex gap-1">
+      {/* Service Type Tabs */}
+      <div className="flex items-center gap-1 border-b border-gray-200 overflow-x-auto">
+        {serviceTabs.map((tab) => {
+          const Icon = tab.icon;
+          const count = getTabCount(tab.id);
+          return (
             <button
-              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                viewType === 'all' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              All Vendors ({vendors.all?.length || 0})
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+              <span className={`px-1.5 py-0.5 rounded text-xs ${
+                activeTab === tab.id ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {count}
+              </span>
             </button>
-            <button
-              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                viewType === 'assigned' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              Assigned ({vendors.assigned?.length || 0})
-            </button>
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
 
-      {/* Search */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="relative">
+      {/* Search and Filters Row */}
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Search */}
+        <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search vendors..."
+            placeholder="Search by name, ID, service, or zone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
           />
+        </div>
+        
+        {/* Filters */}
+        <div className="flex gap-2">
+          <select
+            value={divisionFilter}
+            onChange={(e) => setDivisionFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Divisions</option>
+            {divisions.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+          <select
+            value={zoneFilter}
+            onChange={(e) => setZoneFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Zones</option>
+            {zones.map(z => (
+              <option key={z.id} value={z.id}>{z.name}</option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="active">Active Vendors</option>
+            <option value="inactive">Inactive Vendors</option>
+            <option value="all">All Vendors</option>
+          </select>
         </div>
       </div>
 
@@ -280,9 +360,12 @@ const ManagerVendors = ({ user }) => {
             <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
           </div>
         ) : filteredVendors.length === 0 ? (
-          <div className="text-center py-12">
-            <Store className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No vendors found</p>
+          <div className="text-center py-16">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Truck className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-blue-600 font-medium">No vendors found</p>
+            <p className="text-gray-400 text-sm mt-1">Add vendors using the Add Vendor page.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

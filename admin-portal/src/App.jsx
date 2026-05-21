@@ -44,6 +44,8 @@ import ManagerWorkOrders from './pages/ManagerWorkOrders';
 import ManagerCustomers from './pages/ManagerCustomers';
 import ManagerVendors from './pages/ManagerVendors';
 import ManagerAddVendor from './pages/ManagerAddVendor';
+import ManagerEmployees from './pages/ManagerEmployees';
+import ManagerEmployeeZones from './pages/ManagerEmployeeZones';
 import ManagerEstimates from './pages/ManagerEstimates';
 
 import CoordinatorLogin from './pages/CoordinatorLogin';
@@ -324,6 +326,9 @@ function App() {
             <Route path="/manager/vendors" element={<ManagerVendors user={user} />} />
             <Route path="/manager/vendors/add" element={<ManagerAddVendor user={user} />} />
             <Route path="/manager/vendors/assigned" element={<AssignedVendors />} />
+            <Route path="/manager/employees" element={<ManagerEmployees user={user} />} />
+            <Route path="/manager/employees/add" element={<ManagerEmployees user={user} />} />
+            <Route path="/manager/employees/zones" element={<ManagerEmployeeZones user={user} />} />
             <Route path="/manager/estimates" element={<ManagerEstimates user={user} defaultTab="list" />} />
             <Route path="/manager/estimates/create" element={<ManagerEstimates user={user} defaultTab="create" />} />
             <Route path="/manager/estimates/amc" element={<ManagerEstimates user={user} defaultTab="amc" />} />

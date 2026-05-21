@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList,
   Plus,
@@ -8,7 +8,15 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Eye
+  Eye,
+  Building2,
+  User,
+  Mail,
+  Phone,
+  Image,
+  Camera,
+  FileText,
+  Upload
 } from 'lucide-react';
 
 const ManagerWorkOrders = ({ user }) => {
@@ -26,16 +34,22 @@ const ManagerWorkOrders = ({ user }) => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [propertySearch, setPropertySearch] = useState('');
+  const [subcategories, setSubcategories] = useState([]);
+  const [attachments, setAttachments] = useState([]);
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     propertyId: '',
     categoryId: '',
-    clientId: '',
-    title: '',
+    subcategoryId: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
     description: '',
     priority: 'medium',
     permissionToEnter: 'no',
     hasPet: 'no',
-    scheduledDate: ''
+    entryNotes: ''
   });
 
   const token = sessionStorage.getItem('pm_auth_token');
@@ -195,14 +209,68 @@ const ManagerWorkOrders = ({ user }) => {
     setFormData({
       propertyId: '',
       categoryId: '',
-      clientId: '',
-      title: '',
+      subcategoryId: '',
+      customerName: '',
+      customerEmail: '',
+      customerPhone: '',
       description: '',
       priority: 'medium',
       permissionToEnter: 'no',
       hasPet: 'no',
-      scheduledDate: ''
+      entryNotes: ''
     });
+    setPropertySearch('');
+    setSubcategories([]);
+    setAttachments([]);
+  };
+
+  // Filter properties based on search
+  const filteredPropertiesForSearch = properties.filter(p => 
+    propertySearch && (
+      p.name?.toLowerCase().includes(propertySearch.toLowerCase()) ||
+      p.property_id?.toLowerCase().includes(propertySearch.toLowerCase())
+    )
+  );
+
+  // Handle property selection
+  const handlePropertySelect = (property) => {
+    setFormData({ ...formData, propertyId: property.id });
+    setPropertySearch(property.property_id + ' - ' + property.name);
+  };
+
+  // Handle category change to load subcategories
+  const handleCategoryChange = async (categoryId) => {
+    setFormData({ ...formData, categoryId, subcategoryId: '' });
+    if (categoryId) {
+      try {
+        const response = await fetch(`/api/manager/categories/${categoryId}/subcategories`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+          setSubcategories(result.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch subcategories:', error);
+        setSubcategories([]);
+      }
+    } else {
+      setSubcategories([]);
+    }
+  };
+
+  // Handle file attachments
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (attachments.length + files.length > 5) {
+      setMessage({ type: 'error', text: 'Maximum 5 files allowed' });
+      return;
+    }
+    setAttachments([...attachments, ...files]);
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments(attachments.filter((_, i) => i !== index));
   };
 
   const getStatusColor = (status) => {
@@ -428,150 +496,322 @@ const ManagerWorkOrders = ({ user }) => {
 
       {/* Create Work Order Form - shown for create tab */}
       {activeTab === 'create' && (
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <div className="flex items-start gap-3 mb-6">
+        <div className="bg-white rounded-xl border border-gray-100">
+          {/* Header */}
+          <div className="flex items-start gap-3 p-6 border-b border-gray-100">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
               <Plus className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Create Work Order</h2>
-              <p className="text-sm text-gray-500">Fill in the details to create a new work order</p>
+              <h2 className="text-lg font-semibold text-gray-900">Create New Work Order</h2>
+              <p className="text-sm text-gray-500">Fill in the details to create a work order on behalf of a resident</p>
             </div>
           </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Property *</label>
-                  <select
-                    required
-                    value={formData.propertyId}
-                    onChange={(e) => setFormData({ ...formData, propertyId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Property</option>
-                    {properties.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Property Information Section */}
+            <div className="bg-gray-50 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Building2 className="w-5 h-5 text-gray-600" />
+                <h3 className="font-semibold text-gray-900">Property Information</h3>
+              </div>
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property ID <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={propertySearch}
+                  onChange={(e) => { setPropertySearch(e.target.value); setFormData({ ...formData, propertyId: '' }); }}
+                  placeholder="Search by Property ID or Community Name..."
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                {filteredPropertiesForSearch.length > 0 && !formData.propertyId && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {filteredPropertiesForSearch.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handlePropertySelect(p)}
+                        className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 last:border-0"
+                      >
+                        <p className="font-medium text-gray-900">{p.property_id}</p>
+                        <p className="text-sm text-gray-500">{p.name}</p>
+                      </button>
                     ))}
-                  </select>
-                </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
+            {/* Customer Details Section */}
+            <div className="bg-gray-50 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <User className="w-5 h-5 text-gray-600" />
+                <h3 className="font-semibold text-gray-900">Customer Details</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select
-                    value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-                  <select
-                    value={formData.clientId}
-                    onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Customer</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                  <select
-                    value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    {priorityOptions.map(p => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     required
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Brief title"
+                    value={formData.customerName}
+                    onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                    placeholder="Customer name"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    rows={3}
-                  />
-                </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Scheduled Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input
-                    type="datetime-local"
-                    value={formData.scheduledDate}
-                    onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    type="email"
+                    value={formData.customerEmail}
+                    onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
+                    placeholder="customer@email.com"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Permission to Enter</label>
-                    <select
-                      value={formData.permissionToEnter}
-                      onChange={(e) => setFormData({ ...formData, permissionToEnter: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="no">No</option>
-                      <option value="yes">Yes</option>
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Has Pet?</label>
-                    <select
-                      value={formData.hasPet}
-                      onChange={(e) => setFormData({ ...formData, hasPet: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="no">No</option>
-                      <option value="yes">Yes</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number <span className="text-red-500">*</span></label>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.customerPhone}
+                    onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
+                    placeholder="Phone number"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
               </div>
+            </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            {/* Category & Subcategory */}
+            <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-500">*</span></label>
+                  <div className="flex gap-2">
+                    <select
+                      required
+                      value={formData.categoryId}
+                      onChange={(e) => handleCategoryChange(e.target.value)}
+                      className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select a category</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory <span className="text-red-500">*</span></label>
+                  <select
+                    required
+                    value={formData.subcategoryId}
+                    onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    disabled={!formData.categoryId}
+                  >
+                    <option value="">{formData.categoryId ? 'Select subcategory' : 'Select a category first'}</option>
+                    {subcategories.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description <span className="text-gray-400">(Optional)</span>
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value.slice(0, 500) })}
+                placeholder="Describe the issue or request in detail..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                rows={4}
+              />
+              <p className="text-right text-sm text-gray-400 mt-1">{formData.description.length}/500</p>
+            </div>
+
+            {/* Permission & Pet */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Permission to Enter <span className="text-red-500">*</span></label>
+                <p className="text-xs text-gray-500 mb-2">Allow entry if resident is unavailable</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, permissionToEnter: 'yes' })}
+                    className={`flex-1 py-3 rounded-lg border-2 font-medium transition-all ${
+                      formData.permissionToEnter === 'yes'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, permissionToEnter: 'no' })}
+                    className={`flex-1 py-3 rounded-lg border-2 font-medium transition-all ${
+                      formData.permissionToEnter === 'no'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Has Pet? <span className="text-red-500">*</span></label>
+                <p className="text-xs text-gray-500 mb-2">Does the resident have a pet?</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, hasPet: 'yes' })}
+                    className={`flex-1 py-3 rounded-lg border-2 font-medium transition-all ${
+                      formData.hasPet === 'yes'
+                        ? 'border-amber-500 bg-amber-50 text-amber-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, hasPet: 'no' })}
+                    className={`flex-1 py-3 rounded-lg border-2 font-medium transition-all ${
+                      formData.hasPet === 'no'
+                        ? 'border-amber-500 bg-amber-50 text-amber-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Entry Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Entry Notes <span className="text-gray-400">(Optional)</span>
+              </label>
+              <textarea
+                value={formData.entryNotes}
+                onChange={(e) => setFormData({ ...formData, entryNotes: e.target.value })}
+                placeholder="Special instructions for entry (gate code, parking, etc.)..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                rows={2}
+              />
+            </div>
+
+            {/* Priority */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Priority</label>
+              <div className="grid grid-cols-4 gap-3">
+                {priorityOptions.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, priority: p.value })}
+                    className={`py-3 rounded-lg border-2 font-medium transition-all ${
+                      formData.priority === p.value
+                        ? p.value === 'low' ? 'border-green-500 bg-green-50 text-green-700'
+                        : p.value === 'medium' ? 'border-amber-500 bg-amber-50 text-amber-700'
+                        : p.value === 'high' ? 'border-orange-500 bg-orange-50 text-orange-700'
+                        : 'border-red-500 bg-red-50 text-red-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Attachments */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Attachments <span className="text-gray-400">(Optional - max 5 files)</span>
+              </label>
+              <div className="grid grid-cols-3 gap-4 mt-2">
                 <button
                   type="button"
-                  onClick={() => { resetForm(); setActiveTab('pending'); }}
-                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all"
                 >
-                  Cancel
+                  <Image className="w-8 h-8 text-gray-400 mb-2" />
+                  <span className="text-sm text-gray-600">Gallery</span>
                 </button>
                 <button
-                  type="submit"
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  type="button"
+                  className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Create Work Order</span>
+                  <Camera className="w-8 h-8 text-gray-400 mb-2" />
+                  <span className="text-sm text-gray-600">Camera</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all"
+                >
+                  <FileText className="w-8 h-8 text-gray-400 mb-2" />
+                  <span className="text-sm text-gray-600">Files</span>
                 </button>
               </div>
-            </form>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              {attachments.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {attachments.map((file, index) => (
+                    <div key={index} className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
+                      <FileText className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-700">{file.name}</span>
+                      <button type="button" onClick={() => removeAttachment(index)} className="text-red-500 hover:text-red-700">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Form Actions */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => { resetForm(); setActiveTab('pending'); }}
+                className="px-6 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Work Order</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
