@@ -193,3 +193,96 @@ body {
   color: #64748b;
   background-color: #0f172a;
 }
+
+/* ========== RESPONSIVE UTILITIES ========== */
+
+/* Mobile-first table responsiveness */
+@media (max-width: 1024px) {
+  .table-responsive {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table-responsive table {
+    min-width: 800px;
+  }
+}
+
+/* Ensure forms don't overflow on mobile */
+@media (max-width: 640px) {
+  .form-container {
+    padding: 1rem;
+  }
+  
+  .modal-content {
+    margin: 0.5rem;
+    max-height: calc(100vh - 1rem);
+    overflow-y: auto;
+  }
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 768px) {
+  button, 
+  select, 
+  input[type="text"], 
+  input[type="email"], 
+  input[type="tel"], 
+  input[type="number"] {
+    min-height: 44px;
+  }
+}
+
+/* Hide horizontal overflow globally on mobile */
+@media (max-width: 768px) {
+  .overflow-hidden-mobile {
+    overflow-x: hidden;
+  }
+}
+
+/* Responsive card grids */
+@layer utilities {
+  .responsive-grid-2 {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-4;
+  }
+  
+  .responsive-grid-3 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4;
+  }
+  
+  .responsive-grid-4 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4;
+  }
+}
+
+/* Responsive text sizes */
+@layer utilities {
+  .text-responsive-sm {
+    @apply text-xs sm:text-sm;
+  }
+  
+  .text-responsive-base {
+    @apply text-sm sm:text-base;
+  }
+  
+  .text-responsive-lg {
+    @apply text-base sm:text-lg md:text-xl;
+  }
+  
+  .text-responsive-xl {
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+}
+
+/* Safe area insets for iOS */
+@supports (padding: max(0px)) {
+  .safe-area-inset-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .safe-area-inset-top {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+}

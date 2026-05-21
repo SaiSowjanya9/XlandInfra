@@ -3,11 +3,30 @@
 const EMPLOYEE_STORAGE_KEY = 'xland_employees';
 const EMPLOYEE_NOTIFICATION_KEY = 'xland_employee_notifications';
 
-// Generate unique employee ID
+// Generate sequential unique Employee ID (numeric-only, continuous sequence for all roles)
+// Format: 001, 002, 003...
 const generateEmployeeId = () => {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `EMP-${timestamp}-${random}`;
+  try {
+    // Get all employees to find the highest sequence number
+    const data = localStorage.getItem(EMPLOYEE_STORAGE_KEY);
+    const employees = data ? JSON.parse(data) : [];
+    
+    // Find max sequence from all employees with numeric IDs
+    const numericIds = employees
+      .filter(e => e.employeeId && /^\d+$/.test(e.employeeId))
+      .map(e => parseInt(e.employeeId, 10))
+      .filter(n => !isNaN(n));
+    
+    const maxSequence = numericIds.length > 0 ? Math.max(...numericIds) : 0;
+    const nextSequence = maxSequence + 1;
+    
+    // Format with leading zeros (3 digits minimum, expandable)
+    return String(nextSequence).padStart(3, '0');
+  } catch (error) {
+    console.error('Error generating employee ID:', error);
+    // Fallback to timestamp-based if localStorage query fails
+    return String(Date.now()).slice(-6);
+  }
 };
 
 // Get all employees
@@ -37,20 +56,25 @@ export const getEmployeesByZone = (zoneName) => {
   );
 };
 
-// Check for duplicate employee (by email, phone, or Aadhaar)
-export const checkDuplicateEmployee = (email, phone, aadhaar, excludeId = null) => {
+// Check for duplicate employee (by email, phone, or username)
+export const checkDuplicateEmployee = (email, phone, usernameOrAadhaar, excludeId = null) => {
   const employees = getEmployees('all');
   
   for (const emp of employees) {
     if (excludeId && (emp.id === excludeId || emp.employeeId === excludeId)) continue;
     
-    if (emp.email.toLowerCase() === email.toLowerCase()) {
+    if (emp.email && email && emp.email.toLowerCase() === email.toLowerCase()) {
       return { isDuplicate: true, field: 'email', message: 'An employee with this email already exists' };
     }
-    if (emp.phone === phone) {
+    if (emp.phone && phone && emp.phone === phone) {
       return { isDuplicate: true, field: 'phone', message: 'An employee with this phone number already exists' };
     }
-    if (emp.aadhaar === aadhaar) {
+    // Check username (new field)
+    if (emp.username && usernameOrAadhaar && emp.username.toLowerCase() === usernameOrAadhaar.toLowerCase()) {
+      return { isDuplicate: true, field: 'username', message: 'An employee with this username already exists' };
+    }
+    // Legacy: Check aadhaar if it exists
+    if (emp.aadhaar && usernameOrAadhaar && emp.aadhaar === usernameOrAadhaar) {
       return { isDuplicate: true, field: 'aadhaar', message: 'An employee with this Aadhaar number already exists' };
     }
   }
@@ -62,11 +86,11 @@ export const checkDuplicateEmployee = (email, phone, aadhaar, excludeId = null) 
 export const createEmployee = (employeeData) => {
   const employees = getEmployees('all');
   
-  // Check for duplicates
+  // Check for duplicates (email, phone, username)
   const duplicateCheck = checkDuplicateEmployee(
     employeeData.email,
-    employeeData.phone,
-    employeeData.aadhaar
+    employeeData.phone || '',
+    employeeData.username || employeeData.aadhaar || ''
   );
   
   if (duplicateCheck.isDuplicate) {
@@ -75,14 +99,19 @@ export const createEmployee = (employeeData) => {
   
   const newEmployee = {
     id: `emp_${Date.now()}`,
-    employeeId: generateEmployeeId(),
-    name: employeeData.name,
-    phone: employeeData.phone,
+    employeeId: generateEmployeeId(), // Auto-generated: EMP001, EMP002...
+    name: employeeData.name || employeeData.fullName,
+    fullName: employeeData.fullName || employeeData.name,
+    username: employeeData.username || '',
+    phone: employeeData.phone || '',
     countryCode: employeeData.countryCode || '+91',
     email: employeeData.email,
-    aadhaar: employeeData.aadhaar,
-    assignedZones: employeeData.assignedZones, // 'all' or array of zone names
-    status: 'active',
+    role: employeeData.role || 'executive',
+    roleLabel: employeeData.roleLabel || 'Executive',
+    aadhaar: employeeData.aadhaar || '', // Legacy field - kept for backward compatibility
+    assignedZones: employeeData.assignedZones || [], // 'all' or array of zone names
+    status: employeeData.status || 'active',
+    passwordChangeRequired: employeeData.passwordChangeRequired || true,
     createdBy: employeeData.createdBy || 'system',
     createdAt: new Date().toISOString(),
   };

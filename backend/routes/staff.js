@@ -13,22 +13,71 @@ const { adminOnly, managerOrAdmin, requireRole, ROLES } = require('../middleware
 const { ROLE_NAMES } = require('../config/roles');
 const { sendEmployeeWelcomeEmail } = require('../services/emailService');
 
-// Generate unique User ID based on role
-const generateUserId = (role) => {
-  const prefixes = {
-    admin: 'ADM',
-    operations_manager: 'OPM',
-    franchise_partner: 'FRP',
-    franchise: 'FRP',
-    manager: 'MGR',
-    coordinator: 'CRD',
-    supervisor: 'SUP',
-    executive: 'EXE'
-  };
-  const prefix = prefixes[role] || 'USR';
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = crypto.randomBytes(2).toString('hex').toUpperCase();
-  return `${prefix}-${timestamp}${random}`;
+// User ID Prefixes by Role (Employees use numeric-only IDs)
+const USER_ID_PREFIXES = {
+  admin: 'XAD',
+  operations_manager: 'XOM',
+  franchise_partner: 'XFP',
+  franchise: 'XFP'
+  // Employee roles (manager, coordinator, supervisor, executive) use numeric-only IDs
+};
+
+// Employee roles that use numeric-only IDs (001, 002, 003...)
+const EMPLOYEE_ROLES = ['manager', 'coordinator', 'supervisor', 'executive'];
+
+// Generate sequential unique User ID based on role
+const generateUserId = async (role) => {
+  const isEmployee = EMPLOYEE_ROLES.includes(role);
+  
+  try {
+    if (isEmployee) {
+      // For employees: Generate numeric-only ID (001, 002, 003...)
+      const [rows] = await pool.execute(
+        `SELECT user_id FROM users 
+         WHERE role IN ('manager', 'coordinator', 'supervisor', 'executive') 
+         AND user_id REGEXP '^[0-9]+$'
+         ORDER BY CAST(user_id AS UNSIGNED) DESC LIMIT 1`
+      );
+      
+      let nextSequence = 1;
+      if (rows.length > 0) {
+        const existingId = rows[0].user_id;
+        const numericPart = parseInt(existingId, 10);
+        if (!isNaN(numericPart)) {
+          nextSequence = numericPart + 1;
+        }
+      }
+      
+      // Format with leading zeros (3 digits minimum)
+      return String(nextSequence).padStart(3, '0');
+    }
+    
+    // For non-employees: Use prefix-based ID
+    const prefix = USER_ID_PREFIXES[role] || 'XUS';
+    const [rows] = await pool.execute(
+      `SELECT user_id FROM users WHERE user_id LIKE ? ORDER BY user_id DESC LIMIT 1`,
+      [`${prefix}%`]
+    );
+    
+    let nextSequence = 1;
+    
+    if (rows.length > 0) {
+      const existingId = rows[0].user_id;
+      const numericPart = parseInt(existingId.replace(prefix, ''), 10);
+      if (!isNaN(numericPart)) {
+        nextSequence = numericPart + 1;
+      }
+    }
+    
+    // Format with leading zeros (3 digits minimum, expandable)
+    const sequenceStr = String(nextSequence).padStart(3, '0');
+    return `${prefix}${sequenceStr}`;
+  } catch (error) {
+    console.error('Error generating user ID:', error);
+    // Fallback to timestamp-based if database query fails
+    const timestamp = Date.now().toString(36).toUpperCase().slice(-4);
+    return `${prefix}${timestamp}`;
+  }
 };
 
 // Generate secure temporary password
@@ -630,7 +679,7 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
     }
 
     // Generate unique User ID and temporary password
-    const userId = generateUserId(role);
+    const userId = await generateUserId(role);
     const tempPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
@@ -655,7 +704,8 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
     // If creating a franchise partner, also create a record in franchise_partners table
     if (role === 'franchise_partner' || role === 'franchise') {
       try {
-        const fpCode = franchiseId || `FP-${Date.now()}`;
+        // Use the same userId as fp_code (no separate franchise ID)
+        const fpCode = userId;
         const [fpResult] = await pool.execute(
           `INSERT INTO franchise_partners (
             fp_code, username, email, password_hash, company_name, owner_name, phone,

@@ -34,8 +34,7 @@ const UserManagement = () => {
     name: '',
     email: '',
     phone: '',
-    // Franchise Partner specific fields
-    franchiseId: '',
+    // Franchise Partner specific fields (no franchiseId - auto-generated)
     franchiseName: '',
     companyName: '',
     gstNumber: '',
@@ -158,7 +157,6 @@ const UserManagement = () => {
         name: user.name || '',
         email: user.email || '',
         phone: user.phone || '',
-        franchiseId: user.franchiseId || '',
         franchiseName: user.franchiseName || '',
         companyName: user.companyName || '',
         gstNumber: user.gstNumber || '',
@@ -231,9 +229,8 @@ const UserManagement = () => {
           sendEmail: true
         };
         
-        // Add FP-specific fields if creating a franchise partner
+        // Add FP-specific fields if creating a franchise partner (franchiseId auto-generated)
         if (formData.role === 'franchise_partner' || formData.role === 'franchise') {
-          userData.franchiseId = formData.franchiseId;
           userData.franchiseName = formData.franchiseName;
           userData.companyName = formData.companyName;
           userData.gstNumber = formData.gstNumber;
@@ -717,18 +714,10 @@ const UserManagement = () => {
                       <Building2 className="w-4 h-4 text-primary-600" />
                       Franchise Partner Details
                     </h4>
+                    <p className="text-xs text-gray-500 mb-3 bg-blue-50 p-2 rounded">
+                      User ID will be auto-generated (XFP001, XFP002...)
+                    </p>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Franchise ID *</label>
-                        <input
-                          type="text"
-                          value={formData.franchiseId}
-                          onChange={(e) => setFormData({ ...formData, franchiseId: e.target.value.toUpperCase() })}
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                          placeholder="FP001"
-                          required={isFranchisePartner}
-                        />
-                      </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Franchise Name *</label>
                         <input
@@ -1012,8 +1001,8 @@ const UserManagement = () => {
                     </h5>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <p className="text-gray-500 text-xs">Franchise ID</p>
-                        <p className="text-gray-900 font-medium">{viewingUser.franchiseId || '-'}</p>
+                        <p className="text-gray-500 text-xs">User ID</p>
+                        <p className="text-gray-900 font-medium font-mono">{viewingUser.userId || '-'}</p>
                       </div>
                       <div>
                         <p className="text-gray-500 text-xs">Franchise Name</p>

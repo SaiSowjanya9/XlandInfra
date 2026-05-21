@@ -218,11 +218,11 @@ const AddonsManager = ({ showToast }) => {
       {activeTab === 'create' && (
         <div className="space-y-6">
           {/* Property Type Selection - Evenly distributed layout */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
             <h2 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h2>
             <p className="text-sm text-gray-500 mb-4">Choose the property type this package will be configured for</p>
             
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
               {PROPERTY_TYPE_OPTIONS.map((type) => {
                 const isSelected = selectedPropertyType === type.id;
                 return (
@@ -257,11 +257,11 @@ const AddonsManager = ({ showToast }) => {
                 </div>
               </div>
 
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {/* Single Row Layout: Select Service | Frequency Type | Frequency Count | Billing | Price | Save */}
-                <div className="grid grid-cols-12 gap-3 items-start">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-start">
                   {/* Select Service */}
-                  <div className="col-span-3">
+                  <div className="sm:col-span-1 lg:col-span-3">
                     <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Select Service</label>
                     <input
                       type="text"
@@ -279,7 +279,7 @@ const AddonsManager = ({ showToast }) => {
                   </div>
 
                   {/* Frequency Type */}
-                  <div className="col-span-2">
+                  <div className="sm:col-span-1 lg:col-span-2">
                     <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency Type</label>
                     <div className="relative">
                       <select
@@ -304,7 +304,7 @@ const AddonsManager = ({ showToast }) => {
                   </div>
 
                   {/* Frequency Count */}
-                  <div className="col-span-1 relative">
+                  <div className="sm:col-span-1 lg:col-span-1 relative">
                     <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Count</label>
                     <input
                       type="number"
@@ -325,7 +325,7 @@ const AddonsManager = ({ showToast }) => {
                   </div>
 
                   {/* Service Period */}
-                  <div className="col-span-2">
+                  <div className="sm:col-span-1 lg:col-span-2">
                     <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Period</label>
                     <div className="relative">
                       <select
@@ -342,7 +342,7 @@ const AddonsManager = ({ showToast }) => {
                   </div>
 
                   {/* Price */}
-                  <div className="col-span-2">
+                  <div className="sm:col-span-1 lg:col-span-2">
                     <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (₹)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
@@ -361,7 +361,7 @@ const AddonsManager = ({ showToast }) => {
                   </div>
 
                   {/* Save Button */}
-                  <div className="col-span-2">
+                  <div className="sm:col-span-2 lg:col-span-2">
                     <label className="text-xs font-medium text-transparent mb-2 block uppercase tracking-wider">Action</label>
                     <button
                       onClick={handleSaveAddon}

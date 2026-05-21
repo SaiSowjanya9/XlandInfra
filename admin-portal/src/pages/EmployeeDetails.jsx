@@ -13,11 +13,21 @@ import {
   MapPin,
   Phone,
   Mail,
-  CreditCard,
   Calendar,
   UserX,
   ExternalLink,
+  UserPlus,
+  Briefcase,
+  AtSign,
 } from 'lucide-react';
+
+// Employee roles for display
+const EMPLOYEE_ROLES = {
+  manager: { label: 'Manager', color: 'bg-purple-100 text-purple-700' },
+  coordinator: { label: 'Coordinator', color: 'bg-blue-100 text-blue-700' },
+  supervisor: { label: 'Supervisor', color: 'bg-teal-100 text-teal-700' },
+  executive: { label: 'Executive', color: 'bg-orange-100 text-orange-700' }
+};
 import { useNavigate } from 'react-router-dom';
 import {
   getEmployees,
@@ -112,9 +122,12 @@ const EmployeeDetails = () => {
       const q = searchTerm.toLowerCase();
       const matchesSearch = 
         e.name?.toLowerCase().includes(q) ||
+        e.fullName?.toLowerCase().includes(q) ||
+        e.username?.toLowerCase().includes(q) ||
         e.employeeId?.toLowerCase().includes(q) ||
         e.email?.toLowerCase().includes(q) ||
-        e.phone?.includes(q);
+        e.phone?.includes(q) ||
+        EMPLOYEE_ROLES[e.role]?.label?.toLowerCase().includes(q);
       if (!matchesSearch) return false;
     }
     
@@ -145,11 +158,18 @@ const EmployeeDetails = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Employee Details</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Employee Details</h1>
+          <p className="text-gray-500 text-xs sm:text-sm mt-1">
             {employees.length} employees • Manage and view all registered employees
           </p>
         </div>
+        <button
+          onClick={() => navigate('/employee/add-employee')}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors w-full sm:w-auto"
+        >
+          <UserPlus className="w-4 h-4" />
+          Add Employee
+        </button>
       </div>
 
       {/* Filters */}
@@ -222,12 +242,11 @@ const EmployeeDetails = () => {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Employee</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Employee ID</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Phone</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Role</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Username</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Email</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Aadhaar</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Phone</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Assigned Zones</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Status</th>
                   <th className="px-4 py-3 text-center font-medium text-gray-600 whitespace-nowrap">Actions</th>
                 </tr>
@@ -239,23 +258,30 @@ const EmployeeDetails = () => {
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 bg-indigo-100 rounded-full flex items-center justify-center">
                           <span className="text-indigo-600 font-semibold text-sm">
-                            {employee.name?.charAt(0).toUpperCase()}
+                            {(employee.fullName || employee.name)?.charAt(0).toUpperCase()}
                           </span>
                         </div>
-                        <span className="font-medium text-gray-900">{employee.name}</span>
+                        <div>
+                          <span className="font-medium text-gray-900 block">{employee.fullName || employee.name}</span>
+                          <span className="text-xs text-gray-400 font-mono">{employee.employeeId}</span>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
-                      {employee.employeeId}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                        EMPLOYEE_ROLES[employee.role]?.color || 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {EMPLOYEE_ROLES[employee.role]?.label || employee.roleLabel || 'Employee'}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                      {employee.countryCode} {employee.phone}
+                      <span className="font-mono text-sm">@{employee.username || '-'}</span>
                     </td>
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                       {employee.email}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
-                      {employee.aadhaar?.replace(/(\d{4})/g, '$1 ').trim()}
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                      {employee.phone || '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {hasZonesAssigned(employee) ? (
@@ -278,9 +304,6 @@ const EmployeeDetails = () => {
                           Assign Zones
                         </button>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                      {formatDate(employee.createdAt)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
@@ -348,12 +371,19 @@ const EmployeeDetails = () => {
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
                   <span className="text-indigo-600 font-bold text-lg">
-                    {viewEmployee.name?.charAt(0).toUpperCase()}
+                    {(viewEmployee.fullName || viewEmployee.name)?.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">{viewEmployee.name}</h2>
-                  <p className="text-xs font-mono text-gray-500">{viewEmployee.employeeId}</p>
+                  <h2 className="text-lg font-semibold text-gray-900">{viewEmployee.fullName || viewEmployee.name}</h2>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-mono text-gray-500">{viewEmployee.employeeId}</p>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      EMPLOYEE_ROLES[viewEmployee.role]?.color || 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {EMPLOYEE_ROLES[viewEmployee.role]?.label || viewEmployee.roleLabel || 'Employee'}
+                    </span>
+                  </div>
                 </div>
               </div>
               <button onClick={() => setViewEmployee(null)} className="p-2 hover:bg-gray-100 rounded-lg">
@@ -363,10 +393,10 @@ const EmployeeDetails = () => {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Phone className="w-5 h-5 text-gray-400" />
+                  <AtSign className="w-5 h-5 text-gray-400" />
                   <div>
-                    <p className="text-xs text-gray-500">Phone</p>
-                    <p className="text-sm font-medium text-gray-900">{viewEmployee.countryCode} {viewEmployee.phone}</p>
+                    <p className="text-xs text-gray-500">Username</p>
+                    <p className="text-sm font-mono font-medium text-gray-900">@{viewEmployee.username || '-'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -377,12 +407,10 @@ const EmployeeDetails = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <CreditCard className="w-5 h-5 text-gray-400" />
+                  <Phone className="w-5 h-5 text-gray-400" />
                   <div>
-                    <p className="text-xs text-gray-500">Aadhaar</p>
-                    <p className="text-sm font-mono font-medium text-gray-900">
-                      {viewEmployee.aadhaar?.replace(/(\d{4})/g, '$1 ').trim()}
-                    </p>
+                    <p className="text-xs text-gray-500">Phone</p>
+                    <p className="text-sm font-medium text-gray-900">{viewEmployee.phone || '-'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
