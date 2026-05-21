@@ -10,8 +10,29 @@ import {
   CheckCircle,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  Home,
+  Store,
+  Lock
 } from 'lucide-react';
+
+// Category options
+const CATEGORIES = [
+  {
+    id: 'residential',
+    name: 'Residential',
+    icon: Home,
+    color: 'bg-emerald-500',
+    locked: false
+  },
+  {
+    id: 'commercial',
+    name: 'Commercial',
+    icon: Store,
+    color: 'bg-blue-500',
+    locked: true
+  }
+];
 
 const ManagerCustomers = ({ user }) => {
   const [customers, setCustomers] = useState([]);
@@ -19,6 +40,7 @@ const ManagerCustomers = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formData, setFormData] = useState({
     name: '',
@@ -129,18 +151,9 @@ const ManagerCustomers = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-          <p className="text-gray-500 mt-1">Manage your customers</p>
-        </div>
-        <button
-          onClick={() => { resetForm(); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Customer</span>
-        </button>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
+        <p className="text-gray-500 mt-1">Customer Creation Module</p>
       </div>
 
       {/* Message */}
@@ -156,19 +169,81 @@ const ManagerCustomers = ({ user }) => {
         </div>
       )}
 
-      {/* Search */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search customers..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
+      {/* Category Selection */}
+      {!selectedCategory && (
+        <div className="bg-white rounded-xl border border-gray-100 p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-xl font-semibold text-gray-900">Select Category</h2>
+            <p className="text-gray-500 mt-1">Choose the customer category to proceed</p>
+          </div>
+          
+          <div className="flex justify-center gap-6">
+            {CATEGORIES.map((category) => {
+              const Icon = category.icon;
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => !category.locked && setSelectedCategory(category.id)}
+                  disabled={category.locked}
+                  className={`relative flex flex-col items-center justify-center w-48 h-48 rounded-xl border-2 transition-all ${
+                    category.locked
+                      ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+                      : 'border-emerald-500 bg-white hover:shadow-lg cursor-pointer'
+                  }`}
+                >
+                  {category.locked && (
+                    <div className="absolute top-3 right-3 flex items-center gap-1 text-xs text-gray-400">
+                      <Lock className="w-3 h-3" />
+                      <span>Coming Soon</span>
+                    </div>
+                  )}
+                  <div className={`w-16 h-16 ${category.color} rounded-xl flex items-center justify-center mb-4`}>
+                    <Icon className="w-8 h-8 text-white" />
+                  </div>
+                  <span className={`font-medium ${category.locked ? 'text-gray-400' : 'text-gray-900'}`}>
+                    {category.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Form when category is selected */}
+      {selectedCategory && (
+        <>
+          <div className="flex items-center gap-2 mb-4">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className="text-blue-600 hover:text-blue-700 text-sm"
+            >
+              ← Back to Categories
+            </button>
+          </div>
+          
+          {/* Search */}
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex gap-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search customers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                onClick={() => { resetForm(); setShowModal(true); }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Customer</span>
+              </button>
+            </div>
+          </div>
 
       {/* Customers List */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -242,6 +317,8 @@ const ManagerCustomers = ({ user }) => {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* Add Customer Modal */}
       {showModal && (

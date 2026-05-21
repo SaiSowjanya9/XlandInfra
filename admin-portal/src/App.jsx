@@ -43,6 +43,7 @@ import ManagerProperties from './pages/ManagerProperties';
 import ManagerWorkOrders from './pages/ManagerWorkOrders';
 import ManagerCustomers from './pages/ManagerCustomers';
 import ManagerVendors from './pages/ManagerVendors';
+import ManagerAddVendor from './pages/ManagerAddVendor';
 import ManagerEstimates from './pages/ManagerEstimates';
 
 import CoordinatorLogin from './pages/CoordinatorLogin';
@@ -321,10 +322,12 @@ function App() {
             <Route path="/manager/work-orders/completed" element={<ManagerWorkOrders user={user} />} />
             <Route path="/manager/customers" element={<ManagerCustomers user={user} />} />
             <Route path="/manager/vendors" element={<ManagerVendors user={user} />} />
-            <Route path="/manager/vendors/add" element={<ManagerVendors user={user} />} />
+            <Route path="/manager/vendors/add" element={<ManagerAddVendor user={user} />} />
             <Route path="/manager/vendors/assigned" element={<AssignedVendors />} />
             <Route path="/manager/estimates" element={<ManagerEstimates user={user} defaultTab="list" />} />
             <Route path="/manager/estimates/create" element={<ManagerEstimates user={user} defaultTab="create" />} />
+            <Route path="/manager/estimates/amc" element={<ManagerEstimates user={user} defaultTab="amc" />} />
+            <Route path="/manager/estimates/addons" element={<ManagerEstimates user={user} defaultTab="addons" />} />
             <Route path="/manager/estimates/archived" element={<ManagerEstimates user={user} defaultTab="archived" />} />
             <Route path="*" element={<Navigate to="/manager" replace />} />
           </Routes>
