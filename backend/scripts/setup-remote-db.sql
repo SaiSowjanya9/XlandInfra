@@ -3,7 +3,8 @@
 -- ============================================
 
 -- 1. Create a user that can connect from any IP
-CREATE USER IF NOT EXISTS 'xland_user'@'%' IDENTIFIED BY 'XlandSecure@2024';
+-- IMPORTANT: Replace YOUR_SECURE_PASSWORD with your own strong password
+CREATE USER IF NOT EXISTS 'xland_user'@'%' IDENTIFIED BY 'YOUR_SECURE_PASSWORD';
 
 -- 2. Grant all privileges on customer_portal database
 GRANT ALL PRIVILEGES ON customer_portal.* TO 'xland_user'@'%';

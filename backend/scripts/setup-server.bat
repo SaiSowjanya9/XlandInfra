@@ -17,7 +17,7 @@ echo Open MySQL command line and run:
 echo   mysql -u root -p
 echo.
 echo Then paste these commands:
-echo   CREATE USER IF NOT EXISTS 'xland_user'@'%%' IDENTIFIED BY 'XlandSecure@2024';
+echo   CREATE USER IF NOT EXISTS 'xland_user'@'%%' IDENTIFIED BY 'YOUR_SECURE_PASSWORD';
 echo   GRANT ALL PRIVILEGES ON customer_portal.* TO 'xland_user'@'%%';
 echo   FLUSH PRIVILEGES;
 echo.
@@ -62,7 +62,7 @@ echo ============================================
 echo.
 echo Database Host: [Your IPv4 Address from above]
 echo Database User: xland_user
-echo Database Password: XlandSecure@2024
+echo Database Password: [Your chosen password]
 echo Database Name: customer_portal
 echo Database Port: 3306
 echo.
