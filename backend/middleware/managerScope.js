@@ -1,20 +1,25 @@
 /**
  * Manager Scope Middleware
  * Ensures data isolation for Manager users
- * All data operations are scoped to the logged-in Manager
+ * FP-created Managers see FP's data (filtered by franchise_partner_id)
+ * Standalone Managers see only their own data (filtered by manager_id)
  */
 
 const pool = require('../config/database');
 const { ROLES, isManager } = require('../config/roles');
 
 /**
- * Attach Manager ID to request
- * Extracts manager_id from authenticated user
+ * Attach Manager scope to request
+ * For FP-created Managers: uses franchise_partner_id for filtering
+ * For standalone Managers: uses manager_id for filtering
  */
 const attachManagerScope = (req, res, next) => {
   if (req.user && isManager(req.user.role)) {
     req.managerId = req.user.id;
+    req.franchisePartnerId = req.user.franchisePartnerId || null;
     req.isManager = true;
+    // Flag to indicate if this manager belongs to an FP
+    req.isFPManager = !!req.user.franchisePartnerId;
   }
   next();
 };
@@ -42,31 +47,55 @@ const getManagerIdForInsert = (req) => {
 };
 
 /**
- * Add Manager filter to SQL WHERE clause
+ * Add Manager/FP filter to SQL WHERE clause
+ * For FP Managers: filters by franchise_partner_id
+ * For standalone Managers: filters by manager_id
  * @param {string} whereClause - Existing WHERE clause
  * @param {string} tableAlias - Table alias (optional)
+ * @param {boolean} isFPManager - Whether manager belongs to FP
  * @returns {string} - Modified WHERE clause
  */
-const addManagerFilter = (whereClause, tableAlias = '') => {
+const addManagerFilter = (whereClause, tableAlias = '', isFPManager = false) => {
   const prefix = tableAlias ? `${tableAlias}.` : '';
-  const managerCondition = `${prefix}manager_id = ?`;
+  // FP Managers filter by franchise_partner_id, standalone by manager_id
+  const filterColumn = isFPManager ? 'franchise_partner_id' : 'manager_id';
+  const condition = `${prefix}${filterColumn} = ?`;
   
   if (!whereClause || whereClause.trim() === '') {
-    return `WHERE ${managerCondition}`;
+    return `WHERE ${condition}`;
   }
   
-  return `${whereClause} AND ${managerCondition}`;
+  return `${whereClause} AND ${condition}`;
+};
+
+/**
+ * Get the appropriate scope ID for filtering
+ * @param {object} req - Request object
+ * @returns {number} - franchise_partner_id for FP managers, manager_id for standalone
+ */
+const getScopeId = (req) => {
+  return req.isFPManager ? req.franchisePartnerId : req.managerId;
+};
+
+/**
+ * Get the scope column name for SQL queries
+ * @param {object} req - Request object
+ * @returns {string} - 'franchise_partner_id' or 'manager_id'
+ */
+const getScopeColumn = (req) => {
+  return req.isFPManager ? 'franchise_partner_id' : 'manager_id';
 };
 
 /**
  * Validate ownership of a record for Manager
- * Checks if the record belongs to the logged-in manager
+ * For FP Managers: checks franchise_partner_id
+ * For standalone Managers: checks manager_id
  */
-const validateManagerOwnership = async (tableName, recordId, managerId, idColumn = 'id') => {
+const validateManagerOwnership = async (tableName, recordId, scopeId, idColumn = 'id', scopeColumn = 'manager_id') => {
   try {
     const [rows] = await pool.execute(
-      `SELECT ${idColumn} FROM ${tableName} WHERE ${idColumn} = ? AND manager_id = ?`,
-      [recordId, managerId]
+      `SELECT ${idColumn} FROM ${tableName} WHERE ${idColumn} = ? AND ${scopeColumn} = ?`,
+      [recordId, scopeId]
     );
     return rows.length > 0;
   } catch (error) {
@@ -77,6 +106,7 @@ const validateManagerOwnership = async (tableName, recordId, managerId, idColumn
 
 /**
  * Middleware factory for validating ownership
+ * Supports both FP-scoped and Manager-scoped validation
  * @param {string} tableName - Table to check
  * @param {string} paramName - Request param containing record ID
  * @param {string} idColumn - Column name for ID (default: 'id')
@@ -84,9 +114,10 @@ const validateManagerOwnership = async (tableName, recordId, managerId, idColumn
 const validateOwnership = (tableName, paramName = 'id', idColumn = 'id') => {
   return async (req, res, next) => {
     const recordId = req.params[paramName];
-    const managerId = req.managerId;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
 
-    if (!managerId) {
+    if (!scopeId) {
       return res.status(403).json({
         success: false,
         message: 'Manager access required'
@@ -100,7 +131,7 @@ const validateOwnership = (tableName, paramName = 'id', idColumn = 'id') => {
       });
     }
 
-    const isOwner = await validateManagerOwnership(tableName, recordId, managerId, idColumn);
+    const isOwner = await validateManagerOwnership(tableName, recordId, scopeId, idColumn, scopeColumn);
     
     if (!isOwner) {
       return res.status(403).json({
@@ -114,13 +145,14 @@ const validateOwnership = (tableName, paramName = 'id', idColumn = 'id') => {
 };
 
 /**
- * Build scoped query with manager filter
+ * Build scoped query with FP or Manager filter
  * @param {string} baseQuery - Base SQL query
- * @param {number} managerId - Manager ID
- * @param {string} tableAlias - Table alias for manager_id column
+ * @param {number} scopeId - Scope ID (franchise_partner_id or manager_id)
+ * @param {string} tableAlias - Table alias for scope column
+ * @param {string} scopeColumn - Column to filter by ('franchise_partner_id' or 'manager_id')
  * @returns {object} - { query, params }
  */
-const buildScopedQuery = (baseQuery, managerId, tableAlias = '') => {
+const buildScopedQuery = (baseQuery, scopeId, tableAlias = '', scopeColumn = 'manager_id') => {
   const prefix = tableAlias ? `${tableAlias}.` : '';
   
   // Check if query already has WHERE clause
@@ -128,23 +160,23 @@ const buildScopedQuery = (baseQuery, managerId, tableAlias = '') => {
   
   let modifiedQuery;
   if (hasWhere) {
-    // Insert manager condition after WHERE
+    // Insert scope condition after WHERE
     modifiedQuery = baseQuery.replace(
       /WHERE/i,
-      `WHERE ${prefix}manager_id = ? AND`
+      `WHERE ${prefix}${scopeColumn} = ? AND`
     );
   } else {
     // Add WHERE clause before ORDER BY, GROUP BY, LIMIT, or at end
     const insertPoint = baseQuery.search(/ORDER BY|GROUP BY|LIMIT|$/i);
     modifiedQuery = 
       baseQuery.slice(0, insertPoint) + 
-      ` WHERE ${prefix}manager_id = ? ` + 
+      ` WHERE ${prefix}${scopeColumn} = ? ` + 
       baseQuery.slice(insertPoint);
   }
   
   return {
     query: modifiedQuery,
-    params: [managerId]
+    params: [scopeId]
   };
 };
 
@@ -187,5 +219,7 @@ module.exports = {
   validateOwnership,
   buildScopedQuery,
   canViewPricing,
-  filterPricing
+  filterPricing,
+  getScopeId,
+  getScopeColumn
 };

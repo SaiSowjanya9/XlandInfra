@@ -10,10 +10,14 @@ import {
   CheckCircle,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  Users
 } from 'lucide-react';
 
 const CoordinatorCustomers = ({ user }) => {
+  // Check if this is an FP-created Coordinator (has franchisePartnerId)
+  const isFPCoordinator = !!user?.franchisePartnerId;
+  
   const [customers, setCustomers] = useState([]);
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -131,16 +135,19 @@ const CoordinatorCustomers = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-          <p className="text-gray-500 mt-1">Manage your customers</p>
+          <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
+          <p className="text-gray-500 mt-1">{isFPCoordinator ? 'View customers' : 'Manage your customers'}</p>
         </div>
-        <button
-          onClick={() => { resetForm(); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Customer</span>
-        </button>
+        {/* Add Customer - Hidden for FP Coordinator */}
+        {!isFPCoordinator && (
+          <button
+            onClick={() => { resetForm(); setShowModal(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Customer</span>
+          </button>
+        )}
       </div>
 
       {/* Message */}

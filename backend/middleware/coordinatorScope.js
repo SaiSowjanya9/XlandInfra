@@ -1,20 +1,44 @@
 /**
  * Coordinator Scope Middleware
  * Handles data isolation and ownership validation for Coordinator Portal
+ * FP-created Coordinators see FP's data (filtered by franchise_partner_id)
+ * Standalone Coordinators see only their own data (filtered by coordinator_id)
  */
 
 const { pool } = require('../config/database');
 
 /**
  * Attach coordinator scope to request
- * Extracts coordinator ID from authenticated user
+ * For FP-created Coordinators: uses franchise_partner_id for filtering
+ * For standalone Coordinators: uses coordinator_id for filtering
  */
 const attachCoordinatorScope = (req, res, next) => {
   if (req.user && (req.user.role === 'coordinator' || req.user.coordinatorId)) {
     req.coordinatorId = req.user.coordinatorId || req.user.id;
+    req.franchisePartnerId = req.user.franchisePartnerId || null;
     req.coordinatorScope = true;
+    // Flag to indicate if this coordinator belongs to an FP
+    req.isFPCoordinator = !!req.user.franchisePartnerId;
   }
   next();
+};
+
+/**
+ * Get the appropriate scope ID for filtering
+ * @param {object} req - Request object
+ * @returns {number} - franchise_partner_id for FP coordinators, coordinator_id for standalone
+ */
+const getScopeId = (req) => {
+  return req.isFPCoordinator ? req.franchisePartnerId : req.coordinatorId;
+};
+
+/**
+ * Get the scope column name for SQL queries
+ * @param {object} req - Request object
+ * @returns {string} - 'franchise_partner_id' or 'coordinator_id'
+ */
+const getScopeColumn = (req) => {
+  return req.isFPCoordinator ? 'franchise_partner_id' : 'coordinator_id';
 };
 
 /**
@@ -269,5 +293,7 @@ module.exports = {
   getCoordinatorPermissions,
   canViewPricing,
   filterPricing,
-  checkPermission
+  checkPermission,
+  getScopeId,
+  getScopeColumn
 };

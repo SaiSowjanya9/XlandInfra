@@ -14,10 +14,14 @@ import {
   CheckCircle,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  Lock
 } from 'lucide-react';
 
 const ManagerEmployees = ({ user }) => {
+  // Check if this is an FP-created Manager (has franchisePartnerId)
+  const isFPManager = !!user?.franchisePartnerId;
+  
   const location = useLocation();
   const [employees, setEmployees] = useState([]);
   const [zones, setZones] = useState([]);
@@ -223,6 +227,24 @@ const ManagerEmployees = ({ user }) => {
     if (viewType === 'zones') return 'Zone Assignment';
     return 'Employee Management';
   };
+
+  // Employee Management is restricted for FP Manager
+  if (isFPManager) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Access Restricted</h2>
+          <p className="text-gray-500 max-w-md mx-auto">
+            Employee Management is not available for your account. 
+            Please contact your administrator for more information.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

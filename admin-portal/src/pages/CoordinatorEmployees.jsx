@@ -15,10 +15,14 @@ import {
   Phone,
   Mail,
   MapPin,
-  Eye
+  Eye,
+  Lock
 } from 'lucide-react';
 
 const CoordinatorEmployees = ({ user }) => {
+  // Check if this is an FP-created Coordinator (has franchisePartnerId)
+  const isFPCoordinator = !!user?.franchisePartnerId;
+  
   const location = useLocation();
   const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
@@ -241,6 +245,24 @@ const CoordinatorEmployees = ({ user }) => {
     if (viewType === 'zones') return 'Zone Management';
     return 'Employee Management';
   };
+
+  // Employee Management is restricted for FP Coordinator - Just View
+  if (isFPCoordinator) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Eye className="w-8 h-8 text-amber-500" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">View Only Access</h2>
+          <p className="text-gray-500 max-w-md mx-auto">
+            Employee Management is view-only for your account. 
+            You cannot add, edit, or manage employees.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

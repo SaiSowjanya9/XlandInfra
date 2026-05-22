@@ -16,10 +16,14 @@ import {
   User,
   Store,
   Eye,
-  Lock
+  Lock,
+  Users
 } from 'lucide-react';
 
 const CoordinatorProperties = ({ user }) => {
+  // Check if this is an FP-created Coordinator (has franchisePartnerId)
+  const isFPCoordinator = !!user?.franchisePartnerId;
+  
   const [properties, setProperties] = useState([]);
   const [zones, setZones] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -355,21 +359,23 @@ const CoordinatorProperties = ({ user }) => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-end gap-1">
-                        <span className="p-2 text-gray-400" title="View Only">
+                        {/* View Details - Always visible */}
+                        <button
+                          onClick={() => openEditModal(property)}
+                          className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
+                          title="View Details"
+                        >
                           <Eye className="w-4 h-4" />
-                        </span>
-                        {property.can_modify ? (
+                        </button>
+                        {/* Edit - Only for own properties */}
+                        {property.can_modify && (
                           <button
                             onClick={() => openEditModal(property)}
-                            className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
+                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
                             title="Edit Property"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                        ) : (
-                          <span className="p-2 text-gray-300" title="View Only">
-                            <Lock className="w-4 h-4" />
-                          </span>
                         )}
                       </div>
                     </td>
