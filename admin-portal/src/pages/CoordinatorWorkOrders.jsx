@@ -32,6 +32,7 @@ const CoordinatorWorkOrders = ({ user }) => {
   const [activeTab, setActiveTab] = useState('pending');
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +45,7 @@ const CoordinatorWorkOrders = ({ user }) => {
   const [formData, setFormData] = useState({
     propertyId: '',
     categoryId: '',
+    subcategoryId: '',
     clientId: '',
     title: '',
     description: '',
@@ -213,6 +215,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     setFormData({
       propertyId: '',
       categoryId: '',
+      subcategoryId: '',
       clientId: '',
       title: '',
       description: '',
@@ -221,6 +224,28 @@ const CoordinatorWorkOrders = ({ user }) => {
       hasPet: 'no',
       scheduledDate: ''
     });
+    setSubcategories([]);
+  };
+
+  // Handle category change to load subcategories
+  const handleCategoryChange = async (categoryId) => {
+    setFormData({ ...formData, categoryId, subcategoryId: '' });
+    if (categoryId) {
+      try {
+        const response = await fetch(`/api/coordinator/categories/${categoryId}/subcategories`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+          setSubcategories(result.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch subcategories:', error);
+        setSubcategories([]);
+      }
+    } else {
+      setSubcategories([]);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -534,12 +559,27 @@ const CoordinatorWorkOrders = ({ user }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                   <select
                     value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                    onChange={(e) => handleCategoryChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
                   >
                     <option value="">Select Category</option>
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                  <select
+                    value={formData.subcategoryId}
+                    onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
+                    disabled={!formData.categoryId}
+                  >
+                    <option value="">{formData.categoryId ? 'Select Subcategory' : 'Select Category first'}</option>
+                    {subcategories.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                   </select>
                 </div>

@@ -823,9 +823,27 @@ router.get('/zones', requireManagerScope, async (req, res) => {
 
 router.get('/categories', requireManagerScope, async (req, res) => {
   try {
-    const [categories] = await pool.execute('SELECT * FROM categories WHERE is_active = 1 ORDER BY name');
+    const [categories] = await pool.execute(
+      'SELECT * FROM categories WHERE is_active = TRUE OR is_active = 1 ORDER BY sort_order, name'
+    );
     res.json({ success: true, data: categories });
   } catch (error) {
+    console.error('Categories fetch error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get subcategories by category ID
+router.get('/categories/:categoryId/subcategories', requireManagerScope, async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const [subcategories] = await pool.execute(
+      'SELECT * FROM subcategories WHERE category_id = ? AND (is_active = TRUE OR is_active = 1) ORDER BY sort_order, name',
+      [categoryId]
+    );
+    res.json({ success: true, data: subcategories });
+  } catch (error) {
+    console.error('Subcategories fetch error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
