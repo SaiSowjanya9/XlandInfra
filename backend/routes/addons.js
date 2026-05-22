@@ -1,15 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { getPool, isDbConnected } = require('../config/database');
+const db = require('../config/database');
 
 // GET all add-ons
 router.get('/', async (req, res) => {
   try {
-    if (!isDbConnected()) {
+    if (!db.isDbConnected) {
       return res.json({ success: true, data: [] });
     }
     
-    const pool = getPool();
+    const pool = db.pool;
     const [addons] = await pool.execute(
       `SELECT * FROM addons WHERE is_active = TRUE ORDER BY created_at DESC`
     );
@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
 // CREATE add-on
 router.post('/', async (req, res) => {
   try {
-    if (!isDbConnected()) {
+    if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
     }
     
@@ -54,7 +54,7 @@ router.post('/', async (req, res) => {
     const service = services[0];
     const addonId = `ADDON-${Date.now()}`;
     
-    const pool = getPool();
+    const pool = db.pool;
     await pool.execute(
       `INSERT INTO addons (addon_id, property_type, property_type_name, service_name, frequency_count, frequency_type, billing_cycle, price, total_price)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -85,7 +85,7 @@ router.post('/', async (req, res) => {
 // UPDATE add-on
 router.put('/:addonId', async (req, res) => {
   try {
-    if (!isDbConnected()) {
+    if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
     }
     
@@ -94,7 +94,7 @@ router.put('/:addonId', async (req, res) => {
     
     const service = services?.[0] || {};
     
-    const pool = getPool();
+    const pool = db.pool;
     await pool.execute(
       `UPDATE addons SET 
         property_type = COALESCE(?, property_type),
@@ -129,13 +129,13 @@ router.put('/:addonId', async (req, res) => {
 // DELETE add-on (soft delete)
 router.delete('/:addonId', async (req, res) => {
   try {
-    if (!isDbConnected()) {
+    if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
     }
     
     const { addonId } = req.params;
     
-    const pool = getPool();
+    const pool = db.pool;
     await pool.execute(
       `UPDATE addons SET is_active = FALSE WHERE addon_id = ?`,
       [addonId]
