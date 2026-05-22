@@ -32,6 +32,7 @@ const supervisorRouter = require('./routes/supervisor');
 const executiveRouter = require('./routes/executive');
 const employeeRouter = require('./routes/employee');
 const { router: qrRouter, initializePool: initQRPool } = require('./routes/qr');
+const addonsRouter = require('./routes/addons');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -109,6 +110,7 @@ app.use('/api/supervisor', supervisorRouter);
 app.use('/api/executive', executiveRouter);
 app.use('/api/employee', employeeRouter);
 app.use('/api/qr', qrRouter);
+app.use('/api/addons', addonsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

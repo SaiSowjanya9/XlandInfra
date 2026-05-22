@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Trash2, PlusCircle, ChevronDown, Plus, Layers, Edit2, X } from 'lucide-react';
 import {
-  getAddons, createAddon, deleteAddon, updateAddon,
+  getAddons, createAddon, deleteAddon, updateAddon, fetchAddons,
   getServices, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP
 } from '../../utils/estimateStore';
 
@@ -51,9 +51,9 @@ const AddonsManager = ({ admin, showToast }) => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    // Don't call seedTestData here - it causes deleted items to reappear
-    const currentAddons = getAddons();
+  const loadData = async () => {
+    // Fetch addons from API (synced across devices)
+    const currentAddons = await fetchAddons();
     setAddons(currentAddons);
     setServices(getServices());
   };
@@ -63,7 +63,7 @@ const AddonsManager = ({ admin, showToast }) => {
     ? addons.filter(addon => addon.propertyType === selectedPropertyType)
     : addons;
 
-  const handleSaveAddon = () => {
+  const handleSaveAddon = async () => {
     if (!selectedPropertyType) {
       showToast('Please select a property type', 'error');
       return;
@@ -90,10 +90,14 @@ const AddonsManager = ({ admin, showToast }) => {
       totalPrice: parseFloat(addonForm.price)
     };
 
-    createAddon(addonData);
-    showToast('Add-on created!');
-    resetForm();
-    loadData();
+    try {
+      await createAddon(addonData);
+      showToast('Add-on created!');
+      resetForm();
+      await loadData();
+    } catch (error) {
+      showToast('Failed to create add-on', 'error');
+    }
   };
 
   const resetForm = () => {
@@ -106,13 +110,15 @@ const AddonsManager = ({ admin, showToast }) => {
     });
   };
 
-  const handleDeleteAddon = (addonId) => {
+  const handleDeleteAddon = async (addonId) => {
     if (window.confirm('Are you sure you want to delete this add-on?')) {
-      // Delete from storage
-      deleteAddon(addonId);
-      // Update local state immediately (without calling loadData to avoid any re-seeding)
-      setAddons(prevAddons => prevAddons.filter(addon => addon.addonId !== addonId));
-      showToast('Add-on deleted');
+      try {
+        await deleteAddon(addonId);
+        setAddons(prevAddons => prevAddons.filter(addon => addon.addonId !== addonId));
+        showToast('Add-on deleted');
+      } catch (error) {
+        showToast('Failed to delete add-on', 'error');
+      }
     }
   };
 
@@ -131,7 +137,7 @@ const AddonsManager = ({ admin, showToast }) => {
   };
 
   // Save edited addon
-  const handleUpdateAddon = () => {
+  const handleUpdateAddon = async () => {
     if (!editForm.serviceName.trim()) {
       showToast('Please enter a service name', 'error');
       return;
@@ -154,18 +160,19 @@ const AddonsManager = ({ admin, showToast }) => {
       totalPrice: parseFloat(editForm.price)
     };
 
-    updateAddon(editingAddon.addonId, updates);
-    
-    // Update local state
-    setAddons(prevAddons => prevAddons.map(addon => 
-      addon.addonId === editingAddon.addonId 
-        ? { ...addon, ...updates }
-        : addon
-    ));
-    
-    setShowEditModal(false);
-    setEditingAddon(null);
-    showToast('Add-on updated successfully');
+    try {
+      await updateAddon(editingAddon.addonId, updates);
+      setAddons(prevAddons => prevAddons.map(addon => 
+        addon.addonId === editingAddon.addonId 
+          ? { ...addon, ...updates }
+          : addon
+      ));
+      setShowEditModal(false);
+      setEditingAddon(null);
+      showToast('Add-on updated successfully');
+    } catch (error) {
+      showToast('Failed to update add-on', 'error');
+    }
   };
 
   return (

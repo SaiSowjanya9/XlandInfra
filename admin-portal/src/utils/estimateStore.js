@@ -353,62 +353,107 @@ export const deleteAMCPackage = (packageId) => {
 };
 
 // ============================================
-// Add-ons CRUD
+// Add-ons CRUD (API-based for sync across devices)
 // ============================================
 
+// API base URL
+const API_URL = import.meta.env.VITE_API_URL || '';
+
+// Cache for addons (reduces API calls)
+let addonsCache = null;
+let addonsCacheTime = 0;
+const CACHE_DURATION = 5000; // 5 seconds
+
 export const getAddons = () => {
-  return getStorageData(ADDONS_KEY);
+  // Return cached data if still valid
+  if (addonsCache && Date.now() - addonsCacheTime < CACHE_DURATION) {
+    return addonsCache;
+  }
+  // Return empty array, caller should use fetchAddons() for fresh data
+  return addonsCache || [];
+};
+
+// Async function to fetch addons from API
+export const fetchAddons = async () => {
+  try {
+    const response = await fetch(`${API_URL}/api/addons`);
+    const result = await response.json();
+    if (result.success) {
+      addonsCache = result.data || [];
+      addonsCacheTime = Date.now();
+      return addonsCache;
+    }
+    return [];
+  } catch (error) {
+    console.error('Fetch addons error:', error);
+    return addonsCache || [];
+  }
 };
 
 export const getAddonById = (addonId) => {
-  const addons = getStorageData(ADDONS_KEY);
+  const addons = getAddons();
   return addons.find(addon => addon.addonId === addonId);
 };
 
-export const createAddon = (addonData) => {
-  const addons = getStorageData(ADDONS_KEY);
-  const addonId = `ADDON-${Date.now()}`;
-  
-  const newAddon = {
-    ...addonData,
-    addonId,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  addons.unshift(newAddon);
-  setStorageData(ADDONS_KEY, addons);
-  
-  return newAddon;
-};
-
-export const updateAddon = (addonId, updates) => {
-  const addons = getStorageData(ADDONS_KEY);
-  const index = addons.findIndex(addon => addon.addonId === addonId);
-  
-  if (index !== -1) {
-    addons[index] = {
-      ...addons[index],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-    setStorageData(ADDONS_KEY, addons);
-    return addons[index];
+export const createAddon = async (addonData) => {
+  try {
+    const response = await fetch(`${API_URL}/api/addons`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(addonData)
+    });
+    const result = await response.json();
+    if (result.success) {
+      // Invalidate cache to force refresh
+      addonsCache = null;
+      return { ...addonData, addonId: result.data?.addonId };
+    }
+    throw new Error(result.message);
+  } catch (error) {
+    console.error('Create addon error:', error);
+    throw error;
   }
-  
-  return null;
 };
 
-export const deleteAddon = (addonId) => {
-  let addons = getStorageData(ADDONS_KEY);
-  addons = addons.filter(addon => addon.addonId !== addonId);
-  setStorageData(ADDONS_KEY, addons);
-  return true;
+export const updateAddon = async (addonId, updates) => {
+  try {
+    const response = await fetch(`${API_URL}/api/addons/${addonId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    const result = await response.json();
+    if (result.success) {
+      addonsCache = null;
+      return { addonId, ...updates };
+    }
+    throw new Error(result.message);
+  } catch (error) {
+    console.error('Update addon error:', error);
+    throw error;
+  }
+};
+
+export const deleteAddon = async (addonId) => {
+  try {
+    const response = await fetch(`${API_URL}/api/addons/${addonId}`, {
+      method: 'DELETE'
+    });
+    const result = await response.json();
+    if (result.success) {
+      addonsCache = null;
+      return true;
+    }
+    throw new Error(result.message);
+  } catch (error) {
+    console.error('Delete addon error:', error);
+    throw error;
+  }
 };
 
 // Clear all addons data
 export const clearAllAddons = () => {
-  setStorageData(ADDONS_KEY, []);
+  addonsCache = null;
   return true;
 };
 
