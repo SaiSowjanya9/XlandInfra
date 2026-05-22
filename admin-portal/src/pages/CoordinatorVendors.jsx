@@ -16,17 +16,32 @@ import {
   Mail,
   MapPin,
   Eye,
-  Lock
+  Truck,
+  Wrench,
+  Zap,
+  Wind,
+  Sparkles,
+  Shield
 } from 'lucide-react';
 
 const CoordinatorVendors = ({ user }) => {
+  // Check if this is an FP-created Coordinator (has franchisePartnerId)
+  const isFPCoordinator = !!user?.franchisePartnerId;
+  
   const location = useLocation();
   const [vendors, setVendors] = useState({ own: [], assigned: [], all: [] });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [divisionFilter, setDivisionFilter] = useState('all');
+  const [zoneFilter, setZoneFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [zones, setZones] = useState([]);
+  const [divisions, setDivisions] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
+  const [selectedVendor, setSelectedVendor] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formData, setFormData] = useState({
     companyName: '',
@@ -42,7 +57,20 @@ const CoordinatorVendors = ({ user }) => {
     panNumber: ''
   });
 
-  const viewType = location.pathname.includes('/assigned') ? 'assigned' : 'all';
+  // Service type tabs config
+  const serviceTabs = [
+    { id: 'all', label: 'All Vendors', icon: Store },
+    { id: 'plumbing', label: 'Plumbing', icon: Wrench },
+    { id: 'electrical', label: 'Electrical', icon: Zap },
+    { id: 'hvac', label: 'HVAC', icon: Wind },
+    { id: 'cleaning', label: 'Cleaning', icon: Sparkles },
+    { id: 'security', label: 'Security', icon: Shield }
+  ];
+
+  // Determine view type based on URL
+  const viewType = location.pathname.includes('/add') ? 'add' 
+                 : location.pathname.includes('/assigned') ? 'assigned' 
+                 : 'all';
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -65,8 +93,9 @@ const CoordinatorVendors = ({ user }) => {
 
   useEffect(() => {
     fetchVendors();
-    if (viewType === 'assigned') {
-      setActiveTab('assigned');
+    if (viewType === 'add') {
+      resetForm();
+      setShowModal(true);
     }
   }, [viewType]);
 
@@ -148,6 +177,11 @@ const CoordinatorVendors = ({ user }) => {
   };
 
   const openEditModal = (vendor) => {
+    // FP Coordinators cannot modify vendors
+    if (isFPCoordinator) {
+      setMessage({ type: 'error', text: 'Modify vendor not allowed for this role' });
+      return;
+    }
     if (!vendor.can_modify) {
       setMessage({ type: 'error', text: 'You do not have permission to edit this vendor (View Only)' });
       return;
@@ -187,30 +221,51 @@ const CoordinatorVendors = ({ user }) => {
   };
 
   const getVendorList = () => {
-    switch (activeTab) {
-      case 'own': return vendors.own || [];
+    switch (viewType) {
       case 'assigned': return vendors.assigned || [];
       default: return vendors.all || [];
     }
   };
 
-  const filteredVendors = getVendorList().filter(v =>
-    v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter vendors based on search and service type tab
+  const filteredVendors = getVendorList().filter(v => {
+    const matchesSearch = !searchTerm ||
+      v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.vendor_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.zone_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesTab = activeTab === 'all' || v.service_type?.toLowerCase() === activeTab;
+    const matchesZone = zoneFilter === 'all' || v.zone_id?.toString() === zoneFilter;
+    
+    return matchesSearch && matchesTab && matchesZone;
+  });
+
+  // Get count for each service tab
+  const getTabCount = (tabId) => {
+    const list = getVendorList();
+    if (tabId === 'all') return list.length;
+    return list.filter(v => v.service_type?.toLowerCase() === tabId).length;
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vendor Management</h1>
-          <p className="text-gray-500 mt-1">
-            {activeTab === 'assigned' ? 'View assigned vendors' : 'Manage your vendors'}
-          </p>
+          <h1 className="text-xl font-bold text-gray-900">Vendor Details</h1>
+          <p className="text-teal-600 text-sm">{getVendorList().length} total vendors</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchVendors}
+            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+            title="Refresh"
+          >
+            <RefreshCw className="w-5 h-5 text-gray-600" />
+          </button>
+          {/* Add Vendor - Allowed for Coordinator */}
           <button
             onClick={() => { resetForm(); setShowModal(true); }}
             className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
@@ -234,47 +289,78 @@ const CoordinatorVendors = ({ user }) => {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl border border-gray-100 p-1">
-        <div className="flex gap-1">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === 'all' ? 'bg-teal-100 text-teal-700' : 'text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            All Vendors ({vendors.all?.length || 0})
-          </button>
-          <button
-            onClick={() => setActiveTab('own')}
-            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === 'own' ? 'bg-teal-100 text-teal-700' : 'text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            My Vendors ({vendors.own?.length || 0})
-          </button>
-          <button
-            onClick={() => setActiveTab('assigned')}
-            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === 'assigned' ? 'bg-teal-100 text-teal-700' : 'text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            Assigned ({vendors.assigned?.length || 0})
-          </button>
-        </div>
+      {/* Service Type Tabs */}
+      <div className="flex items-center gap-1 border-b border-gray-200 overflow-x-auto">
+        {serviceTabs.map((tab) => {
+          const Icon = tab.icon;
+          const count = getTabCount(tab.id);
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-teal-600 text-teal-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+              <span className={`px-1.5 py-0.5 rounded text-xs ${
+                activeTab === tab.id ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Search */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="relative">
+      {/* Search and Filters Row */}
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Search */}
+        <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search vendors..."
+            placeholder="Search by name, ID, service, or zone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 bg-white"
           />
+        </div>
+        
+        {/* Filters */}
+        <div className="flex gap-2">
+          <select
+            value={divisionFilter}
+            onChange={(e) => setDivisionFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-teal-500"
+          >
+            <option value="all">All Divisions</option>
+            {divisions.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+          <select
+            value={zoneFilter}
+            onChange={(e) => setZoneFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-teal-500"
+          >
+            <option value="all">All Zones</option>
+            {zones.map(z => (
+              <option key={z.id} value={z.id}>{z.name}</option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-teal-500"
+          >
+            <option value="active">Active Vendors</option>
+            <option value="inactive">Inactive Vendors</option>
+            <option value="all">All Vendors</option>
+          </select>
         </div>
       </div>
 
@@ -285,9 +371,12 @@ const CoordinatorVendors = ({ user }) => {
             <RefreshCw className="w-6 h-6 text-teal-600 animate-spin" />
           </div>
         ) : filteredVendors.length === 0 ? (
-          <div className="text-center py-12">
-            <Store className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No vendors found</p>
+          <div className="text-center py-16">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Truck className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-teal-600 font-medium">No vendors found</p>
+            <p className="text-gray-400 text-sm mt-1">Add vendors using the Add Vendor page.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -298,7 +387,8 @@ const CoordinatorVendors = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Location</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Access</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -316,7 +406,7 @@ const CoordinatorVendors = ({ user }) => {
                     <td className="py-4 px-4">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                         vendor.vendor_type === 'own' 
-                          ? 'bg-teal-100 text-teal-700' 
+                          ? 'bg-purple-100 text-purple-700' 
                           : 'bg-blue-100 text-blue-700'
                       }`}>
                         {vendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}
@@ -345,15 +435,51 @@ const CoordinatorVendors = ({ user }) => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center gap-1">
-                        {vendor.can_modify ? (
-                          <span className="text-xs text-green-600 flex items-center gap-1">
-                            <Edit className="w-3 h-3" /> Edit
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-400 flex items-center gap-1">
-                            <Eye className="w-3 h-3" /> View Only
-                          </span>
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                        vendor.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {vendor.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* View Details - Always visible */}
+                        <button
+                          onClick={() => { setSelectedVendor(vendor); setShowViewModal(true); }}
+                          className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {/* Modify Vendor - Hidden for FP Coordinator */}
+                        {!isFPCoordinator && (
+                          <button
+                            onClick={() => openEditModal(vendor)}
+                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
+                            title="Modify Vendor"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {/* Export to Excel - Hidden for FP Coordinator */}
+                        {!isFPCoordinator && (
+                          <button
+                            onClick={() => { /* TODO: Export single vendor */ }}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            title="Export to Excel"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        )}
+                        {/* Delete - Hidden for FP Coordinator */}
+                        {!isFPCoordinator && (
+                          <button
+                            onClick={() => handleDelete(vendor)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </td>
@@ -503,6 +629,93 @@ const CoordinatorVendors = ({ user }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Vendor Modal */}
+      {showViewModal && selectedVendor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Vendor Details</h2>
+                <button onClick={() => { setShowViewModal(false); setSelectedVendor(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Vendor ID</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.vendor_id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                    selectedVendor.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {selectedVendor.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Company Name</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.company_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Contact Person</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.contact_person || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.email || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Phone</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.phone || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Service Type</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.service_type || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Zone</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.zone || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Area</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.area || '-'}</p>
+                </div>
+                {/* Rate/Visit - Hidden for FP Coordinator */}
+                {!isFPCoordinator && (
+                  <div>
+                    <p className="text-sm text-gray-500">Rate/Visit</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.rate_per_visit || '-'}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm text-gray-500">Coverage/Day</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || '-'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Address</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedVendor.address ? `${selectedVendor.address}, ${selectedVendor.city || ''}, ${selectedVendor.state || ''}` : '-'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => { setShowViewModal(false); setSelectedVendor(null); }}
+                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

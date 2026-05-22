@@ -252,16 +252,14 @@ const ManagerVendors = ({ user }) => {
           >
             <RefreshCw className="w-5 h-5 text-gray-600" />
           </button>
-          {/* Add Vendor - Hidden for FP Manager */}
-          {!isFPManager && (
-            <button
-              onClick={() => { resetForm(); setShowModal(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          {/* Add Vendor - Allowed for Manager */}
+          <button
+            onClick={() => { resetForm(); setShowModal(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus className="w-4 h-4" />
               <span>Add Vendor</span>
             </button>
-          )}
         </div>
       </div>
 
@@ -432,6 +430,7 @@ const ManagerVendors = ({ user }) => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-end gap-2">
+                        {/* View Details - Always visible */}
                         <button
                           onClick={() => { setSelectedVendor(vendor); setShowViewModal(true); }}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -439,24 +438,35 @@ const ManagerVendors = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Edit/Delete buttons - Hidden for FP Manager */}
+                        {/* Modify Vendor - Hidden for FP Manager */}
                         {!isFPManager && (
-                          <>
-                            <button
-                              onClick={() => openEditModal(vendor)}
-                              className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(vendor.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
+                          <button
+                            onClick={() => openEditModal(vendor)}
+                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
+                            title="Modify Vendor"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {/* Export to Excel - Hidden for FP Manager */}
+                        {!isFPManager && (
+                          <button
+                            onClick={() => { /* TODO: Export single vendor */ }}
+                            className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
+                            title="Export to Excel"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        )}
+                        {/* Delete - Hidden for FP Manager */}
+                        {!isFPManager && (
+                          <button
+                            onClick={() => handleDelete(vendor.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </td>

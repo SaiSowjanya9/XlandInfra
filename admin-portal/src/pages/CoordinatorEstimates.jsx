@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 
 const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
+  // Check if this is an FP-created Coordinator (has franchisePartnerId)
+  const isFPCoordinator = !!user?.franchisePartnerId;
+  
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [estimates, setEstimates] = useState([]);
   const [amcPackages, setAmcPackages] = useState([]);
@@ -578,15 +581,18 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
           {/* AMC Tab */}
           {activeTab === 'amc' && (
             <div className="space-y-4">
-              <div className="flex justify-end">
-                <button
-                  onClick={() => { setModalType('amc'); resetAmcForm(); setShowModal(true); }}
-                  className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add AMC Package</span>
-                </button>
-              </div>
+              {/* Hide Add AMC Package button for FP Coordinators */}
+              {!isFPCoordinator && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => { setModalType('amc'); resetAmcForm(); setShowModal(true); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add AMC Package</span>
+                  </button>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {amcPackages.length === 0 ? (
@@ -630,15 +636,18 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Addons Tab */}
           {activeTab === 'addons' && (
             <div className="space-y-4">
-              <div className="flex justify-end">
-                <button
-                  onClick={() => { setModalType('addon'); resetAddonForm(); setShowModal(true); }}
-                  className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Add-on</span>
-                </button>
-              </div>
+              {/* Hide Add Add-on button for FP Coordinators */}
+              {!isFPCoordinator && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => { setModalType('addon'); resetAddonForm(); setShowModal(true); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Add-on</span>
+                  </button>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {addons.length === 0 ? (

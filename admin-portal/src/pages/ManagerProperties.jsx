@@ -19,7 +19,9 @@ import {
   Building,
   Lock,
   ArrowLeft,
-  FileText
+  FileText,
+  Eye,
+  Users
 } from 'lucide-react';
 
 const ManagerProperties = ({ user }) => {
@@ -499,26 +501,27 @@ const ManagerProperties = ({ user }) => {
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                           title="View Details"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Eye className="w-4 h-4" />
                         </button>
-                        {/* Assign/Edit buttons - Hidden for FP Manager */}
+                        {/* Assign Vendor - Hidden for FP Manager */}
                         {!isFPManager && (
-                          <>
-                            <button
-                              onClick={() => openAssignModal(property, 'vendor')}
-                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
-                              title="Assign Vendor"
-                            >
-                              <Store className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => openAssignModal(property, 'employee')}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
-                              title="Assign Employee"
-                            >
-                              <User className="w-4 h-4" />
-                            </button>
-                          </>
+                          <button
+                            onClick={() => openAssignModal(property, 'vendor')}
+                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
+                            title="Assign Vendor"
+                          >
+                            <Store className="w-4 h-4" />
+                          </button>
+                        )}
+                        {/* Assign Employee - Hidden for FP Manager */}
+                        {!isFPManager && (
+                          <button
+                            onClick={() => openAssignModal(property, 'employee')}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                            title="Assign Employee"
+                          >
+                            <Users className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </td>

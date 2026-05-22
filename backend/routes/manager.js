@@ -15,7 +15,9 @@ const {
   getManagerIdForInsert,
   validateOwnership,
   buildScopedQuery,
-  filterPricing
+  filterPricing,
+  getScopeId,
+  getScopeColumn
 } = require('../middleware/managerScope');
 
 // ============================================
@@ -34,9 +36,9 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find manager user
+    // Find manager user - include franchise_partner_id for FP-created managers
     const [users] = await pool.execute(
-      `SELECT id, username, email, password_hash, first_name, last_name, role, is_active 
+      `SELECT id, username, email, password_hash, first_name, last_name, role, is_active, franchise_partner_id 
        FROM users 
        WHERE (username = ? OR email = ?) AND role = ? AND is_active = 1`,
       [username, username, ROLES.MANAGER]
@@ -60,13 +62,14 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generate token
+    // Generate token - include franchisePartnerId for FP-created managers
     const token = generateToken({
       id: user.id,
       username: user.username,
       email: user.email,
       role: user.role,
-      managerId: user.id
+      managerId: user.id,
+      franchisePartnerId: user.franchise_partner_id || null
     });
 
     // Update last login
@@ -89,6 +92,7 @@ router.post('/login', async (req, res) => {
           role: user.role,
           roleName: ROLE_NAMES[user.role],
           managerId: user.id,
+          franchisePartnerId: user.franchise_partner_id || null,
           portal: 'manager'
         }
       }
@@ -113,51 +117,53 @@ router.use(attachManagerScope);
 
 router.get('/dashboard', requireManagerScope, async (req, res) => {
   try {
-    const managerId = req.managerId;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
 
-    // Get counts for dashboard
+    // Get counts for dashboard - filter by FP or Manager scope
     const [propertiesCount] = await pool.execute(
-      'SELECT COUNT(*) as count FROM properties WHERE manager_id = ?',
-      [managerId]
+      `SELECT COUNT(*) as count FROM properties WHERE ${scopeColumn} = ?`,
+      [scopeId]
     );
 
     const [vendorsCount] = await pool.execute(
-      `SELECT COUNT(DISTINCT v.id) as count FROM vendors v 
-       LEFT JOIN manager_assigned_vendors mav ON v.id = mav.vendor_id AND mav.manager_id = ?
-       WHERE v.manager_id = ? OR mav.id IS NOT NULL`,
-      [managerId, managerId]
+      `SELECT COUNT(*) as count FROM vendors WHERE ${scopeColumn} = ?`,
+      [scopeId]
     );
 
     const [customersCount] = await pool.execute(
-      'SELECT COUNT(*) as count FROM clients WHERE manager_id = ?',
-      [managerId]
+      `SELECT COUNT(*) as count FROM clients WHERE ${scopeColumn} = ?`,
+      [scopeId]
     );
 
+    // For FP Managers, count FP employees; for standalone, count manager employees
+    const employeeTable = req.isFPManager ? 'fp_employees' : 'manager_employees';
+    const employeeScopeCol = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
     const [employeesCount] = await pool.execute(
-      'SELECT COUNT(*) as count FROM manager_employees WHERE manager_id = ? AND is_active = 1',
-      [managerId]
+      `SELECT COUNT(*) as count FROM ${employeeTable} WHERE ${employeeScopeCol} = ? AND is_active = 1`,
+      [scopeId]
     );
 
     const [workOrdersCount] = await pool.execute(
-      'SELECT COUNT(*) as count FROM work_orders WHERE manager_id = ?',
-      [managerId]
+      `SELECT COUNT(*) as count FROM work_orders WHERE ${scopeColumn} = ?`,
+      [scopeId]
     );
 
     const [pendingWorkOrders] = await pool.execute(
       `SELECT COUNT(*) as count FROM work_orders 
-       WHERE manager_id = ? AND status NOT IN ('completed', 'closed', 'cancelled')`,
-      [managerId]
+       WHERE ${scopeColumn} = ? AND status NOT IN ('completed', 'closed', 'cancelled')`,
+      [scopeId]
     );
 
     const [completedWorkOrders] = await pool.execute(
       `SELECT COUNT(*) as count FROM work_orders 
-       WHERE manager_id = ? AND status IN ('completed', 'closed')`,
-      [managerId]
+       WHERE ${scopeColumn} = ? AND status IN ('completed', 'closed')`,
+      [scopeId]
     );
 
     const [estimatesCount] = await pool.execute(
-      'SELECT COUNT(*) as count FROM estimates WHERE manager_id = ?',
-      [managerId]
+      `SELECT COUNT(*) as count FROM estimates WHERE ${scopeColumn} = ?`,
+      [scopeId]
     );
 
     // Get recent work orders
@@ -169,10 +175,10 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE wo.manager_id = ?
+       WHERE wo.${scopeColumn} = ?
        ORDER BY wo.created_at DESC
        LIMIT 10`,
-      [managerId]
+      [scopeId]
     );
 
     res.json({
@@ -205,16 +211,19 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
 // PROPERTY MANAGEMENT
 // ============================================
 
-// Get all manager properties
+// Get all manager properties (FP-scoped or Manager-scoped)
 router.get('/properties', requireManagerScope, async (req, res) => {
   try {
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
+    
     const [properties] = await pool.execute(
       `SELECT p.*, z.name as zone_name 
        FROM properties p 
        LEFT JOIN zones z ON p.zone_id = z.id 
-       WHERE p.manager_id = ?
+       WHERE p.${scopeColumn} = ?
        ORDER BY p.created_at DESC`,
-      [req.managerId]
+      [scopeId]
     );
 
     res.json({ success: true, data: properties });
@@ -223,19 +232,21 @@ router.get('/properties', requireManagerScope, async (req, res) => {
   }
 });
 
-// Create property
+// Create property - uses FP scope if FP Manager
 router.post('/properties', requireManagerScope, async (req, res) => {
   try {
     const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
     
     const propertyId = `PROP-MGR-${Date.now()}`;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
     
     const [result] = await pool.execute(
       `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
-        contact_person, contact_phone, contact_email, zone_id, manager_id, created_at)
+        contact_person, contact_phone, contact_email, zone_id, ${scopeColumn}, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [propertyId, name, propertyType || 'residential', address, city, state, zipCode, 
-       contactPerson, contactPhone, contactEmail, zoneId || null, req.managerId]
+       contactPerson, contactPhone, contactEmail, zoneId || null, scopeId]
     );
 
     res.json({ success: true, message: 'Property created', data: { id: result.insertId, propertyId } });
@@ -248,13 +259,15 @@ router.post('/properties', requireManagerScope, async (req, res) => {
 router.put('/properties/:id', requireManagerScope, validateOwnership('properties'), async (req, res) => {
   try {
     const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
     
     await pool.execute(
       `UPDATE properties SET name = ?, property_type = ?, address = ?, city = ?, state = ?, 
         zip_code = ?, contact_person = ?, contact_phone = ?, contact_email = ?, zone_id = ?, updated_at = NOW()
-       WHERE id = ? AND manager_id = ?`,
+       WHERE id = ? AND ${scopeColumn} = ?`,
       [name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, 
-       zoneId || null, req.params.id, req.managerId]
+       zoneId || null, req.params.id, scopeId]
     );
 
     res.json({ success: true, message: 'Property updated' });
@@ -268,14 +281,20 @@ router.delete('/properties/:id', requireManagerScope, validateOwnership('propert
   return res.status(403).json({ success: false, message: 'Delete operation not allowed for this role' });
 });
 
-// Assign vendor to property
+// Assign vendor to property - DISABLED for FP Manager
 router.post('/properties/:id/assign-vendor', requireManagerScope, validateOwnership('properties'), async (req, res) => {
+  // FP Managers cannot assign vendors
+  if (req.isFPManager) {
+    return res.status(403).json({ success: false, message: 'Assign vendor not allowed for this role' });
+  }
   try {
     const { vendorId } = req.body;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
     
     await pool.execute(
-      'UPDATE properties SET assigned_vendor_id = ?, updated_at = NOW() WHERE id = ? AND manager_id = ?',
-      [vendorId, req.params.id, req.managerId]
+      `UPDATE properties SET assigned_vendor_id = ?, updated_at = NOW() WHERE id = ? AND ${scopeColumn} = ?`,
+      [vendorId, req.params.id, scopeId]
     );
 
     res.json({ success: true, message: 'Vendor assigned to property' });
@@ -284,14 +303,20 @@ router.post('/properties/:id/assign-vendor', requireManagerScope, validateOwners
   }
 });
 
-// Assign employee to property
+// Assign employee to property - DISABLED for FP Manager
 router.post('/properties/:id/assign-employee', requireManagerScope, validateOwnership('properties'), async (req, res) => {
+  // FP Managers cannot assign employees
+  if (req.isFPManager) {
+    return res.status(403).json({ success: false, message: 'Assign employee not allowed for this role' });
+  }
   try {
     const { employeeId } = req.body;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
     
     await pool.execute(
-      'UPDATE properties SET assigned_employee_id = ?, updated_at = NOW() WHERE id = ? AND manager_id = ?',
-      [employeeId, req.params.id, req.managerId]
+      `UPDATE properties SET assigned_employee_id = ?, updated_at = NOW() WHERE id = ? AND ${scopeColumn} = ?`,
+      [employeeId, req.params.id, scopeId]
     );
 
     res.json({ success: true, message: 'Employee assigned to property' });
@@ -304,10 +329,12 @@ router.post('/properties/:id/assign-employee', requireManagerScope, validateOwne
 // WORK ORDERS
 // ============================================
 
-// Get all manager work orders
+// Get all manager work orders (FP-scoped or Manager-scoped)
 router.get('/work-orders', requireManagerScope, async (req, res) => {
   try {
     const { status } = req.query;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
     
     let query = `SELECT wo.*, p.name as property_name, c.name as category_name, 
                         v.company_name as vendor_name, cl.name as client_name
@@ -316,9 +343,9 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
                  LEFT JOIN categories c ON wo.category_id = c.id
                  LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
                  LEFT JOIN clients cl ON wo.client_id = cl.id
-                 WHERE wo.manager_id = ?`;
+                 WHERE wo.${scopeColumn} = ?`;
     
-    const params = [req.managerId];
+    const params = [scopeId];
     
     if (status) {
       query += ' AND wo.status = ?';
@@ -337,6 +364,9 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
 // Get pending work orders
 router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
   try {
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
+    
     const [workOrders] = await pool.execute(
       `SELECT wo.*, p.name as property_name, c.name as category_name, 
               v.company_name as vendor_name, cl.name as client_name
@@ -345,9 +375,9 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE wo.manager_id = ? AND wo.status NOT IN ('completed', 'closed', 'cancelled')
+       WHERE wo.${scopeColumn} = ? AND wo.status NOT IN ('completed', 'closed', 'cancelled')
        ORDER BY wo.created_at DESC`,
-      [req.managerId]
+      [scopeId]
     );
     res.json({ success: true, data: workOrders });
   } catch (error) {
@@ -358,6 +388,9 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
 // Get completed work orders
 router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
   try {
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
+    
     const [workOrders] = await pool.execute(
       `SELECT wo.*, p.name as property_name, c.name as category_name, 
               v.company_name as vendor_name, cl.name as client_name
@@ -366,9 +399,9 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE wo.manager_id = ? AND wo.status IN ('completed', 'closed')
+       WHERE wo.${scopeColumn} = ? AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`,
-      [req.managerId]
+      [scopeId]
     );
     res.json({ success: true, data: workOrders });
   } catch (error) {
@@ -382,14 +415,16 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
     const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate } = req.body;
     
     const workOrderId = `WO-MGR-${Date.now()}`;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
     
     const [result] = await pool.execute(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
-        priority, permission_to_enter, has_pet, scheduled_date, status, manager_id, created_by, created_at)
+        priority, permission_to_enter, has_pet, scheduled_date, status, ${scopeColumn}, created_by, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?, NOW())`,
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null,
-       req.managerId, req.user.id]
+       scopeId, req.user.id]
     );
 
     res.json({ success: true, message: 'Work order created', data: { id: result.insertId, workOrderId } });
@@ -402,10 +437,12 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
 router.patch('/work-orders/:id/status', requireManagerScope, validateOwnership('work_orders'), async (req, res) => {
   try {
     const { status } = req.body;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
     
     await pool.execute(
-      'UPDATE work_orders SET status = ?, updated_at = NOW() WHERE id = ? AND manager_id = ?',
-      [status, req.params.id, req.managerId]
+      `UPDATE work_orders SET status = ?, updated_at = NOW() WHERE id = ? AND ${scopeColumn} = ?`,
+      [status, req.params.id, scopeId]
     );
 
     res.json({ success: true, message: 'Status updated' });
@@ -418,11 +455,13 @@ router.patch('/work-orders/:id/status', requireManagerScope, validateOwnership('
 router.patch('/work-orders/:id/assign-vendor', requireManagerScope, validateOwnership('work_orders'), async (req, res) => {
   try {
     const { vendorId } = req.body;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
     
     await pool.execute(
       `UPDATE work_orders SET assigned_vendor_id = ?, status = 'assigned', updated_at = NOW() 
-       WHERE id = ? AND manager_id = ?`,
-      [vendorId, req.params.id, req.managerId]
+       WHERE id = ? AND ${scopeColumn} = ?`,
+      [vendorId, req.params.id, scopeId]
     );
 
     res.json({ success: true, message: 'Vendor assigned' });
@@ -435,16 +474,19 @@ router.patch('/work-orders/:id/assign-vendor', requireManagerScope, validateOwne
 // CUSTOMER MANAGEMENT
 // ============================================
 
-// Get all manager customers
+// Get all manager customers (FP-scoped or Manager-scoped)
 router.get('/customers', requireManagerScope, async (req, res) => {
   try {
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
+    
     const [customers] = await pool.execute(
       `SELECT c.*, p.name as property_name 
        FROM clients c 
        LEFT JOIN properties p ON c.property_id = p.id
-       WHERE c.manager_id = ?
+       WHERE c.${scopeColumn} = ?
        ORDER BY c.created_at DESC`,
-      [req.managerId]
+      [scopeId]
     );
     res.json({ success: true, data: customers });
   } catch (error) {
@@ -458,13 +500,15 @@ router.post('/customers', requireManagerScope, async (req, res) => {
     const { name, email, phone, alternatePhone, address, city, state, zipCode, clientType, companyName, propertyId, gstNumber } = req.body;
     
     const clientId = `CLT-MGR-${Date.now()}`;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
     
     const [result] = await pool.execute(
       `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
-        zip_code, client_type, company_name, property_id, gst_number, manager_id, created_at)
+        zip_code, client_type, company_name, property_id, gst_number, ${scopeColumn}, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
-       clientType || 'individual', companyName, propertyId || null, gstNumber, req.managerId]
+       clientType || 'individual', companyName, propertyId || null, gstNumber, scopeId]
     );
 
     res.json({ success: true, message: 'Customer created', data: { id: result.insertId, clientId } });
@@ -477,36 +521,24 @@ router.post('/customers', requireManagerScope, async (req, res) => {
 // VENDOR MANAGEMENT
 // ============================================
 
-// Get all manager vendors (own + assigned)
+// Get all manager vendors (FP-scoped or Manager-scoped)
 router.get('/vendors', requireManagerScope, async (req, res) => {
   try {
-    // Get vendors created by manager
-    const [ownVendors] = await pool.execute(
-      `SELECT v.*, 'own' as vendor_type FROM vendors v WHERE v.manager_id = ?`,
-      [req.managerId]
-    );
-
-    // Get vendors assigned to manager
-    const [assignedVendors] = await pool.execute(
-      `SELECT v.*, 'assigned' as vendor_type 
-       FROM vendors v 
-       INNER JOIN manager_assigned_vendors mav ON v.id = mav.vendor_id 
-       WHERE mav.manager_id = ? AND mav.is_active = 1`,
-      [req.managerId]
-    );
-
-    // Combine and deduplicate
-    const allVendors = [...ownVendors, ...assignedVendors];
-    const uniqueVendors = allVendors.filter((v, index, self) => 
-      index === self.findIndex(t => t.id === v.id)
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
+    
+    // Get vendors scoped to FP or Manager
+    const [vendors] = await pool.execute(
+      `SELECT v.*, 'own' as vendor_type FROM vendors v WHERE v.${scopeColumn} = ?`,
+      [scopeId]
     );
 
     res.json({
       success: true,
       data: {
-        own: ownVendors,
-        assigned: assignedVendors,
-        all: uniqueVendors
+        own: vendors,
+        assigned: [],
+        all: vendors
       }
     });
   } catch (error) {
@@ -520,13 +552,15 @@ router.post('/vendors', requireManagerScope, async (req, res) => {
     const { companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber } = req.body;
     
     const vendorId = `VND-MGR-${Date.now()}`;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
     
     const [result] = await pool.execute(
       `INSERT INTO vendors (vendor_id, company_name, contact_person, email, phone, alternate_phone, 
-        address, city, state, zip_code, gst_number, pan_number, manager_id, created_at)
+        address, city, state, zip_code, gst_number, pan_number, ${scopeColumn}, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [vendorId, companyName, contactPerson, email, phone, alternatePhone, address, city, state, 
-       zipCode, gstNumber, panNumber, req.managerId]
+       zipCode, gstNumber, panNumber, scopeId]
     );
 
     res.json({ success: true, message: 'Vendor created', data: { id: result.insertId, vendorId } });
@@ -573,20 +607,22 @@ router.delete('/employees/:id', requireManagerScope, async (req, res) => {
 // ESTIMATES MANAGEMENT
 // ============================================
 
-// Get all manager estimates
+// Get all manager estimates (FP-scoped or Manager-scoped)
 router.get('/estimates', requireManagerScope, async (req, res) => {
   try {
     const { archived } = req.query;
     const isArchived = archived === 'true';
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
     
     const [estimates] = await pool.execute(
       `SELECT e.*, p.name as property_name, c.name as client_name
        FROM estimates e
        LEFT JOIN properties p ON e.property_id = p.id
        LEFT JOIN clients c ON e.client_id = c.id
-       WHERE e.manager_id = ? AND e.is_archived = ?
+       WHERE e.${scopeColumn} = ? AND e.is_archived = ?
        ORDER BY e.created_at DESC`,
-      [req.managerId, isArchived]
+      [scopeId, isArchived]
     );
     res.json({ success: true, data: estimates });
   } catch (error) {
@@ -603,15 +639,17 @@ router.post('/estimates', requireManagerScope, async (req, res) => {
     const tax = (subtotal * (taxPercentage || 0)) / 100;
     const discount = (subtotal * (discountPercentage || 0)) / 100;
     const total = subtotal + tax - discount;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
     
     const [result] = await pool.execute(
       `INSERT INTO estimates (estimate_id, client_id, property_id, title, description, estimate_type,
         subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount, total_amount,
-        valid_until, status, manager_id, created_by, created_at)
+        valid_until, status, ${scopeColumn}, created_by, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, NOW())`,
       [estimateId, clientId || null, propertyId || null, title, description, estimateType || 'property_based',
        subtotal, taxPercentage || 0, tax, discountPercentage || 0, discount, total,
-       validUntil || null, req.managerId, req.user.id]
+       validUntil || null, scopeId, req.user.id]
     );
 
     // Insert line items
@@ -634,9 +672,12 @@ router.post('/estimates', requireManagerScope, async (req, res) => {
 // Archive estimate
 router.patch('/estimates/:id/archive', requireManagerScope, validateOwnership('estimates'), async (req, res) => {
   try {
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
+    
     await pool.execute(
-      'UPDATE estimates SET is_archived = 1, updated_at = NOW() WHERE id = ? AND manager_id = ?',
-      [req.params.id, req.managerId]
+      `UPDATE estimates SET is_archived = 1, updated_at = NOW() WHERE id = ? AND ${scopeColumn} = ?`,
+      [req.params.id, scopeId]
     );
     res.json({ success: true, message: 'Estimate archived' });
   } catch (error) {
@@ -645,21 +686,27 @@ router.patch('/estimates/:id/archive', requireManagerScope, validateOwnership('e
 });
 
 // ============================================
-// AMC PACKAGES
+// AMC PACKAGES - FP Managers use FP packages (read-only), standalone use manager packages
 // ============================================
 
-// Get all manager AMC packages
+// Get all AMC packages
 router.get('/amc-packages', requireManagerScope, async (req, res) => {
   try {
+    const scopeId = getScopeId(req);
+    
+    // FP Managers read from fp_amc_packages, standalone from manager_amc_packages
+    const table = req.isFPManager ? 'fp_amc_packages' : 'manager_amc_packages';
+    const scopeColumn = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
+    
     const [packages] = await pool.execute(
-      'SELECT * FROM manager_amc_packages WHERE manager_id = ? AND is_active = 1 ORDER BY created_at DESC',
-      [req.managerId]
+      `SELECT * FROM ${table} WHERE ${scopeColumn} = ? AND is_active = 1 ORDER BY created_at DESC`,
+      [scopeId]
     );
     
     // Filter pricing if needed
     const filteredPackages = packages.map(pkg => {
       if (pkg.hide_pricing) {
-        const { base_price, ...rest } = pkg;
+        const { base_price, price, ...rest } = pkg;
         return rest;
       }
       return pkg;
@@ -671,8 +718,12 @@ router.get('/amc-packages', requireManagerScope, async (req, res) => {
   }
 });
 
-// Create AMC package
+// Create AMC package - DISABLED for FP Managers
 router.post('/amc-packages', requireManagerScope, async (req, res) => {
+  // FP Managers cannot create packages
+  if (req.isFPManager) {
+    return res.status(403).json({ success: false, message: 'Create package not allowed for this role' });
+  }
   try {
     const { name, description, durationMonths, basePrice, services, termsConditions, hidePricing } = req.body;
     
@@ -691,19 +742,25 @@ router.post('/amc-packages', requireManagerScope, async (req, res) => {
 });
 
 // ============================================
-// ADD-ONS
+// ADD-ONS - FP Managers use FP addons (read-only), standalone use manager addons
 // ============================================
 
-// Get all manager add-ons
+// Get all add-ons
 router.get('/addons', requireManagerScope, async (req, res) => {
   try {
+    const scopeId = getScopeId(req);
+    
+    // FP Managers read from fp_addons, standalone from manager_addons
+    const table = req.isFPManager ? 'fp_addons' : 'manager_addons';
+    const scopeColumn = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
+    
     const [addons] = await pool.execute(
       `SELECT a.*, c.name as category_name 
-       FROM manager_addons a
+       FROM ${table} a
        LEFT JOIN categories c ON a.category_id = c.id
-       WHERE a.manager_id = ? AND a.is_active = 1
+       WHERE a.${scopeColumn} = ? AND a.is_active = 1
        ORDER BY a.created_at DESC`,
-      [req.managerId]
+      [scopeId]
     );
     
     // Filter pricing if needed
@@ -721,8 +778,12 @@ router.get('/addons', requireManagerScope, async (req, res) => {
   }
 });
 
-// Create add-on
+// Create add-on - DISABLED for FP Managers
 router.post('/addons', requireManagerScope, async (req, res) => {
+  // FP Managers cannot create add-ons
+  if (req.isFPManager) {
+    return res.status(403).json({ success: false, message: 'Create add-on not allowed for this role' });
+  }
   try {
     const { name, description, price, unit, categoryId, hidePricing } = req.body;
     
@@ -739,13 +800,22 @@ router.post('/addons', requireManagerScope, async (req, res) => {
 });
 
 // ============================================
-// ZONES & CATEGORIES (Read-only)
+// ZONES & CATEGORIES - FP Managers use FP zones, standalone use global zones
 // ============================================
 
 router.get('/zones', requireManagerScope, async (req, res) => {
   try {
-    const [zones] = await pool.execute('SELECT * FROM zones WHERE is_active = 1 ORDER BY name');
-    res.json({ success: true, data: zones });
+    // FP Managers get zones from fp_zones, standalone get global zones
+    if (req.isFPManager) {
+      const [zones] = await pool.execute(
+        'SELECT * FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY name',
+        [req.franchisePartnerId]
+      );
+      res.json({ success: true, data: zones });
+    } else {
+      const [zones] = await pool.execute('SELECT * FROM zones WHERE is_active = 1 ORDER BY name');
+      res.json({ success: true, data: zones });
+    }
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -761,7 +831,7 @@ router.get('/categories', requireManagerScope, async (req, res) => {
 });
 
 // ============================================
-// EXPORT ENDPOINTS
+// EXPORT ENDPOINTS - All DISABLED for FP Manager role
 // ============================================
 
 // Export properties - DISABLED for Manager role
@@ -780,6 +850,10 @@ router.get('/export/employees', requireManagerScope, async (req, res) => {
 });
 
 router.get('/export/work-orders', requireManagerScope, async (req, res) => {
+  // Disabled for FP Managers
+  if (req.isFPManager) {
+    return res.status(403).json({ success: false, message: 'Export not allowed for this role' });
+  }
   try {
     const [data] = await pool.execute(
       'SELECT * FROM work_orders WHERE manager_id = ?',

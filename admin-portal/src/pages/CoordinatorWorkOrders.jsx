@@ -13,12 +13,23 @@ import {
   User,
   ChevronDown,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  Eye,
+  Store,
+  Users,
+  Download,
+  Trash2,
+  RotateCcw,
+  Lock
 } from 'lucide-react';
 
 const CoordinatorWorkOrders = ({ user }) => {
+  // Check if this is an FP-created Coordinator (has franchisePartnerId)
+  const isFPCoordinator = !!user?.franchisePartnerId;
+  
   const location = useLocation();
   const [workOrders, setWorkOrders] = useState([]);
+  const [activeTab, setActiveTab] = useState('pending');
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -353,12 +364,10 @@ const CoordinatorWorkOrders = ({ user }) => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Work Order</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Order ID</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Resident</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Category</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Priority</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
@@ -368,20 +377,18 @@ const CoordinatorWorkOrders = ({ user }) => {
                   <tr key={wo.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <div>
-                        <p className="font-medium text-gray-900">{wo.title || wo.work_order_id}</p>
-                        <p className="text-sm text-gray-500">{wo.work_order_id}</p>
+                        <p className="font-medium text-gray-900">{wo.work_order_id}</p>
+                        <p className="text-sm text-gray-500">{wo.title || '-'}</p>
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="text-sm text-gray-600">{wo.property_name || '-'}</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{wo.client_name || wo.customer_name || '-'}</p>
+                        <p className="text-sm text-gray-500">{wo.property_name || '-'}</p>
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-600">{wo.category_name || '-'}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(wo.priority)}`}>
-                        {wo.priority?.toUpperCase()}
-                      </span>
                     </td>
                     <td className="py-4 px-4">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
@@ -389,28 +396,99 @@ const CoordinatorWorkOrders = ({ user }) => {
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="text-sm text-gray-600">{wo.vendor_name || '-'}</span>
-                    </td>
-                    <td className="py-4 px-4">
                       <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {!wo.assigned_vendor_id && wo.status !== 'closed' && wo.status !== 'cancelled' && (
-                          <button
-                            onClick={() => { setSelectedWorkOrder(wo); setShowAssignModal(true); }}
-                            className="px-3 py-1 text-sm text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50"
-                          >
-                            Assign Vendor
-                          </button>
+                      <div className="flex items-center justify-end gap-1">
+                        {/* View Details - Always visible */}
+                        <button
+                          onClick={() => { setSelectedWorkOrder(wo); /* TODO: View modal */ }}
+                          className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        
+                        {/* PENDING ACTIONS */}
+                        {viewType !== 'completed' && (
+                          <>
+                            {/* Assign Vendor - Hidden for FP Coordinator */}
+                            {!isFPCoordinator && (
+                              <button
+                                onClick={() => { setSelectedWorkOrder(wo); setShowAssignModal(true); }}
+                                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
+                                title="Assign Vendor"
+                              >
+                                <Store className="w-4 h-4" />
+                              </button>
+                            )}
+                            {/* Assign Employee - Hidden for FP Coordinator */}
+                            {!isFPCoordinator && (
+                              <button
+                                onClick={() => { /* TODO: Assign employee */ }}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                                title="Assign Employee"
+                              >
+                                <Users className="w-4 h-4" />
+                              </button>
+                            )}
+                            {/* Export to Excel - Hidden for FP Coordinator */}
+                            {!isFPCoordinator && (
+                              <button
+                                onClick={() => { /* TODO: Export */ }}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                                title="Export to Excel"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                            )}
+                            {/* Delete - Hidden for FP Coordinator */}
+                            {!isFPCoordinator && (
+                              <button
+                                onClick={() => { /* TODO: Delete */ }}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </>
                         )}
-                        {wo.status === 'completed' && (
-                          <button
-                            onClick={() => handleStatusUpdate(wo.id, 'closed')}
-                            className="px-3 py-1 text-sm text-green-600 border border-green-200 rounded-lg hover:bg-green-50"
-                          >
-                            Close
-                          </button>
+                        
+                        {/* COMPLETED ACTIONS */}
+                        {viewType === 'completed' && (
+                          <>
+                            {/* Change of Status - dropdown */}
+                            <select
+                              value={wo.status}
+                              onChange={(e) => handleStatusUpdate(wo.id, e.target.value)}
+                              className="px-2 py-1 text-xs border border-gray-200 rounded-lg bg-white text-gray-700"
+                              title="Change Status"
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="assigned">Assigned</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="completed">Completed</option>
+                              <option value="closed">Closed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                            {/* Mark As Closed */}
+                            <button
+                              onClick={() => handleStatusUpdate(wo.id, 'closed')}
+                              className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
+                              title="Mark As Closed"
+                            >
+                              <Lock className="w-4 h-4" />
+                            </button>
+                            {/* Rivet to Pending */}
+                            <button
+                              onClick={() => handleStatusUpdate(wo.id, 'pending')}
+                              className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg"
+                              title="Revert to Pending"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
