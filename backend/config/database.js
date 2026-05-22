@@ -10,7 +10,13 @@ const dbConfig = {
   port: process.env.DB_PORT || 3306,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  // SSL configuration for cloud databases (PlanetScale, Railway, etc.)
+  ...(process.env.DB_SSL === 'true' && {
+    ssl: {
+      rejectUnauthorized: true
+    }
+  })
 };
 
 let pool = null;
