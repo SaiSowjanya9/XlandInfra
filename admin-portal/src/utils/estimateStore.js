@@ -252,104 +252,121 @@ export const restoreEstimate = (estimateId) => {
 };
 
 // ============================================
-// AMC Packages CRUD
+// AMC Packages CRUD (API-based for sync across devices)
 // ============================================
 
+// API base URL for packages
+const PKG_API_URL = import.meta.env.VITE_API_URL || '';
+
+// Cache for packages
+let packagesCache = null;
+let packagesCacheTime = 0;
+const PKG_CACHE_DURATION = 5000;
+
 export const getAMCPackages = () => {
-  return getStorageData(AMC_PACKAGES_KEY);
+  if (packagesCache && Date.now() - packagesCacheTime < PKG_CACHE_DURATION) {
+    return packagesCache;
+  }
+  return packagesCache || [];
+};
+
+// Async function to fetch packages from API
+export const fetchAMCPackages = async () => {
+  try {
+    const response = await fetch(`${PKG_API_URL}/api/amc-packages`);
+    const result = await response.json();
+    if (result.success) {
+      packagesCache = result.data || [];
+      packagesCacheTime = Date.now();
+      return packagesCache;
+    }
+    return [];
+  } catch (error) {
+    console.error('Fetch packages error:', error);
+    return packagesCache || [];
+  }
 };
 
 export const getAMCPackageById = (packageId) => {
-  const packages = getStorageData(AMC_PACKAGES_KEY);
+  const packages = getAMCPackages();
   return packages.find(pkg => pkg.packageId === packageId);
 };
 
-// Get AMC package by property type (IC, Villa, Apt, Plot, Flat)
+// Property type mapping
+const typeMapping = {
+  'IC': 'IC', 'Independent House': 'IC',
+  'Villa': 'Villa', 'Villas': 'Villa',
+  'Apt': 'Apt', 'APT': 'Apt', 'Apartment': 'Apt',
+  'Plot': 'Plot', 'Plots': 'Plot',
+  'Flat': 'Flat', 'Flats': 'Flat',
+  'GC': 'Apt', 'Commercial': 'Commercial'
+};
+
 export const getAMCPackageByPropertyType = (propertyType) => {
-  const packages = getStorageData(AMC_PACKAGES_KEY);
-  // Map various property type formats to standardized types
-  const typeMapping = {
-    'IC': 'IC',
-    'Independent House': 'IC',
-    'Villa': 'Villa',
-    'Villas': 'Villa',
-    'Apt': 'Apt',
-    'APT': 'Apt',
-    'Apartment': 'Apt',
-    'Plot': 'Plot',
-    'Plots': 'Plot',
-    'Flat': 'Flat',
-    'Flats': 'Flat',
-    'GC': 'Apt', // Gated Community maps to Apartment
-    'Commercial': 'Commercial'
-  };
-  
+  const packages = getAMCPackages();
   const normalizedType = typeMapping[propertyType] || propertyType;
   return packages.find(pkg => pkg.propertyType === normalizedType);
 };
 
-// Get all AMC packages for a specific property type
 export const getAMCPackagesByPropertyType = (propertyType) => {
-  const packages = getStorageData(AMC_PACKAGES_KEY);
-  const typeMapping = {
-    'IC': 'IC',
-    'Independent House': 'IC',
-    'Villa': 'Villa',
-    'Villas': 'Villa',
-    'Apt': 'Apt',
-    'APT': 'Apt',
-    'Apartment': 'Apt',
-    'Plot': 'Plot',
-    'Plots': 'Plot',
-    'Flat': 'Flat',
-    'Flats': 'Flat',
-    'GC': 'Apt',
-    'Commercial': 'Commercial'
-  };
-  
+  const packages = getAMCPackages();
   const normalizedType = typeMapping[propertyType] || propertyType;
   return packages.filter(pkg => pkg.propertyType === normalizedType);
 };
 
-export const createAMCPackage = (packageData) => {
-  const packages = getStorageData(AMC_PACKAGES_KEY);
-  const packageId = `AMC-${Date.now()}`;
-  
-  const newPackage = {
-    ...packageData,
-    packageId,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  packages.unshift(newPackage);
-  setStorageData(AMC_PACKAGES_KEY, packages);
-  
-  return newPackage;
-};
-
-export const updateAMCPackage = (packageId, updates) => {
-  const packages = getStorageData(AMC_PACKAGES_KEY);
-  const index = packages.findIndex(pkg => pkg.packageId === packageId);
-  
-  if (index !== -1) {
-    packages[index] = {
-      ...packages[index],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-    setStorageData(AMC_PACKAGES_KEY, packages);
-    return packages[index];
+export const createAMCPackage = async (packageData) => {
+  try {
+    const response = await fetch(`${PKG_API_URL}/api/amc-packages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(packageData)
+    });
+    const result = await response.json();
+    if (result.success) {
+      packagesCache = null;
+      return { ...packageData, packageId: result.data?.packageId };
+    }
+    throw new Error(result.message);
+  } catch (error) {
+    console.error('Create package error:', error);
+    throw error;
   }
-  
-  return null;
 };
 
-export const deleteAMCPackage = (packageId) => {
-  let packages = getStorageData(AMC_PACKAGES_KEY);
-  packages = packages.filter(pkg => pkg.packageId !== packageId);
-  setStorageData(AMC_PACKAGES_KEY, packages);
-  return true;
+export const updateAMCPackage = async (packageId, updates) => {
+  try {
+    const response = await fetch(`${PKG_API_URL}/api/amc-packages/${packageId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    const result = await response.json();
+    if (result.success) {
+      packagesCache = null;
+      return { packageId, ...updates };
+    }
+    throw new Error(result.message);
+  } catch (error) {
+    console.error('Update package error:', error);
+    throw error;
+  }
+};
+
+export const deleteAMCPackage = async (packageId) => {
+  try {
+    const response = await fetch(`${PKG_API_URL}/api/amc-packages/${packageId}`, {
+      method: 'DELETE'
+    });
+    const result = await response.json();
+    if (result.success) {
+      packagesCache = null;
+      return true;
+    }
+    throw new Error(result.message);
+  } catch (error) {
+    console.error('Delete package error:', error);
+    throw error;
+  }
 };
 
 // ============================================
