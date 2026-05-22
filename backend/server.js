@@ -1,8 +1,12 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
+
+// Real-time sync (WebSocket)
+const { initRealtimeServer } = require('./config/realtime');
 
 const { testConnection, initOnboardingTables } = require('./config/database');
 const categoriesRouter = require('./routes/categories');
@@ -150,8 +154,15 @@ const startServer = async () => {
     console.log('   To enable database, update .env with valid MySQL credentials');
   }
 
-  app.listen(PORT, () => {
+  // Create HTTP server for both Express and WebSocket
+  const server = http.createServer(app);
+
+  // Initialize real-time WebSocket server
+  initRealtimeServer(server);
+
+  server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 Real-time WebSocket enabled at /ws`);
     console.log(`📁 Uploads directory: ${uploadsDir}`);
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔗 CORS: Accepting requests from xlandinfra.com and localhost`);
