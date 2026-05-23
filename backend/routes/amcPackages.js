@@ -15,18 +15,27 @@ router.get('/', async (req, res) => {
     );
     
     // Transform to match frontend format
-    const formattedPackages = packages.map(pkg => ({
-      packageId: pkg.package_id,
-      packageName: pkg.package_name,
-      propertyType: pkg.property_type,
-      services: pkg.services,
-      serviceRows: pkg.service_rows ? JSON.parse(pkg.service_rows) : [],
-      rate: parseFloat(pkg.rate),
-      billingDuration: pkg.billing_duration,
-      status: pkg.status,
-      createdAt: pkg.created_at,
-      updatedAt: pkg.updated_at
-    }));
+    const formattedPackages = packages.map(pkg => {
+      let serviceRows = [];
+      if (pkg.service_rows) {
+        // Handle both string and object (MySQL JSON column returns object)
+        serviceRows = typeof pkg.service_rows === 'string' 
+          ? JSON.parse(pkg.service_rows) 
+          : pkg.service_rows;
+      }
+      return {
+        packageId: pkg.package_id,
+        packageName: pkg.package_name,
+        propertyType: pkg.property_type,
+        services: pkg.services,
+        serviceRows: serviceRows,
+        rate: parseFloat(pkg.rate),
+        billingDuration: pkg.billing_duration,
+        status: pkg.status,
+        createdAt: pkg.created_at,
+        updatedAt: pkg.updated_at
+      };
+    });
     
     res.json({ success: true, data: formattedPackages });
   } catch (error) {
