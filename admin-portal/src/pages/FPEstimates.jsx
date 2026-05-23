@@ -520,10 +520,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       </div>
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div></div> : filteredEstimates.length === 0 ? <div className="py-16 text-center"><DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No estimates found</p><p className="text-gray-400 text-sm mt-1">Try adjusting your search or filters</p></div> : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Amount</th><th className="px-4 py-3 text-left font-medium text-gray-600">Status</th><th className="px-4 py-3 text-left font-medium text-gray-600">Created</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead>
-            <tbody className="divide-y divide-gray-100">{filteredEstimates.map((est) => <tr key={est.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-mono text-xs">{est.estimate_id}</td><td className="px-4 py-3">{est.client_name}</td><td className="px-4 py-3 capitalize">{est.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 font-semibold">{formatCurrency(est.total_amount)}</td><td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{est.status}</span></td><td className="px-4 py-3 text-gray-500">{est.created_at ? new Date(est.created_at).toLocaleDateString() : '-'}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Eye className="w-4 h-4" /></button><button onClick={() => handleArchiveEstimate(est.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Archive className="w-4 h-4" /></button></div></td></tr>)}</tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
+              <thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Estimate ID</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Client</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden sm:table-cell">Type</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Amount</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden md:table-cell">Status</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden lg:table-cell">Created</th><th className="px-3 py-3 text-center font-medium text-gray-600 whitespace-nowrap text-xs">Actions</th></tr></thead>
+              <tbody className="divide-y divide-gray-100">{filteredEstimates.map((est) => <tr key={est.id} className="hover:bg-gray-50"><td className="px-3 py-3 font-mono text-xs whitespace-nowrap">{est.estimate_id}</td><td className="px-3 py-3 truncate max-w-[120px]">{est.client_name}</td><td className="px-3 py-3 capitalize whitespace-nowrap hidden sm:table-cell">{est.estimate_type?.replace('_', ' ')}</td><td className="px-3 py-3 font-semibold whitespace-nowrap">{formatCurrency(est.total_amount)}</td><td className="px-3 py-3 hidden md:table-cell"><span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{est.status}</span></td><td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell">{est.created_at ? new Date(est.created_at).toLocaleDateString() : '-'}</td><td className="px-3 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Eye className="w-4 h-4" /></button><button onClick={() => handleArchiveEstimate(est.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Archive className="w-4 h-4" /></button></div></td></tr>)}</tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
@@ -1046,14 +1048,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       
       {/* View Estimate Modal */}
       {viewEstimate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-800">Estimate Details</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
               <button onClick={() => setViewEstimate(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div><p className="text-sm text-gray-500">Estimate ID</p><p className="font-medium">{viewEstimate.estimate_id}</p></div>
                 <div><p className="text-sm text-gray-500">Status</p><span className={`px-2 py-1 rounded-full text-xs font-medium ${viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{viewEstimate.status}</span></div>
                 <div><p className="text-sm text-gray-500">Type</p><p className="font-medium capitalize">{viewEstimate.estimate_type?.replace('_', ' ')}</p></div>

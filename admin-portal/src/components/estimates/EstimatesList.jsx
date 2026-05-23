@@ -211,22 +211,23 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
       {/* Estimates List */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {filteredEstimates.length === 0 ? (
-          <div className="p-12 text-center">
+          <div className="p-8 sm:p-12 text-center">
             <DollarSign className="w-12 h-12 mx-auto text-gray-300 mb-3" />
             <p className="text-gray-500">No estimates found</p>
             <p className="text-sm text-gray-400">Try adjusting your search or filters</p>
           </div>
         ) : (
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Estimate ID</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Client</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Estimate ID</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden sm:table-cell">Type</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Client</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">Date</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Total</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden lg:table-cell">Status</th>
+                <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -234,42 +235,42 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                 const Icon = PROPERTY_ICONS[estimate.propertyType] || (estimate.estimateType === 'direct' ? User : Building2);
                 return (
                   <tr key={estimate.estimateId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <span className="font-medium text-gray-800">{estimate.estimateId}</span>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                      <span className="font-medium text-gray-800 text-xs sm:text-sm">{estimate.estimateId}</span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">
                       <div className="flex items-center gap-2">
                         <Icon className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          {estimate.estimateType === 'property-based' ? estimate.propertyType : 'Direct-Based'}
+                        <span className="text-sm text-gray-600 whitespace-nowrap">
+                          {estimate.estimateType === 'property-based' ? estimate.propertyType : 'Direct'}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-gray-800">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                      <p className="text-xs sm:text-sm text-gray-800 truncate max-w-[100px] sm:max-w-none">
                         {estimate.clientName || estimate.customerName}
                       </p>
                       {estimate.propertyId && (
-                        <p className="text-xs text-gray-500">{estimate.propertyId}</p>
+                        <p className="text-xs text-gray-500 truncate">{estimate.propertyId}</p>
                       )}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 hidden md:table-cell">
+                      <div className="flex items-center gap-1 text-sm text-gray-600 whitespace-nowrap">
                         <Calendar className="w-4 h-4" />
                         {new Date(estimate.createdAt).toLocaleDateString()}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="font-semibold text-gray-800">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                      <span className="font-semibold text-gray-800 text-xs sm:text-sm whitespace-nowrap">
                         ₹{(estimate.totalPrice || calculateEstimateTotal(estimate)).toLocaleString()}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[estimate.status]}`}>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 hidden lg:table-cell">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_STYLES[estimate.status]}`}>
                         {estimate.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => setViewEstimate(estimate)}
@@ -314,15 +315,16 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {/* View Estimate Modal */}
       {viewEstimate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-800">Estimate Details</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
               <button
                 onClick={() => setViewEstimate(null)}
                 className="p-2 hover:bg-gray-100 rounded-lg"
@@ -330,7 +332,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Estimate ID</p>
