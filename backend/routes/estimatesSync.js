@@ -19,26 +19,39 @@ router.get('/', async (req, res) => {
     );
     
     // Transform to match frontend format
-    const formattedEstimates = estimates.map(est => ({
-      estimateId: est.estimate_id,
-      customerName: est.customer_name,
-      customerEmail: est.customer_email,
-      customerPhone: est.customer_phone,
-      propertyType: est.property_type,
-      propertyName: est.property_name,
-      propertyAddress: est.property_address,
-      services: est.services ? JSON.parse(est.services) : [],
-      addons: est.addons ? JSON.parse(est.addons) : [],
-      subtotal: parseFloat(est.subtotal),
-      discount: parseFloat(est.discount),
-      tax: parseFloat(est.tax),
-      total: parseFloat(est.total),
-      notes: est.notes,
-      status: est.status,
-      validUntil: est.valid_until,
-      createdAt: est.created_at,
-      updatedAt: est.updated_at
-    }));
+    const formattedEstimates = estimates.map(est => {
+      // Handle JSON fields - MySQL may return object or string
+      let services = [];
+      let addons = [];
+      if (est.services) {
+        services = typeof est.services === 'string' ? JSON.parse(est.services) : est.services;
+      }
+      if (est.addons) {
+        addons = typeof est.addons === 'string' ? JSON.parse(est.addons) : est.addons;
+      }
+      return {
+        estimateId: est.estimate_id,
+        customerName: est.customer_name,
+        customerEmail: est.customer_email,
+        customerPhone: est.customer_phone,
+        propertyType: est.property_type,
+        propertyName: est.property_name,
+        propertyAddress: est.property_address,
+        services: services,
+        addons: addons,
+        subtotal: parseFloat(est.subtotal || 0),
+        discount: parseFloat(est.discount || 0),
+        tax: parseFloat(est.tax || 0),
+        total: parseFloat(est.total || 0),
+        notes: est.notes,
+        status: est.status,
+        isArchived: est.is_archived,
+        archivedAt: est.archived_at,
+        validUntil: est.valid_until,
+        createdAt: est.created_at,
+        updatedAt: est.updated_at
+      };
+    });
     
     res.json({ success: true, data: formattedEstimates });
   } catch (error) {
