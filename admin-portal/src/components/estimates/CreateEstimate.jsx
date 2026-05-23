@@ -1338,9 +1338,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       className="w-full px-4 py-2.5 text-sm border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 appearance-none bg-white"
                     >
                       <option value="">+ Select Add-on to add</option>
-                      {availableAddons
-                        .filter(addon => !selectedAddons.find(a => a.addonId === addon.addonId))
-                        .map(addon => (
+                      {availableAddons.map(addon => (
                           <option key={addon.addonId} value={addon.addonId}>
                             {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
                           </option>
@@ -1989,9 +1987,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     className="w-full px-4 py-2.5 text-sm border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 appearance-none bg-white"
                   >
                     <option value="">+ Select Add-on to add</option>
-                    {availableAddons
-                      .filter(addon => !directSelectedAddons.find(a => a.addonId === addon.addonId))
-                      .map(addon => (
+                    {availableAddons.map(addon => (
                         <option key={addon.addonId} value={addon.addonId}>
                           {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
                         </option>
