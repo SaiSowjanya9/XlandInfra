@@ -3,9 +3,7 @@ import {
   Archive, RotateCcw, Trash2, Eye, X, Calendar, Building2, User,
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase
 } from 'lucide-react';
-import {
-  getArchivedEstimates, restoreEstimate, deleteEstimate, calculateEstimateTotal
-} from '../../utils/estimateStore';
+import { calculateEstimateTotal } from '../../utils/estimateStore';
 
 const PROPERTY_ICONS = {
   APT: Home,
@@ -37,22 +35,44 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast }) => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    setArchivedEstimates(getArchivedEstimates());
+  const loadData = async () => {
+    try {
+      const response = await fetch('/api/estimates-sync?archived=true');
+      const result = await response.json();
+      if (result.success) {
+        setArchivedEstimates(result.data || []);
+      }
+    } catch (error) {
+      console.error('Load archived estimates error:', error);
+    }
   };
 
-  const handleRestoreEstimate = (estimateId) => {
-    restoreEstimate(estimateId);
-    showToast('Estimate restored');
-    loadData();
-    if (onRefresh) onRefresh();
+  const handleRestoreEstimate = async (estimateId) => {
+    try {
+      const response = await fetch(`/api/estimates-sync/${estimateId}/restore`, { method: 'PUT' });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Estimate restored');
+        loadData();
+        if (onRefresh) onRefresh();
+      }
+    } catch (error) {
+      showToast('Failed to restore estimate', 'error');
+    }
   };
 
-  const handleDeletePermanent = (estimateId) => {
-    deleteEstimate(estimateId, true);
-    showToast('Estimate deleted permanently');
-    loadData();
-    setDeleteConfirm(null);
+  const handleDeletePermanent = async (estimateId) => {
+    try {
+      const response = await fetch(`/api/estimates-sync/${estimateId}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Estimate deleted permanently');
+        loadData();
+        setDeleteConfirm(null);
+      }
+    } catch (error) {
+      showToast('Failed to delete estimate', 'error');
+    }
   };
 
   return (
