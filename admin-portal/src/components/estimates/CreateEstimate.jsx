@@ -1352,11 +1352,48 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       className="w-full px-4 py-2.5 text-sm border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 appearance-none bg-white"
                     >
                       <option value="">+ Select Add-on to add</option>
-                      {availableAddons.map(addon => (
-                          <option key={addon.addonId} value={addon.addonId}>
-                            {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
-                          </option>
-                        ))}
+                      {(() => {
+                        const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType;
+                        const filteredAddons = propertyType 
+                          ? availableAddons.filter(addon => {
+                              const addonType = addon.propertyType?.toUpperCase();
+                              const searchType = propertyType.toUpperCase();
+                              return addonType === searchType || 
+                                     addonType === 'GC' && searchType === 'GC' ||
+                                     addonType === 'GATED COMMUNITY' && searchType === 'GC';
+                            })
+                          : availableAddons;
+                        const otherAddons = propertyType 
+                          ? availableAddons.filter(addon => !filteredAddons.includes(addon))
+                          : [];
+                        return (
+                          <>
+                            {filteredAddons.length > 0 && (
+                              <optgroup label={`For ${propertyType || 'Selected Property'}`}>
+                                {filteredAddons.map(addon => (
+                                  <option key={addon.addonId} value={addon.addonId}>
+                                    {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {otherAddons.length > 0 && (
+                              <optgroup label="Other Property Types">
+                                {otherAddons.map(addon => (
+                                  <option key={addon.addonId} value={addon.addonId}>
+                                    {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {filteredAddons.length === 0 && otherAddons.length === 0 && availableAddons.map(addon => (
+                              <option key={addon.addonId} value={addon.addonId}>
+                                {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
+                              </option>
+                            ))}
+                          </>
+                        );
+                      })()}
                       <option value="OTHER" className="font-semibold text-blue-600">➕ Other (Custom Service)</option>
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 pointer-events-none" />
@@ -2011,11 +2048,48 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     className="w-full px-4 py-2.5 text-sm border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 appearance-none bg-white"
                   >
                     <option value="">+ Select Add-on to add</option>
-                    {availableAddons.map(addon => (
-                        <option key={addon.addonId} value={addon.addonId}>
-                          {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
-                        </option>
-                      ))}
+                    {(() => {
+                      const propertyType = estimateForm.propertyType;
+                      const filteredAddons = propertyType 
+                        ? availableAddons.filter(addon => {
+                            const addonType = addon.propertyType?.toUpperCase();
+                            const searchType = propertyType.toUpperCase();
+                            return addonType === searchType || 
+                                   addonType === 'GC' && searchType === 'GC' ||
+                                   addonType === 'GATED COMMUNITY' && searchType === 'GC';
+                          })
+                        : availableAddons;
+                      const otherAddons = propertyType 
+                        ? availableAddons.filter(addon => !filteredAddons.includes(addon))
+                        : [];
+                      return (
+                        <>
+                          {filteredAddons.length > 0 && (
+                            <optgroup label={`For ${propertyType || 'Selected Property'}`}>
+                              {filteredAddons.map(addon => (
+                                <option key={addon.addonId} value={addon.addonId}>
+                                  {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                          {otherAddons.length > 0 && (
+                            <optgroup label="Other Property Types">
+                              {otherAddons.map(addon => (
+                                <option key={addon.addonId} value={addon.addonId}>
+                                  {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                          {filteredAddons.length === 0 && otherAddons.length === 0 && availableAddons.map(addon => (
+                            <option key={addon.addonId} value={addon.addonId}>
+                              {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
+                            </option>
+                          ))}
+                        </>
+                      );
+                    })()}
                     <option value="OTHER" className="font-semibold text-blue-600">➕ Other (Custom Service)</option>
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 pointer-events-none" />
