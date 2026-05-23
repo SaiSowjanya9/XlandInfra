@@ -22,6 +22,7 @@ import {
   deleteAMCPackage,
   BILLING_DURATIONS,
   FREQUENCY_TYPES,
+  FREQUENCY_COUNT_MAP,
   seedTestData,
   getAMCPackageByPropertyType,
 } from '../../utils/estimateStore';
@@ -37,14 +38,7 @@ const PROPERTY_TYPE_OPTIONS = [
   { id: 'Plot', label: 'Plot' },
 ];
 
-// Auto-calculate frequency count based on frequency type
-const FREQUENCY_COUNT_MAP = {
-  'Monthly': 1,
-  'Quarterly': 3,
-  'Half-yearly': 6,
-  'Yearly': 12,
-  'Custom Months': null // User enters manually
-};
+// FREQUENCY_COUNT_MAP imported from estimateStore
 
 const AMCPackageManager = ({ admin, showToast }) => {
   // Check if user is Operations Manager (restricted access - view only)
@@ -575,10 +569,10 @@ const AMCPackageManager = ({ admin, showToast }) => {
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</span>
                     </div>
                     <div className="col-span-3">
-                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency Type</span>
+                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
                     </div>
                     <div className="col-span-3">
-                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency Count</span>
+                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Visits</span>
                     </div>
                     <div className="col-span-1">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</span>
@@ -614,21 +608,15 @@ const AMCPackageManager = ({ admin, showToast }) => {
                           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                         </div>
                         
-                        {/* Frequency Count - Auto-set based on type, manual only for 'Custom Months' */}
+                        {/* Visits - Auto-set based on frequency */}
                         <div className="col-span-3">
                           <input
                             type="number"
                             min="1"
                             value={row.frequencyCount}
-                            onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
-                            placeholder={row.frequencyType === 'Custom Months' ? 'Enter months' : ''}
-                            readOnly={row.frequencyType !== 'Custom Months'}
-                            title={row.frequencyType === 'Custom Months' ? 'Enter the number of months manually' : `Auto-set to ${FREQUENCY_COUNT_MAP[row.frequencyType] || 1}`}
-                            className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 ${
-                              row.frequencyType === 'Custom Months' 
-                                ? 'border-blue-300 bg-blue-50' 
-                                : 'border-gray-300 bg-gray-100 cursor-not-allowed'
-                            }`}
+                            readOnly
+                            title={`Auto-set to ${FREQUENCY_COUNT_MAP[row.frequencyType] || 1} visits`}
+                            className="w-full px-3 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
                           />
                         </div>
                         
@@ -860,8 +848,8 @@ const AMCPackageManager = ({ admin, showToast }) => {
                 {/* Table Header */}
                 <div className="grid grid-cols-12 gap-3 px-3 py-2 bg-slate-50 rounded-lg mb-2">
                   <div className="col-span-5"><span className="text-xs font-semibold text-gray-600 uppercase">Service</span></div>
-                  <div className="col-span-3"><span className="text-xs font-semibold text-gray-600 uppercase">Frequency Type</span></div>
-                  <div className="col-span-3"><span className="text-xs font-semibold text-gray-600 uppercase">Frequency Count</span></div>
+                  <div className="col-span-3"><span className="text-xs font-semibold text-gray-600 uppercase">Frequency</span></div>
+                  <div className="col-span-3"><span className="text-xs font-semibold text-gray-600 uppercase">Visits</span></div>
                   <div className="col-span-1"></div>
                 </div>
                 
@@ -889,20 +877,14 @@ const AMCPackageManager = ({ admin, showToast }) => {
                           ))}
                         </select>
                       </div>
-                      {/* Frequency Count - Auto-set based on type, manual only for 'Custom Months' */}
+                      {/* Visits - Auto-set based on frequency */}
                       <div className="col-span-3">
                         <input
                           type="number"
                           min="1"
                           value={row.frequencyCount}
-                          onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
-                          placeholder={row.frequencyType === 'Custom Months' ? 'Enter months' : ''}
-                          readOnly={row.frequencyType !== 'Custom Months'}
-                          className={`w-full px-3 py-2 border rounded-lg text-sm ${
-                            row.frequencyType === 'Custom Months' 
-                              ? 'border-blue-300 bg-blue-50' 
-                              : 'border-gray-300 bg-gray-100 cursor-not-allowed'
-                          }`}
+                          readOnly
+                          className="w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
                         />
                       </div>
                       <div className="col-span-1 flex justify-center">

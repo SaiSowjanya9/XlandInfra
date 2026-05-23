@@ -326,7 +326,7 @@ const AddonsManager = ({ admin, showToast }) => {
 
                   {/* No. of visits */}
                   <div className="sm:col-span-1 lg:col-span-1 relative">
-                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">No.of visits</label>
+                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider whitespace-nowrap">Visits</label>
                     <input
                       type="number"
                       min="1"

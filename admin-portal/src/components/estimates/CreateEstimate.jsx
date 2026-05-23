@@ -1402,9 +1402,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                           ))}
                         </select>
                       </div>
-                      {/* No.of visits */}
+                      {/* Visits */}
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">No.of visits</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Visits</label>
                         <input
                           type="number"
                           min="1"
@@ -2060,7 +2060,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       </select>
                     </div>
                     <div className="lg:col-span-2">
-                      <label className="block text-xs font-medium text-gray-600 mb-1">No.of visits</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Visits</label>
                       <input
                         type="number"
                         min="1"

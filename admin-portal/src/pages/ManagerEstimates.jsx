@@ -5,6 +5,7 @@ import {
   List, ChevronDown, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
   DollarSign, Layers, Filter, Download, Mail, Save, Edit
 } from 'lucide-react';
+import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
@@ -14,8 +15,6 @@ const PROPERTY_TYPE_OPTIONS = [
   { id: 'Plot', label: 'Plot' },
 ];
 
-const FREQUENCY_TYPES = ['Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'Custom Months'];
-const FREQUENCY_COUNT_MAP = { 'Monthly': 1, 'Quarterly': 3, 'Half-yearly': 6, 'Yearly': 12, 'Custom Months': null };
 const BILLING_DURATIONS = [
   { value: 'monthly', label: 'Monthly' },
   { value: 'quarterly', label: 'Quarterly' },
@@ -678,10 +677,10 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</span>
                       </div>
                       <div className="col-span-3">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency Type</span>
+                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
                       </div>
                       <div className="col-span-3">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency Count</span>
+                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Visits</span>
                       </div>
                       <div className="col-span-1">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</span>
@@ -723,14 +722,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                               type="number"
                               min="1"
                               value={row.frequencyCount}
-                              onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
-                              placeholder={row.frequencyType === 'Custom Months' ? 'Enter months' : ''}
-                              readOnly={row.frequencyType !== 'Custom Months'}
-                              className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 ${
-                                row.frequencyType === 'Custom Months' 
-                                  ? 'border-blue-300 bg-blue-50' 
-                                  : 'border-gray-300 bg-gray-100 cursor-not-allowed'
-                              }`}
+                              readOnly
+                              className="w-full px-3 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
                             />
                           </div>
                           
@@ -877,7 +870,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-3"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Service Name</label><input type="text" value={addonForm.serviceName} onChange={(e) => setAddonForm({ ...addonForm, serviceName: e.target.value })} placeholder="Service name" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div>
                   <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency</label><select value={addonForm.frequencyType} onChange={(e) => { const v = e.target.value; const auto = FREQUENCY_COUNT_MAP[v]; setAddonForm({ ...addonForm, frequencyType: v, frequencyCount: auto !== null ? auto : '' }); }} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white">{FREQUENCY_TYPES.map(f => <option key={f} value={f}>{f}</option>)}</select></div>
-                  <div className="col-span-1"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">No.of visits</label><input type="number" value={addonForm.frequencyCount} readOnly className="w-full px-2 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm text-center" /></div>
+                  <div className="col-span-1"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider whitespace-nowrap">Visits</label><input type="number" value={addonForm.frequencyCount} readOnly className="w-full px-2 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm text-center" /></div>
                   <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Period</label><select value={addonForm.billingCycle} onChange={(e) => setAddonForm({ ...addonForm, billingCycle: e.target.value })} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Half-Yearly">Half-Yearly</option><option value="Yearly">Yearly</option></select></div>
                   <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (₹)</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span><input type="text" value={addonForm.price} onChange={(e) => setAddonForm({ ...addonForm, price: e.target.value.replace(/[^0-9]/g, '') })} placeholder="0" className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div></div>
                   <div className="col-span-2"><button onClick={handleSaveAddon} className="w-full px-4 py-2.5 bg-stone-700 text-white rounded-lg hover:bg-stone-800 font-medium flex items-center justify-center gap-2"><Plus className="w-4 h-4" />Save</button></div>
