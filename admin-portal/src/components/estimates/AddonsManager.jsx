@@ -26,7 +26,7 @@ const AddonsManager = ({ admin, showToast }) => {
   const [filterPropertyType, setFilterPropertyType] = useState('all'); // Filter for All Add-ons tab
   const [addonForm, setAddonForm] = useState({
     serviceName: '',
-    frequencyCount: 1,
+    frequencyCount: 12,
     frequencyType: 'Monthly',
     billingCycle: 'Monthly',
     price: ''
@@ -40,7 +40,7 @@ const AddonsManager = ({ admin, showToast }) => {
   const [editingAddon, setEditingAddon] = useState(null);
   const [editForm, setEditForm] = useState({
     serviceName: '',
-    frequencyCount: 1,
+    frequencyCount: 12,
     frequencyType: 'Monthly',
     billingCycle: 'Monthly',
     price: '',
@@ -103,7 +103,7 @@ const AddonsManager = ({ admin, showToast }) => {
   const resetForm = () => {
     setAddonForm({
       serviceName: '',
-      frequencyCount: 1,
+      frequencyCount: 12,
       frequencyType: 'Monthly',
       billingCycle: 'Monthly',
       price: ''
@@ -291,9 +291,9 @@ const AddonsManager = ({ admin, showToast }) => {
                     </datalist>
                   </div>
 
-                  {/* Frequency Type */}
+                  {/* Frequency */}
                   <div className="sm:col-span-1 lg:col-span-2">
-                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency Type</label>
+                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency</label>
                     <div className="relative">
                       <select
                         value={addonForm.frequencyType}
@@ -303,7 +303,7 @@ const AddonsManager = ({ admin, showToast }) => {
                           setAddonForm({ 
                             ...addonForm, 
                             frequencyType: newType,
-                            frequencyCount: autoCount !== null ? autoCount : ''
+                            frequencyCount: autoCount || 1
                           });
                         }}
                         className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 bg-white appearance-none"
@@ -316,25 +316,16 @@ const AddonsManager = ({ admin, showToast }) => {
                     </div>
                   </div>
 
-                  {/* Frequency Count */}
+                  {/* No. of visits */}
                   <div className="sm:col-span-1 lg:col-span-1 relative">
-                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Count</label>
+                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">No.of visits</label>
                     <input
                       type="number"
                       min="1"
                       value={addonForm.frequencyCount}
-                      onChange={(e) => setAddonForm({ ...addonForm, frequencyCount: e.target.value })}
-                      placeholder={addonForm.frequencyType === 'Custom Months' ? '#' : ''}
-                      readOnly={addonForm.frequencyType !== 'Custom Months'}
-                      className={`w-full px-2 py-2.5 border rounded-lg text-sm text-center focus:ring-2 focus:ring-stone-200 focus:border-stone-400 ${
-                        addonForm.frequencyType === 'Custom Months' 
-                          ? 'border-blue-300 bg-blue-50' 
-                          : 'border-gray-300 bg-gray-100 cursor-not-allowed'
-                      }`}
+                      readOnly
+                      className="w-full px-2 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm text-center cursor-not-allowed"
                     />
-                    {addonForm.frequencyType === 'Custom Months' && (
-                      <p className="absolute left-0 top-full mt-1 text-xs text-blue-600 whitespace-nowrap">Enter manually</p>
-                    )}
                   </div>
 
                   {/* Price */}
@@ -535,7 +526,7 @@ const AddonsManager = ({ admin, showToast }) => {
                             Frequency
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                            Count
+                            No.of visits
                           </th>
                           <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
                             Total Rate
@@ -641,10 +632,10 @@ const AddonsManager = ({ admin, showToast }) => {
                 </datalist>
               </div>
 
-              {/* Frequency Type & Count */}
+              {/* Frequency & No.of visits */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Frequency Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
                   <select
                     value={editForm.frequencyType}
                     onChange={(e) => {
@@ -653,7 +644,7 @@ const AddonsManager = ({ admin, showToast }) => {
                       setEditForm({ 
                         ...editForm, 
                         frequencyType: newType,
-                        frequencyCount: autoCount !== null ? autoCount : editForm.frequencyCount
+                        frequencyCount: autoCount || 1
                       });
                     }}
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
@@ -664,18 +655,13 @@ const AddonsManager = ({ admin, showToast }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Frequency Count</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">No.of visits</label>
                   <input
                     type="number"
                     min="1"
                     value={editForm.frequencyCount}
-                    onChange={(e) => setEditForm({ ...editForm, frequencyCount: e.target.value })}
-                    readOnly={editForm.frequencyType !== 'Custom Months'}
-                    className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-stone-500 outline-none ${
-                      editForm.frequencyType === 'Custom Months' 
-                        ? 'border-blue-300 bg-blue-50' 
-                        : 'border-gray-200 bg-gray-100'
-                    }`}
+                    readOnly
+                    className="w-full px-4 py-2.5 border border-gray-200 bg-gray-100 rounded-xl outline-none"
                   />
                 </div>
               </div>

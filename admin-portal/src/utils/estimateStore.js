@@ -48,16 +48,17 @@ const DEFAULT_SERVICES = [
 // Property types for AMC packages
 export const PROPERTY_TYPES = ['APT', 'Flats', 'GC', 'Villas', 'Plots', 'Commercial'];
 
-// Frequency types
-export const FREQUENCY_TYPES = ['Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'Custom Months'];
+// Frequency types (how often service occurs)
+export const FREQUENCY_TYPES = ['Monthly', 'Every 2 Months', 'Every 3 Months', 'Quarterly', 'Half-Yearly', 'Yearly'];
 
-// Auto-calculate frequency count based on frequency type
+// Auto-calculate No. of visits per year based on frequency
 export const FREQUENCY_COUNT_MAP = {
-  'Monthly': 1,
+  'Monthly': 12,
+  'Every 2 Months': 6,
+  'Every 3 Months': 4,
   'Quarterly': 3,
-  'Half-yearly': 6,
-  'Yearly': 12,
-  'Custom Months': null // User enters manually
+  'Half-Yearly': 2,
+  'Yearly': 1
 };
 
 // Billing duration options with multipliers
