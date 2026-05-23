@@ -8,7 +8,7 @@ import PhoneInput from '../common/PhoneInput';
 import { 
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
   getAMCPackageByPropertyId, addService, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP,
-  getAMCPackages, getAddons, seedTestData, getAMCPackageByPropertyType,
+  getAMCPackages, getAddons, fetchAMCPackages, fetchAddons, seedTestData, getAMCPackageByPropertyType,
   migratePackagesToServiceRows, getAMCPackagesByPropertyType
 } from '../../utils/estimateStore';
 
@@ -105,14 +105,18 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
 
   const loadData = async () => {
     // Seed test data if none exists
-    seedTestData();
     // Migrate existing packages to include serviceRows with frequency data
     migratePackagesToServiceRows();
     const props = await getProperties();
     setProperties(props);
     setAvailableServices(getServices());
-    setAvailablePackages(getAMCPackages());
-    setAvailableAddons(getAddons());
+    // Fetch packages and addons from API
+    const [packages, addons] = await Promise.all([
+      fetchAMCPackages(),
+      fetchAddons()
+    ]);
+    setAvailablePackages(packages);
+    setAvailableAddons(addons);
   };
 
   const filteredProperties = properties.filter(prop => {
