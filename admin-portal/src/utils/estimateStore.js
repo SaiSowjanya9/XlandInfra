@@ -123,40 +123,24 @@ export const addService = (serviceName) => {
 };
 
 // ============================================
-// Estimates CRUD
+// Estimates CRUD (API-based for sync across devices)
 // ============================================
 
+// API base URL for estimates
+const EST_API_URL = import.meta.env.VITE_API_URL || '';
+
+// Cache for estimates
+let estimatesCache = null;
+let estimatesCacheTime = 0;
+const EST_CACHE_DURATION = 5000;
+
 export const getEstimates = (status = 'all', includeArchived = false) => {
-  let estimates = getStorageData(ESTIMATES_KEY);
+  let estimates = estimatesCache || [];
   
-  // Auto-archive direct estimates older than 30 days
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  
-  estimates = estimates.map(est => {
-    if (
-      est.estimateType === 'direct' &&
-      est.status !== 'Archived' &&
-      new Date(est.createdAt) < thirtyDaysAgo
-    ) {
-      return {
-        ...est,
-        status: 'Archived',
-        archivedAt: now.toISOString(),
-        autoArchived: true
-      };
-    }
-    return est;
-  });
-  
-  setStorageData(ESTIMATES_KEY, estimates);
-  
-  // Filter by archived status
   if (!includeArchived) {
     estimates = estimates.filter(est => est.status !== 'Archived');
   }
   
-  // Filter by status
   if (status !== 'all') {
     estimates = estimates.filter(est => est.status === status);
   }
@@ -164,91 +148,102 @@ export const getEstimates = (status = 'all', includeArchived = false) => {
   return estimates.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 };
 
+// Async function to fetch estimates from API
+export const fetchEstimates = async () => {
+  try {
+    const response = await fetch(`${EST_API_URL}/api/estimates-sync`);
+    const result = await response.json();
+    if (result.success) {
+      estimatesCache = result.data || [];
+      estimatesCacheTime = Date.now();
+      return estimatesCache;
+    }
+    return [];
+  } catch (error) {
+    console.error('Fetch estimates error:', error);
+    return estimatesCache || [];
+  }
+};
+
 export const getArchivedEstimates = () => {
-  const estimates = getStorageData(ESTIMATES_KEY);
+  const estimates = estimatesCache || [];
   return estimates
     .filter(est => est.status === 'Archived')
     .sort((a, b) => new Date(b.archivedAt || b.createdAt) - new Date(a.archivedAt || a.createdAt));
 };
 
 export const getEstimateById = (estimateId) => {
-  const estimates = getStorageData(ESTIMATES_KEY);
+  const estimates = estimatesCache || [];
   return estimates.find(est => est.estimateId === estimateId);
 };
 
-export const createEstimate = (estimateData) => {
-  const estimates = getStorageData(ESTIMATES_KEY);
-  const estimateId = generateEstimateId();
-  
-  const newEstimate = {
-    ...estimateData,
-    estimateId,
-    status: estimateData.status || 'Draft',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-  };
-  
-  estimates.unshift(newEstimate);
-  setStorageData(ESTIMATES_KEY, estimates);
-  
-  return newEstimate;
-};
-
-export const updateEstimate = (estimateId, updates) => {
-  const estimates = getStorageData(ESTIMATES_KEY);
-  const index = estimates.findIndex(est => est.estimateId === estimateId);
-  
-  if (index !== -1) {
-    estimates[index] = {
-      ...estimates[index],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-    setStorageData(ESTIMATES_KEY, estimates);
-    return estimates[index];
-  }
-  
-  return null;
-};
-
-export const deleteEstimate = (estimateId, permanent = false) => {
-  let estimates = getStorageData(ESTIMATES_KEY);
-  
-  if (permanent) {
-    estimates = estimates.filter(est => est.estimateId !== estimateId);
-  } else {
-    const index = estimates.findIndex(est => est.estimateId === estimateId);
-    if (index !== -1) {
-      estimates[index] = {
-        ...estimates[index],
-        status: 'Archived',
-        archivedAt: new Date().toISOString()
-      };
+export const createEstimate = async (estimateData) => {
+  try {
+    const response = await fetch(`${EST_API_URL}/api/estimates-sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(estimateData)
+    });
+    const result = await response.json();
+    if (result.success) {
+      estimatesCache = null;
+      return { ...estimateData, estimateId: result.data?.estimateId };
     }
+    throw new Error(result.message);
+  } catch (error) {
+    console.error('Create estimate error:', error);
+    throw error;
   }
-  
-  setStorageData(ESTIMATES_KEY, estimates);
-  return true;
 };
 
-export const restoreEstimate = (estimateId) => {
-  const estimates = getStorageData(ESTIMATES_KEY);
-  const index = estimates.findIndex(est => est.estimateId === estimateId);
-  
-  if (index !== -1) {
-    estimates[index] = {
-      ...estimates[index],
-      status: 'Draft',
-      archivedAt: null,
-      autoArchived: false,
-      updatedAt: new Date().toISOString()
-    };
-    setStorageData(ESTIMATES_KEY, estimates);
-    return estimates[index];
+export const updateEstimate = async (estimateId, updates) => {
+  try {
+    const response = await fetch(`${EST_API_URL}/api/estimates-sync/${estimateId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    const result = await response.json();
+    if (result.success) {
+      estimatesCache = null;
+      return { estimateId, ...updates };
+    }
+    throw new Error(result.message);
+  } catch (error) {
+    console.error('Update estimate error:', error);
+    throw error;
   }
-  
-  return null;
+};
+
+export const deleteEstimate = async (estimateId, permanent = false) => {
+  try {
+    if (permanent) {
+      const response = await fetch(`${EST_API_URL}/api/estimates-sync/${estimateId}`, {
+        method: 'DELETE'
+      });
+      const result = await response.json();
+      if (result.success) {
+        estimatesCache = null;
+        return true;
+      }
+      throw new Error(result.message);
+    } else {
+      // Soft delete = archive
+      return await updateEstimate(estimateId, { status: 'Archived' });
+    }
+  } catch (error) {
+    console.error('Delete estimate error:', error);
+    throw error;
+  }
+};
+
+export const restoreEstimate = async (estimateId) => {
+  try {
+    return await updateEstimate(estimateId, { status: 'Draft' });
+  } catch (error) {
+    console.error('Restore estimate error:', error);
+    throw error;
+  }
 };
 
 // ============================================
