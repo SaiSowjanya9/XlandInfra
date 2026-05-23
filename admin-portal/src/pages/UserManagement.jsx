@@ -457,15 +457,16 @@ const UserManagement = () => {
 
       {/* Users Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[700px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">User ID</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">User ID</th>
+              <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">User</th>
+              <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Role</th>
+              <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">Contact</th>
+              <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Status</th>
+              <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -479,45 +480,45 @@ const UserManagement = () => {
               const isFP = user.role === 'franchise_partner' || user.role === 'franchise';
               return (
                 <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <span className="font-mono text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded">
                       {user.userId || user.id}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 ${roleInfo.bgColor} rounded-full flex items-center justify-center`}>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 ${roleInfo.bgColor} rounded-full flex items-center justify-center flex-shrink-0`}>
                         <span className={`text-xs font-semibold ${roleInfo.textColor}`}>
                           {user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                         </span>
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900 text-sm">{user.name}</p>
-                        <p className="text-xs text-gray-500">@{user.username}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 text-sm truncate max-w-[100px]">{user.name}</p>
+                        <p className="text-xs text-gray-500 truncate">@{user.username}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${roleInfo.bgColor} ${roleInfo.textColor}`}>
-                      <Icon className="w-3 h-3" />
-                      {getRoleLabel(user.role)}
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${roleInfo.bgColor} ${roleInfo.textColor}`}>
+                      <Icon className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate max-w-[80px]">{getRoleLabel(user.role)}</span>
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3 whitespace-nowrap hidden md:table-cell">
                     <div className="space-y-0.5">
-                      <p className="text-xs text-gray-600 flex items-center gap-1">
-                        <Mail className="w-3 h-3" />
-                        {user.email}
+                      <p className="text-xs text-gray-600 flex items-center gap-1 truncate max-w-[150px]">
+                        <Mail className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{user.email}</span>
                       </p>
                       {user.phone && (
                         <p className="text-xs text-gray-500 flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
+                          <Phone className="w-3 h-3 flex-shrink-0" />
                           {user.phone}
                         </p>
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <button
                       onClick={() => handleToggleStatus(user)}
                       className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
@@ -539,7 +540,7 @@ const UserManagement = () => {
                       )}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-3 py-3 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => setViewingUser(user)}
@@ -569,6 +570,7 @@ const UserManagement = () => {
             })}
           </tbody>
         </table>
+        </div>
 
         {filteredUsers.length === 0 && (
           <div className="text-center py-12">
