@@ -18,7 +18,7 @@ const ServiceRows = ({
           <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Service Name</span>
         </div>
         <div className="col-span-3">
-          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency Type</span>
+          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
         </div>
         <div className="col-span-3">
           <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Rate (₹)</span>
@@ -41,7 +41,7 @@ const ServiceRows = ({
             />
           </div>
           
-          {/* Frequency Type */}
+          {/* Frequency */}
           <div className="col-span-3">
             <select
               value={service.frequencyType || 'Monthly'}

@@ -51,7 +51,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   const [customAddonForm, setCustomAddonForm] = useState({
     serviceName: '',
     frequencyType: 'Monthly',
-    frequencyCount: 1,
+    frequencyCount: 12,
     price: ''
   });
   const [discount, setDiscount] = useState(''); // Discount percentage
@@ -63,7 +63,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   const [directCustomAddonForm, setDirectCustomAddonForm] = useState({
     serviceName: '',
     frequencyType: 'Monthly',
-    frequencyCount: 1,
+    frequencyCount: 12,
     price: ''
   });
   const [directDiscount, setDirectDiscount] = useState('');
@@ -355,7 +355,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     setCustomAddonForm({
       serviceName: '',
       frequencyType: 'Monthly',
-      frequencyCount: 1,
+      frequencyCount: 12,
       price: ''
     });
   };
@@ -366,7 +366,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     setCustomAddonForm({
       serviceName: '',
       frequencyType: 'Monthly',
-      frequencyCount: 1,
+      frequencyCount: 12,
       price: ''
     });
   };
@@ -521,7 +521,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     setDirectCustomAddonForm({
       serviceName: '',
       frequencyType: 'Monthly',
-      frequencyCount: 1,
+      frequencyCount: 12,
       price: ''
     });
   };
@@ -531,7 +531,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     setDirectCustomAddonForm({
       serviceName: '',
       frequencyType: 'Monthly',
-      frequencyCount: 1,
+      frequencyCount: 12,
       price: ''
     });
   };
@@ -1284,8 +1284,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       {/* Table Header */}
                       <div className="grid grid-cols-10 gap-2 px-3 py-2 bg-blue-100/50 border-b border-blue-200">
                         <div className="col-span-6 text-xs font-semibold text-blue-800 uppercase">Service</div>
-                        <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency Type</div>
-                        <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Count</div>
+                        <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency</div>
+                        <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">No.of visits</div>
                       </div>
                       {/* Table Body */}
                       {selectedPackage.serviceRows && selectedPackage.serviceRows.length > 0 ? (
@@ -1394,20 +1394,15 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                           ))}
                         </select>
                       </div>
-                      {/* Count */}
+                      {/* No.of visits */}
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Count</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">No.of visits</label>
                         <input
                           type="number"
                           min="1"
                           value={customAddonForm.frequencyCount}
-                          onChange={(e) => handleCustomAddonChange('frequencyCount', e.target.value)}
-                          readOnly={customAddonForm.frequencyType !== 'Custom Months'}
-                          className={`w-full px-3 py-2 text-sm border rounded-md text-center ${
-                            customAddonForm.frequencyType === 'Custom Months'
-                              ? 'border-blue-300 bg-white focus:ring-2 focus:ring-blue-200'
-                              : 'border-gray-200 bg-gray-100 cursor-not-allowed'
-                          }`}
+                          readOnly
+                          className="w-full px-3 py-2 text-sm border border-gray-200 bg-gray-100 rounded-md text-center cursor-not-allowed"
                         />
                       </div>
                       {/* Price */}
@@ -1444,8 +1439,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     {/* Table Header */}
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-white border-b border-blue-100">
                       <div className="col-span-4 text-xs font-semibold text-blue-800 uppercase">Service</div>
-                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency Type</div>
-                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Count</div>
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency</div>
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">No.of visits</div>
                       <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-right">Price</div>
                       <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Action</div>
                     </div>
@@ -1940,8 +1935,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     {/* Table Header */}
                     <div className="grid grid-cols-10 gap-2 px-3 py-2 bg-blue-100/50 border-b border-blue-200">
                       <div className="col-span-6 text-xs font-semibold text-blue-800 uppercase">Service</div>
-                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency Type</div>
-                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Count</div>
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency</div>
+                      <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">No.of visits</div>
                     </div>
                     {/* Table Body */}
                     {directSelectedPackage.serviceRows && directSelectedPackage.serviceRows.length > 0 ? (
@@ -2049,18 +2044,13 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       </select>
                     </div>
                     <div className="lg:col-span-2">
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Count</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">No.of visits</label>
                       <input
                         type="number"
                         min="1"
                         value={directCustomAddonForm.frequencyCount}
-                        onChange={(e) => handleDirectCustomAddonChange('frequencyCount', e.target.value)}
-                        readOnly={directCustomAddonForm.frequencyType !== 'Custom Months'}
-                        className={`w-full px-3 py-2 text-sm border rounded-md text-center ${
-                          directCustomAddonForm.frequencyType === 'Custom Months'
-                            ? 'border-blue-300 bg-white focus:ring-2 focus:ring-blue-200'
-                            : 'border-gray-200 bg-gray-100 cursor-not-allowed'
-                        }`}
+                        readOnly
+                        className="w-full px-3 py-2 text-sm border border-gray-200 bg-gray-100 rounded-md text-center cursor-not-allowed"
                       />
                     </div>
                     <div className="lg:col-span-2">
@@ -2095,8 +2085,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   {/* Table Header */}
                   <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-white border-b border-blue-100">
                     <div className="col-span-4 text-xs font-semibold text-blue-800 uppercase">Service</div>
-                    <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency Type</div>
-                    <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Count</div>
+                    <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase">Frequency</div>
+                    <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">No.of visits</div>
                     <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-right">Price</div>
                     <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase text-center">Action</div>
                   </div>
