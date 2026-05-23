@@ -102,11 +102,11 @@ const PortalSelector = ({ onSelectPortal }) => {
                       : 'bg-zinc-800/20 border-zinc-700/30'
                   }`}>
                     
-                    {/* Coming Soon Badge */}
+                    {/* Coming Soon Badge - Top Right Corner */}
                     {portal.comingSoon && (
-                      <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-zinc-800/90 border border-zinc-700/50 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
-                        <Lock className="w-2.5 h-2.5 text-zinc-500" strokeWidth={2} />
-                        <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">Coming Soon</span>
+                      <div className="absolute -top-2 -right-2 sm:-top-2.5 sm:-right-3 px-2 py-0.5 sm:px-2.5 sm:py-1 bg-zinc-800/95 border border-zinc-700/50 rounded-full flex items-center gap-1 sm:gap-1.5 backdrop-blur-sm shadow-lg">
+                        <Lock className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-zinc-400" strokeWidth={2} />
+                        <span className="text-[8px] sm:text-[10px] font-semibold text-zinc-300 uppercase tracking-wide">Soon</span>
                       </div>
                     )}
 
