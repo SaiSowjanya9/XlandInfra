@@ -2,16 +2,20 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
 
-// GET all estimates
+// GET all estimates (supports ?archived=true for archived estimates)
 router.get('/', async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.json({ success: true, data: [] });
     }
     
+    const { archived } = req.query;
+    const isArchived = archived === 'true';
+    
     const pool = db.pool;
     const [estimates] = await pool.execute(
-      `SELECT * FROM estimates WHERE is_active = TRUE ORDER BY created_at DESC`
+      `SELECT * FROM estimates WHERE is_active = TRUE AND is_archived = ? ORDER BY created_at DESC`,
+      [isArchived ? 1 : 0]
     );
     
     // Transform to match frontend format
@@ -155,6 +159,50 @@ router.put('/:estimateId', async (req, res) => {
     res.json({ success: true, message: 'Estimate updated' });
   } catch (error) {
     console.error('Update estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ARCHIVE estimate
+router.put('/:estimateId/archive', async (req, res) => {
+  try {
+    if (!db.isDbConnected) {
+      return res.status(503).json({ success: false, message: 'Database not connected' });
+    }
+    
+    const { estimateId } = req.params;
+    
+    const pool = db.pool;
+    await pool.execute(
+      `UPDATE estimates SET is_archived = TRUE, archived_at = NOW() WHERE estimate_id = ?`,
+      [estimateId]
+    );
+    
+    res.json({ success: true, message: 'Estimate archived' });
+  } catch (error) {
+    console.error('Archive estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// RESTORE estimate
+router.put('/:estimateId/restore', async (req, res) => {
+  try {
+    if (!db.isDbConnected) {
+      return res.status(503).json({ success: false, message: 'Database not connected' });
+    }
+    
+    const { estimateId } = req.params;
+    
+    const pool = db.pool;
+    await pool.execute(
+      `UPDATE estimates SET is_archived = FALSE, archived_at = NULL WHERE estimate_id = ?`,
+      [estimateId]
+    );
+    
+    res.json({ success: true, message: 'Estimate restored' });
+  } catch (error) {
+    console.error('Restore estimate error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
