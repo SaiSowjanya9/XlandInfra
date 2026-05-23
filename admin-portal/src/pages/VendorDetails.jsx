@@ -418,56 +418,56 @@ const VendorDetails = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[900px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Vendor ID</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Service Type</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Owner</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Zone</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Area</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Rate/Visit</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Coverage/Day</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created By</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Status</th>
-                  <th className="px-4 py-3 text-center font-medium text-gray-600 whitespace-nowrap">Actions</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Vendor ID</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Service</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Owner</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden lg:table-cell">Zone</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden xl:table-cell">Area</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden md:table-cell">Rate</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden lg:table-cell">Coverage</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden xl:table-cell">Created By</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden sm:table-cell">Created</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Status</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredVendors.map((vendor) => (
                   <tr key={vendor.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600 whitespace-nowrap">
+                    <td className="px-3 py-3 font-mono text-xs text-gray-600 whitespace-nowrap">
                       {vendor.vendorId}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
                         {vendor.serviceType}
                         {vendor.serviceVerified && <FileCheck className="w-3 h-3 text-emerald-500" />}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
+                    <td className="px-3 py-3 font-medium text-gray-900 whitespace-nowrap text-sm truncate max-w-[100px]">
                       {vendor.ownerName}
                     </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden lg:table-cell">
                       {vendor.zone || '-'}
                     </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden xl:table-cell">
                       {vendor.areaName || '-'}
                     </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden md:table-cell">
                       ₹{vendor.ratePerVisit}
                     </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap text-center hidden lg:table-cell">
                       {vendor.coveragePerDay}
                     </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden xl:table-cell">
                       Manager
                     </td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                    <td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden sm:table-cell">
                       {formatDate(vendor.createdAt)}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                         vendor.status === 'deleted' 
                           ? 'bg-red-100 text-red-700' 
@@ -476,7 +476,7 @@ const VendorDetails = () => {
                         {vendor.status === 'deleted' ? 'Deleted' : 'Active'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => setViewVendor(vendor)}

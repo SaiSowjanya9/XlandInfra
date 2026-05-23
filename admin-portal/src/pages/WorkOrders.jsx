@@ -96,16 +96,16 @@ const WorkOrders = ({ admin }) => {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[600px]">
             <thead>
-              <tr className="border-b border-gray-200">
-                <th className="table-header">Order ID</th>
-                <th className="table-header">Resident</th>
-                <th className="table-header">Unit</th>
-                <th className="table-header">Category</th>
-                <th className="table-header">Status</th>
-                <th className="table-header">Created</th>
-                <th className="table-header">Actions</th>
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Order ID</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Resident</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden md:table-cell">Unit</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Category</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Status</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden sm:table-cell">Created</th>
+                <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -116,18 +116,18 @@ const WorkOrders = ({ admin }) => {
               ) : (
                 filtered.map((wo) => (
                   <tr key={wo.id} className="hover:bg-gray-50">
-                    <td className="table-cell font-mono text-xs">{wo.work_order_id}</td>
-                    <td className="table-cell font-medium">{wo.first_name} {wo.last_name}</td>
-                    <td className="table-cell">{wo.unit_number} - {wo.property_name}</td>
-                    <td className="table-cell">{wo.category_name}</td>
-                    <td className="table-cell">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(wo.status)}`}>
+                    <td className="px-3 py-3 font-mono text-xs whitespace-nowrap text-gray-700">{wo.work_order_id}</td>
+                    <td className="px-3 py-3 font-medium text-sm whitespace-nowrap truncate max-w-[100px]">{wo.first_name} {wo.last_name}</td>
+                    <td className="px-3 py-3 text-sm whitespace-nowrap hidden md:table-cell">{wo.unit_number} - {wo.property_name}</td>
+                    <td className="px-3 py-3 text-sm whitespace-nowrap">{wo.category_name}</td>
+                    <td className="px-3 py-3">
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${getStatusColor(wo.status)}`}>
                         {wo.status?.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="table-cell text-sm">{new Date(wo.created_at).toLocaleDateString()}</td>
-                    <td className="table-cell">
-                      <button onClick={() => setSelectedOrder(wo)} className="p-1 text-gray-500 hover:text-primary-600">
+                    <td className="px-3 py-3 text-sm text-gray-500 whitespace-nowrap hidden sm:table-cell">{new Date(wo.created_at).toLocaleDateString()}</td>
+                    <td className="px-3 py-3 text-center">
+                      <button onClick={() => setSelectedOrder(wo)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded">
                         <Eye className="w-4 h-4" />
                       </button>
                     </td>
@@ -140,14 +140,14 @@ const WorkOrders = ({ admin }) => {
       </div>
 
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold">Work Order Details</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+              <h2 className="text-base sm:text-lg font-semibold">Work Order Details</h2>
               <button onClick={() => setSelectedOrder(null)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
             </div>
-            <div className="p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Order ID</p>
                   <p className="font-mono font-medium">{selectedOrder.work_order_id}</p>
@@ -163,11 +163,11 @@ const WorkOrders = ({ admin }) => {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Resident</p>
                   <p className="font-medium">{selectedOrder.first_name} {selectedOrder.last_name}</p>
-                  <p className="text-sm text-gray-600">{selectedOrder.email}</p>
+                  <p className="text-sm text-gray-600 break-all">{selectedOrder.email}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Location</p>
@@ -175,7 +175,7 @@ const WorkOrders = ({ admin }) => {
                   <p className="text-sm text-gray-600">{selectedOrder.property_name}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Category</p>
                   <p className="font-medium">{selectedOrder.category_name}</p>
@@ -189,13 +189,13 @@ const WorkOrders = ({ admin }) => {
                 <p className="text-sm text-gray-500">Description</p>
                 <p className="mt-1 p-3 bg-gray-50 rounded-lg">{selectedOrder.description || 'No description provided'}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="flex items-center space-x-2">
-                  <span className={`w-3 h-3 rounded-full ${selectedOrder.permission_to_enter === 'yes' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                  <span className={`w-3 h-3 rounded-full flex-shrink-0 ${selectedOrder.permission_to_enter === 'yes' ? 'bg-green-500' : 'bg-red-500'}`}></span>
                   <span className="text-sm">Permission to Enter: {selectedOrder.permission_to_enter}</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className={`w-3 h-3 rounded-full ${selectedOrder.has_pet === 'yes' ? 'bg-amber-500' : 'bg-gray-300'}`}></span>
+                  <span className={`w-3 h-3 rounded-full flex-shrink-0 ${selectedOrder.has_pet === 'yes' ? 'bg-amber-500' : 'bg-gray-300'}`}></span>
                   <span className="text-sm">Has Pet: {selectedOrder.has_pet}</span>
                 </div>
               </div>
