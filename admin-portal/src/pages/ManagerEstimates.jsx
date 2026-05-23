@@ -55,6 +55,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [addonFilterPropertyType, setAddonFilterPropertyType] = useState('all');
   const [addonForm, setAddonForm] = useState({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [viewEstimate, setViewEstimate] = useState(null);
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -433,7 +434,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
         {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div></div> : filteredEstimates.length === 0 ? <div className="py-16 text-center"><DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No estimates found</p><p className="text-gray-400 text-sm mt-1">Try adjusting your search or filters</p></div> : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Amount</th><th className="px-4 py-3 text-left font-medium text-gray-600">Status</th><th className="px-4 py-3 text-left font-medium text-gray-600">Created</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead>
-            <tbody className="divide-y divide-gray-100">{filteredEstimates.map((est) => <tr key={est.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-mono text-xs">{est.estimate_id}</td><td className="px-4 py-3">{est.client_name}</td><td className="px-4 py-3 capitalize">{est.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 font-semibold">{formatCurrency(est.total_amount)}</td><td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{est.status}</span></td><td className="px-4 py-3 text-gray-500">{est.created_at ? new Date(est.created_at).toLocaleDateString() : '-'}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Eye className="w-4 h-4" /></button><button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Archive className="w-4 h-4" /></button></div></td></tr>)}</tbody>
+            <tbody className="divide-y divide-gray-100">{filteredEstimates.map((est) => <tr key={est.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-mono text-xs">{est.estimate_id}</td><td className="px-4 py-3">{est.client_name}</td><td className="px-4 py-3 capitalize">{est.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 font-semibold">{formatCurrency(est.total_amount)}</td><td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{est.status}</span></td><td className="px-4 py-3 text-gray-500">{est.created_at ? new Date(est.created_at).toLocaleDateString() : '-'}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Eye className="w-4 h-4" /></button><button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Archive className="w-4 h-4" /></button></div></td></tr>)}</tbody>
           </table>
         )}
       </div>
@@ -954,6 +955,59 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       </div>
       <div className="max-w-7xl mx-auto px-6 py-6">{renderContent()}</div>
       {toast && <div className="fixed bottom-6 right-6 z-50"><div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}<span>{toast.message}</span><button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-white/20 rounded"><X className="w-4 h-4" /></button></div></div>}
+      
+      {/* View Estimate Modal */}
+      {viewEstimate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800">Estimate Details</h3>
+              <button onClick={() => setViewEstimate(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div><p className="text-sm text-gray-500">Estimate ID</p><p className="font-medium">{viewEstimate.estimate_id}</p></div>
+                <div><p className="text-sm text-gray-500">Status</p><span className={`px-2 py-1 rounded-full text-xs font-medium ${viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{viewEstimate.status}</span></div>
+                <div><p className="text-sm text-gray-500">Type</p><p className="font-medium capitalize">{viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
+                <div><p className="text-sm text-gray-500">Created</p><p className="font-medium">{viewEstimate.created_at ? new Date(viewEstimate.created_at).toLocaleDateString() : '-'}</p></div>
+              </div>
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm text-gray-500 mb-2">Client Information</p>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <p className="font-medium text-lg">{viewEstimate.client_name || viewEstimate.customer_name || 'N/A'}</p>
+                  {viewEstimate.client_phone && <p className="text-sm text-gray-600">📞 {viewEstimate.client_phone}</p>}
+                  {viewEstimate.client_email && <p className="text-sm text-gray-600">✉️ {viewEstimate.client_email}</p>}
+                  {viewEstimate.property_type && <p className="text-sm text-gray-600">🏠 Property Type: {viewEstimate.property_type}</p>}
+                  {viewEstimate.property_name && <p className="text-sm text-gray-600">🏢 Property: {viewEstimate.property_name}</p>}
+                  {viewEstimate.property_address && <p className="text-sm text-gray-600">📍 {viewEstimate.property_address}</p>}
+                </div>
+              </div>
+              {viewEstimate.services && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm text-gray-500 mb-2">Services</p>
+                  <div className="space-y-2">
+                    {(typeof viewEstimate.services === 'string' ? JSON.parse(viewEstimate.services) : viewEstimate.services).map((svc, idx) => (
+                      <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                        <p className="font-medium">{svc.name || svc.service}</p>
+                        <p className="font-semibold">₹{Number(svc.price || 0).toLocaleString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="border-t border-gray-100 pt-4 space-y-2">
+                {viewEstimate.subtotal > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>₹{Number(viewEstimate.subtotal).toLocaleString()}</span></div>}
+                {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm text-green-600"><span>Discount</span><span>-₹{Number(viewEstimate.discount_amount).toLocaleString()}</span></div>}
+                {viewEstimate.tax_amount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Tax (GST)</span><span>₹{Number(viewEstimate.tax_amount).toLocaleString()}</span></div>}
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <p className="text-lg font-semibold">Total</p>
+                  <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total_amount || 0).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
