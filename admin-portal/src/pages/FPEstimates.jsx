@@ -264,7 +264,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">+ Select Add-on to add</option>
-                  {addons.filter(a => !estimateForm.selectedAddons.includes(a.id)).map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}
+                  {addons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}
                 </select>
               </div>
               {estimateForm.selectedAddons.length === 0 ? (
@@ -417,7 +417,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">+ Select Add-on to add</option>
-                  {addons.filter(a => !estimateForm.selectedAddons.includes(a.id)).map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}
+                  {addons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}
                 </select>
               </div>
               {estimateForm.selectedAddons.length === 0 ? (

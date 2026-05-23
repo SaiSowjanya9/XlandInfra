@@ -205,7 +205,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
             >
               <option value="">+ Select Add-on to add</option>
-              {addons.filter(a => !selectedAddons.includes(a.id?.toString())).map(addon => (
+              {addons.map(addon => (
                 <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>
               ))}
             </select>
