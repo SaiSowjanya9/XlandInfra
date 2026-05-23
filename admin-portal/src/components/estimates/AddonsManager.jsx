@@ -29,7 +29,8 @@ const AddonsManager = ({ admin, showToast }) => {
     frequencyCount: 12,
     frequencyType: 'Monthly',
     billingCycle: 'Monthly',
-    price: ''
+    price: '',
+    description: ''
   });
 
   // Service period options
@@ -42,6 +43,7 @@ const AddonsManager = ({ admin, showToast }) => {
     serviceName: '',
     frequencyCount: 12,
     frequencyType: 'Monthly',
+    description: '',
     billingCycle: 'Monthly',
     price: '',
     propertyType: ''
@@ -84,10 +86,12 @@ const AddonsManager = ({ admin, showToast }) => {
         name: addonForm.serviceName.trim(),
         frequency: parseInt(addonForm.frequencyCount) || 1,
         frequencyType: addonForm.frequencyType,
-        price: parseFloat(addonForm.price)
+        price: parseFloat(addonForm.price),
+        description: addonForm.description?.trim() || ''
       }],
       billingCycle: addonForm.billingCycle,
-      totalPrice: parseFloat(addonForm.price)
+      totalPrice: parseFloat(addonForm.price),
+      description: addonForm.description?.trim() || ''
     };
 
     try {
@@ -106,7 +110,8 @@ const AddonsManager = ({ admin, showToast }) => {
       frequencyCount: 12,
       frequencyType: 'Monthly',
       billingCycle: 'Monthly',
-      price: ''
+      price: '',
+      description: ''
     });
   };
 
@@ -131,7 +136,8 @@ const AddonsManager = ({ admin, showToast }) => {
       frequencyType: addon.services?.[0]?.frequencyType || 'Monthly',
       billingCycle: addon.billingCycle || 'Monthly',
       price: addon.services?.[0]?.price?.toString() || addon.totalPrice?.toString() || '',
-      propertyType: addon.propertyType || 'GC'
+      propertyType: addon.propertyType || 'GC',
+      description: addon.services?.[0]?.description || addon.description || ''
     });
     setShowEditModal(true);
   };
@@ -154,10 +160,12 @@ const AddonsManager = ({ admin, showToast }) => {
         name: editForm.serviceName.trim(),
         frequency: parseInt(editForm.frequencyCount) || 1,
         frequencyType: editForm.frequencyType,
-        price: parseFloat(editForm.price)
+        price: parseFloat(editForm.price),
+        description: editForm.description?.trim() || ''
       }],
       billingCycle: editForm.billingCycle,
-      totalPrice: parseFloat(editForm.price)
+      totalPrice: parseFloat(editForm.price),
+      description: editForm.description?.trim() || ''
     };
 
     try {
@@ -358,6 +366,18 @@ const AddonsManager = ({ admin, showToast }) => {
                       Save
                     </button>
                   </div>
+                </div>
+
+                {/* Description - Optional */}
+                <div className="mt-4">
+                  <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Description (Optional)</label>
+                  <textarea
+                    value={addonForm.description}
+                    onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })}
+                    placeholder="Add notes or description for this add-on..."
+                    rows={2}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 resize-none"
+                  />
                 </div>
               </div>
             </div>
@@ -693,6 +713,18 @@ const AddonsManager = ({ admin, showToast }) => {
                   }}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
                   placeholder="0"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  placeholder="Add notes or description..."
+                  rows={2}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none resize-none"
                 />
               </div>
 

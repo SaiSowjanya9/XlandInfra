@@ -30,60 +30,73 @@ const ServiceRows = ({
 
       {/* Service Rows */}
       {serviceList.map((service, index) => (
-        <div key={index} className="grid grid-cols-12 gap-4 items-center p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-indigo-200 transition-colors">
-          {/* Service Name */}
-          <div className="col-span-5">
-            <ServiceSelector
-              value={service.name}
-              onChange={(val) => onUpdate(index, 'name', val)}
-              services={availableServices}
-              onServicesUpdate={onServicesUpdate}
-            />
-          </div>
-          
-          {/* Frequency */}
-          <div className="col-span-3">
-            <select
-              value={service.frequencyType || 'Monthly'}
-              onChange={(e) => onUpdate(index, 'frequencyType', e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 bg-white"
-            >
-              {FREQUENCY_TYPES.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
-          </div>
-          
-          {/* Price */}
-          <div className="col-span-3">
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
-              <input
-                type="number"
-                min="0"
-                value={service.price}
-                onChange={(e) => onUpdate(index, 'price', e.target.value)}
-                className="w-full pl-7 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
-                placeholder="0"
+        <div key={index} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-indigo-200 transition-colors space-y-3">
+          <div className="grid grid-cols-12 gap-4 items-center">
+            {/* Service Name */}
+            <div className="col-span-5">
+              <ServiceSelector
+                value={service.name}
+                onChange={(val) => onUpdate(index, 'name', val)}
+                services={availableServices}
+                onServicesUpdate={onServicesUpdate}
               />
+            </div>
+            
+            {/* Frequency */}
+            <div className="col-span-3">
+              <select
+                value={service.frequencyType || 'Monthly'}
+                onChange={(e) => onUpdate(index, 'frequencyType', e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 bg-white"
+              >
+                {FREQUENCY_TYPES.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Price */}
+            <div className="col-span-3">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={service.price}
+                  onChange={(e) => onUpdate(index, 'price', e.target.value)}
+                  className="w-full pl-7 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            
+            {/* Delete Button */}
+            <div className="col-span-1 flex justify-center">
+              <button
+                type="button"
+                onClick={() => onRemove(index)}
+                className={`p-2 rounded-lg transition-colors ${
+                  serviceList.length === 1 
+                    ? 'text-gray-300 cursor-not-allowed' 
+                    : 'text-red-500 hover:bg-red-50 hover:text-red-600'
+                }`}
+                disabled={serviceList.length === 1}
+                title={serviceList.length === 1 ? 'Cannot remove last service' : 'Remove service'}
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
             </div>
           </div>
           
-          {/* Delete Button */}
-          <div className="col-span-1 flex justify-center">
-            <button
-              type="button"
-              onClick={() => onRemove(index)}
-              className={`p-2 rounded-lg transition-colors ${
-                serviceList.length === 1 
-                  ? 'text-gray-300 cursor-not-allowed' 
-                  : 'text-red-500 hover:bg-red-50 hover:text-red-600'
-              }`}
-              disabled={serviceList.length === 1}
-              title={serviceList.length === 1 ? 'Cannot remove last service' : 'Remove service'}
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
+          {/* Description - Optional */}
+          <div>
+            <input
+              type="text"
+              value={service.description || ''}
+              onChange={(e) => onUpdate(index, 'description', e.target.value)}
+              placeholder="Add description/notes (optional)"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 bg-white"
+            />
           </div>
         </div>
       ))}

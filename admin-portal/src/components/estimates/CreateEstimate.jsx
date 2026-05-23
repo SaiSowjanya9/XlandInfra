@@ -52,7 +52,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     serviceName: '',
     frequencyType: 'Monthly',
     frequencyCount: 12,
-    price: ''
+    price: '',
+    description: ''
   });
   const [discount, setDiscount] = useState(''); // Discount percentage
   const [gstRate, setGstRate] = useState('18'); // GST percentage - customizable
@@ -64,7 +65,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     serviceName: '',
     frequencyType: 'Monthly',
     frequencyCount: 12,
-    price: ''
+    price: '',
+    description: ''
   });
   const [directDiscount, setDirectDiscount] = useState('');
   const [directGstRate, setDirectGstRate] = useState('18');
@@ -345,9 +347,11 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
         name: customAddonForm.serviceName.trim(),
         frequencyType: customAddonForm.frequencyType,
         frequency: parseInt(customAddonForm.frequencyCount) || 1,
-        price: parseFloat(customAddonForm.price)
+        price: parseFloat(customAddonForm.price),
+        description: customAddonForm.description?.trim() || ''
       }],
-      totalPrice: parseFloat(customAddonForm.price)
+      totalPrice: parseFloat(customAddonForm.price),
+      description: customAddonForm.description?.trim() || ''
     };
 
     setSelectedAddons([...selectedAddons, customAddon]);
@@ -356,7 +360,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       serviceName: '',
       frequencyType: 'Monthly',
       frequencyCount: 12,
-      price: ''
+      price: '',
+      description: ''
     });
   };
 
@@ -367,7 +372,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       serviceName: '',
       frequencyType: 'Monthly',
       frequencyCount: 12,
-      price: ''
+      price: '',
+      description: ''
     });
   };
 
@@ -511,9 +517,11 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
         name: directCustomAddonForm.serviceName.trim(),
         frequencyType: directCustomAddonForm.frequencyType,
         frequency: parseInt(directCustomAddonForm.frequencyCount) || 1,
-        price: parseFloat(directCustomAddonForm.price)
+        price: parseFloat(directCustomAddonForm.price),
+        description: directCustomAddonForm.description?.trim() || ''
       }],
-      totalPrice: parseFloat(directCustomAddonForm.price)
+      totalPrice: parseFloat(directCustomAddonForm.price),
+      description: directCustomAddonForm.description?.trim() || ''
     };
 
     setDirectSelectedAddons([...directSelectedAddons, customAddon]);
@@ -522,7 +530,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       serviceName: '',
       frequencyType: 'Monthly',
       frequencyCount: 12,
-      price: ''
+      price: '',
+      description: ''
     });
   };
 
@@ -532,7 +541,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       serviceName: '',
       frequencyType: 'Monthly',
       frequencyCount: 12,
-      price: ''
+      price: '',
+      description: ''
     });
   };
 
@@ -1424,6 +1434,16 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                           Add
                         </button>
                       </div>
+                      {/* Description - Full width */}
+                      <div className="col-span-12 mt-2">
+                        <input
+                          type="text"
+                          value={customAddonForm.description}
+                          onChange={(e) => handleCustomAddonChange('description', e.target.value)}
+                          placeholder="Add description/notes (optional)"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2067,6 +2087,16 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       >
                         Add
                       </button>
+                    </div>
+                    {/* Description - Full width */}
+                    <div className="lg:col-span-12 mt-2">
+                      <input
+                        type="text"
+                        value={directCustomAddonForm.description}
+                        onChange={(e) => handleDirectCustomAddonChange('description', e.target.value)}
+                        placeholder="Add description/notes (optional)"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                      />
                     </div>
                   </div>
                 </div>
