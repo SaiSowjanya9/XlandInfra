@@ -188,6 +188,8 @@ function App() {
     localStorage.removeItem('pm_auth_token');
     localStorage.removeItem('pm_current_user');
     localStorage.removeItem('pm_demo_mode');
+    // Redirect to home page
+    window.location.href = '/';
   };
 
   const handleSelectPortal = (portalKey) => {
