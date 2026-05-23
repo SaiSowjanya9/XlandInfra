@@ -212,43 +212,89 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast }) => {
 
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm text-gray-500 mb-2">Client Information</p>
-                {viewEstimate.estimateType === 'property-based' ? (
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="font-medium">{viewEstimate.clientName}</p>
-                    <p className="text-sm text-gray-600">{viewEstimate.propertyId} • {viewEstimate.propertyType}</p>
-                    {viewEstimate.communityName && (
-                      <p className="text-sm text-gray-600">{viewEstimate.communityName}</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="font-medium">{viewEstimate.customerName}</p>
-                    {viewEstimate.phone && <p className="text-sm text-gray-600">Phone: {viewEstimate.phone}</p>}
-                    {viewEstimate.email && <p className="text-sm text-gray-600">Email: {viewEstimate.email}</p>}
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm text-gray-500 mb-2">Services</p>
-                <div className="space-y-2">
-                  {viewEstimate.services?.map((service, idx) => (
-                    <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
-                      <div>
-                        <p className="font-medium">{service.name}</p>
-                        <p className="text-sm text-gray-500">{service.frequency} × {service.frequencyType}</p>
-                      </div>
-                      <p className="font-semibold">₹{Number(service.price).toLocaleString()}</p>
-                    </div>
-                  ))}
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <p className="font-medium text-lg">{viewEstimate.customerName || viewEstimate.clientName || 'N/A'}</p>
+                  {(viewEstimate.customerPhone || viewEstimate.phone) && (
+                    <p className="text-sm text-gray-600">📞 {viewEstimate.customerPhone || viewEstimate.phone}</p>
+                  )}
+                  {(viewEstimate.customerEmail || viewEstimate.email) && (
+                    <p className="text-sm text-gray-600">✉️ {viewEstimate.customerEmail || viewEstimate.email}</p>
+                  )}
+                  {viewEstimate.propertyType && (
+                    <p className="text-sm text-gray-600">🏠 Property Type: {viewEstimate.propertyType}</p>
+                  )}
+                  {viewEstimate.propertyName && (
+                    <p className="text-sm text-gray-600">🏢 Property: {viewEstimate.propertyName}</p>
+                  )}
+                  {viewEstimate.propertyAddress && (
+                    <p className="text-sm text-gray-600">📍 {viewEstimate.propertyAddress}</p>
+                  )}
+                  {viewEstimate.propertyId && (
+                    <p className="text-sm text-gray-500">ID: {viewEstimate.propertyId}</p>
+                  )}
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-4 flex justify-between items-center">
-                <p className="text-lg font-semibold">Total</p>
-                <p className="text-2xl font-bold text-indigo-600">
-                  ₹{(viewEstimate.totalPrice || calculateEstimateTotal(viewEstimate)).toLocaleString()}
-                </p>
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm text-gray-500 mb-2">Services / Package</p>
+                <div className="space-y-2">
+                  {viewEstimate.services?.length > 0 ? viewEstimate.services.map((service, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                      <div>
+                        <p className="font-medium">{service.name || service.service}</p>
+                        {(service.frequency || service.frequencyType) && (
+                          <p className="text-sm text-gray-500">{service.frequency || service.frequencyCount} × {service.frequencyType}</p>
+                        )}
+                      </div>
+                      <p className="font-semibold">₹{Number(service.price || 0).toLocaleString()}</p>
+                    </div>
+                  )) : (
+                    <p className="text-gray-400 text-sm">No services listed</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Addons Section */}
+              {viewEstimate.addons?.length > 0 && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm text-gray-500 mb-2">Add-ons</p>
+                  <div className="space-y-2">
+                    {viewEstimate.addons.map((addon, idx) => (
+                      <div key={idx} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
+                        <p className="font-medium text-blue-800">{addon.name || addon.serviceName}</p>
+                        <p className="font-semibold text-blue-700">₹{Number(addon.price || addon.totalPrice || 0).toLocaleString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Price Breakdown */}
+              <div className="border-t border-gray-100 pt-4 space-y-2">
+                {viewEstimate.subtotal > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Subtotal</span>
+                    <span>₹{Number(viewEstimate.subtotal).toLocaleString()}</span>
+                  </div>
+                )}
+                {viewEstimate.discount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Discount</span>
+                    <span>-₹{Number(viewEstimate.discount).toLocaleString()}</span>
+                  </div>
+                )}
+                {viewEstimate.tax > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Tax (GST)</span>
+                    <span>₹{Number(viewEstimate.tax).toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <p className="text-lg font-semibold">Total</p>
+                  <p className="text-2xl font-bold text-indigo-600">
+                    ₹{Number(viewEstimate.total || viewEstimate.totalPrice || calculateEstimateTotal(viewEstimate) || 0).toLocaleString()}
+                  </p>
+                </div>
               </div>
 
               <div className="border-t border-gray-100 pt-4 flex gap-3 justify-end">
