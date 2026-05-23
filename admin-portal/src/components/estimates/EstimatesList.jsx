@@ -28,7 +28,7 @@ const STATUS_STYLES = {
   Archived: 'bg-slate-100 text-slate-700'
 };
 
-const EstimatesList = ({ admin, onRefresh, showToast }) => {
+const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = admin?.role === 'operations_manager';
   
@@ -45,7 +45,18 @@ const EstimatesList = ({ admin, onRefresh, showToast }) => {
   const [viewEstimate, setViewEstimate] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  const filteredEstimates = searchEstimates(searchTerm, filters);
+  // Filter estimates based on search and filters
+  const filteredEstimates = estimates.filter(est => {
+    const search = searchTerm.toLowerCase();
+    const matchSearch = !search || 
+      est.estimateId?.toLowerCase().includes(search) ||
+      est.customerName?.toLowerCase().includes(search) ||
+      est.propertyName?.toLowerCase().includes(search);
+    const matchType = filters.estimateType === 'all' || est.estimateType === filters.estimateType;
+    const matchStatus = filters.status === 'all' || est.status === filters.status;
+    const matchProperty = filters.propertyType === 'all' || est.propertyType === filters.propertyType;
+    return matchSearch && matchType && matchStatus && matchProperty;
+  });
 
   const handleSendEstimate = (estimate) => {
     updateEstimate(estimate.estimateId, { status: 'Sent' });
@@ -53,10 +64,17 @@ const EstimatesList = ({ admin, onRefresh, showToast }) => {
     onRefresh();
   };
 
-  const handleArchiveEstimate = (estimateId) => {
-    deleteEstimate(estimateId, false);
-    showToast('Estimate archived');
-    onRefresh();
+  const handleArchiveEstimate = async (estimateId) => {
+    try {
+      const response = await fetch(`/api/estimates-sync/${estimateId}/archive`, { method: 'PUT' });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Estimate archived');
+        onRefresh();
+      }
+    } catch (error) {
+      showToast('Failed to archive', 'error');
+    }
     setDeleteConfirm(null);
   };
 

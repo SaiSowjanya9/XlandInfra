@@ -11,7 +11,7 @@ import AddonsManager from '../components/estimates/AddonsManager';
 import ArchivedEstimates from '../components/estimates/ArchivedEstimates';
 
 import {
-  getEstimates, getArchivedEstimates, getAMCPackages, getAddons
+  fetchEstimates, fetchAMCPackages, fetchAddons
 } from '../utils/estimateStore';
 
 const TAB_TITLES = {
@@ -25,6 +25,8 @@ const TAB_TITLES = {
 const Estimates = ({ admin, defaultTab = 'list' }) => {
   const navigate = useNavigate();
   const [toast, setToast] = useState(null);
+  const [estimates, setEstimates] = useState([]);
+  const [archivedEstimates, setArchivedEstimates] = useState([]);
   const [stats, setStats] = useState({
     estimates: 0,
     archived: 0,
@@ -36,13 +38,29 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
     loadStats();
   }, [defaultTab]);
 
-  const loadStats = () => {
-    setStats({
-      estimates: getEstimates().length,
-      archived: getArchivedEstimates().length,
-      amcPackages: getAMCPackages().length,
-      addons: getAddons().length
-    });
+  const loadStats = async () => {
+    try {
+      const [estRes, archRes, pkgRes, addRes] = await Promise.all([
+        fetch('/api/estimates-sync?archived=false'),
+        fetch('/api/estimates-sync?archived=true'),
+        fetchAMCPackages(),
+        fetchAddons()
+      ]);
+      const estData = await estRes.json();
+      const archData = await archRes.json();
+      const estArr = estData.success ? estData.data : [];
+      const archArr = archData.success ? archData.data : [];
+      setEstimates(estArr);
+      setArchivedEstimates(archArr);
+      setStats({
+        estimates: estArr.length,
+        archived: archArr.length,
+        amcPackages: pkgRes.length,
+        addons: addRes.length
+      });
+    } catch (error) {
+      console.error('Load stats error:', error);
+    }
   };
 
   const showToast = (message, type = 'success') => {
@@ -73,6 +91,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
         return (
           <EstimatesList
             admin={admin}
+            estimates={estimates}
             onRefresh={handleRefresh}
             showToast={showToast}
           />
