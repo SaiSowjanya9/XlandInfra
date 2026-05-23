@@ -253,7 +253,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
-                  {amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}
+                  {(() => {
+                    const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || estimateForm?.propertyType;
+                    const filteredPkgs = propertyType ? amcPackages.filter(pkg => { const pkgType = (pkg.property_type || '').toUpperCase(); const searchType = propertyType.toUpperCase(); return pkgType === searchType || pkgType === 'GC' && searchType === 'GC'; }) : amcPackages;
+                    const otherPkgs = propertyType ? amcPackages.filter(pkg => !filteredPkgs.includes(pkg)) : [];
+                    return (<>{filteredPkgs.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}{otherPkgs.length > 0 && <optgroup label="Other Packages">{otherPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}{!propertyType && amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</>);
+                  })()}
                 </select>
               </div>
               <div>
@@ -263,7 +268,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">+ Select Add-on to add</option>
-                  {addons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}
+                  {(() => {
+                    const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || estimateForm?.propertyType;
+                    const filteredAddons = propertyType ? addons.filter(addon => { const addonType = (addon.property_type || '').toUpperCase(); const searchType = propertyType.toUpperCase(); return addonType === searchType || addonType === 'GC' && searchType === 'GC'; }) : addons;
+                    const otherAddons = propertyType ? addons.filter(addon => !filteredAddons.includes(addon)) : [];
+                    return (<>{filteredAddons.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}</optgroup>}{otherAddons.length > 0 && <optgroup label="Other Add-ons">{otherAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}</optgroup>}{!propertyType && addons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}</>);
+                  })()}
                 </select>
               </div>
               {estimateForm.selectedAddons.length === 0 ? (
@@ -406,7 +416,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
-                  {amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}
+                  {(() => {
+                    const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || estimateForm?.propertyType;
+                    const filteredPkgs = propertyType ? amcPackages.filter(pkg => { const pkgType = (pkg.property_type || '').toUpperCase(); const searchType = propertyType.toUpperCase(); return pkgType === searchType || pkgType === 'GC' && searchType === 'GC'; }) : amcPackages;
+                    const otherPkgs = propertyType ? amcPackages.filter(pkg => !filteredPkgs.includes(pkg)) : [];
+                    return (<>{filteredPkgs.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}{otherPkgs.length > 0 && <optgroup label="Other Packages">{otherPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}{!propertyType && amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</>);
+                  })()}
                 </select>
               </div>
               <div>
@@ -416,7 +431,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">+ Select Add-on to add</option>
-                  {addons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}
+                  {(() => {
+                    const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || estimateForm?.propertyType;
+                    const filteredAddons = propertyType ? addons.filter(addon => { const addonType = (addon.property_type || '').toUpperCase(); const searchType = propertyType.toUpperCase(); return addonType === searchType || addonType === 'GC' && searchType === 'GC'; }) : addons;
+                    const otherAddons = propertyType ? addons.filter(addon => !filteredAddons.includes(addon)) : [];
+                    return (<>{filteredAddons.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}</optgroup>}{otherAddons.length > 0 && <optgroup label="Other Add-ons">{otherAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}</optgroup>}{!propertyType && addons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}</>);
+                  })()}
                 </select>
               </div>
               {estimateForm.selectedAddons.length === 0 ? (

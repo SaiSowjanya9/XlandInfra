@@ -187,9 +187,20 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
             >
               <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
-              {amcPackages.map(pkg => (
-                <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>
-              ))}
+              {(() => {
+                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
+                const filteredPkgs = propertyType ? amcPackages.filter(pkg => {
+                  const pkgType = (pkg.property_type || pkg.propertyType || '').toUpperCase();
+                  const searchType = propertyType.toUpperCase();
+                  return pkgType === searchType || pkgType === 'GC' && searchType === 'GC';
+                }) : amcPackages;
+                const otherPkgs = propertyType ? amcPackages.filter(pkg => !filteredPkgs.includes(pkg)) : [];
+                return (<>
+                  {filteredPkgs.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}
+                  {otherPkgs.length > 0 && <optgroup label="Other Packages">{otherPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}
+                  {!propertyType && amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}
+                </>);
+              })()}
             </select>
           </div>
           <div>
@@ -204,9 +215,20 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
             >
               <option value="">+ Select Add-on to add</option>
-              {addons.map(addon => (
-                <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>
-              ))}
+              {(() => {
+                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
+                const filteredAddons = propertyType ? addons.filter(addon => {
+                  const addonType = (addon.property_type || addon.propertyType || '').toUpperCase();
+                  const searchType = propertyType.toUpperCase();
+                  return addonType === searchType || addonType === 'GC' && searchType === 'GC';
+                }) : addons;
+                const otherAddons = propertyType ? addons.filter(addon => !filteredAddons.includes(addon)) : [];
+                return (<>
+                  {filteredAddons.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>)}</optgroup>}
+                  {otherAddons.length > 0 && <optgroup label="Other Add-ons">{otherAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>)}</optgroup>}
+                  {!propertyType && addons.map(addon => <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>)}
+                </>);
+              })()}
             </select>
           </div>
           {selectedAddons.length === 0 ? (
