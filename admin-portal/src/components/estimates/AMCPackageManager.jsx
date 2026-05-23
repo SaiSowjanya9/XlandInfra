@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import {
   getAMCPackages,
+  fetchAMCPackages,
   createAMCPackage,
   updateAMCPackage,
   deleteAMCPackage,
@@ -65,9 +66,9 @@ const AMCPackageManager = ({ admin, showToast }) => {
     billingDuration: 'monthly',
   });
 
-  const loadData = () => {
-    // Don't call seedTestData here - it can cause deleted items to reappear
-    const currentPackages = getAMCPackages();
+  const loadData = async () => {
+    // Fetch packages from API
+    const currentPackages = await fetchAMCPackages();
     setAmcPackages(currentPackages);
   };
 
