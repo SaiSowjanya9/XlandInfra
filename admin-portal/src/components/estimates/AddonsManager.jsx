@@ -375,8 +375,9 @@ const AddonsManager = ({ admin, showToast }) => {
                     value={addonForm.description}
                     onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })}
                     placeholder="Add notes or description for this add-on..."
-                    rows={2}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 resize-none"
+                    rows={3}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 resize-y"
+                    style={{ minHeight: '80px' }}
                   />
                 </div>
               </div>
@@ -723,8 +724,9 @@ const AddonsManager = ({ admin, showToast }) => {
                   value={editForm.description}
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                   placeholder="Add notes or description..."
-                  rows={2}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none resize-none"
+                  rows={3}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none resize-y"
+                  style={{ minHeight: '80px' }}
                 />
               </div>
 

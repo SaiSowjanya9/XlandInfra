@@ -385,17 +385,46 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm text-gray-500 mb-2">Services / Package</p>
                 <div className="space-y-2">
-                  {viewEstimate.services?.length > 0 ? viewEstimate.services.map((service, idx) => (
-                    <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
-                      <div>
-                        <p className="font-medium">{service.name || service.service}</p>
-                        {(service.frequency || service.frequencyType) && (
-                          <p className="text-sm text-gray-500">{service.frequency || service.frequencyCount} × {service.frequencyType}</p>
-                        )}
+                  {/* Show AMC Package if exists */}
+                  {viewEstimate.amcPackage && (
+                    <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-indigo-800">{viewEstimate.amcPackage.packageName || viewEstimate.amcPackage.name || 'AMC Package'}</p>
+                          <p className="text-xs text-indigo-600">{viewEstimate.amcPackage.billingDuration || 'Monthly'} billing</p>
+                        </div>
+                        <p className="font-bold text-indigo-700">₹{Number(viewEstimate.amcPackage.rate || viewEstimate.amcPackage.totalRate || viewEstimate.amcPrice || 0).toLocaleString()}</p>
                       </div>
-                      <p className="font-semibold">₹{Number(service.price || 0).toLocaleString()}</p>
+                      {/* Package Services */}
+                      {viewEstimate.amcPackage.serviceRows?.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-indigo-200 space-y-1">
+                          {viewEstimate.amcPackage.serviceRows.map((svc, i) => (
+                            <p key={i} className="text-xs text-indigo-600">• {svc.service} ({svc.frequencyCount}× {svc.frequencyType})</p>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )) : (
+                  )}
+                  
+                  {/* Show individual services */}
+                  {viewEstimate.services?.length > 0 ? viewEstimate.services.map((service, idx) => {
+                    const serviceName = service.name || service.service || service.serviceName || 'Service';
+                    const servicePrice = service.price || service.rate || 0;
+                    const serviceFrequency = service.frequency || service.frequencyCount;
+                    const serviceFrequencyType = service.frequencyType;
+                    
+                    return (
+                      <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                        <div>
+                          <p className="font-medium">{serviceName}</p>
+                          {serviceFrequency && serviceFrequencyType && (
+                            <p className="text-sm text-gray-500">{serviceFrequency}× {serviceFrequencyType}</p>
+                          )}
+                        </div>
+                        <p className="font-semibold">₹{Number(servicePrice).toLocaleString()}</p>
+                      </div>
+                    );
+                  }) : !viewEstimate.amcPackage && (
                     <p className="text-gray-400 text-sm">No services listed</p>
                   )}
                 </div>
@@ -406,12 +435,25 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-sm text-gray-500 mb-2">Add-ons</p>
                   <div className="space-y-2">
-                    {viewEstimate.addons.map((addon, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
-                        <p className="font-medium text-blue-800">{addon.name || addon.serviceName}</p>
-                        <p className="font-semibold text-blue-700">₹{Number(addon.price || addon.totalPrice || 0).toLocaleString()}</p>
-                      </div>
-                    ))}
+                    {viewEstimate.addons.map((addon, idx) => {
+                      // Handle different addon data structures
+                      const addonName = addon.name || addon.serviceName || addon.services?.[0]?.name || addon.addonName || 'Add-on';
+                      const addonPrice = addon.price || addon.totalPrice || addon.services?.[0]?.price || 0;
+                      const addonFrequency = addon.frequency || addon.frequencyCount || addon.services?.[0]?.frequency;
+                      const addonFrequencyType = addon.frequencyType || addon.services?.[0]?.frequencyType;
+                      
+                      return (
+                        <div key={idx} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
+                          <div>
+                            <p className="font-medium text-blue-800">{addonName}</p>
+                            {addonFrequency && addonFrequencyType && (
+                              <p className="text-xs text-blue-600">{addonFrequency}× {addonFrequencyType}</p>
+                            )}
+                          </div>
+                          <p className="font-semibold text-blue-700">₹{Number(addonPrice).toLocaleString()}</p>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
