@@ -255,8 +255,12 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                     <td className="px-3 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">
                       <div className="flex items-center gap-2">
                         <Icon className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-600 whitespace-nowrap">
-                          {estimate.estimateType === 'property-based' ? estimate.propertyType : 'Direct'}
+                        <span className={`text-sm whitespace-nowrap px-2 py-0.5 rounded ${
+                          estimate.estimateType === 'property-based' || estimate.propertyId 
+                            ? 'bg-blue-100 text-blue-700' 
+                            : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {estimate.estimateType === 'property-based' || estimate.propertyId ? 'Property' : 'Direct'}
                         </span>
                       </div>
                     </td>
