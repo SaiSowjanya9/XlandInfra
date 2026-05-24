@@ -55,7 +55,13 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
     const matchType = filters.estimateType === 'all' || est.estimateType === filters.estimateType;
     const matchStatus = filters.status === 'all' || est.status === filters.status;
     const matchProperty = filters.propertyType === 'all' || est.propertyType === filters.propertyType;
-    return matchSearch && matchType && matchStatus && matchProperty;
+    
+    // Date filtering
+    const estDate = new Date(est.createdAt);
+    const matchFromDate = !filters.dateFrom || estDate >= new Date(filters.dateFrom);
+    const matchToDate = !filters.dateTo || estDate <= new Date(filters.dateTo + 'T23:59:59');
+    
+    return matchSearch && matchType && matchStatus && matchProperty && matchFromDate && matchToDate;
   });
 
   const handleSendEstimate = async (estimate) => {
@@ -156,15 +162,15 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
           <div className="mt-4 pt-4 border-t border-gray-100">
             <div className="grid grid-cols-5 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Estimate Type</label>
                 <select
                   value={filters.estimateType}
                   onChange={(e) => setFilters({ ...filters, estimateType: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 >
-                  <option value="all">All Types</option>
-                  <option value="property-based">Property-Based Estimate</option>
-                  <option value="direct">Direct-Based Estimate</option>
+                  <option value="all">All Estimates</option>
+                  <option value="property-based">Property ID Based</option>
+                  <option value="direct">Direct Estimate</option>
                 </select>
               </div>
               <div>
@@ -181,13 +187,13 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Property Type</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Property Category</label>
                 <select
                   value={filters.propertyType}
                   onChange={(e) => setFilters({ ...filters, propertyType: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 >
-                  <option value="all">All Properties</option>
+                  <option value="all">All Categories</option>
                   {PROPERTY_TYPES.map(type => (
                     <option key={type} value={type}>{type}</option>
                   ))}
@@ -260,7 +266,9 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                             ? 'bg-blue-100 text-blue-700' 
                             : 'bg-purple-100 text-purple-700'
                         }`}>
-                          {estimate.estimateType === 'property-based' || estimate.propertyId ? 'Property' : 'Direct'}
+                          {estimate.estimateType === 'property-based' || estimate.propertyId 
+                            ? (estimate.propertyType || 'Property') 
+                            : 'Direct'}
                         </span>
                       </div>
                     </td>
@@ -306,8 +314,8 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                         >
                           <Download className="w-4 h-4" />
                         </button>
-                        {/* Send Email - Available for all */}
-                        {estimate.status === 'Draft' && (
+                        {/* Send Email - Available for all estimates with customer email */}
+                        {(estimate.customerEmail || estimate.email) && (
                           <button
                             onClick={() => handleSendEstimate(estimate)}
                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"

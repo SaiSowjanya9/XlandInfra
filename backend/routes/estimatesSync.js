@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const db = require('../config/database');
-const { sendEstimateEmail } = require('../services/emailService');
+const { sendEstimateEmail, sendEstimateActionNotification } = require('../services/emailService');
 
 // GET all estimates (supports ?archived=true for archived estimates)
 router.get('/', async (req, res) => {
@@ -281,6 +282,9 @@ router.post('/:estimateId/send', async (req, res) => {
       addons = typeof est.addons === 'string' ? JSON.parse(est.addons) : est.addons;
     }
     
+    // Generate action token for approve/reject links
+    const actionToken = crypto.randomBytes(32).toString('hex');
+    
     // Prepare estimate data for email
     const estimateData = {
       estimateId: est.estimate_id,
@@ -300,14 +304,14 @@ router.post('/:estimateId/send', async (req, res) => {
       return res.status(400).json({ success: false, message: 'No customer email found for this estimate' });
     }
     
-    // Send the email
-    const emailResult = await sendEstimateEmail(estimateData);
+    // Send the email with action token
+    const emailResult = await sendEstimateEmail(estimateData, actionToken);
     
     if (emailResult.success) {
-      // Update estimate status to 'Sent'
+      // Update estimate status to 'Sent' and store action token and sent date
       await pool.execute(
-        `UPDATE estimates SET status = 'Sent' WHERE estimate_id = ?`,
-        [estimateId]
+        `UPDATE estimates SET status = 'Sent', action_token = ?, sent_at = NOW() WHERE estimate_id = ?`,
+        [actionToken, estimateId]
       );
       
       res.json({ 
@@ -326,5 +330,143 @@ router.post('/:estimateId/send', async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+// PUBLIC: Customer approve/reject estimate
+router.post('/:estimateId/action', async (req, res) => {
+  try {
+    if (!db.isDbConnected) {
+      return res.status(503).json({ success: false, message: 'Database not connected' });
+    }
+    
+    const { estimateId } = req.params;
+    const { action, token } = req.body;
+    
+    if (!action || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ success: false, message: 'Invalid action' });
+    }
+    
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Token required' });
+    }
+    
+    const pool = db.pool;
+    const [estimates] = await pool.execute(
+      `SELECT * FROM estimates WHERE estimate_id = ? AND action_token = ? AND is_active = TRUE`,
+      [estimateId, token]
+    );
+    
+    if (estimates.length === 0) {
+      return res.status(404).json({ success: false, message: 'Estimate not found or invalid token' });
+    }
+    
+    const est = estimates[0];
+    
+    // Check if already actioned
+    if (['Approved', 'Rejected'].includes(est.status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `This estimate has already been ${est.status.toLowerCase()}` 
+      });
+    }
+    
+    // Check if expired
+    if (est.status === 'Expired') {
+      return res.status(400).json({ success: false, message: 'This estimate has expired' });
+    }
+    
+    const newStatus = action === 'approve' ? 'Approved' : 'Rejected';
+    
+    // Update estimate status
+    await pool.execute(
+      `UPDATE estimates SET status = ?, actioned_at = NOW() WHERE estimate_id = ?`,
+      [newStatus, estimateId]
+    );
+    
+    // Note: Admin notification emails disabled for now
+    // Can be enabled later by uncommenting sendEstimateActionNotification call
+    
+    res.json({ 
+      success: true, 
+      message: `Estimate ${newStatus.toLowerCase()} successfully`,
+      status: newStatus
+    });
+  } catch (error) {
+    console.error('Estimate action error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get estimate status for action page (public)
+router.get('/:estimateId/status', async (req, res) => {
+  try {
+    if (!db.isDbConnected) {
+      return res.status(503).json({ success: false, message: 'Database not connected' });
+    }
+    
+    const { estimateId } = req.params;
+    const { token } = req.query;
+    
+    const pool = db.pool;
+    const [estimates] = await pool.execute(
+      `SELECT estimate_id, customer_name, property_name, total, status, sent_at 
+       FROM estimates WHERE estimate_id = ? AND action_token = ? AND is_active = TRUE`,
+      [estimateId, token]
+    );
+    
+    if (estimates.length === 0) {
+      return res.status(404).json({ success: false, message: 'Estimate not found or invalid token' });
+    }
+    
+    const est = estimates[0];
+    res.json({ 
+      success: true, 
+      data: {
+        estimateId: est.estimate_id,
+        customerName: est.customer_name,
+        propertyName: est.property_name,
+        total: parseFloat(est.total || 0),
+        status: est.status,
+        sentAt: est.sent_at
+      }
+    });
+  } catch (error) {
+    console.error('Get estimate status error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Scheduled job: Auto-expire estimates after 1 month and auto-delete archived after 2 months
+const runScheduledTasks = async () => {
+  if (!db.isDbConnected) return;
+  
+  try {
+    const pool = db.pool;
+    
+    // Auto-expire: Estimates with status 'Sent' and sent_at > 1 month ago
+    const [expiredResult] = await pool.execute(
+      `UPDATE estimates SET status = 'Expired' 
+       WHERE status = 'Sent' AND sent_at IS NOT NULL AND sent_at < DATE_SUB(NOW(), INTERVAL 1 MONTH)`
+    );
+    if (expiredResult.affectedRows > 0) {
+      console.log(`⏰ Auto-expired ${expiredResult.affectedRows} estimates`);
+    }
+    
+    // Auto-delete: Archived estimates older than 2 months
+    const [deletedResult] = await pool.execute(
+      `DELETE FROM estimates 
+       WHERE status = 'Archived' AND archived_at IS NOT NULL AND archived_at < DATE_SUB(NOW(), INTERVAL 2 MONTH)`
+    );
+    if (deletedResult.affectedRows > 0) {
+      console.log(`🗑️ Auto-deleted ${deletedResult.affectedRows} archived estimates`);
+    }
+  } catch (error) {
+    console.error('Scheduled task error:', error);
+  }
+};
+
+// Run scheduled tasks every hour
+setInterval(runScheduledTasks, 60 * 60 * 1000);
+// Also run on startup after 30 seconds
+setTimeout(runScheduledTasks, 30000);
 
 module.exports = router;

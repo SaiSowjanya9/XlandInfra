@@ -659,13 +659,18 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
   }
 };
 
-// Send estimate email to customer
-const sendEstimateEmail = async (estimate) => {
+// Send estimate email to customer with Approve/Reject buttons
+const sendEstimateEmail = async (estimate, actionToken) => {
   const { customerName, customerEmail, estimateId, propertyName, services, addons, subtotal, discount, tax, total, validUntil } = estimate;
   
   if (!customerEmail) {
     return { success: false, error: 'No customer email provided' };
   }
+
+  // Base URL for action links
+  const baseUrl = process.env.FRONTEND_URL || 'https://admin.xlandinfra.com';
+  const approveUrl = `${baseUrl}/estimate-action/${estimateId}?action=approve&token=${actionToken}`;
+  const rejectUrl = `${baseUrl}/estimate-action/${estimateId}?action=reject&token=${actionToken}`;
 
   // Format services list
   const servicesHtml = (services || []).map(s => `
@@ -683,10 +688,14 @@ const sendEstimateEmail = async (estimate) => {
     </tr>
   `).join('');
 
+  // Calculate expiry date (1 month from now)
+  const expiryDate = new Date();
+  expiryDate.setMonth(expiryDate.getMonth() + 1);
+
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
     to: customerEmail,
-    subject: `Your Estimate ${estimateId} from XLAND INFRA`,
+    subject: `Your Estimate ${estimateId} from XLAND INFRA - Action Required`,
     headers: getDefaultHeaders(),
     html: `
       <!DOCTYPE html>
@@ -717,12 +726,10 @@ const sendEstimateEmail = async (estimate) => {
                 <span style="color: #6b7280; font-size: 14px;">Estimate ID</span>
                 <span style="color: #1f2937; font-weight: 600;">${estimateId}</span>
               </div>
-              ${validUntil ? `
               <div style="display: flex; justify-content: space-between;">
                 <span style="color: #6b7280; font-size: 14px;">Valid Until</span>
-                <span style="color: #1f2937; font-weight: 600;">${new Date(validUntil).toLocaleDateString('en-IN')}</span>
+                <span style="color: #dc2626; font-weight: 600;">${expiryDate.toLocaleDateString('en-IN')}</span>
               </div>
-              ` : ''}
             </div>
             
             <!-- Services Table -->
@@ -742,7 +749,7 @@ const sendEstimateEmail = async (estimate) => {
             ` : ''}
             
             <!-- Totals -->
-            <div style="background: #f9fafb; border-radius: 8px; padding: 15px;">
+            <div style="background: #f9fafb; border-radius: 8px; padding: 15px; margin-bottom: 25px;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #6b7280;">Subtotal</span>
                 <span style="color: #1f2937;">₹${Number(subtotal || 0).toLocaleString()}</span>
@@ -763,8 +770,25 @@ const sendEstimateEmail = async (estimate) => {
               </div>
             </div>
             
+            <!-- Action Buttons -->
+            <div style="text-align: center; margin: 30px 0;">
+              <p style="color: #374151; font-weight: 600; margin-bottom: 20px; font-size: 16px;">Please review and take action:</p>
+              <a href="${approveUrl}" style="display: inline-block; background: #059669; color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-size: 16px; font-weight: 600; margin-right: 15px;">
+                ✓ Approve Estimate
+              </a>
+              <a href="${rejectUrl}" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                ✗ Reject Estimate
+              </a>
+            </div>
+            
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin-top: 20px;">
+              <p style="color: #92400e; margin: 0; font-size: 14px;">
+                <strong>⚠️ Important:</strong> This estimate will automatically expire on <strong>${expiryDate.toLocaleDateString('en-IN')}</strong> if no action is taken.
+              </p>
+            </div>
+            
             <p style="color: #4b5563; line-height: 1.6; margin: 25px 0 0 0; font-size: 14px;">
-              If you have any questions about this estimate, please don't hesitate to contact us.
+              If you have any questions about this estimate, please don't hesitate to contact us at <a href="mailto:info@xlandinfra.com" style="color: #1e40af;">info@xlandinfra.com</a>.
             </p>
           </div>
           
@@ -789,6 +813,108 @@ const sendEstimateEmail = async (estimate) => {
   }
 };
 
+// Send notification to admins when estimate is approved/rejected
+const sendEstimateActionNotification = async (estimate, action, customerName) => {
+  const { estimateId, propertyName, total, customerEmail } = estimate;
+  const actionColor = action === 'Approved' ? '#059669' : '#dc2626';
+  const actionEmoji = action === 'Approved' ? '✅' : '❌';
+
+  const emailHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f3f4f6;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 24px;">XLAND INFRA</h1>
+          <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 14px;">Estimate ${action} Notification</p>
+        </div>
+        
+        <div style="background: #ffffff; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 25px;">
+            <span style="font-size: 48px;">${actionEmoji}</span>
+            <h2 style="color: ${actionColor}; margin: 15px 0 0 0; font-size: 24px;">Estimate ${action}</h2>
+          </div>
+          
+          <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+            <table style="width: 100%;">
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Estimate ID:</td>
+                <td style="padding: 8px 0; color: #1f2937; font-weight: 600; text-align: right;">${estimateId}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Customer Name:</td>
+                <td style="padding: 8px 0; color: #1f2937; font-weight: 600; text-align: right;">${customerName || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Customer Email:</td>
+                <td style="padding: 8px 0; color: #1f2937; text-align: right;">${customerEmail || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Property:</td>
+                <td style="padding: 8px 0; color: #1f2937; text-align: right;">${propertyName || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Total Amount:</td>
+                <td style="padding: 8px 0; color: #1e40af; font-weight: 700; font-size: 18px; text-align: right;">₹${Number(total || 0).toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Action Date:</td>
+                <td style="padding: 8px 0; color: #1f2937; text-align: right;">${new Date().toLocaleString('en-IN')}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <p style="color: #4b5563; line-height: 1.6; margin: 0; font-size: 14px; text-align: center;">
+            The customer has <strong style="color: ${actionColor};">${action.toLowerCase()}</strong> the estimate. 
+            ${action === 'Approved' ? 'Please proceed with the next steps.' : 'You may follow up with the customer for feedback.'}
+          </p>
+        </div>
+        
+        <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
+          <p style="margin: 0;">© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Send to admin emails
+  const adminEmails = ['info@xlandinfra.com', 'xlandinfra@gmail.com'];
+  
+  try {
+    const emailPromises = adminEmails.map(async (email) => {
+      const mailOptions = {
+        from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: `${actionEmoji} Estimate ${estimateId} ${action} by ${customerName || 'Customer'}`,
+        headers: getDefaultHeaders(),
+        html: emailHtml
+      };
+      
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`📧 Estimate action notification sent to ${email}`);
+        return { email, success: true };
+      } catch (err) {
+        console.error(`❌ Failed to send to ${email}:`, err.message);
+        return { email, success: false, error: err.message };
+      }
+    });
+
+    const results = await Promise.all(emailPromises);
+    const successCount = results.filter(r => r.success).length;
+    console.log(`📧 Estimate action notification: ${successCount}/${adminEmails.length} emails sent`);
+    return { success: successCount > 0, results };
+  } catch (error) {
+    console.error('Error sending estimate action notification:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWorkOrderNotification,
   sendContactNotification,
@@ -798,5 +924,6 @@ module.exports = {
   sendEmployeeWelcomeEmail,
   sendFPEmployeeWelcomeEmail,
   sendEstimateEmail,
+  sendEstimateActionNotification,
   NOTIFICATION_EMAIL
 };

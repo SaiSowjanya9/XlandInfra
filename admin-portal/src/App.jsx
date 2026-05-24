@@ -84,6 +84,7 @@ import EmployeeZoneManagement from './pages/EmployeeZoneManagement';
 import Estimates from './pages/Estimates';
 import UserManagement from './pages/UserManagement';
 import QRManagement from './pages/QRManagement';
+import EstimateAction from './pages/EstimateAction';
 
 // Session timeout in milliseconds (30 minutes)
 const SESSION_TIMEOUT = 30 * 60 * 1000;
@@ -208,6 +209,17 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
+    );
+  }
+
+  // Public route: Estimate Action page (accessible without login)
+  if (window.location.pathname.startsWith('/estimate-action/')) {
+    return (
+      <Router>
+        <Routes>
+          <Route path="/estimate-action/:estimateId" element={<EstimateAction />} />
+        </Routes>
+      </Router>
     );
   }
 
