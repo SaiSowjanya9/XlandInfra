@@ -280,24 +280,20 @@ export const seedSampleVendors = () => {
   console.log('[VendorStore] Seeded sample vendors');
 };
 
-// NOTE: Auto-seeding removed - vendors should only come from user input or API
-// To manually seed sample data for testing, call seedSampleVendors() from browser console
-
-// Clear all sample/demo vendors (VND-001 to VND-005)
-export const clearSampleVendors = () => {
+// Auto-clear sample vendors on store load (one-time cleanup)
+const autoCleanupSampleVendors = () => {
   const vendors = getStorageData(VENDOR_KEY);
   const sampleIds = ['VND-001', 'VND-002', 'VND-003', 'VND-004', 'VND-005'];
-  const filtered = vendors.filter(v => !sampleIds.includes(v.vendorId));
-  setStorageData(VENDOR_KEY, filtered);
-  console.log('[VendorStore] Cleared sample vendors');
-  return filtered.length;
+  const hasSampleData = vendors.some(v => sampleIds.includes(v.vendorId));
+  if (hasSampleData) {
+    const filtered = vendors.filter(v => !sampleIds.includes(v.vendorId));
+    setStorageData(VENDOR_KEY, filtered);
+    console.log('[VendorStore] Auto-cleared sample vendors');
+  }
 };
 
-// Clear ALL vendors (use with caution)
-export const clearAllVendors = () => {
-  setStorageData(VENDOR_KEY, []);
-  console.log('[VendorStore] Cleared all vendors');
-};
+// Run cleanup on load
+autoCleanupSampleVendors();
 
 // ============================================
 // Notifications – localStorage (UI-only)
