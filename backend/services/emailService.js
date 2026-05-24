@@ -659,6 +659,136 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
   }
 };
 
+// Send estimate email to customer
+const sendEstimateEmail = async (estimate) => {
+  const { customerName, customerEmail, estimateId, propertyName, services, addons, subtotal, discount, tax, total, validUntil } = estimate;
+  
+  if (!customerEmail) {
+    return { success: false, error: 'No customer email provided' };
+  }
+
+  // Format services list
+  const servicesHtml = (services || []).map(s => `
+    <tr>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">${s.name || s.service || 'Service'}</td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${Number(s.price || s.rate || 0).toLocaleString()}</td>
+    </tr>
+  `).join('');
+
+  // Format addons list
+  const addonsHtml = (addons || []).map(a => `
+    <tr>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">${a.name || a.serviceName || a.services?.[0]?.name || 'Add-on'}</td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${Number(a.price || a.totalPrice || a.services?.[0]?.price || 0).toLocaleString()}</td>
+    </tr>
+  `).join('');
+
+  const mailOptions = {
+    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    to: customerEmail,
+    subject: `Your Estimate ${estimateId} from XLAND INFRA`,
+    headers: getDefaultHeaders(),
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f3f4f6;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">XLAND INFRA</h1>
+            <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 14px;">Property Management Solutions</p>
+          </div>
+          
+          <!-- Content -->
+          <div style="background: #ffffff; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px;">Hello ${customerName || 'Valued Customer'},</h2>
+            
+            <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">
+              Thank you for your interest in our services. Please find below the estimate for your property <strong>${propertyName || 'N/A'}</strong>.
+            </p>
+            
+            <!-- Estimate Details -->
+            <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <span style="color: #6b7280; font-size: 14px;">Estimate ID</span>
+                <span style="color: #1f2937; font-weight: 600;">${estimateId}</span>
+              </div>
+              ${validUntil ? `
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: #6b7280; font-size: 14px;">Valid Until</span>
+                <span style="color: #1f2937; font-weight: 600;">${new Date(validUntil).toLocaleDateString('en-IN')}</span>
+              </div>
+              ` : ''}
+            </div>
+            
+            <!-- Services Table -->
+            ${services?.length > 0 || addons?.length > 0 ? `
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+              <thead>
+                <tr style="background: #f3f4f6;">
+                  <th style="padding: 12px; text-align: left; font-size: 14px; color: #374151; border-bottom: 2px solid #e5e7eb;">Description</th>
+                  <th style="padding: 12px; text-align: right; font-size: 14px; color: #374151; border-bottom: 2px solid #e5e7eb;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${servicesHtml}
+                ${addonsHtml}
+              </tbody>
+            </table>
+            ` : ''}
+            
+            <!-- Totals -->
+            <div style="background: #f9fafb; border-radius: 8px; padding: 15px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #6b7280;">Subtotal</span>
+                <span style="color: #1f2937;">₹${Number(subtotal || 0).toLocaleString()}</span>
+              </div>
+              ${discount > 0 ? `
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #6b7280;">Discount</span>
+                <span style="color: #059669;">-₹${Number(discount).toLocaleString()}</span>
+              </div>
+              ` : ''}
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #6b7280;">Tax (GST)</span>
+                <span style="color: #1f2937;">₹${Number(tax || 0).toLocaleString()}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 2px solid #e5e7eb; margin-top: 8px;">
+                <span style="color: #1f2937; font-weight: 700; font-size: 16px;">Total</span>
+                <span style="color: #1e40af; font-weight: 700; font-size: 18px;">₹${Number(total || 0).toLocaleString()}</span>
+              </div>
+            </div>
+            
+            <p style="color: #4b5563; line-height: 1.6; margin: 25px 0 0 0; font-size: 14px;">
+              If you have any questions about this estimate, please don't hesitate to contact us.
+            </p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
+            <p style="margin: 0;">© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.</p>
+            <p style="margin: 8px 0 0 0;">This is an automated email. Please do not reply directly.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`📧 Estimate email sent to ${customerEmail} (Estimate: ${estimateId}, Message ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error sending estimate email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWorkOrderNotification,
   sendContactNotification,
@@ -667,5 +797,6 @@ module.exports = {
   sendPasswordResetConfirmation,
   sendEmployeeWelcomeEmail,
   sendFPEmployeeWelcomeEmail,
+  sendEstimateEmail,
   NOTIFICATION_EMAIL
 };

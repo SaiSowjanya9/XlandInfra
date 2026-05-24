@@ -58,10 +58,24 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
     return matchSearch && matchType && matchStatus && matchProperty;
   });
 
-  const handleSendEstimate = (estimate) => {
-    updateEstimate(estimate.estimateId, { status: 'Sent' });
-    showToast('Estimate sent!');
-    onRefresh();
+  const handleSendEstimate = async (estimate) => {
+    try {
+      const response = await fetch(`/api/estimates-sync/${estimate.estimateId}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        showToast(`Estimate sent to ${result.email}`);
+        onRefresh();
+      } else {
+        showToast(result.message || 'Failed to send estimate', 'error');
+      }
+    } catch (error) {
+      console.error('Send estimate error:', error);
+      showToast('Failed to send estimate', 'error');
+    }
   };
 
   const handleArchiveEstimate = async (estimateId) => {

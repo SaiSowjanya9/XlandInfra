@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
+const { sendEstimateEmail } = require('../services/emailService');
 
 // GET all estimates (supports ?archived=true for archived estimates)
 router.get('/', async (req, res) => {
@@ -238,6 +239,83 @@ router.delete('/:estimateId', async (req, res) => {
     res.json({ success: true, message: 'Estimate deleted' });
   } catch (error) {
     console.error('Delete estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// SEND estimate email to customer
+router.post('/:estimateId/send', async (req, res) => {
+  try {
+    if (!db.isDbConnected) {
+      return res.status(503).json({ success: false, message: 'Database not connected' });
+    }
+    
+    const { estimateId } = req.params;
+    
+    const pool = db.pool;
+    const [estimates] = await pool.execute(
+      `SELECT * FROM estimates WHERE estimate_id = ? AND is_active = TRUE`,
+      [estimateId]
+    );
+    
+    if (estimates.length === 0) {
+      return res.status(404).json({ success: false, message: 'Estimate not found' });
+    }
+    
+    const est = estimates[0];
+    
+    // Parse JSON fields
+    let services = [];
+    let addons = [];
+    if (est.services) {
+      services = typeof est.services === 'string' ? JSON.parse(est.services) : est.services;
+    }
+    if (est.addons) {
+      addons = typeof est.addons === 'string' ? JSON.parse(est.addons) : est.addons;
+    }
+    
+    // Prepare estimate data for email
+    const estimateData = {
+      estimateId: est.estimate_id,
+      customerName: est.customer_name,
+      customerEmail: est.customer_email,
+      propertyName: est.property_name,
+      services: services,
+      addons: addons,
+      subtotal: parseFloat(est.subtotal || 0),
+      discount: parseFloat(est.discount || 0),
+      tax: parseFloat(est.tax || 0),
+      total: parseFloat(est.total || 0),
+      validUntil: est.valid_until
+    };
+    
+    if (!estimateData.customerEmail) {
+      return res.status(400).json({ success: false, message: 'No customer email found for this estimate' });
+    }
+    
+    // Send the email
+    const emailResult = await sendEstimateEmail(estimateData);
+    
+    if (emailResult.success) {
+      // Update estimate status to 'Sent'
+      await pool.execute(
+        `UPDATE estimates SET status = 'Sent' WHERE estimate_id = ?`,
+        [estimateId]
+      );
+      
+      res.json({ 
+        success: true, 
+        message: `Estimate sent to ${estimateData.customerEmail}`,
+        email: estimateData.customerEmail
+      });
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        message: emailResult.error || 'Failed to send email'
+      });
+    }
+  } catch (error) {
+    console.error('Send estimate email error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
