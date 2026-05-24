@@ -32,6 +32,7 @@ router.get('/', async (req, res) => {
       }
       return {
         estimateId: est.estimate_id,
+        estimateType: est.estimate_type || 'direct',
         customerName: est.customer_name,
         customerEmail: est.customer_email,
         customerPhone: est.customer_phone,
@@ -72,10 +73,17 @@ router.post('/', async (req, res) => {
       customerName, customerEmail, customerPhone,
       propertyType, propertyName, propertyAddress,
       services, addons, subtotal, discount, tax, total,
-      notes, status, validUntil
+      notes, status, validUntil, estimateType,
+      subTotal, gst, totalPrice
     } = req.body;
     
     const estimateId = `EST-${Date.now()}`;
+    
+    // Use proper field names (frontend sends different names)
+    const finalSubtotal = subtotal || subTotal || 0;
+    const finalTax = tax || gst || 0;
+    const finalTotal = total || totalPrice || 0;
+    const finalType = estimateType || 'direct';
     
     const pool = db.pool;
     await pool.execute(
@@ -83,8 +91,8 @@ router.post('/', async (req, res) => {
         estimate_id, customer_name, customer_email, customer_phone,
         property_type, property_name, property_address,
         services, addons, subtotal, discount, tax, total,
-        notes, status, valid_until
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        notes, status, valid_until, estimate_type
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         estimateId,
         customerName || null,
@@ -95,13 +103,14 @@ router.post('/', async (req, res) => {
         propertyAddress || null,
         services ? JSON.stringify(services) : null,
         addons ? JSON.stringify(addons) : null,
-        subtotal || 0,
+        finalSubtotal,
         discount || 0,
-        tax || 0,
-        total || 0,
+        finalTax,
+        finalTotal,
         notes || null,
-        status || 'draft',
-        validUntil || null
+        status || 'Draft',
+        validUntil || null,
+        finalType
       ]
     );
     
