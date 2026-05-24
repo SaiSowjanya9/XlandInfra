@@ -64,6 +64,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
     serviceRows: [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }],
     price: '',
     billingDuration: 'monthly',
+    description: ''
   });
 
   const loadData = async () => {
@@ -150,6 +151,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
       billingDuration: amcForm.billingDuration,
       totalRate: getPrice(),
       status: 'active',
+      description: amcForm.description?.trim() || ''
     };
 
     if (editingPackage) {
@@ -194,6 +196,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
       serviceRows: loadedServiceRows,
       price: pkg.rate?.toString() || '',
       billingDuration: pkg.billingDuration || 'monthly',
+      description: pkg.description || ''
     });
     setShowEditModal(true);
   };
@@ -221,6 +224,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
       serviceRows: [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }],
       price: '',
       billingDuration: 'monthly',
+      description: ''
     });
     setSelectedPropertyType(null);
     setEditingPackage(null);
@@ -580,7 +584,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
                     </div>
                   </div>
 
-                  {/* Service Rows */}
+                    {/* Service Rows */}
                   <div className="space-y-3">
                     {amcForm.serviceRows.map((row, index) => (
                       <div key={index} className="grid grid-cols-12 gap-3 items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -637,6 +641,19 @@ const AMCPackageManager = ({ admin, showToast }) => {
                         </div>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Description - Optional */}
+                  <div className="mt-5">
+                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Description (Optional)</label>
+                    <textarea
+                      value={amcForm.description}
+                      onChange={(e) => setAmcForm({ ...amcForm, description: e.target.value })}
+                      placeholder="Add notes or description for this package..."
+                      rows={3}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 resize-y"
+                      style={{ minHeight: '80px' }}
+                    />
                   </div>
                 </div>
 
@@ -900,6 +917,19 @@ const AMCPackageManager = ({ admin, showToast }) => {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Description - Optional */}
+              <div className="border-t border-gray-100 pt-5">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Description (Optional)</label>
+                <textarea
+                  value={amcForm.description}
+                  onChange={(e) => setAmcForm({ ...amcForm, description: e.target.value })}
+                  placeholder="Add notes or description for this package..."
+                  rows={3}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 resize-y"
+                  style={{ minHeight: '80px' }}
+                />
               </div>
 
               {/* Price Summary - LIGHT Design */}
