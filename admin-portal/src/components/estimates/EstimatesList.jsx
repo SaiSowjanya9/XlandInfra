@@ -436,11 +436,26 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                   <p className="text-sm text-gray-500 mb-2">Add-ons</p>
                   <div className="space-y-2">
                     {viewEstimate.addons.map((addon, idx) => {
-                      // Handle different addon data structures
-                      const addonName = addon.name || addon.serviceName || addon.services?.[0]?.name || addon.addonName || 'Add-on';
-                      const addonPrice = addon.price || addon.totalPrice || addon.services?.[0]?.price || 0;
-                      const addonFrequency = addon.frequency || addon.frequencyCount || addon.services?.[0]?.frequency;
-                      const addonFrequencyType = addon.frequencyType || addon.services?.[0]?.frequencyType;
+                      // Handle different addon data structures including plain numbers
+                      if (typeof addon === 'number') {
+                        return (
+                          <div key={idx} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
+                            <p className="font-medium text-blue-800">Add-on {idx + 1}</p>
+                            <p className="font-semibold text-blue-700">₹{Number(addon).toLocaleString()}</p>
+                          </div>
+                        );
+                      }
+                      
+                      // Get addon name from various possible structures
+                      const addonName = addon.name || addon.serviceName || addon.service_name || 
+                                       addon.services?.[0]?.name || addon.addonName || 
+                                       addon.addon_name || `Add-on ${idx + 1}`;
+                      const addonPrice = addon.price || addon.totalPrice || addon.total_price || 
+                                        addon.services?.[0]?.price || addon.rate || 0;
+                      const addonFrequency = addon.frequency || addon.frequencyCount || 
+                                            addon.frequency_count || addon.services?.[0]?.frequency;
+                      const addonFrequencyType = addon.frequencyType || addon.frequency_type || 
+                                                addon.services?.[0]?.frequencyType;
                       
                       return (
                         <div key={idx} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">

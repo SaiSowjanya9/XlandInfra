@@ -6,7 +6,7 @@ import {
   Settings, Flame, ArrowUpDown, Droplets, Trash, Waves,
   FileCheck, Edit3, Save
 } from 'lucide-react';
-import { getVendors, deleteVendor, updateVendor, getVendorNotifications, markAllVendorNotificationsRead, clearSampleVendors } from '../utils/vendorStore';
+import { getVendors, deleteVendor, updateVendor, getVendorNotifications, markAllVendorNotificationsRead } from '../utils/vendorStore';
 import * as XLSX from 'xlsx';
 
 // Service Type Tabs (like Client Submissions tabs)
@@ -78,14 +78,6 @@ const VendorDetails = () => {
   const handleMarkAllRead = () => {
     markAllVendorNotificationsRead();
     setNotifications(getVendorNotifications());
-  };
-
-  const handleClearSampleVendors = async () => {
-    if (window.confirm('This will remove all sample/demo vendors (VND-001 to VND-005). Continue?')) {
-      clearSampleVendors();
-      await loadData();
-      showToast('Sample vendors cleared');
-    }
   };
 
   const handleOpenEdit = (vendor) => {
@@ -251,17 +243,6 @@ const VendorDetails = () => {
           <p className="text-gray-500 text-sm mt-1">{vendors.length} total vendors</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Clear Sample Data Button - only show if sample vendors exist */}
-          {vendors.some(v => ['VND-001', 'VND-002', 'VND-003', 'VND-004', 'VND-005'].includes(v.vendorId)) && (
-            <button
-              onClick={handleClearSampleVendors}
-              className="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
-              title="Clear sample/demo vendors"
-            >
-              Clear Demo Data
-            </button>
-          )}
-          
           <button
             onClick={loadData}
             className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
