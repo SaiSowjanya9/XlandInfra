@@ -550,7 +550,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!estimateType) {
       showToast?.('Please select an estimate type', 'error');
       return;
@@ -685,12 +685,17 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       }
     }
 
-    const createdEstimate = createEstimate(estimateData);
-    setLastCreatedEstimate(createdEstimate);
-    
-    showToast?.('Estimate saved successfully!', 'success');
-    resetForm();
-    if (onSuccess) onSuccess();
+    try {
+      const createdEstimate = await createEstimate(estimateData);
+      setLastCreatedEstimate(createdEstimate);
+      
+      showToast?.('Estimate saved successfully!', 'success');
+      resetForm();
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      console.error('Save estimate error:', error);
+      showToast?.('Failed to save estimate', 'error');
+    }
   };
 
   const handleSendEmail = async () => {
