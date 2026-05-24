@@ -693,9 +693,29 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     if (onSuccess) onSuccess();
   };
 
-  const handleSendEmail = () => {
-    const email = lastCreatedEstimate?.customerEmail || selectedProperty?.associationContacts?.[0]?.email;
-    showToast?.(`Estimate sent to ${email}`, 'success');
+  const handleSendEmail = async () => {
+    if (!lastCreatedEstimate?.estimateId) {
+      showToast?.('No estimate to send', 'error');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/estimates-sync/${lastCreatedEstimate.estimateId}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        showToast?.(`Estimate sent to ${result.email}`, 'success');
+      } else {
+        showToast?.(result.message || 'Failed to send email', 'error');
+      }
+    } catch (error) {
+      console.error('Send email error:', error);
+      showToast?.('Failed to send email', 'error');
+    }
+    
     setShowEmailConfirm(false);
     resetForm();
     if (onSuccess) onSuccess();
