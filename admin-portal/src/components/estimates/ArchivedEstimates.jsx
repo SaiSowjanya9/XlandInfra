@@ -259,12 +259,27 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast }) => {
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-sm text-gray-500 mb-2">Add-ons</p>
                   <div className="space-y-2">
-                    {viewEstimate.addons.map((addon, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
-                        <p className="font-medium text-blue-800">{addon.name || addon.serviceName}</p>
-                        <p className="font-semibold text-blue-700">₹{Number(addon.price || addon.totalPrice || 0).toLocaleString()}</p>
-                      </div>
-                    ))}
+                    {viewEstimate.addons.map((addon, idx) => {
+                      // Get addon name from various possible structures
+                      const addonName = addon.name || addon.serviceName || 
+                        (addon.services?.[0]?.name) || 
+                        (Array.isArray(addon.services) ? addon.services.map(s => s.name || s.service).join(', ') : null) ||
+                        'Add-on';
+                      const addonPrice = addon.price || addon.totalPrice || 
+                        (addon.services?.reduce((sum, s) => sum + (parseFloat(s.price) || 0), 0)) || 0;
+                      
+                      return (
+                        <div key={idx} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
+                          <div>
+                            <p className="font-medium text-blue-800">{addonName}</p>
+                            {addon.services?.length > 1 && (
+                              <p className="text-xs text-blue-600">{addon.services.length} services included</p>
+                            )}
+                          </div>
+                          <p className="font-semibold text-blue-700">₹{Number(addonPrice).toLocaleString()}</p>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
