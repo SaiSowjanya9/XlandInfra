@@ -131,7 +131,7 @@ const AddEmployee = ({ admin }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          'Authorization': `Bearer ${sessionStorage.getItem('pm_auth_token')}`
         },
         body: JSON.stringify(employeeData)
       });
