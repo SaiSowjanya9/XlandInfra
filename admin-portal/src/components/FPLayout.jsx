@@ -21,8 +21,6 @@ import {
   Truck,
   Hammer,
   ClipboardCheck,
-  UserCog,
-  Shield,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -52,9 +50,6 @@ const FPLayout = ({ admin, onLogout, children }) => {
     location.pathname.startsWith('/fp/estimates')
   );
 
-  const [userMgmtOpen, setUserMgmtOpen] = useState(
-    location.pathname.startsWith('/fp/user-management')
-  );
 
   // Base nav items - filtered based on role
   const allNavItems = [
@@ -69,9 +64,6 @@ const FPLayout = ({ admin, onLogout, children }) => {
     ? allNavItems.filter(item => !item.fpOnly)
     : allNavItems;
 
-  const userMgmtSubItems = [
-    { path: '/fp/user-management', icon: Shield, label: 'Manage Users' },
-  ];
 
   // Vendor sub-items - Add Vendor hidden for FP Manager, Assigned Vendors is view-only
   const allVendorSubItems = [
@@ -109,7 +101,6 @@ const FPLayout = ({ admin, onLogout, children }) => {
   const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEmployeeSectionActive = employeeSubItems.some(item => location.pathname === item.path);
   const isEstimatesSectionActive = estimatesSubItems.some(item => location.pathname === item.path);
-  const isUserMgmtSectionActive = userMgmtSubItems.some(item => location.pathname === item.path);
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
@@ -195,36 +186,6 @@ const FPLayout = ({ admin, onLogout, children }) => {
               <NavLink key={item.path} item={item} mobile />
             ))}
 
-            {/* User Management Section - Hidden for FP Manager */}
-            {!isFPManager && (
-              <div className="mt-2">
-                <button
-                  onClick={() => setUserMgmtOpen(!userMgmtOpen)}
-                  className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
-                    isUserMgmtSectionActive && !userMgmtOpen
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <UserCog className="w-5 h-5" />
-                    <span className="font-medium">User Management</span>
-                  </div>
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform duration-200 ${
-                      userMgmtOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-                {userMgmtOpen && (
-                  <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
-                    {userMgmtSubItems.map((item) => (
-                      <NavLink key={item.path} item={item} mobile />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Vendor Management Section */}
             <div className="mt-2">

@@ -33,7 +33,6 @@ import FPAddVendor from './pages/FPAddVendor';
 import FPEmployees from './pages/FPEmployees';
 import FPAddEmployee from './pages/FPAddEmployee';
 import FPEmployeeZones from './pages/FPEmployeeZones';
-import FPUserManagement from './pages/FPUserManagement';
 import FPEstimates from './pages/FPEstimates';
 
 import ManagerLogin from './pages/ManagerLogin';
@@ -312,7 +311,6 @@ function App() {
             <Route path="/fp/employees" element={<FPEmployees user={user} />} />
             <Route path="/fp/employees/add" element={<FPAddEmployee user={user} />} />
             <Route path="/fp/employees/zones" element={<FPEmployeeZones user={user} />} />
-            <Route path="/fp/user-management" element={<FPUserManagement user={user} />} />
             <Route path="/fp/estimates" element={<FPEstimates user={user} defaultTab="list" />} />
             <Route path="/fp/estimates/create" element={<FPEstimates user={user} defaultTab="create" />} />
             <Route path="/fp/estimates/amc" element={<FPEstimates user={user} defaultTab="amc" />} />
