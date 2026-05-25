@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ClipboardList,
   Plus,
@@ -9,76 +9,43 @@ import {
   CheckCircle,
   Clock,
   Eye,
-  Building2,
-  User,
-  Mail,
-  Phone,
-  Image,
-  Camera,
-  FileText,
-  Upload,
-  Store,
-  Users,
-  Download,
-  Trash2,
   RotateCcw,
-  Lock,
-  ChevronDown
+  XCircle,
+  Store,
+  UserPlus
 } from 'lucide-react';
 
 const ManagerWorkOrders = ({ user }) => {
-  // Check if this is an FP-created Manager (has franchisePartnerId)
-  const isFPManager = !!user?.franchisePartnerId;
-
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [customers, setCustomers] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
-  const [showViewModal, setShowViewModal] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(null);
+  const [showAssignModal, setShowAssignModal] = useState(null);
+  const [cancelNote, setCancelNote] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [propertySearch, setPropertySearch] = useState('');
-  const [subcategories, setSubcategories] = useState([]);
-  const [attachments, setAttachments] = useState([]);
-  const fileInputRef = useRef(null);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [formData, setFormData] = useState({
     propertyId: '',
     categoryId: '',
-    subcategoryId: '',
-    customerName: '',
-    customerEmail: '',
-    customerPhone: '',
     description: '',
-    priority: 'medium',
-    permissionToEnter: 'no',
-    hasPet: 'no',
-    entryNotes: ''
+    priority: 'medium'
   });
 
   const token = sessionStorage.getItem('pm_auth_token');
 
   const statusOptions = [
-    { value: '', label: 'All Status' },
-    { value: 'draft', label: 'Draft' },
-    { value: 'requested', label: 'Requested' },
-    { value: 'under_review', label: 'Under Review' },
-    { value: 'assigned', label: 'Assigned' },
-    { value: 'accepted', label: 'Accepted' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'closed', label: 'Closed' },
-    { value: 'cancelled', label: 'Cancelled' }
-  ];
-
-  const priorityOptions = [
-    { value: 'low', label: 'Low', color: 'bg-green-100 text-green-700' },
-    { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-700' },
-    { value: 'high', label: 'High', color: 'bg-orange-100 text-orange-700' },
-    { value: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-700' }
+    { value: 'pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-700' },
+    { value: 'assigned', label: 'Assigned', color: 'bg-purple-100 text-purple-700' },
+    { value: 'in_progress', label: 'In Progress', color: 'bg-orange-100 text-orange-700' },
+    { value: 'completed', label: 'Completed', color: 'bg-green-100 text-green-700' },
+    { value: 'closed', label: 'Closed', color: 'bg-gray-100 text-gray-700' },
+    { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-700' }
   ];
 
   const fetchWorkOrders = async () => {
@@ -467,8 +434,8 @@ const ManagerWorkOrders = ({ user }) => {
                       <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-1">
-                        {/* View Details - Always visible */}
+                      <div className="flex items-center justify-end gap-2">
+                        {/* View Details */}
                         <button
                           onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -477,86 +444,47 @@ const ManagerWorkOrders = ({ user }) => {
                           <Eye className="w-4 h-4" />
                         </button>
                         
-                        {/* PENDING TAB ACTIONS */}
-                        {activeTab === 'pending' && (
-                          <>
-                            {/* Assign Vendor - Hidden for FP Manager */}
-                            {!isFPManager && (
-                              <button
-                                onClick={() => { setSelectedWorkOrder(wo); /* TODO: Open assign vendor modal */ }}
-                                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
-                                title="Assign Vendor"
-                              >
-                                <Store className="w-4 h-4" />
-                              </button>
-                            )}
-                            {/* Assign Employee - Hidden for FP Manager */}
-                            {!isFPManager && (
-                              <button
-                                onClick={() => { setSelectedWorkOrder(wo); /* TODO: Open assign employee modal */ }}
-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
-                                title="Assign Employee"
-                              >
-                                <Users className="w-4 h-4" />
-                              </button>
-                            )}
-                            {/* Export to Excel - Hidden for FP Manager */}
-                            {!isFPManager && (
-                              <button
-                                onClick={() => { /* TODO: Export single work order */ }}
-                                className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
-                                title="Export to Excel"
-                              >
-                                <Download className="w-4 h-4" />
-                              </button>
-                            )}
-                            {/* Delete - Hidden for FP Manager */}
-                            {!isFPManager && (
-                              <button
-                                onClick={() => { /* TODO: Delete work order */ }}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </>
+                        {/* Change of Status - dropdown */}
+                        <select
+                          value={wo.status}
+                          onChange={(e) => {
+                            if (e.target.value === 'cancelled') {
+                              setShowCancelModal(wo);
+                            } else {
+                              handleStatusUpdate(wo.id, e.target.value);
+                            }
+                          }}
+                          className="px-2 py-1 text-xs border border-gray-200 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500"
+                          title="Change Status"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="assigned">Assigned</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                          <option value="closed">Closed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                        
+                        {/* Mark As Closed */}
+                        {wo.status !== 'closed' && (
+                          <button
+                            onClick={() => handleStatusUpdate(wo.id, 'closed')}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                            title="Mark As Closed"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
                         )}
                         
-                        {/* COMPLETED TAB ACTIONS */}
-                        {activeTab === 'completed' && (
-                          <>
-                            {/* Change of Status - dropdown */}
-                            <select
-                              value={wo.status}
-                              onChange={(e) => handleStatusUpdate(wo.id, e.target.value)}
-                              className="px-2 py-1 text-xs border border-gray-200 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500"
-                              title="Change Status"
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="assigned">Assigned</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="completed">Completed</option>
-                              <option value="closed">Closed</option>
-                              <option value="certified">Certified</option>
-                            </select>
-                            {/* Mark As Closed */}
-                            <button
-                              onClick={() => handleStatusUpdate(wo.id, 'closed')}
-                              className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
-                              title="Mark As Closed"
-                            >
-                              <Lock className="w-4 h-4" />
-                            </button>
-                            {/* Rivet to Pending */}
-                            <button
-                              onClick={() => handleStatusUpdate(wo.id, 'pending')}
-                              className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg"
-                              title="Revert to Pending"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </button>
-                          </>
+                        {/* Revert to Pending */}
+                        {wo.status !== 'pending' && (
+                          <button
+                            onClick={() => handleStatusUpdate(wo.id, 'pending')}
+                            className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg"
+                            title="Revert to Pending"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </td>
@@ -953,6 +881,78 @@ const ManagerWorkOrders = ({ user }) => {
                   className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Modal - Requires Note */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowCancelModal(null); setCancelNote(''); }}>
+          <div className="bg-white rounded-xl max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Cancel Work Order</h2>
+              <button onClick={() => { setShowCancelModal(null); setCancelNote(''); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-500 mb-2">
+                Work Order: <span className="font-medium text-gray-900">{showCancelModal.work_order_id}</span>
+              </p>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cancellation Note <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={cancelNote}
+                  onChange={(e) => setCancelNote(e.target.value)}
+                  placeholder="Please provide a reason for cancellation..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => { setShowCancelModal(null); setCancelNote(''); }}
+                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!cancelNote.trim()) {
+                      setMessage({ type: 'error', text: 'Cancellation note is required' });
+                      return;
+                    }
+                    try {
+                      const response = await fetch(`/api/manager/work-orders/${showCancelModal.id}/status`, {
+                        method: 'PATCH',
+                        headers: {
+                          'Authorization': `Bearer ${token}`,
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ status: 'cancelled', notes: cancelNote })
+                      });
+                      const result = await response.json();
+                      if (result.success) {
+                        setMessage({ type: 'success', text: 'Work order cancelled' });
+                        fetchWorkOrders();
+                      } else {
+                        setMessage({ type: 'error', text: result.message || 'Failed to cancel' });
+                      }
+                    } catch (error) {
+                      setMessage({ type: 'error', text: 'Failed to cancel work order' });
+                    }
+                    setShowCancelModal(null);
+                    setCancelNote('');
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Confirm Cancel
                 </button>
               </div>
             </div>

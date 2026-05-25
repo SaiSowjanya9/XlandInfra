@@ -1,89 +1,44 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Building2,
-  Store,
-  Users,
-  ClipboardList,
-  FileText,
-  Clock,
-  CheckCircle,
-  AlertCircle,
+  Eye,
+  Search,
   RefreshCw,
-  ArrowRight,
-  TrendingUp,
-  Calendar
+  MapPin,
+  Phone,
+  Mail,
+  X
 } from 'lucide-react';
 
 const ManagerDashboard = ({ user }) => {
-  const navigate = useNavigate();
-  // Check if this is an FP-created Manager (has franchisePartnerId)
-  const isFPManager = !!user?.franchisePartnerId;
-
-  const [stats, setStats] = useState(null);
-  const [recentWorkOrders, setRecentWorkOrders] = useState([]);
+  const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProperty, setSelectedProperty] = useState(null);
 
   const token = sessionStorage.getItem('pm_auth_token');
 
-  const fetchDashboard = async () => {
+  // Fetch properties
+  const fetchProperties = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/manager/dashboard', {
+      const response = await fetch('/api/manager/properties', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
-
       if (result.success) {
-        setStats(result.data.stats);
-        setRecentWorkOrders(result.data.recentWorkOrders || []);
+        setProperties(result.data || []);
       }
     } catch (error) {
-      console.error('Dashboard fetch error:', error);
+      console.error('Fetch properties error:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDashboard();
+    fetchProperties();
   }, []);
-
-  const statCards = [
-    { label: 'Properties', value: stats?.properties || 0, icon: Building2, color: 'blue', path: '/manager/properties' },
-    { label: 'Vendors', value: stats?.vendors || 0, icon: Store, color: 'purple', path: '/manager/vendors' },
-    { label: 'Customers', value: stats?.customers || 0, icon: Users, color: 'green', path: '/manager/customers' },
-    { label: 'Employees', value: stats?.employees || 0, icon: Users, color: 'orange', path: '/manager/employees' },
-    { label: 'Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, color: 'indigo', path: '/manager/work-orders' },
-    { label: 'Estimates', value: stats?.estimates || 0, icon: FileText, color: 'pink', path: '/manager/estimates' }
-  ];
-
-  const getColorClasses = (color) => {
-    const colors = {
-      blue: 'bg-blue-50 text-blue-600 border-blue-100',
-      purple: 'bg-purple-50 text-purple-600 border-purple-100',
-      green: 'bg-green-50 text-green-600 border-green-100',
-      orange: 'bg-orange-50 text-orange-600 border-orange-100',
-      indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-      pink: 'bg-pink-50 text-pink-600 border-pink-100'
-    };
-    return colors[color] || colors.blue;
-  };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      draft: 'bg-gray-100 text-gray-600',
-      requested: 'bg-blue-100 text-blue-700',
-      under_review: 'bg-yellow-100 text-yellow-700',
-      assigned: 'bg-purple-100 text-purple-700',
-      accepted: 'bg-indigo-100 text-indigo-700',
-      in_progress: 'bg-orange-100 text-orange-700',
-      completed: 'bg-green-100 text-green-700',
-      closed: 'bg-gray-100 text-gray-600',
-      cancelled: 'bg-red-100 text-red-700'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-600';
-  };
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -94,14 +49,22 @@ const ManagerDashboard = ({ user }) => {
     });
   };
 
-  // Quick actions - Add Property and Add Customer hidden for FP Manager
-  const allQuickActions = [
-    { label: 'Add Property', icon: Building2, path: '/manager/properties', color: 'blue', adminOnly: true },
-    { label: 'Create Work Order', icon: ClipboardList, path: '/manager/work-orders', color: 'indigo' },
-    { label: 'Add Customer', icon: Users, path: '/manager/customers', color: 'green', adminOnly: true },
-    { label: 'Create Estimate', icon: FileText, path: '/manager/estimates/create', color: 'purple' }
-  ];
-  const quickActions = isFPManager ? allQuickActions.filter(a => !a.adminOnly) : allQuickActions;
+  const getStatusColor = (status) => {
+    const colors = {
+      active: 'bg-green-100 text-green-700',
+      inactive: 'bg-gray-100 text-gray-600',
+      pending: 'bg-yellow-100 text-yellow-700'
+    };
+    return colors[status] || 'bg-gray-100 text-gray-600';
+  };
+
+  // Filter properties
+  const filteredProperties = properties.filter(p =>
+    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.property_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.zone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.division?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -113,176 +76,107 @@ const ManagerDashboard = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Welcome back, {user?.firstName || 'Manager'}!
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Here's what's happening with your operations today.
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-500 mt-1">Manage your properties</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Pending</p>
-            <p className="text-2xl font-bold text-orange-600">{stats?.pendingWorkOrders || 0}</p>
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Completed</p>
-            <p className="text-2xl font-bold text-green-600">{stats?.completedWorkOrders || 0}</p>
-          </div>
+        <button
+          onClick={fetchProperties}
+          className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      {/* Search */}
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name, ID, zone, division..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {statCards.map((stat) => (
-          <button
-            key={stat.label}
-            onClick={() => navigate(stat.path)}
-            className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all text-left group"
-          >
-            <div className={`w-10 h-10 rounded-lg ${getColorClasses(stat.color)} flex items-center justify-center mb-3`}>
-              <stat.icon className="w-5 h-5" />
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-            <p className="text-sm text-gray-500">{stat.label}</p>
-          </button>
-        ))}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg border border-gray-200 p-5">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {quickActions.map((action) => (
-            <button
-              key={action.label}
-              onClick={() => navigate(action.path)}
-              className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-gray-50 transition-all group"
-            >
-              <div className={`w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-primary-50`}>
-                <action.icon className="w-5 h-5 text-gray-600 group-hover:text-primary-600" />
-              </div>
-              <span className="text-sm font-medium text-gray-700 group-hover:text-primary-700">
-                {action.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Work Orders Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Pending Work Orders */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
-                <Clock className="w-4 h-4 text-orange-600" />
-              </div>
-              <h3 className="font-medium text-gray-900">Pending</h3>
-            </div>
-            <span className="text-2xl font-bold text-orange-600">{stats?.pendingWorkOrders || 0}</span>
-          </div>
-          <button
-            onClick={() => navigate('/manager/work-orders/pending')}
-            className="w-full py-2 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors border border-orange-200"
-          >
-            View All Pending
-          </button>
-        </div>
-
-        {/* Completed Work Orders */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-4 h-4 text-green-600" />
-              </div>
-              <h3 className="font-medium text-gray-900">Completed</h3>
-            </div>
-            <span className="text-2xl font-bold text-green-600">{stats?.completedWorkOrders || 0}</span>
-          </div>
-          <button
-            onClick={() => navigate('/manager/work-orders/completed')}
-            className="w-full py-2 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-green-200"
-          >
-            View All Completed
-          </button>
-        </div>
-
-        {/* Total Estimates */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
-                <FileText className="w-4 h-4 text-purple-600" />
-              </div>
-              <h3 className="font-medium text-gray-900">Estimates</h3>
-            </div>
-            <span className="text-2xl font-bold text-purple-600">{stats?.estimates || 0}</span>
-          </div>
-          <button
-            onClick={() => navigate('/manager/estimates')}
-            className="w-full py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors border border-purple-200"
-          >
-            Manage Estimates
-          </button>
-        </div>
-      </div>
-
-      {/* Recent Work Orders Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Work Orders</h2>
-          <button
-            onClick={() => navigate('/manager/work-orders')}
-            className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
-          >
-            View All <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {recentWorkOrders.length === 0 ? (
-          <div className="p-8 text-center">
-            <ClipboardList className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 text-sm">No work orders yet</p>
-            <button
-              onClick={() => navigate('/manager/work-orders')}
-              className="mt-3 text-sm text-primary-600 hover:text-primary-700"
-            >
-              Create your first work order
-            </button>
+      {/* Properties Table */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        {filteredProperties.length === 0 ? (
+          <div className="text-center py-12">
+            <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No properties found</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Work Order</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Property</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Name</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">ID</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Type</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Zone</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Area</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Division</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Units</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Address</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Contacts</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Created By</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Created</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                  <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {recentWorkOrders.slice(0, 5).map((wo) => (
-                  <tr key={wo.id} className="hover:bg-gray-50 transition-colors">
+              <tbody className="divide-y divide-gray-50">
+                {filteredProperties.map((property) => (
+                  <tr key={property.id} className="hover:bg-gray-50">
                     <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900 text-sm">{wo.title || wo.work_order_id}</p>
-                      <p className="text-xs text-gray-500">{wo.work_order_id}</p>
+                      <p className="font-medium text-gray-900 text-sm">{property.name || property.community_name}</p>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{wo.property_name || '-'}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{wo.category_name || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600">{property.property_id}</td>
                     <td className="py-3 px-4">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(wo.status)}`}>
-                        {wo.status?.replace(/_/g, ' ').toUpperCase()}
+                      <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                        {property.property_type || property.entry_type}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-500">{formatDate(wo.created_at)}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600">{property.zone || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600">{property.area_name || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600">{property.division || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600">{property.total_units || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600 max-w-[150px] truncate">{property.address || '-'}</td>
+                    <td className="py-3 px-4">
+                      <div className="text-sm">
+                        {property.contact_name && <p className="text-gray-900">{property.contact_name}</p>}
+                        {property.contact_phone && (
+                          <p className="text-gray-500 text-xs flex items-center gap-1">
+                            <Phone className="w-3 h-3" /> {property.contact_phone}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600">{property.created_by || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-500">{formatDate(property.created_at)}</td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(property.status)}`}>
+                        {property.status || 'active'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center justify-center">
+                        <button
+                          onClick={() => setSelectedProperty(property)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -290,6 +184,82 @@ const ManagerDashboard = ({ user }) => {
           </div>
         )}
       </div>
+
+      {/* View Details Modal */}
+      {selectedProperty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedProperty(null)}>
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Property Details</h2>
+              <button onClick={() => setSelectedProperty(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Property ID</p>
+                  <p className="font-medium">{selectedProperty.property_id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Name</p>
+                  <p className="font-medium">{selectedProperty.name || selectedProperty.community_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Type</p>
+                  <p className="font-medium">{selectedProperty.property_type || selectedProperty.entry_type}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Zone</p>
+                  <p className="font-medium">{selectedProperty.zone || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Area</p>
+                  <p className="font-medium">{selectedProperty.area_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Division</p>
+                  <p className="font-medium">{selectedProperty.division || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Units</p>
+                  <p className="font-medium">{selectedProperty.total_units || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(selectedProperty.status)}`}>
+                    {selectedProperty.status || 'active'}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Address</p>
+                  <p className="font-medium flex items-start gap-1">
+                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+                    {selectedProperty.address || '-'}
+                  </p>
+                </div>
+                {selectedProperty.contact_name && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-500">Contact</p>
+                    <p className="font-medium">{selectedProperty.contact_name}</p>
+                    {selectedProperty.contact_phone && (
+                      <p className="text-sm text-gray-600 flex items-center gap-1">
+                        <Phone className="w-3 h-3" /> {selectedProperty.contact_phone}
+                      </p>
+                    )}
+                    {selectedProperty.contact_email && (
+                      <p className="text-sm text-gray-600 flex items-center gap-1">
+                        <Mail className="w-3 h-3" /> {selectedProperty.contact_email}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
