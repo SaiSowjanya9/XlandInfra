@@ -144,21 +144,24 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       [scopeId]
     );
 
+    // Work orders - Manager sees only their own (by manager_id)
+    const managerId = req.managerId;
+    
     const [workOrdersCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE ${scopeColumn} = ?`,
-      [scopeId]
+      `SELECT COUNT(*) as count FROM work_orders WHERE manager_id = ?`,
+      [managerId]
     );
 
     const [pendingWorkOrders] = await pool.execute(
       `SELECT COUNT(*) as count FROM work_orders 
-       WHERE ${scopeColumn} = ? AND status NOT IN ('completed', 'closed', 'cancelled')`,
-      [scopeId]
+       WHERE manager_id = ? AND status NOT IN ('completed', 'closed', 'cancelled')`,
+      [managerId]
     );
 
     const [completedWorkOrders] = await pool.execute(
       `SELECT COUNT(*) as count FROM work_orders 
-       WHERE ${scopeColumn} = ? AND status IN ('completed', 'closed')`,
-      [scopeId]
+       WHERE manager_id = ? AND status IN ('completed', 'closed')`,
+      [managerId]
     );
 
     const [estimatesCount] = await pool.execute(
@@ -166,7 +169,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       [scopeId]
     );
 
-    // Get recent work orders
+    // Get recent work orders - Manager sees only their own
     const [recentWorkOrders] = await pool.execute(
       `SELECT wo.*, p.name as property_name, c.name as category_name, 
               v.company_name as vendor_name, cl.name as client_name
@@ -175,10 +178,10 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE wo.${scopeColumn} = ?
+       WHERE wo.manager_id = ?
        ORDER BY wo.created_at DESC
        LIMIT 10`,
-      [scopeId]
+      [managerId]
     );
 
     res.json({
@@ -329,12 +332,13 @@ router.post('/properties/:id/assign-employee', requireManagerScope, validateOwne
 // WORK ORDERS
 // ============================================
 
-// Get all manager work orders (FP-scoped or Manager-scoped)
+// Get all manager work orders - Manager sees ONLY their own work orders (by manager_id)
 router.get('/work-orders', requireManagerScope, async (req, res) => {
   try {
     const { status } = req.query;
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    // Always filter by manager_id so manager sees only their own work orders
+    // FP dashboard uses a different route to see all FP work orders
+    const managerId = req.managerId;
     
     let query = `SELECT wo.*, p.name as property_name, c.name as category_name, 
                         v.company_name as vendor_name, cl.name as client_name
@@ -343,9 +347,9 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
                  LEFT JOIN categories c ON wo.category_id = c.id
                  LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
                  LEFT JOIN clients cl ON wo.client_id = cl.id
-                 WHERE wo.${scopeColumn} = ?`;
+                 WHERE wo.manager_id = ?`;
     
-    const params = [scopeId];
+    const params = [managerId];
     
     if (status) {
       query += ' AND wo.status = ?';
@@ -361,11 +365,10 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
   }
 });
 
-// Get pending work orders
+// Get pending work orders - Manager sees only their own
 router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const managerId = req.managerId;
     
     const [workOrders] = await pool.execute(
       `SELECT wo.*, p.name as property_name, c.name as category_name, 
@@ -375,9 +378,9 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE wo.${scopeColumn} = ? AND wo.status NOT IN ('completed', 'closed', 'cancelled')
+       WHERE wo.manager_id = ? AND wo.status NOT IN ('completed', 'closed', 'cancelled')
        ORDER BY wo.created_at DESC`,
-      [scopeId]
+      [managerId]
     );
     res.json({ success: true, data: workOrders });
   } catch (error) {
@@ -385,11 +388,10 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
   }
 });
 
-// Get completed work orders
+// Get completed work orders - Manager sees only their own
 router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const managerId = req.managerId;
     
     const [workOrders] = await pool.execute(
       `SELECT wo.*, p.name as property_name, c.name as category_name, 
@@ -399,9 +401,9 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE wo.${scopeColumn} = ? AND wo.status IN ('completed', 'closed')
+       WHERE wo.manager_id = ? AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`,
-      [scopeId]
+      [managerId]
     );
     res.json({ success: true, data: workOrders });
   } catch (error) {
@@ -415,16 +417,19 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
     const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate } = req.body;
     
     const workOrderId = `WO-MGR-${Date.now()}`;
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    
+    // For FP-created managers: store BOTH franchise_partner_id AND manager_id
+    // So work order shows in both FP dashboard and Manager dashboard
+    const managerId = req.managerId;
+    const franchisePartnerId = req.isFPManager ? req.franchisePartnerId : null;
     
     const [result] = await pool.execute(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
-        priority, permission_to_enter, has_pet, scheduled_date, status, ${scopeColumn}, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?, NOW())`,
+        priority, permission_to_enter, has_pet, scheduled_date, status, manager_id, franchise_partner_id, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?, ?, NOW())`,
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null,
-       scopeId, req.user.id]
+       managerId, franchisePartnerId, req.user.id]
     );
 
     res.json({ success: true, message: 'Work order created', data: { id: result.insertId, workOrderId } });
@@ -433,17 +438,25 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
   }
 });
 
-// Update work order status
-router.patch('/work-orders/:id/status', requireManagerScope, validateOwnership('work_orders'), async (req, res) => {
+// Update work order status - Manager can only update their own work orders
+router.patch('/work-orders/:id/status', requireManagerScope, async (req, res) => {
   try {
-    const { status } = req.body;
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const { status, notes } = req.body;
+    const managerId = req.managerId;
     
-    await pool.execute(
-      `UPDATE work_orders SET status = ?, updated_at = NOW() WHERE id = ? AND ${scopeColumn} = ?`,
-      [status, req.params.id, scopeId]
-    );
+    // Build update query - include notes if cancelling
+    let updateQuery = `UPDATE work_orders SET status = ?, updated_at = NOW()`;
+    const params = [status];
+    
+    if (status === 'cancelled' && notes) {
+      updateQuery += `, cancellation_notes = ?`;
+      params.push(notes);
+    }
+    
+    updateQuery += ` WHERE id = ? AND manager_id = ?`;
+    params.push(req.params.id, managerId);
+    
+    await pool.execute(updateQuery, params);
 
     res.json({ success: true, message: 'Status updated' });
   } catch (error) {
