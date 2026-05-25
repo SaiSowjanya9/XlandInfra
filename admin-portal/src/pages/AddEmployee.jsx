@@ -322,13 +322,6 @@ const AddEmployee = ({ admin }) => {
             </div>
           </div>
 
-          {/* Note about temporary password */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-700">
-              <span className="font-semibold text-blue-800">Note:</span> A temporary password will be auto-generated and sent to the employee's email address. They will be required to change it on first login.
-            </p>
-          </div>
-
           {/* Divider */}
           <div className="border-t border-gray-200"></div>
 
