@@ -1,61 +1,17 @@
 import { useState, useEffect } from 'react';
 import {
-  UserPlus,
-  Plus,
+  Users,
   Search,
   RefreshCw,
-  X,
-  Save,
-  AlertCircle,
-  CheckCircle,
   Phone,
   Mail,
-  MapPin,
-  Home,
-  Store,
-  Lock
+  MapPin
 } from 'lucide-react';
-
-// Category options
-const CATEGORIES = [
-  {
-    id: 'residential',
-    name: 'Residential',
-    icon: Home,
-    color: 'bg-emerald-500',
-    locked: false
-  },
-  {
-    id: 'commercial',
-    name: 'Commercial',
-    icon: Store,
-    color: 'bg-blue-500',
-    locked: true
-  }
-];
 
 const ManagerCustomers = ({ user }) => {
   const [customers, setCustomers] = useState([]);
-  const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    alternatePhone: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    clientType: 'individual',
-    companyName: '',
-    propertyId: '',
-    gstNumber: ''
-  });
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -76,70 +32,9 @@ const ManagerCustomers = ({ user }) => {
     }
   };
 
-  const fetchProperties = async () => {
-    try {
-      const response = await fetch('/api/manager/properties', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success) {
-        setProperties(result.data);
-      }
-    } catch (error) {
-      console.error('Fetch properties error:', error);
-    }
-  };
-
   useEffect(() => {
     fetchCustomers();
-    fetchProperties();
   }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage({ type: '', text: '' });
-
-    try {
-      const response = await fetch('/api/manager/customers', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setMessage({ type: 'success', text: 'Customer created successfully!' });
-        setShowModal(false);
-        resetForm();
-        fetchCustomers();
-      } else {
-        setMessage({ type: 'error', text: result.message || 'Operation failed' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to create customer' });
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      alternatePhone: '',
-      address: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      clientType: 'individual',
-      companyName: '',
-      propertyId: '',
-      gstNumber: ''
-    });
-  };
 
   const filteredCustomers = customers.filter(c =>
     c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -152,98 +47,32 @@ const ManagerCustomers = ({ user }) => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-        <p className="text-gray-500 mt-1">Customer Creation Module</p>
+        <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
+        <p className="text-gray-500 mt-1">View customer information</p>
       </div>
 
-      {/* Message */}
-      {message.text && (
-        <div className={`p-4 rounded-lg flex items-center gap-3 ${
-          message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-          <span>{message.text}</span>
-          <button onClick={() => setMessage({ type: '', text: '' })} className="ml-auto">
-            <X className="w-4 h-4" />
+      {/* Search */}
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="flex gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search customers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            onClick={fetchCustomers}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
           </button>
         </div>
-      )}
-
-      {/* Category Selection */}
-      {!selectedCategory && (
-        <div className="bg-white rounded-xl border border-gray-100 p-8">
-          <div className="text-center mb-8">
-            <h2 className="text-xl font-semibold text-gray-900">Select Category</h2>
-            <p className="text-gray-500 mt-1">Choose the customer category to proceed</p>
-          </div>
-          
-          <div className="flex justify-center gap-6">
-            {CATEGORIES.map((category) => {
-              const Icon = category.icon;
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => !category.locked && setSelectedCategory(category.id)}
-                  disabled={category.locked}
-                  className={`relative flex flex-col items-center justify-center w-48 h-48 rounded-xl border-2 transition-all ${
-                    category.locked
-                      ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-                      : 'border-emerald-500 bg-white hover:shadow-lg cursor-pointer'
-                  }`}
-                >
-                  {category.locked && (
-                    <div className="absolute top-3 right-3 flex items-center gap-1 text-xs text-gray-400">
-                      <Lock className="w-3 h-3" />
-                      <span>Coming Soon</span>
-                    </div>
-                  )}
-                  <div className={`w-16 h-16 ${category.color} rounded-xl flex items-center justify-center mb-4`}>
-                    <Icon className="w-8 h-8 text-white" />
-                  </div>
-                  <span className={`font-medium ${category.locked ? 'text-gray-400' : 'text-gray-900'}`}>
-                    {category.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Form when category is selected */}
-      {selectedCategory && (
-        <>
-          <div className="flex items-center gap-2 mb-4">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className="text-blue-600 hover:text-blue-700 text-sm"
-            >
-              ← Back to Categories
-            </button>
-          </div>
-          
-          {/* Search */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <div className="flex gap-3">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search customers..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <button
-                onClick={() => { resetForm(); setShowModal(true); }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Customer</span>
-              </button>
-            </div>
-          </div>
+      </div>
 
       {/* Customers List */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -253,7 +82,7 @@ const ManagerCustomers = ({ user }) => {
           </div>
         ) : filteredCustomers.length === 0 ? (
           <div className="text-center py-12">
-            <UserPlus className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No customers found</p>
           </div>
         ) : (
@@ -317,177 +146,6 @@ const ManagerCustomers = ({ user }) => {
           </div>
         )}
       </div>
-        </>
-      )}
-
-      {/* Add Customer Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Add New Customer</h2>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Full name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
-                  <select
-                    value={formData.clientType}
-                    onChange={(e) => setFormData({ ...formData, clientType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="individual">Individual</option>
-                    <option value="company">Company</option>
-                    <option value="association">Association</option>
-                  </select>
-                </div>
-
-                {formData.clientType !== 'individual' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                    <input
-                      type="text"
-                      value={formData.companyName}
-                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Alternate Phone</label>
-                  <input
-                    type="tel"
-                    value={formData.alternatePhone}
-                    onChange={(e) => setFormData({ ...formData, alternatePhone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Linked Property</label>
-                  <select
-                    value={formData.propertyId}
-                    onChange={(e) => setFormData({ ...formData, propertyId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Property</option>
-                    {properties.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                  <textarea
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    rows={2}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                  <input
-                    type="text"
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                  <input
-                    type="text"
-                    value={formData.zipCode}
-                    onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
-                  <input
-                    type="text"
-                    value={formData.gstNumber}
-                    onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Add Customer</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

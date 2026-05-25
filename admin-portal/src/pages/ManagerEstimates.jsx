@@ -44,13 +44,13 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [estimateType, setEstimateType] = useState(null);
   const [propertyIdInput, setPropertyIdInput] = useState('');
   const [selectedProperty, setSelectedProperty] = useState(null);
-  // FP Manager defaults to 'all-packages' (no create access)
-  const [amcActiveTab, setAmcActiveTab] = useState(isFPManager ? 'all-packages' : 'create');
+  // Managers cannot create packages - always default to all-packages
+  const [amcActiveTab, setAmcActiveTab] = useState('all-packages');
   const [selectedPropertyType, setSelectedPropertyType] = useState(null);
   const [amcForm, setAmcForm] = useState({ packageName: '', serviceRows: [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' });
   const [filterPropertyType, setFilterPropertyType] = useState('all');
-  // FP Manager defaults to 'all-addons' (no create access)
-  const [addonActiveTab, setAddonActiveTab] = useState(isFPManager ? 'all-addons' : 'create');
+  // Managers cannot create add-ons - always default to all-addons
+  const [addonActiveTab, setAddonActiveTab] = useState('all-addons');
   const [addonSelectedPropertyType, setAddonSelectedPropertyType] = useState(null);
   const [addonFilterPropertyType, setAddonFilterPropertyType] = useState('all');
   const [addonForm, setAddonForm] = useState({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' });
@@ -490,19 +490,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       </div>
 
-      {/* Tabs - Create Package hidden for FP Manager */}
+      {/* Tabs - Create Package hidden for all managers */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit mb-6">
-        {!isFPManager && (
-          <button
-            onClick={() => setAmcActiveTab('create')}
-            className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${amcActiveTab === 'create' ? 'bg-white text-slate-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
-          >
-            <div className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Create Package
-            </div>
-          </button>
-        )}
         <button
           onClick={() => setAmcActiveTab('all-packages')}
           className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${amcActiveTab === 'all-packages' ? 'bg-white text-slate-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
@@ -555,15 +544,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
           {amcPackages.length === 0 ? (
             <div className="p-12 text-center">
               <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500">No AMC packages yet</p>
-              {!isFPManager && (
-                <>
-                  <p className="text-sm text-gray-400 mb-4">Create your first package to get started</p>
-                  <button onClick={() => setAmcActiveTab('create')} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
-                    Create Package
-                  </button>
-                </>
-              )}
+              <p className="text-gray-500">No AMC packages available</p>
             </div>
           ) : filteredAmcPackages.length === 0 ? (
             <div className="p-8 text-center">
@@ -877,12 +858,9 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
   const renderAddons = () => (
     <div className="space-y-6">
-      <div className="flex items-center gap-3"><div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center"><PlusCircle className="w-5 h-5 text-stone-600" /></div><div><h2 className="text-xl font-bold text-gray-900">Add-ons</h2><p className="text-sm text-gray-500">Create optional services for AMC packages by property type</p></div></div>
-      {/* Tabs - Create Add-on hidden for FP Manager */}
+      <div className="flex items-center gap-3"><div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center"><PlusCircle className="w-5 h-5 text-stone-600" /></div><div><h2 className="text-xl font-bold text-gray-900">Add-ons</h2><p className="text-sm text-gray-500">View available add-ons for AMC packages</p></div></div>
+      {/* Tabs - Create Add-on hidden for all managers */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-        {!isFPManager && (
-          <button onClick={() => setAddonActiveTab('create')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${addonActiveTab === 'create' ? 'bg-white text-stone-700 shadow-sm' : 'text-gray-600'}`}><Plus className="w-4 h-4" />Create Add-on</button>
-        )}
         <button onClick={() => setAddonActiveTab('all-addons')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white text-stone-700 shadow-sm' : 'text-gray-600'}`}><Layers className="w-4 h-4" />All Add-ons{addons.length > 0 && <span className="px-1.5 py-0.5 bg-stone-600 text-white rounded-full text-xs">{addons.length}</span>}</button>
       </div>
       {addonActiveTab === 'create' && (

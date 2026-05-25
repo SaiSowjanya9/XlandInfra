@@ -429,8 +429,8 @@ const ManagerVendors = ({ user }) => {
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {/* View Details - Always visible */}
+                      <div className="flex items-center justify-end">
+                        {/* View Details */}
                         <button
                           onClick={() => { setSelectedVendor(vendor); setShowViewModal(true); }}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -438,36 +438,6 @@ const ManagerVendors = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Modify Vendor - Hidden for FP Manager */}
-                        {!isFPManager && (
-                          <button
-                            onClick={() => openEditModal(vendor)}
-                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
-                            title="Modify Vendor"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        )}
-                        {/* Export to Excel - Hidden for FP Manager */}
-                        {!isFPManager && (
-                          <button
-                            onClick={() => { /* TODO: Export single vendor */ }}
-                            className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
-                            title="Export to Excel"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                        )}
-                        {/* Delete - Hidden for FP Manager */}
-                        {!isFPManager && (
-                          <button
-                            onClick={() => handleDelete(vendor.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -675,13 +645,6 @@ const ManagerVendors = ({ user }) => {
                   <p className="text-sm text-gray-500">Area</p>
                   <p className="font-medium text-gray-900">{selectedVendor.area || '-'}</p>
                 </div>
-                {/* Rate/Visit - Hidden for FP Manager */}
-                {!isFPManager && (
-                  <div>
-                    <p className="text-sm text-gray-500">Rate/Visit</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.rate_per_visit || '-'}</p>
-                  </div>
-                )}
                 <div className="col-span-2">
                   <p className="text-sm text-gray-500">Address</p>
                   <p className="font-medium text-gray-900">
