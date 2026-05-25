@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const pool = require('../config/database');
+const { pool } = require('../config/database');
 const { authenticate, generateToken } = require('../middleware/auth');
 const { ROLES, ROLE_NAMES, isManager } = require('../config/roles');
 const { 

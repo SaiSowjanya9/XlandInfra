@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Store,
   Plus,
@@ -29,6 +29,7 @@ const ManagerVendors = ({ user }) => {
   const isFPManager = !!user?.franchisePartnerId;
   
   const location = useLocation();
+  const navigate = useNavigate();
   const [vendors, setVendors] = useState({ own: [], assigned: [], all: [] });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -252,9 +253,9 @@ const ManagerVendors = ({ user }) => {
           >
             <RefreshCw className="w-5 h-5 text-gray-600" />
           </button>
-          {/* Add Vendor - Allowed for Manager */}
+          {/* Add Vendor - Navigate to Add Vendor page */}
           <button
-            onClick={() => { resetForm(); setShowModal(true); }}
+            onClick={() => navigate('/manager/vendors/add')}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus className="w-4 h-4" />
