@@ -323,6 +323,13 @@ const EmployeeDetails = () => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={() => setEditEmployee({ ...employee, fullName: employee.fullName || employee.name })}
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                          title="Modify"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
                         {employee.status === 'active' ? (
                           <button
                             onClick={() => handleDeactivate(employee)}
@@ -493,6 +500,113 @@ const EmployeeDetails = () => {
                   Delete
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Employee Modal */}
+      {editEmployee && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditEmployee(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                  <Edit2 className="w-5 h-5 text-indigo-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900">Modify Employee</h2>
+              </div>
+              <button
+                onClick={() => setEditEmployee(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  value={editEmployee.fullName || ''}
+                  onChange={(e) => setEditEmployee({ ...editEmployee, fullName: e.target.value, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input
+                  type="text"
+                  value={editEmployee.username || ''}
+                  onChange={(e) => setEditEmployee({ ...editEmployee, username: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editEmployee.email || ''}
+                  onChange={(e) => setEditEmployee({ ...editEmployee, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={editEmployee.phone || ''}
+                  onChange={(e) => setEditEmployee({ ...editEmployee, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <select
+                  value={editEmployee.role || ''}
+                  onChange={(e) => setEditEmployee({ ...editEmployee, role: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="manager">Manager</option>
+                  <option value="coordinator">Coordinator</option>
+                  <option value="supervisor">Supervisor</option>
+                  <option value="executive">Executive</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={editEmployee.status || 'active'}
+                  onChange={(e) => setEditEmployee({ ...editEmployee, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end sticky bottom-0 bg-white">
+              <button
+                onClick={() => setEditEmployee(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const result = updateEmployee(editEmployee.id || editEmployee.employeeId, editEmployee);
+                  if (result.success) {
+                    showToast('Employee updated successfully');
+                    setEditEmployee(null);
+                    loadData();
+                  } else {
+                    showToast(result.message || 'Failed to update employee', 'error');
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+              >
+                Save Changes
+              </button>
             </div>
           </div>
         </div>

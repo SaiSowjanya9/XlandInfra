@@ -9,7 +9,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { createEmployee, checkDuplicateEmployee } from '../utils/employeeStore';
+import { checkDuplicateEmployee } from '../utils/employeeStore';
 
 // Employee roles with descriptions
 const EMPLOYEE_ROLES = {
@@ -111,27 +111,44 @@ const AddEmployee = ({ admin }) => {
     setSubmitting(true);
 
     try {
+      // Parse full name into first and last name
+      const nameParts = formData.fullName.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || firstName;
+
       const employeeData = {
-        name: formData.fullName.trim(),
-        fullName: formData.fullName.trim(),
+        firstName,
+        lastName,
         username: formData.username.trim().toLowerCase(),
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone || '',
         role: formData.role,
-        roleLabel: EMPLOYEE_ROLES[formData.role].label,
-        assignedZones: [], // Zones are assigned separately in Employee Zone Management
-        createdBy: admin?.username || 'system',
-        status: 'active',
-        passwordChangeRequired: true, // Flag for first login password change
+        sendEmail: true, // Send welcome email with credentials
       };
 
-      const result = createEmployee(employeeData);
+      // Call backend API to create employee
+      const response = await fetch('/api/staff', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        },
+        body: JSON.stringify(employeeData)
+      });
+
+      const result = await response.json();
 
       if (result.success) {
-        setCreatedEmployee(result.data);
+        setCreatedEmployee({
+          employeeId: result.data.userId,
+          fullName: formData.fullName.trim(),
+          email: result.data.email,
+          role: result.data.role,
+          emailSent: result.data.emailSent
+        });
         setSubmitted(true);
       } else {
-        setErrors(prev => ({ ...prev, [result.field || 'general']: result.message }));
+        setErrors(prev => ({ ...prev, general: result.message }));
       }
     } catch (error) {
       console.error('Error creating employee:', error);
@@ -159,12 +176,8 @@ const AddEmployee = ({ admin }) => {
           <p className="text-gray-500 mb-2">
             Employee ID: <span className="font-mono text-emerald-600">{createdEmployee.employeeId}</span>
           </p>
-          <p className="text-gray-500 mb-2">
+          <p className="text-gray-500 mb-4">
             <strong>{createdEmployee.fullName}</strong> ({EMPLOYEE_ROLES[createdEmployee.role]?.label}) has been added.
-          </p>
-          <p className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mb-4">
-            <Info className="w-4 h-4 inline mr-1" />
-            A temporary password has been sent to <strong>{createdEmployee.email}</strong>
           </p>
           <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-6">
             <MapPin className="w-4 h-4 inline mr-1" />
