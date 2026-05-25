@@ -549,33 +549,112 @@ router.get('/customers', requireFPScope, async (req, res) => {
   }
 });
 
-// Create customer
+// Create customer with property
 router.post('/customers', requireFPScope, async (req, res) => {
   try {
     const {
-      name, email, phone, alternatePhone, address, city, state, zipCode,
+      // Property form data
+      zone, areaName, division, propertyType, communityName,
+      associationContacts, numberOfBlocks, unitsPerBlock, blockNames,
+      numberOfUnits, villaPlotNumber, blockInfo, blockNA,
+      address, city, state, postalCode, landmark, mapLocation, notes,
+      entryType, category,
+      // Simple customer data (for backward compatibility)
+      name, email, phone, alternatePhone, zipCode,
       clientType, companyName, propertyId, gstNumber
     } = req.body;
 
-    const clientId = `FP${req.fpId}-CLT-${Date.now()}`;
+    // Check if this is a property form submission (has zone/communityName)
+    if (zone && communityName) {
+      // Generate IDs
+      const propertyIdGen = `GC-Y001-${Date.now()}`;
+      const clientId = `FP${req.fpId}-CLT-${Date.now()}`;
+      
+      // Get contact info
+      const contact = associationContacts?.[0] || {};
+      const contactName = contact.name || '';
+      const contactEmail = contact.email || '';
+      const contactPhone = contact.phone || '';
+      const contactCountryCode = contact.countryCode || '+91';
 
-    const [result] = await pool.execute(
-      `INSERT INTO clients (
-        client_id, name, email, phone, alternate_phone, address, city, state, zip_code,
-        client_type, company_name, property_id, gst_number, franchise_partner_id, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
-        clientType || 'individual', companyName, propertyId || null, gstNumber,
-        req.fpId, req.user.id
-      ]
-    );
+      // Create property first
+      const [propertyResult] = await pool.execute(
+        `INSERT INTO properties (
+          property_id, name, property_type, address, city, state, zip_code,
+          contact_person, contact_phone, contact_email, zone_id, division_id,
+          franchise_partner_id, created_by, latitude, longitude, landmark, notes,
+          entry_type, category, area_name, number_of_blocks, units_per_block,
+          block_names, number_of_units, villa_plot_number, block_info
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          propertyIdGen, communityName, propertyType || 'residential', address, city, state, postalCode || '',
+          contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
+          zone || null, division || null,
+          req.fpId, req.user.id, 
+          mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
+          entryType || null, category || null, areaName || '',
+          numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}),
+          JSON.stringify(blockNames || {}), numberOfUnits || null, villaPlotNumber || '', blockInfo || ''
+        ]
+      );
 
-    res.status(201).json({
-      success: true,
-      message: 'Customer created successfully',
-      data: { id: result.insertId, clientId }
-    });
+      // Create customer account if email provided
+      let customerResult = null;
+      if (contactEmail) {
+        // Generate temp password
+        const tempPassword = Math.random().toString(36).slice(-8);
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        
+        // Check if customer already exists
+        const [existing] = await pool.execute(
+          'SELECT id FROM customer_accounts WHERE email = ?', [contactEmail]
+        );
+        
+        if (existing.length === 0) {
+          [customerResult] = await pool.execute(
+            `INSERT INTO customer_accounts (
+              customer_id, name, email, phone, password_hash, property_id,
+              franchise_partner_id, is_activated, temp_password
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              clientId, contactName, contactEmail, `${contactCountryCode}${contactPhone}`,
+              hashedPassword, propertyResult.insertId, req.fpId, 0, tempPassword
+            ]
+          );
+        }
+      }
+
+      res.status(201).json({
+        success: true,
+        message: 'Property and customer created successfully',
+        data: { 
+          propertyId: propertyIdGen,
+          clientId,
+          customerId: customerResult?.insertId || null
+        }
+      });
+    } else {
+      // Simple customer creation (backward compatibility)
+      const clientId = `FP${req.fpId}-CLT-${Date.now()}`;
+
+      const [result] = await pool.execute(
+        `INSERT INTO clients (
+          client_id, name, email, phone, alternate_phone, address, city, state, zip_code,
+          client_type, company_name, property_id, gst_number, franchise_partner_id, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
+          clientType || 'individual', companyName, propertyId || null, gstNumber,
+          req.fpId, req.user.id
+        ]
+      );
+
+      res.status(201).json({
+        success: true,
+        message: 'Customer created successfully',
+        data: { id: result.insertId, clientId }
+      });
+    }
   } catch (error) {
     console.error('Create customer error:', error);
     res.status(500).json({
@@ -583,6 +662,110 @@ router.post('/customers', requireFPScope, async (req, res) => {
       message: 'Failed to create customer',
       error: error.message
     });
+  }
+});
+
+// Get customer accounts for FP
+router.get('/customer-accounts', requireFPScope, async (req, res) => {
+  try {
+    const [accounts] = await pool.execute(
+      `SELECT ca.*, p.name as property_name, p.property_id as property_code
+       FROM customer_accounts ca
+       LEFT JOIN properties p ON ca.property_id = p.id
+       WHERE ca.franchise_partner_id = ?
+       ORDER BY ca.created_at DESC`,
+      [req.fpId]
+    );
+    
+    res.json({ success: true, data: accounts });
+  } catch (error) {
+    console.error('Get customer accounts error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Activate customer account
+router.post('/customer-accounts/:id/activate', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Generate new temp password
+    const tempPassword = Math.random().toString(36).slice(-8);
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    
+    await pool.execute(
+      `UPDATE customer_accounts 
+       SET is_activated = 1, password_hash = ?, temp_password = ?, updated_at = NOW()
+       WHERE id = ? AND franchise_partner_id = ?`,
+      [hashedPassword, tempPassword, id, req.fpId]
+    );
+    
+    // Get customer details for email
+    const [[customer]] = await pool.execute(
+      'SELECT name, email FROM customer_accounts WHERE id = ?', [id]
+    );
+    
+    // TODO: Send activation email with temp password
+    
+    res.json({ 
+      success: true, 
+      message: 'Customer account activated',
+      data: { tempPassword } // Return temp password for manual sharing if needed
+    });
+  } catch (error) {
+    console.error('Activate customer error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Deactivate customer account
+router.post('/customer-accounts/:id/deactivate', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await pool.execute(
+      `UPDATE customer_accounts SET is_activated = 0, updated_at = NOW()
+       WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+    
+    res.json({ success: true, message: 'Customer account deactivated' });
+  } catch (error) {
+    console.error('Deactivate customer error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Resend activation email
+router.post('/customer-accounts/:id/resend-activation', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Generate new temp password
+    const tempPassword = Math.random().toString(36).slice(-8);
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    
+    await pool.execute(
+      `UPDATE customer_accounts SET password_hash = ?, temp_password = ?, updated_at = NOW()
+       WHERE id = ? AND franchise_partner_id = ?`,
+      [hashedPassword, tempPassword, id, req.fpId]
+    );
+    
+    // Get customer email
+    const [[customer]] = await pool.execute(
+      'SELECT name, email FROM customer_accounts WHERE id = ?', [id]
+    );
+    
+    // TODO: Send email with new temp password
+    
+    res.json({ 
+      success: true, 
+      message: 'New activation credentials generated',
+      data: { tempPassword, email: customer?.email }
+    });
+  } catch (error) {
+    console.error('Resend activation error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -1662,12 +1845,12 @@ router.post('/estimates', requireFPScope, async (req, res) => {
   }
 });
 
-// Get AMC packages - Global packages visible to all portals
+// Get FP AMC packages - Scoped to each FP
 router.get('/amc-packages', requireFPScope, async (req, res) => {
   try {
-    // Read from global amc_packages table
     const [packages] = await pool.execute(
-      `SELECT * FROM amc_packages WHERE is_active = 1 ORDER BY created_at DESC`
+      `SELECT * FROM fp_amc_packages WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
+      [req.fpId]
     );
 
     res.json({
@@ -1719,12 +1902,16 @@ router.post('/amc-packages', requireFPScope, async (req, res) => {
   }
 });
 
-// Get add-ons - Global add-ons visible to all portals
+// Get FP add-ons - Scoped to each FP
 router.get('/addons', requireFPScope, async (req, res) => {
   try {
-    // Read from global addons table
     const [addons] = await pool.execute(
-      `SELECT * FROM addons WHERE is_active = 1 ORDER BY created_at DESC`
+      `SELECT a.*, c.name as category_name
+       FROM fp_addons a
+       LEFT JOIN categories c ON a.category_id = c.id
+       WHERE a.franchise_partner_id = ?
+       ORDER BY a.created_at DESC`,
+      [req.fpId]
     );
 
     res.json({

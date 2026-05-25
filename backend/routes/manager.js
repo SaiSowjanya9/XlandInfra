@@ -702,12 +702,18 @@ router.patch('/estimates/:id/archive', requireManagerScope, validateOwnership('e
 // AMC PACKAGES - FP Managers use FP packages (read-only), standalone use manager packages
 // ============================================
 
-// Get all AMC packages - Global packages visible to all
+// Get AMC packages - FP Managers see FP packages, standalone see their own
 router.get('/amc-packages', requireManagerScope, async (req, res) => {
   try {
-    // Read from global amc_packages table - visible to all portals
+    const scopeId = getScopeId(req);
+    
+    // FP Managers read from fp_amc_packages, standalone from manager_amc_packages
+    const table = req.isFPManager ? 'fp_amc_packages' : 'manager_amc_packages';
+    const scopeColumn = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
+    
     const [packages] = await pool.execute(
-      `SELECT * FROM amc_packages WHERE is_active = 1 ORDER BY created_at DESC`
+      `SELECT * FROM ${table} WHERE ${scopeColumn} = ? AND is_active = 1 ORDER BY created_at DESC`,
+      [scopeId]
     );
     
     res.json({ success: true, data: packages });
@@ -743,12 +749,22 @@ router.post('/amc-packages', requireManagerScope, async (req, res) => {
 // ADD-ONS - FP Managers use FP addons (read-only), standalone use manager addons
 // ============================================
 
-// Get all add-ons - Global add-ons visible to all
+// Get add-ons - FP Managers see FP add-ons, standalone see their own
 router.get('/addons', requireManagerScope, async (req, res) => {
   try {
-    // Read from global addons table - visible to all portals
+    const scopeId = getScopeId(req);
+    
+    // FP Managers read from fp_addons, standalone from manager_addons
+    const table = req.isFPManager ? 'fp_addons' : 'manager_addons';
+    const scopeColumn = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
+    
     const [addons] = await pool.execute(
-      `SELECT * FROM addons WHERE is_active = 1 ORDER BY created_at DESC`
+      `SELECT a.*, c.name as category_name 
+       FROM ${table} a
+       LEFT JOIN categories c ON a.category_id = c.id
+       WHERE a.${scopeColumn} = ? AND a.is_active = 1
+       ORDER BY a.created_at DESC`,
+      [scopeId]
     );
     
     res.json({ success: true, data: addons });
@@ -784,17 +800,9 @@ router.post('/addons', requireManagerScope, async (req, res) => {
 
 router.get('/zones', requireManagerScope, async (req, res) => {
   try {
-    // FP Managers get zones from fp_zones, standalone get global zones
-    if (req.isFPManager) {
-      const [zones] = await pool.execute(
-        'SELECT * FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY name',
-        [req.franchisePartnerId]
-      );
-      res.json({ success: true, data: zones });
-    } else {
-      const [zones] = await pool.execute('SELECT * FROM zones WHERE is_active = 1 ORDER BY name');
-      res.json({ success: true, data: zones });
-    }
+    // Global zones visible to all portals
+    const [zones] = await pool.execute('SELECT * FROM zones WHERE is_active = 1 ORDER BY name');
+    res.json({ success: true, data: zones });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

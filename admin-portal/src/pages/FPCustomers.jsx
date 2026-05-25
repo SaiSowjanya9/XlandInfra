@@ -75,6 +75,47 @@ const COUNTRY_CODES = [
 // Initial Division options
 const INITIAL_DIVISIONS = ['Division A', 'Division B', 'Division C', 'Division D', 'Division E'];
 
+// Indian States in alphabetical order
+const INDIAN_STATES = [
+  'Andhra Pradesh',
+  'Arunachal Pradesh',
+  'Assam',
+  'Bihar',
+  'Chhattisgarh',
+  'Goa',
+  'Gujarat',
+  'Haryana',
+  'Himachal Pradesh',
+  'Jharkhand',
+  'Karnataka',
+  'Kerala',
+  'Madhya Pradesh',
+  'Maharashtra',
+  'Manipur',
+  'Meghalaya',
+  'Mizoram',
+  'Nagaland',
+  'Odisha',
+  'Punjab',
+  'Rajasthan',
+  'Sikkim',
+  'Tamil Nadu',
+  'Telangana',
+  'Tripura',
+  'Uttar Pradesh',
+  'Uttarakhand',
+  'West Bengal',
+  // Union Territories
+  'Andaman and Nicobar Islands',
+  'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi',
+  'Jammu and Kashmir',
+  'Ladakh',
+  'Lakshadweep',
+  'Puducherry',
+];
+
 const FPCustomers = ({ user }) => {
   const [customers, setCustomers] = useState([]);
   const [properties, setProperties] = useState([]);
@@ -989,13 +1030,16 @@ const FPCustomers = ({ user }) => {
                           <label className="block text-sm text-gray-700 mb-1.5">
                             State <span className="text-red-500">*</span>
                           </label>
-                          <input
-                            type="text"
+                          <select
                             value={formData.state}
                             onChange={(e) => updateFormData('state', e.target.value)}
                             className={inputClass(hasError && !formData.state.trim())}
-                            placeholder="State"
-                          />
+                          >
+                            <option value="">Select State</option>
+                            {INDIAN_STATES.map(state => (
+                              <option key={state} value={state}>{state}</option>
+                            ))}
+                          </select>
                           <FieldError show={hasError && !formData.state.trim()} message="State is required" />
                         </div>
 

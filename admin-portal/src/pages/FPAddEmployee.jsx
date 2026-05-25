@@ -1,34 +1,28 @@
 import { useState } from 'react';
 import {
-  User,
-  Phone,
-  Mail,
-  CreditCard,
   CheckCircle2,
   AlertCircle,
   Loader2,
-  ArrowLeft,
-  MapPin,
+  X,
   Send,
   Key,
-  ExternalLink,
+  MapPin,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const COUNTRY_CODES = [
-  { code: '+91', flag: '🇮🇳', label: 'India' },
-  { code: '+1', flag: '🇺🇸', label: 'US' },
-  { code: '+44', flag: '🇬🇧', label: 'UK' },
-  { code: '+61', flag: '🇦🇺', label: 'Australia' },
-  { code: '+971', flag: '🇦🇪', label: 'UAE' },
+const EMPLOYEE_ROLES = [
+  { value: 'manager', label: 'Manager', description: 'Manages work orders, vendors, estimates, and schedules' },
+  { value: 'coordinator', label: 'Coordinator', description: 'Coordinates field operations and team assignments' },
+  { value: 'supervisor', label: 'Supervisor', description: 'Supervises field employees and monitors work progress' },
+  { value: 'executive', label: 'Executive', description: 'Executes field tasks and reports work status' },
 ];
 
 const initialFormState = {
+  role: 'manager',
   name: '',
-  phone: '',
-  countryCode: '+91',
+  username: '',
   email: '',
-  aadhaar: '',
+  phone: '',
 };
 
 const FPAddEmployee = ({ user }) => {
@@ -53,41 +47,34 @@ const FPAddEmployee = ({ user }) => {
     return regex.test(email);
   };
 
-  const validatePhone = (phone) => {
-    const regex = /^\d{10}$/;
-    return regex.test(phone);
-  };
-
-  const validateAadhaar = (aadhaar) => {
-    const regex = /^\d{12}$/;
-    return regex.test(aadhaar.replace(/\s/g, ''));
+  const validateUsername = (username) => {
+    const regex = /^[a-z0-9_]+$/;
+    return regex.test(username) && username.length >= 3;
   };
 
   const validateForm = () => {
     const newErrors = {};
 
+    if (!formData.role) {
+      newErrors.role = 'Please select a role';
+    }
+
     if (!formData.name.trim()) {
-      newErrors.name = 'Employee name is required';
+      newErrors.name = 'Full name is required';
     } else if (formData.name.trim().length < 2) {
       newErrors.name = 'Name must be at least 2 characters';
     }
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!validatePhone(formData.phone)) {
-      newErrors.phone = 'Phone number must be 10 digits';
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
+    } else if (!validateUsername(formData.username)) {
+      newErrors.username = 'Username must be lowercase letters, numbers, or underscores (min 3 chars)';
     }
 
     if (!formData.email.trim()) {
       newErrors.email = 'Email address is required';
     } else if (!validateEmail(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (!formData.aadhaar.trim()) {
-      newErrors.aadhaar = 'Aadhaar number is required';
-    } else if (!validateAadhaar(formData.aadhaar)) {
-      newErrors.aadhaar = 'Aadhaar must be 12 digits';
     }
 
     setErrors(newErrors);
@@ -105,14 +92,12 @@ const FPAddEmployee = ({ user }) => {
 
     try {
       const employeeData = {
+        role: formData.role,
         name: formData.name.trim(),
-        phone: formData.phone,
-        countryCode: formData.countryCode,
+        username: formData.username.trim().toLowerCase(),
         email: formData.email.trim().toLowerCase(),
-        aadhaar: formData.aadhaar.replace(/\s/g, ''),
-        assignedZones: [],
+        phone: formData.phone || null,
         createdBy: user?.username || 'FP',
-        createdAt: new Date().toISOString(),
       };
 
       const response = await fetch('/api/fp/employees', {
@@ -237,165 +222,153 @@ const FPAddEmployee = ({ user }) => {
     );
   }
 
+  const selectedRole = EMPLOYEE_ROLES.find(r => r.value === formData.role);
+
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <button
-          onClick={() => navigate('/fp')}
-          className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-4 text-sm"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </button>
-        <h1 className="text-2xl font-semibold text-gray-900">Add New Employee</h1>
-        <p className="text-gray-500 text-sm mt-1">Register a new employee in the system</p>
-      </div>
-
-      {errors.general && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-          <p className="text-sm text-red-700">{errors.general}</p>
+    <div className="min-h-[80vh] flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg border border-gray-100">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h1 className="text-xl font-semibold text-gray-900">Add Employee</h1>
+          <button
+            onClick={() => navigate('/fp/employees')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
         </div>
-      )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Personal Information */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <User className="w-5 h-5 text-indigo-600" />
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {errors.general && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <p className="text-sm text-red-700">{errors.general}</p>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Personal Information</h2>
-              <p className="text-sm text-gray-500">Employee's basic details</p>
-            </div>
+          )}
+
+          {/* Employee Role Section */}
+          <div className="border border-gray-200 rounded-xl p-5">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Employee Role <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.role}
+              onChange={(e) => updateField('role', e.target.value)}
+              className={`w-full md:w-1/2 px-4 py-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none appearance-none bg-white ${
+                errors.role ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`}
+            >
+              {EMPLOYEE_ROLES.map(role => (
+                <option key={role.value} value={role.value}>{role.label}</option>
+              ))}
+            </select>
+            {selectedRole && (
+              <p className="text-sm text-gray-500 mt-2">{selectedRole.description}</p>
+            )}
+            {errors.role && <p className="text-xs text-red-500 mt-1">{errors.role}</p>}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Name */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => updateField('name', e.target.value)}
-                placeholder="Enter employee's full name"
-                className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none ${
-                  errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
-              />
-              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
-            </div>
+          {/* Basic Information Section */}
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 mb-4">Basic Information</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Full Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => updateField('name', e.target.value)}
+                  placeholder="John Doe"
+                  className={`w-full px-4 py-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none ${
+                    errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+              </div>
 
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Phone Number <span className="text-red-500">*</span>
-              </label>
-              <div className="flex gap-2">
-                <select
-                  value={formData.countryCode}
-                  onChange={(e) => updateField('countryCode', e.target.value)}
-                  className="w-24 px-2 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none"
-                >
-                  {COUNTRY_CODES.map(cc => (
-                    <option key={cc.code} value={cc.code}>{cc.flag} {cc.code}</option>
-                  ))}
-                </select>
+              {/* Username */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Username <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => updateField('username', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  placeholder="johndoe"
+                  className={`w-full px-4 py-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none ${
+                    errors.username ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {errors.username && <p className="text-xs text-red-500 mt-1">{errors.username}</p>}
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => updateField('email', e.target.value)}
+                  placeholder="john@example.com"
+                  className={`w-full px-4 py-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none ${
+                    errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Phone
+                </label>
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => updateField('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  placeholder="10-digit mobile number"
-                  className={`flex-1 px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none ${
-                    errors.phone ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  }`}
+                  onChange={(e) => updateField('phone', e.target.value.replace(/[^\d+\s-]/g, ''))}
+                  placeholder="+91 9876543210"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
                 />
               </div>
-              {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Email Address <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => updateField('email', e.target.value)}
-                placeholder="employee@example.com"
-                className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none ${
-                  errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
-              />
-              {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
-            </div>
-
-            {/* Aadhaar */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Aadhaar Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.aadhaar}
-                onChange={(e) => updateField('aadhaar', e.target.value.replace(/\D/g, '').slice(0, 12))}
-                placeholder="XXXX XXXX XXXX"
-                maxLength={12}
-                className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none font-mono ${
-                  errors.aadhaar ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
-              />
-              {errors.aadhaar && <p className="text-xs text-red-500 mt-1">{errors.aadhaar}</p>}
-              <p className="text-xs text-gray-400 mt-1">Aadhaar number must be unique for each employee</p>
             </div>
           </div>
-        </div>
 
-        {/* Zone Assignment Info */}
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-4">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <h3 className="font-medium text-amber-800">Zone Assignment</h3>
-              <p className="text-sm text-amber-700 mt-0.5">
-                Zones can be assigned after employee creation in the <strong>Employee Zone Management</strong> section.
-              </p>
-            </div>
+          {/* Divider */}
+          <div className="border-t border-gray-100"></div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/fp/employees')}
+              className="px-6 py-2.5 text-gray-700 font-medium hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-6 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Employee'
+              )}
+            </button>
           </div>
-        </div>
-
-        {/* Submit Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-4">
-          <button
-            type="button"
-            onClick={() => navigate('/fp/employees')}
-            className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              'Add Employee'
-            )}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };
