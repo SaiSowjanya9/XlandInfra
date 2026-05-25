@@ -17,7 +17,7 @@ const formatDate = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-// Generate Premium PDF with professional design
+// Generate Premium PDF with professional design - Soft/Subtle colors
 const generatePDF = (data, type, filename) => {
   try {
     const doc = new jsPDF('p', 'mm', 'a4');
@@ -26,15 +26,16 @@ const generatePDF = (data, type, filename) => {
     const margin = 15;
     let y = 10;
 
-    // Colors
-    const primaryBlue = [30, 64, 175];
-    const darkText = [31, 41, 55];
-    const grayText = [107, 114, 128];
-    const lightGray = [243, 244, 246];
-    const accentGold = [180, 140, 60];
+    // Soft/Subtle Colors - No bright colors
+    const primaryColor = [71, 85, 105];      // Slate-600
+    const darkText = [51, 65, 85];           // Slate-700
+    const grayText = [100, 116, 139];        // Slate-500
+    const lightGray = [248, 250, 252];       // Slate-50
+    const borderColor = [203, 213, 225];     // Slate-300
+    const accentColor = [148, 163, 184];     // Slate-400
 
     // ===== HEADER =====
-    doc.setFillColor(...primaryBlue);
+    doc.setFillColor(...primaryColor);
     doc.rect(0, 0, pageWidth, 32, 'F');
     
     // Company name
@@ -47,9 +48,9 @@ const generatePDF = (data, type, filename) => {
     doc.text('Property Management Solutions', margin, 23);
 
     // Document type badge
-    doc.setFillColor(...accentGold);
+    doc.setFillColor(241, 245, 249); // Slate-100
     doc.roundedRect(pageWidth - margin - 45, 8, 45, 16, 2, 2, 'F');
-    doc.setTextColor(...primaryBlue);
+    doc.setTextColor(...primaryColor);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
@@ -61,9 +62,9 @@ const generatePDF = (data, type, filename) => {
     doc.setTextColor(...darkText);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('Document ID:', margin, y);
+    doc.text('Estimate ID:', margin, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(data.estimateId || data.packageId || 'N/A', margin + 32, y);
+    doc.text(data.estimateId || data.packageId || 'N/A', margin + 28, y);
     
     doc.setFont('helvetica', 'bold');
     doc.text('Date:', pageWidth - margin - 60, y);
@@ -75,13 +76,13 @@ const generatePDF = (data, type, filename) => {
     if (data.packageName) {
       doc.setFillColor(...lightGray);
       doc.roundedRect(margin, y, pageWidth - margin * 2, 14, 2, 2, 'F');
-      doc.setFillColor(...accentGold);
-      doc.rect(margin, y, 4, 14, 'F');
+      doc.setFillColor(...accentColor);
+      doc.rect(margin, y, 3, 14, 'F');
       
-      doc.setTextColor(...primaryBlue);
+      doc.setTextColor(...primaryColor);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(data.packageName, margin + 10, y + 9);
+      doc.text(data.packageName, margin + 8, y + 9);
       
       if (data.billingDuration) {
         doc.setTextColor(...grayText);
@@ -94,13 +95,14 @@ const generatePDF = (data, type, filename) => {
 
     // ===== TWO COLUMN INFO SECTION =====
     const colWidth = (pageWidth - margin * 2 - 10) / 2;
+    const boxHeight = 58;
     
     // Property Details Box
-    doc.setDrawColor(220, 220, 220);
+    doc.setDrawColor(...borderColor);
     doc.setLineWidth(0.5);
-    doc.roundedRect(margin, y, colWidth, 45, 3, 3, 'S');
+    doc.roundedRect(margin, y, colWidth, boxHeight, 3, 3, 'S');
     
-    doc.setFillColor(...primaryBlue);
+    doc.setFillColor(...primaryColor);
     doc.roundedRect(margin, y, colWidth, 12, 3, 3, 'F');
     doc.rect(margin, y + 8, colWidth, 4, 'F');
     doc.setTextColor(255, 255, 255);
@@ -110,35 +112,41 @@ const generatePDF = (data, type, filename) => {
     
     let infoY = y + 18;
     doc.setTextColor(...darkText);
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     
-    if (data.propertyType) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Type:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.propertyType), margin + 25, infoY);
-      infoY += 7;
-    }
-    if (data.propertyName || data.communityName) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Name:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      const propName = String(data.propertyName || data.communityName || '');
-      doc.text(propName.substring(0, 25), margin + 25, infoY);
-      infoY += 7;
-    }
     if (data.propertyId) {
       doc.setFont('helvetica', 'bold');
-      doc.text('ID:', margin + 5, infoY);
+      doc.text('Property ID:', margin + 5, infoY);
       doc.setFont('helvetica', 'normal');
-      doc.text(String(data.propertyId), margin + 25, infoY);
+      doc.text(String(data.propertyId), margin + 30, infoY);
+      infoY += 6;
+    }
+    if (data.propertyType) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Property Type:', margin + 5, infoY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.propertyType), margin + 30, infoY);
+      infoY += 6;
+    }
+    if (data.zone) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Zone:', margin + 5, infoY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.zone), margin + 30, infoY);
+      infoY += 6;
+    }
+    if (data.division) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Division:', margin + 5, infoY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.division), margin + 30, infoY);
     }
     
     // Customer Details Box
-    doc.setDrawColor(220, 220, 220);
-    doc.roundedRect(margin + colWidth + 10, y, colWidth, 45, 3, 3, 'S');
+    doc.setDrawColor(...borderColor);
+    doc.roundedRect(margin + colWidth + 10, y, colWidth, boxHeight, 3, 3, 'S');
     
-    doc.setFillColor(...primaryBlue);
+    doc.setFillColor(...primaryColor);
     doc.roundedRect(margin + colWidth + 10, y, colWidth, 12, 3, 3, 'F');
     doc.rect(margin + colWidth + 10, y + 8, colWidth, 4, 'F');
     doc.setTextColor(255, 255, 255);
@@ -148,82 +156,121 @@ const generatePDF = (data, type, filename) => {
     
     infoY = y + 18;
     doc.setTextColor(...darkText);
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     
     if (data.customerName) {
       doc.setFont('helvetica', 'bold');
-      doc.text('Name:', margin + colWidth + 15, infoY);
+      doc.text('Contact Name:', margin + colWidth + 15, infoY);
       doc.setFont('helvetica', 'normal');
-      doc.text(String(data.customerName).substring(0, 20), margin + colWidth + 35, infoY);
-      infoY += 7;
+      doc.text(String(data.customerName).substring(0, 18), margin + colWidth + 40, infoY);
+      infoY += 6;
+    }
+    if (data.communityName || data.propertyName) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Community:', margin + colWidth + 15, infoY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.communityName || data.propertyName || '').substring(0, 18), margin + colWidth + 40, infoY);
+      infoY += 6;
+    }
+    if (data.address) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Address:', margin + colWidth + 15, infoY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.address).substring(0, 18), margin + colWidth + 40, infoY);
+      infoY += 6;
     }
     if (data.customerPhone || data.phone) {
       doc.setFont('helvetica', 'bold');
       doc.text('Phone:', margin + colWidth + 15, infoY);
       doc.setFont('helvetica', 'normal');
-      doc.text(String(data.customerPhone || data.phone || ''), margin + colWidth + 35, infoY);
-      infoY += 7;
+      doc.text(String(data.customerPhone || data.phone || ''), margin + colWidth + 40, infoY);
+      infoY += 6;
     }
     if (data.customerEmail || data.email) {
       doc.setFont('helvetica', 'bold');
       doc.text('Email:', margin + colWidth + 15, infoY);
       doc.setFont('helvetica', 'normal');
       const email = String(data.customerEmail || data.email || '');
-      doc.text(email.substring(0, 25), margin + colWidth + 35, infoY);
+      doc.text(email.substring(0, 22), margin + colWidth + 40, infoY);
     }
     
-    y += 52;
+    y += boxHeight + 8;
 
-    // ===== SERVICES TABLE =====
-    doc.setTextColor(...primaryBlue);
+    // ===== NO OF VISITS =====
+    if (data.noOfVisits) {
+      doc.setFillColor(...lightGray);
+      doc.roundedRect(margin, y, 70, 10, 2, 2, 'F');
+      doc.setTextColor(...darkText);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('No. of Visits:', margin + 5, y + 7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.noOfVisits), margin + 35, y + 7);
+      y += 14;
+    }
+
+    // ===== SERVICES TABLE (No Amount column) =====
+    doc.setTextColor(...primaryColor);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('SERVICES INCLUDED', margin, y);
-    doc.setDrawColor(...accentGold);
-    doc.setLineWidth(1);
+    doc.setDrawColor(...accentColor);
+    doc.setLineWidth(0.8);
     doc.line(margin, y + 2, margin + 40, y + 2);
     y += 8;
 
-    // Prepare services data
+    // Prepare services data - No Amount column, No [Add-on] prefix
     const services = data.services || [];
-    const tableBody = services.length > 0 
-      ? services.map((s, idx) => [
+    const tableBody = [];
+    
+    if (services.length > 0) {
+      services.forEach((s, idx) => {
+        const row = [
           String(idx + 1),
           String(s.name || s.service || 'Service'),
-          String(s.frequencyCount || s.frequency || '-'),
-          String(s.frequencyType || 'Monthly'),
-          formatCurrency(s.price || 0)
-        ])
-      : [['1', 'No services listed', '-', '-', '-']];
+          String(s.frequencyType || 'Monthly')
+        ];
+        tableBody.push(row);
+        
+        // Add description if exists
+        if (s.description) {
+          tableBody.push(['', { content: s.description, styles: { fontStyle: 'italic', textColor: grayText, fontSize: 7 } }, '']);
+        }
+      });
+    } else {
+      tableBody.push(['1', 'No services listed', '-']);
+    }
 
-    // Add addons to table
+    // Add addons to table (without [Add-on] prefix)
     if (data.addons && data.addons.length > 0) {
       data.addons.forEach((addon, idx) => {
-        const addonName = addon.name || addon.serviceName || addon.services?.[0]?.name || 'Add-on';
-        const addonPrice = addon.price || addon.totalPrice || addon.services?.[0]?.price || 0;
+        const addonName = addon.name || addon.serviceName || addon.services?.[0]?.name || 'Additional Service';
         tableBody.push([
           String(services.length + idx + 1),
-          `[Add-on] ${addonName}`,
-          '-',
-          '-',
-          formatCurrency(addonPrice)
+          addonName,
+          '-'
         ]);
+        
+        // Add description if exists
+        if (addon.description) {
+          tableBody.push(['', { content: addon.description, styles: { fontStyle: 'italic', textColor: grayText, fontSize: 7 } }, '']);
+        }
       });
     }
 
     autoTable(doc, {
       startY: y,
-      head: [['#', 'Service Description', 'Qty', 'Frequency', 'Amount']],
+      head: [['#', 'Service Description', 'Frequency']],
       body: tableBody,
       margin: { left: margin, right: margin },
       styles: {
         fontSize: 9,
         cellPadding: 4,
-        lineColor: [220, 220, 220],
+        lineColor: borderColor,
         lineWidth: 0.2
       },
       headStyles: {
-        fillColor: primaryBlue,
+        fillColor: primaryColor,
         textColor: [255, 255, 255],
         fontStyle: 'bold',
         fontSize: 8
@@ -234,16 +281,29 @@ const generatePDF = (data, type, filename) => {
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },
         1: { cellWidth: 'auto' },
-        2: { cellWidth: 18, halign: 'center' },
-        3: { cellWidth: 28, halign: 'center' },
-        4: { cellWidth: 35, halign: 'right', fontStyle: 'bold' }
+        2: { cellWidth: 30, halign: 'center' }
       },
-      alternateRowStyles: { fillColor: [250, 250, 250] }
+      alternateRowStyles: { fillColor: [250, 251, 252] }
     });
 
     y = doc.lastAutoTable.finalY + 10;
 
-    // ===== PRICE SUMMARY =====
+    // ===== DESCRIPTION SECTION =====
+    if (data.description) {
+      doc.setFillColor(...lightGray);
+      doc.roundedRect(margin, y, pageWidth - margin * 2, 20, 2, 2, 'F');
+      doc.setTextColor(...darkText);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Description:', margin + 5, y + 7);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      const descLines = doc.splitTextToSize(data.description, pageWidth - margin * 2 - 10);
+      doc.text(descLines.slice(0, 2), margin + 5, y + 14);
+      y += 24;
+    }
+
+    // ===== TOTAL PRICE SUMMARY =====
     const summaryWidth = 90;
     const summaryX = pageWidth - margin - summaryWidth;
     
@@ -254,7 +314,7 @@ const generatePDF = (data, type, filename) => {
     const total = parseFloat(data.totalPrice) || (afterDiscount + gst);
 
     // Summary box
-    doc.setDrawColor(...primaryBlue);
+    doc.setDrawColor(...borderColor);
     doc.setLineWidth(0.5);
     doc.roundedRect(summaryX, y, summaryWidth, discount > 0 ? 65 : 55, 3, 3, 'S');
     
@@ -262,10 +322,10 @@ const generatePDF = (data, type, filename) => {
     doc.setFillColor(...lightGray);
     doc.roundedRect(summaryX, y, summaryWidth, 12, 3, 3, 'F');
     doc.rect(summaryX, y + 8, summaryWidth, 4, 'F');
-    doc.setTextColor(...primaryBlue);
+    doc.setTextColor(...primaryColor);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('PRICE SUMMARY', summaryX + summaryWidth / 2, y + 8, { align: 'center' });
+    doc.text('TOTAL PRICE SUMMARY', summaryX + summaryWidth / 2, y + 8, { align: 'center' });
     
     let sumY = y + 20;
     
@@ -281,7 +341,7 @@ const generatePDF = (data, type, filename) => {
     
     // Discount
     if (discount > 0) {
-      doc.setTextColor(200, 50, 50);
+      doc.setTextColor([120, 113, 108]); // Soft brown/gray for discount
       doc.setFont('helvetica', 'normal');
       doc.text('Discount', summaryX + 8, sumY);
       doc.setFont('helvetica', 'bold');
@@ -299,13 +359,13 @@ const generatePDF = (data, type, filename) => {
     sumY += 5;
     
     // Separator
-    doc.setDrawColor(...accentGold);
+    doc.setDrawColor(...accentColor);
     doc.setLineWidth(0.5);
     doc.line(summaryX + 5, sumY, summaryX + summaryWidth - 5, sumY);
     sumY += 8;
     
     // Total
-    doc.setFillColor(...primaryBlue);
+    doc.setFillColor(...primaryColor);
     doc.roundedRect(summaryX, sumY - 3, summaryWidth, 14, 0, 0, 'F');
     doc.roundedRect(summaryX, sumY, summaryWidth, 11, 3, 3, 'F');
     doc.setTextColor(255, 255, 255);
@@ -317,11 +377,11 @@ const generatePDF = (data, type, filename) => {
     // ===== FOOTER =====
     doc.setFillColor(...lightGray);
     doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
-    doc.setDrawColor(...accentGold);
+    doc.setDrawColor(...accentColor);
     doc.setLineWidth(0.5);
     doc.line(0, pageHeight - 20, pageWidth, pageHeight - 20);
     
-    doc.setTextColor(...primaryBlue);
+    doc.setTextColor(...primaryColor);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.text('XLAND INFRA Property Management Solutions', pageWidth / 2, pageHeight - 12, { align: 'center' });
@@ -404,10 +464,16 @@ export const exportEstimateToPDF = (estimate) => {
       packageName: estimate.packageName,
       propertyId: estimate.propertyId,
       propertyType: estimate.propertyType || estimate.entryType,
-      propertyName: estimate.propertyName || estimate.communityName,
+      propertyName: estimate.propertyName,
+      communityName: estimate.communityName || estimate.propertyName,
+      zone: estimate.zone || estimate.zoneName,
+      division: estimate.division || estimate.divisionName,
+      address: estimate.address || estimate.propertyAddress,
       customerName: estimate.customerName || estimate.clientName,
       customerPhone: estimate.customerPhone || estimate.phone,
       customerEmail: estimate.customerEmail || estimate.email,
+      noOfVisits: estimate.noOfVisits || estimate.visits || estimate.numberOfVisits,
+      description: estimate.description || estimate.notes,
       services,
       addons,
       billingDuration: estimate.billingDuration || 'Yearly',
@@ -473,8 +539,19 @@ export const exportPackageToPDF = (pkg) => {
 
     const exportData = {
       packageId: pkg.packageId || pkg.id || 'PKG-' + Date.now(),
+      estimateId: pkg.packageId || pkg.id || 'PKG-' + Date.now(),
       packageName: pkg.packageName || pkg.name || 'AMC Package',
       propertyType: pkg.propertyType || 'General',
+      propertyId: pkg.propertyId,
+      zone: pkg.zone || pkg.zoneName,
+      division: pkg.division || pkg.divisionName,
+      communityName: pkg.communityName || pkg.propertyName,
+      address: pkg.address,
+      customerName: pkg.customerName || pkg.clientName,
+      customerPhone: pkg.customerPhone || pkg.phone,
+      customerEmail: pkg.customerEmail || pkg.email,
+      noOfVisits: pkg.noOfVisits || pkg.visits,
+      description: pkg.description || pkg.notes,
       services,
       billingDuration: pkg.billingDuration || 'Yearly',
       subtotal: totalPrice,
