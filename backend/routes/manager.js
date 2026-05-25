@@ -702,30 +702,15 @@ router.patch('/estimates/:id/archive', requireManagerScope, validateOwnership('e
 // AMC PACKAGES - FP Managers use FP packages (read-only), standalone use manager packages
 // ============================================
 
-// Get all AMC packages
+// Get all AMC packages - Global packages visible to all
 router.get('/amc-packages', requireManagerScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    
-    // FP Managers read from fp_amc_packages, standalone from manager_amc_packages
-    const table = req.isFPManager ? 'fp_amc_packages' : 'manager_amc_packages';
-    const scopeColumn = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
-    
+    // Read from global amc_packages table - visible to all portals
     const [packages] = await pool.execute(
-      `SELECT * FROM ${table} WHERE ${scopeColumn} = ? AND is_active = 1 ORDER BY created_at DESC`,
-      [scopeId]
+      `SELECT * FROM amc_packages WHERE is_active = 1 ORDER BY created_at DESC`
     );
     
-    // Filter pricing if needed
-    const filteredPackages = packages.map(pkg => {
-      if (pkg.hide_pricing) {
-        const { base_price, price, ...rest } = pkg;
-        return rest;
-      }
-      return pkg;
-    });
-    
-    res.json({ success: true, data: filteredPackages });
+    res.json({ success: true, data: packages });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -758,34 +743,15 @@ router.post('/amc-packages', requireManagerScope, async (req, res) => {
 // ADD-ONS - FP Managers use FP addons (read-only), standalone use manager addons
 // ============================================
 
-// Get all add-ons
+// Get all add-ons - Global add-ons visible to all
 router.get('/addons', requireManagerScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    
-    // FP Managers read from fp_addons, standalone from manager_addons
-    const table = req.isFPManager ? 'fp_addons' : 'manager_addons';
-    const scopeColumn = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
-    
+    // Read from global addons table - visible to all portals
     const [addons] = await pool.execute(
-      `SELECT a.*, c.name as category_name 
-       FROM ${table} a
-       LEFT JOIN categories c ON a.category_id = c.id
-       WHERE a.${scopeColumn} = ? AND a.is_active = 1
-       ORDER BY a.created_at DESC`,
-      [scopeId]
+      `SELECT * FROM addons WHERE is_active = 1 ORDER BY created_at DESC`
     );
     
-    // Filter pricing if needed
-    const filteredAddons = addons.map(addon => {
-      if (addon.hide_pricing) {
-        const { price, ...rest } = addon;
-        return rest;
-      }
-      return addon;
-    });
-    
-    res.json({ success: true, data: filteredAddons });
+    res.json({ success: true, data: addons });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -1662,12 +1662,12 @@ router.post('/estimates', requireFPScope, async (req, res) => {
   }
 });
 
-// Get FP AMC packages
+// Get AMC packages - Global packages visible to all portals
 router.get('/amc-packages', requireFPScope, async (req, res) => {
   try {
+    // Read from global amc_packages table
     const [packages] = await pool.execute(
-      `SELECT * FROM fp_amc_packages WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
-      [req.fpId]
+      `SELECT * FROM amc_packages WHERE is_active = 1 ORDER BY created_at DESC`
     );
 
     res.json({
@@ -1719,16 +1719,12 @@ router.post('/amc-packages', requireFPScope, async (req, res) => {
   }
 });
 
-// Get FP addons
+// Get add-ons - Global add-ons visible to all portals
 router.get('/addons', requireFPScope, async (req, res) => {
   try {
+    // Read from global addons table
     const [addons] = await pool.execute(
-      `SELECT a.*, c.name as category_name
-       FROM fp_addons a
-       LEFT JOIN categories c ON a.category_id = c.id
-       WHERE a.franchise_partner_id = ?
-       ORDER BY a.created_at DESC`,
-      [req.fpId]
+      `SELECT * FROM addons WHERE is_active = 1 ORDER BY created_at DESC`
     );
 
     res.json({
