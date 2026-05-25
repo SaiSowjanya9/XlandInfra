@@ -722,14 +722,16 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             
             <!-- Estimate Details -->
             <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <span style="color: #6b7280; font-size: 14px;">Estimate ID</span>
-                <span style="color: #1f2937; font-weight: 600;">${estimateId}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between;">
-                <span style="color: #6b7280; font-size: 14px;">Valid Until</span>
-                <span style="color: #dc2626; font-weight: 600;">${expiryDate.toLocaleDateString('en-IN')}</span>
-              </div>
+              <table style="width: 100%;">
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Estimate ID:</td>
+                  <td style="padding: 8px 0; padding-left: 15px; color: #1f2937; font-weight: 600;">${estimateId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Valid Until:</td>
+                  <td style="padding: 8px 0; padding-left: 15px; color: #dc2626; font-weight: 600;">${expiryDate.toLocaleDateString('en-IN')}</td>
+                </tr>
+              </table>
             </div>
             
             <!-- Services Table -->
