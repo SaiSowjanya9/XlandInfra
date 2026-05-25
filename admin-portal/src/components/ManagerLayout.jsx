@@ -9,7 +9,6 @@ import {
   Menu,
   X,
   ChevronDown,
-  FileInput,
   Plus,
   List,
   Package,
@@ -20,7 +19,6 @@ import {
   UserPlus,
   Hammer,
   ClipboardCheck,
-  Users,
   MapPin
 } from 'lucide-react';
 
@@ -33,15 +31,13 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   // Check if this is an FP-created Manager (has franchisePartnerId)
   const isFPManager = !!admin?.franchisePartnerId;
 
-  // Nav items - Add Customer hidden for FP Manager
-  const allNavItems = [
+  // Nav items - Add Customer removed for all managers
+  const navItems = [
     { path: '/manager', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/manager/properties', icon: Building2, label: 'Property Management' },
     { path: '/manager/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/manager/employees/zones', icon: MapPin, label: 'Employee Zone Management' },
-    { path: '/manager/customers', icon: FileInput, label: 'Add Customer', adminOnly: true },
   ];
-  const navItems = isFPManager ? allNavItems.filter(item => !item.adminOnly) : allNavItems;
 
   // Vendor sub-items - Add Vendor hidden for FP Manager
   const allVendorSubItems = [

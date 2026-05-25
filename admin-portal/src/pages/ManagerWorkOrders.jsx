@@ -23,6 +23,7 @@ const ManagerWorkOrders = ({ user }) => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(null);
