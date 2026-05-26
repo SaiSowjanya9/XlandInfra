@@ -2,16 +2,18 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import BrandLogo from './components/BrandLogo';
 
-// Lazy load components for better performance
-const Layout = lazy(() => import('./components/Layout'));
+// Direct imports for critical post-login components (no loading delay)
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import WorkOrder from './pages/WorkOrder';
+import Login from './pages/Login';
+
+// Lazy load less frequently accessed components
 const CorporateLanding = lazy(() => import('./pages/CorporateLanding'));
 const CustomerHome = lazy(() => import('./pages/CustomerHome'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const WorkOrder = lazy(() => import('./pages/WorkOrder'));
 const Schedule = lazy(() => import('./pages/Schedule'));
 const Payment = lazy(() => import('./pages/Payment'));
 const Contact = lazy(() => import('./pages/Contact'));
-const Login = lazy(() => import('./pages/Login'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const ActivateAccount = lazy(() => import('./pages/ActivateAccount'));
@@ -221,7 +223,7 @@ function App() {
         <Route path="/terms-of-service" element={<TermsOfService />} />
         <Route path="/cookie-policy" element={<CookiePolicy />} />
         
-        {/* Customer Portal Routes */}
+        {/* Customer Portal Routes - Login uses direct import for fast loading */}
         <Route path="/login" element={
           user ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />
         } />
@@ -230,15 +232,16 @@ function App() {
         } />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/activate/:token" element={<ActivateAccount />} />
+        {/* Dashboard routes use direct imports for instant loading after login */}
         <Route path="/dashboard/*" element={
           user ? (
             <Layout user={user} onLogout={handleLogout}>
               <Routes>
                 <Route path="/" element={<Dashboard user={user} />} />
                 <Route path="/work-order" element={<WorkOrder user={user} />} />
-                <Route path="/schedule" element={<Schedule />} />
-                <Route path="/payment" element={<Payment />} />
-                <Route path="/contact" element={<Contact />} />
+                <Route path="/schedule" element={<Suspense fallback={<PageLoader />}><Schedule /></Suspense>} />
+                <Route path="/payment" element={<Suspense fallback={<PageLoader />}><Payment /></Suspense>} />
+                <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
               </Routes>
             </Layout>
           ) : (

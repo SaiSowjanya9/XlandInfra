@@ -119,83 +119,81 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
   try {
     const scopeId = getScopeId(req);
     const scopeColumn = getScopeColumn(req);
-
-    // Get counts for dashboard - filter by FP or Manager scope
-    const [propertiesCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM properties WHERE ${scopeColumn} = ?`,
-      [scopeId]
-    );
-
-    const [vendorsCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM vendors WHERE ${scopeColumn} = ?`,
-      [scopeId]
-    );
-
-    const [customersCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM clients WHERE ${scopeColumn} = ?`,
-      [scopeId]
-    );
-
-    // For FP Managers, count FP employees; for standalone, count manager employees
+    const managerId = req.managerId;
     const employeeTable = req.isFPManager ? 'fp_employees' : 'manager_employees';
     const employeeScopeCol = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
-    const [employeesCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM ${employeeTable} WHERE ${employeeScopeCol} = ? AND is_active = 1`,
-      [scopeId]
-    );
 
-    // Work orders - Manager sees only their own (by manager_id)
-    const managerId = req.managerId;
-    
-    const [workOrdersCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE manager_id = ?`,
-      [managerId]
-    );
-
-    const [pendingWorkOrders] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders 
-       WHERE manager_id = ? AND status NOT IN ('completed', 'closed', 'cancelled')`,
-      [managerId]
-    );
-
-    const [completedWorkOrders] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders 
-       WHERE manager_id = ? AND status IN ('completed', 'closed')`,
-      [managerId]
-    );
-
-    const [estimatesCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM estimates WHERE ${scopeColumn} = ?`,
-      [scopeId]
-    );
-
-    // Get recent work orders - Manager sees only their own
-    const [recentWorkOrders] = await pool.execute(
-      `SELECT wo.*, p.name as property_name, c.name as category_name, 
-              v.company_name as vendor_name, cl.name as client_name
-       FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN categories c ON wo.category_id = c.id
-       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE wo.manager_id = ?
-       ORDER BY wo.created_at DESC
-       LIMIT 10`,
-      [managerId]
-    );
+    // Run all queries in parallel for faster response
+    const [
+      propertiesCount,
+      vendorsCount,
+      customersCount,
+      employeesCount,
+      workOrderStats,
+      estimatesCount,
+      recentWorkOrders
+    ] = await Promise.all([
+      // Properties count
+      pool.execute(`SELECT COUNT(*) as count FROM properties WHERE ${scopeColumn} = ?`, [scopeId])
+        .then(([r]) => r[0].count).catch(() => 0),
+      
+      // Vendors count
+      pool.execute(`SELECT COUNT(*) as count FROM vendors WHERE ${scopeColumn} = ?`, [scopeId])
+        .then(([r]) => r[0].count).catch(() => 0),
+      
+      // Customers count
+      pool.execute(`SELECT COUNT(*) as count FROM clients WHERE ${scopeColumn} = ?`, [scopeId])
+        .then(([r]) => r[0].count).catch(() => 0),
+      
+      // Employees count
+      pool.execute(`SELECT COUNT(*) as count FROM ${employeeTable} WHERE ${employeeScopeCol} = ? AND is_active = 1`, [scopeId])
+        .then(([r]) => r[0].count).catch(() => 0),
+      
+      // Work orders - combined query
+      pool.execute(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN status NOT IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed
+        FROM work_orders WHERE manager_id = ?
+      `, [managerId]).then(([[r]]) => ({ 
+        total: r.total || 0, 
+        pending: r.pending || 0, 
+        completed: r.completed || 0 
+      })).catch(() => ({ total: 0, pending: 0, completed: 0 })),
+      
+      // Estimates count
+      pool.execute(`SELECT COUNT(*) as count FROM estimates WHERE ${scopeColumn} = ?`, [scopeId])
+        .then(([r]) => r[0].count).catch(() => 0),
+      
+      // Recent work orders
+      pool.execute(
+        `SELECT wo.*, p.name as property_name, c.name as category_name, 
+                v.company_name as vendor_name, cl.name as client_name
+         FROM work_orders wo
+         LEFT JOIN properties p ON wo.property_id = p.id
+         LEFT JOIN categories c ON wo.category_id = c.id
+         LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+         LEFT JOIN clients cl ON wo.client_id = cl.id
+         WHERE wo.manager_id = ?
+         ORDER BY wo.created_at DESC
+         LIMIT 10`,
+        [managerId]
+      ).then(([rows]) => rows).catch(() => [])
+    ]);
 
     res.json({
       success: true,
       data: {
         stats: {
-          properties: propertiesCount[0].count,
-          vendors: vendorsCount[0].count,
-          customers: customersCount[0].count,
-          employees: employeesCount[0].count,
-          workOrders: workOrdersCount[0].count,
-          pendingWorkOrders: pendingWorkOrders[0].count,
-          completedWorkOrders: completedWorkOrders[0].count,
-          estimates: estimatesCount[0].count
+          properties: propertiesCount,
+          vendors: vendorsCount,
+          customers: customersCount,
+          employees: employeesCount,
+          workOrders: workOrderStats.total,
+          pendingWorkOrders: workOrderStats.pending,
+          completedWorkOrders: workOrderStats.completed,
+          estimates: estimatesCount
         },
         recentWorkOrders
       }

@@ -124,82 +124,84 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
     const fpId = req.fpId;
 
     // Helper function to safely get count (handles missing tables)
-    const safeCount = async (query, params) => {
-      try {
-        const [result] = await pool.execute(query, params);
-        return result[0]?.count || 0;
-      } catch (e) {
-        console.log(`Dashboard query skipped (table may not exist): ${e.message}`);
-        return 0;
-      }
+    const safeCount = (query, params) => {
+      return pool.execute(query, params)
+        .then(([result]) => result[0]?.count || 0)
+        .catch((e) => {
+          console.log(`Dashboard query skipped (table may not exist): ${e.message}`);
+          return 0;
+        });
     };
 
-    // Get counts for dashboard (safely handles missing tables)
-    const properties = await safeCount(
-      'SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ?', [fpId]
-    );
-    const vendors = await safeCount(
-      'SELECT COUNT(*) as count FROM vendors WHERE franchise_partner_id = ?', [fpId]
-    );
-    const customers = await safeCount(
-      'SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?', [fpId]
-    );
-    const totalWorkOrders = await safeCount(
-      'SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ?', [fpId]
-    );
-    const pendingWorkOrders = await safeCount(
-      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ? AND status NOT IN ('completed', 'closed', 'cancelled')`, [fpId]
-    );
-    const completedWorkOrders = await safeCount(
-      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ? AND status IN ('completed', 'closed')`, [fpId]
-    );
-    const estimates = await safeCount(
-      'SELECT COUNT(*) as count FROM estimates WHERE franchise_partner_id = ?', [fpId]
-    );
-    const employees = await safeCount(
-      'SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ?', [fpId]
-    );
-    
-    // Employee role breakdown
-    const managers = await safeCount(
-      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND role = 'manager' AND is_active = 1`, [fpId]
-    );
-    const coordinators = await safeCount(
-      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND role = 'coordinator' AND is_active = 1`, [fpId]
-    );
-    const supervisors = await safeCount(
-      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND role = 'supervisor' AND is_active = 1`, [fpId]
-    );
-    const executives = await safeCount(
-      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND role = 'executive' AND is_active = 1`, [fpId]
-    );
-
-    // Work orders by employee role
-    const workOrdersByManagers = await safeCount(
-      `SELECT COUNT(*) as count FROM work_orders wo
-       INNER JOIN fp_employees e ON wo.created_by = e.id
-       WHERE wo.franchise_partner_id = ? AND e.role = 'manager'`, [fpId]
-    );
-    const workOrdersByCoordinators = await safeCount(
-      `SELECT COUNT(*) as count FROM work_orders wo
-       INNER JOIN fp_employees e ON wo.created_by = e.id
-       WHERE wo.franchise_partner_id = ? AND e.role = 'coordinator'`, [fpId]
-    );
-    const workOrdersBySupervisors = await safeCount(
-      `SELECT COUNT(*) as count FROM work_orders wo
-       INNER JOIN fp_employees e ON wo.created_by = e.id
-       WHERE wo.franchise_partner_id = ? AND e.role = 'supervisor'`, [fpId]
-    );
-    const workOrdersByExecutives = await safeCount(
-      `SELECT COUNT(*) as count FROM work_orders wo
-       INNER JOIN fp_employees e ON wo.created_by = e.id
-       WHERE wo.franchise_partner_id = ? AND e.role = 'executive'`, [fpId]
-    );
-
-    // Recent work orders with creator info
-    let recentWorkOrders = [];
-    try {
-      const [rows] = await pool.execute(
+    // Run all queries in parallel for faster response
+    const [
+      properties,
+      vendors,
+      customers,
+      workOrderStats,
+      estimates,
+      employeeStats,
+      workOrdersByRole,
+      recentWorkOrders
+    ] = await Promise.all([
+      // Properties count
+      safeCount('SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ?', [fpId]),
+      
+      // Vendors count
+      safeCount('SELECT COUNT(*) as count FROM vendors WHERE franchise_partner_id = ?', [fpId]),
+      
+      // Customers count
+      safeCount('SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?', [fpId]),
+      
+      // Work orders - combined query
+      pool.execute(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN status NOT IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed
+        FROM work_orders WHERE franchise_partner_id = ?
+      `, [fpId]).then(([[r]]) => ({ total: r.total || 0, pending: r.pending || 0, completed: r.completed || 0 }))
+        .catch(() => ({ total: 0, pending: 0, completed: 0 })),
+      
+      // Estimates count
+      safeCount('SELECT COUNT(*) as count FROM estimates WHERE franchise_partner_id = ?', [fpId]),
+      
+      // Employee stats - combined query
+      pool.execute(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN role = 'manager' AND is_active = 1 THEN 1 ELSE 0 END) as managers,
+          SUM(CASE WHEN role = 'coordinator' AND is_active = 1 THEN 1 ELSE 0 END) as coordinators,
+          SUM(CASE WHEN role = 'supervisor' AND is_active = 1 THEN 1 ELSE 0 END) as supervisors,
+          SUM(CASE WHEN role = 'executive' AND is_active = 1 THEN 1 ELSE 0 END) as executives
+        FROM fp_employees WHERE franchise_partner_id = ?
+      `, [fpId]).then(([[r]]) => ({
+        total: r.total || 0,
+        managers: r.managers || 0,
+        coordinators: r.coordinators || 0,
+        supervisors: r.supervisors || 0,
+        executives: r.executives || 0
+      })).catch(() => ({ total: 0, managers: 0, coordinators: 0, supervisors: 0, executives: 0 })),
+      
+      // Work orders by role - combined query
+      pool.execute(`
+        SELECT 
+          SUM(CASE WHEN e.role = 'manager' THEN 1 ELSE 0 END) as managers,
+          SUM(CASE WHEN e.role = 'coordinator' THEN 1 ELSE 0 END) as coordinators,
+          SUM(CASE WHEN e.role = 'supervisor' THEN 1 ELSE 0 END) as supervisors,
+          SUM(CASE WHEN e.role = 'executive' THEN 1 ELSE 0 END) as executives
+        FROM work_orders wo
+        INNER JOIN fp_employees e ON wo.created_by = e.id
+        WHERE wo.franchise_partner_id = ?
+      `, [fpId]).then(([[r]]) => ({
+        managers: r.managers || 0,
+        coordinators: r.coordinators || 0,
+        supervisors: r.supervisors || 0,
+        executives: r.executives || 0
+      })).catch(() => ({ managers: 0, coordinators: 0, supervisors: 0, executives: 0 })),
+      
+      // Recent work orders
+      pool.execute(
         `SELECT wo.*, p.name as property_name, c.name as category_name,
                 e.name as created_by_name, e.role as created_by_role
          FROM work_orders wo
@@ -209,11 +211,8 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
          WHERE wo.franchise_partner_id = ?
          ORDER BY wo.created_at DESC LIMIT 5`,
         [fpId]
-      );
-      recentWorkOrders = rows;
-    } catch (e) {
-      console.log('Recent work orders query skipped:', e.message);
-    }
+      ).then(([rows]) => rows).catch(() => [])
+    ]);
 
     res.json({
       success: true,
@@ -223,23 +222,18 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
           vendors,
           customers,
           workOrders: {
-            total: totalWorkOrders,
-            pending: pendingWorkOrders,
-            completed: completedWorkOrders,
-            byRole: {
-              managers: workOrdersByManagers,
-              coordinators: workOrdersByCoordinators,
-              supervisors: workOrdersBySupervisors,
-              executives: workOrdersByExecutives
-            }
+            total: workOrderStats.total,
+            pending: workOrderStats.pending,
+            completed: workOrderStats.completed,
+            byRole: workOrdersByRole
           },
           estimates,
-          employees,
+          employees: employeeStats.total,
           employeeRoles: {
-            managers,
-            coordinators,
-            supervisors,
-            executives
+            managers: employeeStats.managers,
+            coordinators: employeeStats.coordinators,
+            supervisors: employeeStats.supervisors,
+            executives: employeeStats.executives
           }
         },
         recentWorkOrders
@@ -627,20 +621,58 @@ router.delete('/work-orders/:id', requireFPScope, async (req, res) => {
 // ============================================
 
 // Get all FP customers
+// Combines data from both clients table (legacy) and customer_accounts + properties (new form)
 router.get('/customers', requireFPScope, async (req, res) => {
   try {
-    const [customers] = await pool.execute(
-      `SELECT c.*, p.name as property_name
+    // Get legacy clients
+    const [legacyClients] = await pool.execute(
+      `SELECT c.*, p.name as property_name, 'client' as source_type
        FROM clients c
        LEFT JOIN properties p ON c.property_id = p.id
-       WHERE c.franchise_partner_id = ?
-       ORDER BY c.created_at DESC`,
+       WHERE c.franchise_partner_id = ?`,
       [req.fpId]
     );
 
+    // Get customers from customer_accounts linked to FP properties
+    const [accountCustomers] = await pool.execute(
+      `SELECT 
+         ca.id, ca.customer_id as client_id, 
+         COALESCE(ca.name, CONCAT(ca.first_name, ' ', ca.last_name)) as name,
+         ca.email, ca.phone, ca.country_code,
+         p.name as property_name, p.property_id as property_code,
+         p.address, p.city, p.state, p.zip_code as postalCode,
+         ca.is_activated, ca.is_active,
+         ca.created_at, ca.updated_at,
+         'customer_account' as source_type
+       FROM customer_accounts ca
+       INNER JOIN properties p ON ca.property_id = p.id
+       WHERE ca.franchise_partner_id = ?`,
+      [req.fpId]
+    );
+
+    // Get customers from customer_accounts linked to onboarded_properties (admin-created)
+    const [adminCustomers] = await pool.execute(
+      `SELECT 
+         ca.id, ca.customer_id as client_id, 
+         COALESCE(ca.name, CONCAT(ca.first_name, ' ', ca.last_name)) as name,
+         ca.email, ca.phone, ca.country_code,
+         op.community_name as property_name, op.property_id as property_code,
+         op.address, op.city, op.state, op.postal_code as postalCode,
+         ca.is_activated, ca.is_active,
+         ca.created_at, ca.updated_at,
+         'admin_created' as source_type
+       FROM customer_accounts ca
+       INNER JOIN onboarded_properties op ON ca.property_id = op.id
+       WHERE ca.franchise_partner_id IS NULL`
+    );
+
+    // Combine and sort by created_at
+    const allCustomers = [...legacyClients, ...accountCustomers, ...adminCustomers]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
     res.json({
       success: true,
-      data: customers
+      data: allCustomers
     });
   } catch (error) {
     console.error('Get customers error:', error);
@@ -769,13 +801,18 @@ router.post('/customers', requireFPScope, async (req, res) => {
 });
 
 // Get customer accounts for FP
+// Includes both FP-created customers AND admin-created customers (from onboarded_properties)
 router.get('/customer-accounts', requireFPScope, async (req, res) => {
   try {
     const [accounts] = await pool.execute(
-      `SELECT ca.*, p.name as property_name, p.property_id as property_code
+      `SELECT ca.*, 
+              COALESCE(p.name, op.community_name) as property_name, 
+              COALESCE(p.property_id, op.property_id) as property_code,
+              CASE WHEN ca.franchise_partner_id IS NULL THEN 'admin' ELSE 'fp' END as created_source
        FROM customer_accounts ca
-       LEFT JOIN properties p ON ca.property_id = p.id
-       WHERE ca.franchise_partner_id = ?
+       LEFT JOIN properties p ON ca.property_id = p.id AND ca.franchise_partner_id IS NOT NULL
+       LEFT JOIN onboarded_properties op ON ca.property_id = op.id AND ca.franchise_partner_id IS NULL
+       WHERE ca.franchise_partner_id = ? OR ca.franchise_partner_id IS NULL
        ORDER BY ca.created_at DESC`,
       [req.fpId]
     );
@@ -799,7 +836,7 @@ router.post('/customer-accounts/:id/activate', requireFPScope, async (req, res) 
     await pool.execute(
       `UPDATE customer_accounts 
        SET is_activated = 1, password_hash = ?, temp_password = ?, updated_at = NOW()
-       WHERE id = ? AND franchise_partner_id = ?`,
+       WHERE id = ? AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
       [hashedPassword, tempPassword, id, req.fpId]
     );
     
@@ -828,7 +865,7 @@ router.post('/customer-accounts/:id/deactivate', requireFPScope, async (req, res
     
     await pool.execute(
       `UPDATE customer_accounts SET is_activated = 0, updated_at = NOW()
-       WHERE id = ? AND franchise_partner_id = ?`,
+       WHERE id = ? AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
       [id, req.fpId]
     );
     
@@ -850,7 +887,7 @@ router.post('/customer-accounts/:id/resend-activation', requireFPScope, async (r
     
     await pool.execute(
       `UPDATE customer_accounts SET password_hash = ?, temp_password = ?, updated_at = NOW()
-       WHERE id = ? AND franchise_partner_id = ?`,
+       WHERE id = ? AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
       [hashedPassword, tempPassword, id, req.fpId]
     );
     

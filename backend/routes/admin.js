@@ -661,74 +661,67 @@ router.put('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) =>
 
 router.get('/dashboard/stats', async (req, res) => {
   try {
-    // Properties from onboarded_properties table
-    let properties = 0;
-    try {
-      const [[propCount]] = await pool.execute(`SELECT COUNT(*) as count FROM onboarded_properties WHERE status = 'active'`);
-      properties = propCount.count;
-    } catch (e) {
-      try {
-        const [[propCount]] = await pool.execute(`SELECT COUNT(*) as count FROM properties WHERE is_active = TRUE`);
-        properties = propCount.count;
-      } catch (e2) {}
-    }
-
-    // Vendors from onboarded_vendors table
-    let vendors = 0;
-    try {
-      const [[vendorCount]] = await pool.execute(`SELECT COUNT(*) as count FROM onboarded_vendors WHERE status = 'active'`);
-      vendors = vendorCount.count;
-    } catch (e) {
-      try {
-        const [[vendorCount]] = await pool.execute(`SELECT COUNT(*) as count FROM vendors WHERE is_active = TRUE`);
-        vendors = vendorCount.count;
-      } catch (e2) {}
-    }
-
-    // Customers/Residents
-    let customers = 0;
-    try {
-      const [[customerCount]] = await pool.execute(`SELECT COUNT(*) as count FROM residents WHERE is_active = TRUE`);
-      customers = customerCount.count;
-    } catch (e) {}
-
-    // Work Orders
-    let workOrders = 0, pendingWorkOrders = 0, completedWorkOrders = 0;
-    try {
-      const [[woCount]] = await pool.execute(`SELECT COUNT(*) as count FROM work_orders`);
-      workOrders = woCount.count;
-      const [[pendingCount]] = await pool.execute(`SELECT COUNT(*) as count FROM work_orders WHERE status IN ('pending', 'open', 'in_progress')`);
-      pendingWorkOrders = pendingCount.count;
-      const [[completedCount]] = await pool.execute(`SELECT COUNT(*) as count FROM work_orders WHERE status = 'completed'`);
-      completedWorkOrders = completedCount.count;
-    } catch (e) {}
-
-    // Estimates
-    let totalEstimates = 0;
-    try {
-      const [[estCount]] = await pool.execute(`SELECT COUNT(*) as count FROM estimates`);
-      totalEstimates = estCount.count;
-    } catch (e) {}
-
-    // Zones
-    let totalZones = 0;
-    try {
-      const [[zoneCount]] = await pool.execute(`SELECT COUNT(DISTINCT zone) as count FROM onboarded_properties WHERE zone IS NOT NULL AND zone != '' AND status = 'active'`);
-      totalZones = zoneCount.count;
-    } catch (e) {}
+    // Run all queries in parallel for faster response
+    const [
+      propertiesResult,
+      vendorsResult,
+      customersResult,
+      workOrdersResult,
+      estimatesResult,
+      zonesResult
+    ] = await Promise.all([
+      // Properties count
+      pool.execute(`SELECT COUNT(*) as count FROM onboarded_properties WHERE status = 'active'`)
+        .then(([[r]]) => r.count)
+        .catch(() => pool.execute(`SELECT COUNT(*) as count FROM properties WHERE is_active = TRUE`)
+          .then(([[r]]) => r.count)
+          .catch(() => 0)),
+      
+      // Vendors count
+      pool.execute(`SELECT COUNT(*) as count FROM onboarded_vendors WHERE status = 'active'`)
+        .then(([[r]]) => r.count)
+        .catch(() => pool.execute(`SELECT COUNT(*) as count FROM vendors WHERE is_active = TRUE`)
+          .then(([[r]]) => r.count)
+          .catch(() => 0)),
+      
+      // Customers count
+      pool.execute(`SELECT COUNT(*) as count FROM residents WHERE is_active = TRUE`)
+        .then(([[r]]) => r.count)
+        .catch(() => 0),
+      
+      // Work orders - single query with conditional counts
+      pool.execute(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN status IN ('pending', 'open', 'in_progress', 'requested', 'under_review', 'assigned') THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status IN ('completed', 'closed', 'verified') THEN 1 ELSE 0 END) as completed
+        FROM work_orders
+      `).then(([[r]]) => ({ total: r.total || 0, pending: r.pending || 0, completed: r.completed || 0 }))
+        .catch(() => ({ total: 0, pending: 0, completed: 0 })),
+      
+      // Estimates count
+      pool.execute(`SELECT COUNT(*) as count FROM estimates`)
+        .then(([[r]]) => r.count)
+        .catch(() => 0),
+      
+      // Zones count
+      pool.execute(`SELECT COUNT(DISTINCT zone) as count FROM onboarded_properties WHERE zone IS NOT NULL AND zone != '' AND status = 'active'`)
+        .then(([[r]]) => r.count)
+        .catch(() => 0)
+    ]);
 
     res.json({
       success: true,
       data: {
-        properties,
-        vendors,
-        customers,
-        workOrders,
-        pendingWorkOrders,
-        completedWorkOrders,
-        totalEstimates,
-        totalZones,
-        activeWorkOrders: pendingWorkOrders
+        properties: propertiesResult,
+        vendors: vendorsResult,
+        customers: customersResult,
+        workOrders: workOrdersResult.total,
+        pendingWorkOrders: workOrdersResult.pending,
+        completedWorkOrders: workOrdersResult.completed,
+        totalEstimates: estimatesResult,
+        totalZones: zonesResult,
+        activeWorkOrders: workOrdersResult.pending
       }
     });
   } catch (error) {
@@ -747,66 +740,59 @@ router.get('/dashboard/stats', async (req, res) => {
 
 router.get('/dashboard/recent-activities', async (req, res) => {
   try {
-    const activities = [];
-    
-    // Get recent work orders
-    try {
-      const [workOrders] = await pool.execute(`
+    // Run all queries in parallel for faster response
+    const [workOrders, props, vends] = await Promise.all([
+      // Recent work orders
+      pool.execute(`
         SELECT id, work_order_id, title, status, created_at 
         FROM work_orders 
         ORDER BY created_at DESC 
         LIMIT 5
-      `);
-      workOrders.forEach(wo => {
-        activities.push({
-          id: `wo-${wo.id}`,
-          type: 'workorder',
-          message: `Work order ${wo.work_order_id || '#' + wo.id}: ${wo.title || 'New work order'} - ${wo.status}`,
-          time: formatTimeAgo(wo.created_at),
-          timestamp: wo.created_at
-        });
-      });
-    } catch (e) {}
-
-    // Get recent properties
-    try {
-      const [props] = await pool.execute(`
+      `).then(([rows]) => rows).catch(() => []),
+      
+      // Recent properties
+      pool.execute(`
         SELECT id, property_id, community_name, created_at 
         FROM onboarded_properties 
         WHERE status = 'active'
         ORDER BY created_at DESC 
         LIMIT 3
-      `);
-      props.forEach(p => {
-        activities.push({
-          id: `prop-${p.id}`,
-          type: 'property',
-          message: `Property ${p.community_name || p.property_id} was added`,
-          time: formatTimeAgo(p.created_at),
-          timestamp: p.created_at
-        });
-      });
-    } catch (e) {}
-
-    // Get recent vendors
-    try {
-      const [vends] = await pool.execute(`
+      `).then(([rows]) => rows).catch(() => []),
+      
+      // Recent vendors
+      pool.execute(`
         SELECT id, vendor_id, company_name, created_at 
         FROM onboarded_vendors 
         WHERE status = 'active'
         ORDER BY created_at DESC 
         LIMIT 3
-      `);
-      vends.forEach(v => {
-        activities.push({
-          id: `vend-${v.id}`,
-          type: 'vendor',
-          message: `Vendor ${v.company_name || v.vendor_id} was onboarded`,
-          time: formatTimeAgo(v.created_at),
-          timestamp: v.created_at
-        });
-      });
-    } catch (e) {}
+      `).then(([rows]) => rows).catch(() => [])
+    ]);
+
+    // Build activities array
+    const activities = [
+      ...workOrders.map(wo => ({
+        id: `wo-${wo.id}`,
+        type: 'workorder',
+        message: `Work order ${wo.work_order_id || '#' + wo.id}: ${wo.title || 'New work order'} - ${wo.status}`,
+        time: formatTimeAgo(wo.created_at),
+        timestamp: wo.created_at
+      })),
+      ...props.map(p => ({
+        id: `prop-${p.id}`,
+        type: 'property',
+        message: `Property ${p.community_name || p.property_id} was added`,
+        time: formatTimeAgo(p.created_at),
+        timestamp: p.created_at
+      })),
+      ...vends.map(v => ({
+        id: `vend-${v.id}`,
+        type: 'vendor',
+        message: `Vendor ${v.company_name || v.vendor_id} was onboarded`,
+        time: formatTimeAgo(v.created_at),
+        timestamp: v.created_at
+      }))
+    ];
 
     // Sort by timestamp and limit
     activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
