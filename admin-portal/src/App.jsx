@@ -378,6 +378,7 @@ function App() {
             <Route path="/coordinator/work-orders" element={<CoordinatorWorkOrders user={user} />} />
             <Route path="/coordinator/work-orders/pending" element={<CoordinatorWorkOrders user={user} />} />
             <Route path="/coordinator/work-orders/completed" element={<CoordinatorWorkOrders user={user} />} />
+            <Route path="/coordinator/work-orders/create" element={<CoordinatorWorkOrders user={user} />} />
             <Route path="/coordinator/customers" element={<CoordinatorCustomers user={user} />} />
             <Route path="/coordinator/customers/add" element={<CoordinatorCustomers user={user} defaultTab="add" />} />
             <Route path="/coordinator/vendors" element={<CoordinatorVendors user={user} />} />

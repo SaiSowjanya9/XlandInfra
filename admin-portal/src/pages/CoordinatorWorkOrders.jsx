@@ -21,8 +21,16 @@ import {
   Trash2,
   RotateCcw,
   Lock,
-  MessageSquare
+  MessageSquare,
+  Building2,
+  Mail,
+  Phone,
+  Image,
+  Camera,
+  FileText,
+  Send
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const CoordinatorWorkOrders = ({ user }) => {
   // Check if this is an FP-created Coordinator (has franchisePartnerId)
@@ -48,21 +56,27 @@ const CoordinatorWorkOrders = ({ user }) => {
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [propertySearch, setPropertySearch] = useState('');
   const [formData, setFormData] = useState({
     propertyId: '',
     categoryId: '',
     subcategoryId: '',
     clientId: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
     title: '',
     description: '',
     priority: 'medium',
-    permissionToEnter: 'no',
-    hasPet: 'no',
+    permissionToEnter: '',
+    hasPet: '',
+    entryNotes: '',
     scheduledDate: ''
   });
 
   const viewType = location.pathname.includes('/pending') ? 'pending' 
-                 : location.pathname.includes('/completed') ? 'completed' 
+                 : location.pathname.includes('/completed') ? 'completed'
+                 : location.pathname.includes('/create') ? 'create'
                  : 'all';
 
   const token = sessionStorage.getItem('pm_auth_token');
@@ -397,46 +411,65 @@ const CoordinatorWorkOrders = ({ user }) => {
 
   const ViewIcon = getViewIcon();
 
+  // Get pending and completed counts
+  const pendingCount = workOrders.filter(wo => ['pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)).length;
+  const completedCount = workOrders.filter(wo => wo.status === 'completed').length;
+
+  // Filter properties based on search
+  const filteredProperties = properties.filter(p =>
+    p.property_id?.toLowerCase().includes(propertySearch.toLowerCase()) ||
+    p.name?.toLowerCase().includes(propertySearch.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
-      {/* FP Coordinator - View Only Banner */}
-      {isFPCoordinator && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
-          <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <Eye className="w-6 h-6 text-amber-600" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-amber-800">View Only Access</h3>
-            <p className="text-sm text-amber-700">You have view-only access. Status changes are allowed for completed orders.</p>
-          </div>
+      {/* Tabs Header */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="flex items-center border-b border-gray-100">
+          <Link
+            to="/coordinator/work-orders/pending"
+            className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              viewType === 'pending'
+                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            <span>Pending</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs ${
+              viewType === 'pending' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'
+            }`}>
+              {pendingCount}
+            </span>
+          </Link>
+          <Link
+            to="/coordinator/work-orders/completed"
+            className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              viewType === 'completed'
+                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Completed</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs ${
+              viewType === 'completed' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'
+            }`}>
+              {completedCount}
+            </span>
+          </Link>
+          <Link
+            to="/coordinator/work-orders/create"
+            className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              viewType === 'create'
+                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create New</span>
+          </Link>
         </div>
-      )}
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-            viewType === 'pending' ? 'bg-orange-100' : viewType === 'completed' ? 'bg-green-100' : 'bg-teal-100'
-          }`}>
-            <ViewIcon className={`w-5 h-5 ${
-              viewType === 'pending' ? 'text-orange-600' : viewType === 'completed' ? 'text-green-600' : 'text-teal-600'
-            }`} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{getViewTitle()}</h1>
-            <p className="text-gray-500 mt-1">
-              {isFPCoordinator ? 'View and manage work order statuses' : 'Manage your work orders'}
-            </p>
-          </div>
-        </div>
-        {/* Create Work Order - Always visible (as per diagram) */}
-        <button
-          onClick={() => { resetForm(); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Work Order</span>
-        </button>
       </div>
 
       {/* Message */}
@@ -452,7 +485,302 @@ const CoordinatorWorkOrders = ({ user }) => {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Create New Work Order Form */}
+      {viewType === 'create' && (
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          {/* Form Header */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <Plus className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Create New Work Order</h2>
+              <p className="text-sm text-gray-500">Fill in the details to create a work order on behalf of a resident</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleCreateWorkOrder} className="space-y-6">
+            {/* Property Information */}
+            <div className="bg-gray-50 rounded-xl p-5 space-y-4">
+              <div className="flex items-center gap-2 text-gray-700 font-medium">
+                <Building2 className="w-4 h-4" />
+                <span>Property Information</span>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Property ID <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={propertySearch}
+                    onChange={(e) => setPropertySearch(e.target.value)}
+                    placeholder="Search by Property ID or Community Name..."
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                  {propertySearch && filteredProperties.length > 0 && !formData.propertyId && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredProperties.slice(0, 5).map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, propertyId: p.id });
+                            setPropertySearch(`${p.property_id} - ${p.name}`);
+                          }}
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm"
+                        >
+                          <span className="font-medium">{p.property_id}</span> - {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Details */}
+            <div className="bg-gray-50 rounded-xl p-5 space-y-4">
+              <div className="flex items-center gap-2 text-gray-700 font-medium">
+                <User className="w-4 h-4" />
+                <span>Customer Details</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.customerName}
+                    onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                    placeholder="Customer name"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={formData.customerEmail}
+                    onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
+                    placeholder="customer@email.com"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.customerPhone}
+                    onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
+                    placeholder="Phone number"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Category & Subcategory */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={formData.categoryId}
+                    onChange={(e) => {
+                      setFormData({ ...formData, categoryId: e.target.value, subcategoryId: '' });
+                      fetchSubcategories(e.target.value);
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Subcategory <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.subcategoryId}
+                  onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  disabled={!formData.categoryId}
+                >
+                  <option value="">Select a category first</option>
+                  {subcategories.map(sub => (
+                    <option key={sub.id} value={sub.id}>{sub.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description <span className="text-gray-400">(Optional)</span>
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value.slice(0, 500) })}
+                placeholder="Describe the issue or request in detail..."
+                rows={4}
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 resize-none"
+              />
+              <p className="text-right text-xs text-gray-400 mt-1">{formData.description.length}/500</p>
+            </div>
+
+            {/* Permission to Enter & Has Pet */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Permission to Enter <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-gray-500 mb-2">Allow entry if resident is unavailable</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, permissionToEnter: 'yes' })}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-colors ${
+                      formData.permissionToEnter === 'yes'
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, permissionToEnter: 'no' })}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-colors ${
+                      formData.permissionToEnter === 'no'
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Has Pet? <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-gray-500 mb-2">Does the resident have a pet</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, hasPet: 'yes' })}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-colors ${
+                      formData.hasPet === 'yes'
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, hasPet: 'no' })}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-colors ${
+                      formData.hasPet === 'no'
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Entry Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Entry Notes <span className="text-gray-400">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                value={formData.entryNotes}
+                onChange={(e) => setFormData({ ...formData, entryNotes: e.target.value })}
+                placeholder="Special instructions for entry (gate code, parking, etc.)..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            {/* Priority */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+              <div className="grid grid-cols-4 gap-2">
+                {['low', 'medium', 'high', 'urgent'].map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, priority: p })}
+                    className={`py-2 px-4 rounded-lg border-2 font-medium capitalize transition-colors ${
+                      formData.priority === p
+                        ? 'border-amber-400 bg-amber-50 text-amber-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Attachments */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Attachments <span className="text-gray-400">(Optional - max 5 files)</span>
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors"
+                >
+                  <Image className="w-6 h-6 text-gray-400 mb-1" />
+                  <span className="text-sm text-gray-500">Gallery</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors"
+                >
+                  <Camera className="w-6 h-6 text-gray-400 mb-1" />
+                  <span className="text-sm text-gray-500">Camera</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors"
+                >
+                  <FileText className="w-6 h-6 text-gray-400 mb-1" />
+                  <span className="text-sm text-gray-500">Files</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
+            >
+              <Send className="w-5 h-5" />
+              <span>Create Work Order</span>
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Filters - Only show for list views */}
+      {viewType !== 'create' && (
       <div className="bg-white rounded-xl border border-gray-100 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
@@ -489,8 +817,10 @@ const CoordinatorWorkOrders = ({ user }) => {
           </button>
         </div>
       </div>
+      )}
 
       {/* Work Orders List */}
+      {viewType !== 'create' && (
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -665,6 +995,7 @@ const CoordinatorWorkOrders = ({ user }) => {
           </div>
         )}
       </div>
+      )}
 
       {/* Create Work Order Modal */}
       {showModal && (

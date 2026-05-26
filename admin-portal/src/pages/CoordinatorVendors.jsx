@@ -285,21 +285,6 @@ const CoordinatorVendors = ({ user }) => {
 
   return (
     <div className="space-y-4">
-      {/* FP Coordinator - Just View Banner */}
-      {isFPCoordinator && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
-          <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <Eye className="w-6 h-6 text-amber-600" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-amber-800">View Only Access</h3>
-            <p className="text-sm text-amber-700">
-              Vendor Management is view-only for your account. Rate/Visit information is hidden. You cannot add, modify, or delete vendors.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
