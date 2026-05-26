@@ -119,19 +119,6 @@ const CoordinatorDashboard = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* FP Coordinator - View Only Banner */}
-      {isFPCoordinator && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
-          <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <Eye className="w-6 h-6 text-amber-600" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-amber-800">View Only Access</h3>
-            <p className="text-sm text-amber-700">You have view-only access. Some features are restricted.</p>
-          </div>
-        </div>
-      )}
-
       {/* Welcome Header */}
       <div className="bg-gradient-to-r from-teal-600 to-cyan-700 rounded-2xl p-6 text-white">
         <div className="flex items-center justify-between">
@@ -140,9 +127,7 @@ const CoordinatorDashboard = ({ user }) => {
               Welcome back, {user?.firstName || 'Coordinator'}!
             </h1>
             <p className="text-teal-100 mt-1">
-              {isFPCoordinator 
-                ? 'Here\'s your view-only operations overview.' 
-                : 'Here\'s your operations overview for today.'}
+              Here's your operations overview for today.
             </p>
           </div>
           <div className="hidden md:flex items-center gap-4">

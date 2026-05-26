@@ -76,7 +76,6 @@ const CoordinatorWorkOrders = ({ user }) => {
     { value: 'accepted', label: 'Accepted' },
     { value: 'in_progress', label: 'In Progress' },
     { value: 'completed', label: 'Completed' },
-    { value: 'closed', label: 'Closed' },
     { value: 'cancelled', label: 'Cancelled' }
   ];
 
@@ -612,17 +611,8 @@ const CoordinatorWorkOrders = ({ user }) => {
                               <option value="assigned">Assigned</option>
                               <option value="in_progress">In Progress</option>
                               <option value="completed">Completed</option>
-                              <option value="closed">Closed</option>
                               <option value="cancelled">Cancelled</option>
                             </select>
-                            {/* Mark As Closed */}
-                            <button
-                              onClick={() => handleStatusUpdate(wo.id, 'closed')}
-                              className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                              title="Mark As Closed"
-                            >
-                              <Lock className="w-4 h-4" />
-                            </button>
                             {/* Revert to Pending */}
                             <button
                               onClick={() => handleStatusUpdate(wo.id, 'pending')}
@@ -637,7 +627,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                         {/* ALL TAB ACTIONS */}
                         {viewType === 'all' && (
                           <div className="flex items-center gap-1">
-                            {!isFPCoordinator && wo.status !== 'completed' && wo.status !== 'closed' && (
+                            {!isFPCoordinator && wo.status !== 'completed' && wo.status !== 'cancelled' && (
                               <>
                                 <button
                                   onClick={() => { setSelectedWorkOrder(wo); setShowAssignModal(true); }}

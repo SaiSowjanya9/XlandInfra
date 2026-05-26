@@ -34,6 +34,10 @@ const CoordinatorProperties = ({ user }) => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [divisionFilter, setDivisionFilter] = useState('all');
+  const [zoneFilter, setZoneFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [showModal, setShowModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignType, setAssignType] = useState('vendor');
@@ -278,10 +282,44 @@ const CoordinatorProperties = ({ user }) => {
     });
   };
 
-  const filteredProperties = properties.filter(p =>
-    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.property_id?.toLowerCase().includes(searchTerm.toLowerCase())
+  // Property type tabs config
+  const propertyTabs = [
+    { id: 'all', label: 'All Customers' },
+    { id: 'gated_community', label: 'Gated Communities' },
+    { id: 'apartment', label: 'Apartments' },
+    { id: 'villa', label: 'Villas' },
+    { id: 'plot', label: 'Plots' },
+    { id: 'flat', label: 'Flats' }
+  ];
+
+  // Get unique divisions from properties
+  const divisions = [...new Set(properties.map(p => p.division).filter(Boolean))];
+
+  const filteredProperties = properties.filter(p => {
+    // Search filter
+    const matchesSearch = !searchTerm || 
+      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.property_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.zone_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.address?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Tab filter (property type)
+    const matchesTab = activeTab === 'all' || 
+      p.property_type?.toLowerCase().replace(/\s+/g, '_') === activeTab ||
+      p.entry_type?.toLowerCase() === activeTab.replace('_', '');
+    
+    // Division filter
+    const matchesDivision = divisionFilter === 'all' || p.division === divisionFilter;
+    
+    // Zone filter
+    const matchesZone = zoneFilter === 'all' || p.zone_id === zoneFilter || p.zone_name === zoneFilter;
+    
+    // Status filter
+    const matchesStatus = statusFilter === 'all' || (p.status || 'active') === statusFilter;
+    
+    return matchesSearch && matchesTab && matchesDivision && matchesZone && matchesStatus;
+  }
   );
 
   return (
@@ -303,19 +341,7 @@ const CoordinatorProperties = ({ user }) => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-gray-500 mt-1">
-            {isFPCoordinator ? 'View your assigned properties' : 'Manage your assigned properties'}
-          </p>
-        </div>
-        {/* Add Property - Visible for all (can add to their scope) */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => { resetForm(); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Property</span>
-          </button>
+          <p className="text-gray-500 mt-1">{properties.length} total customers</p>
         </div>
       </div>
 
@@ -332,17 +358,86 @@ const CoordinatorProperties = ({ user }) => {
         </div>
       )}
 
-      {/* Search */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search properties..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-          />
+      {/* Tabs and Filters */}
+      <div className="bg-white rounded-xl border border-gray-100">
+        {/* Property Type Tabs */}
+        <div className="flex items-center gap-1 px-4 pt-4 border-b border-gray-100 overflow-x-auto">
+          {propertyTabs.map((tab) => {
+            const count = tab.id === 'all' 
+              ? properties.length 
+              : properties.filter(p => 
+                  p.property_type?.toLowerCase().replace(/\s+/g, '_') === tab.id ||
+                  p.entry_type?.toLowerCase() === tab.id.replace('_', '')
+                ).length;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs ${
+                  activeTab === tab.id ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search and Filters */}
+        <div className="p-4 space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name, ID, zone, or address..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Filter Dropdowns */}
+          <div className="flex flex-wrap gap-3">
+            <select
+              value={divisionFilter}
+              onChange={(e) => setDivisionFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Divisions</option>
+              {divisions.map(div => (
+                <option key={div} value={div}>{div}</option>
+              ))}
+            </select>
+
+            <select
+              value={zoneFilter}
+              onChange={(e) => setZoneFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Zones</option>
+              {zones.map(zone => (
+                <option key={zone.id} value={zone.name}>{zone.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -456,16 +551,6 @@ const CoordinatorProperties = ({ user }) => {
                             <Users className="w-4 h-4" />
                           </button>
                         )}
-                        {/* Export to Excel - Hidden for FP Coordinator */}
-                        {!isFPCoordinator && (
-                          <button
-                            onClick={() => handleExportSingle(property)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                            title="Export to Excel"
-                          >
-                            <FileSpreadsheet className="w-4 h-4" />
-                          </button>
-                        )}
                         {/* Delete - Hidden for FP Coordinator */}
                         {!isFPCoordinator && property.can_delete && (
                           <button
@@ -482,6 +567,13 @@ const CoordinatorProperties = ({ user }) => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        
+        {/* Footer */}
+        {!loading && filteredProperties.length > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+            Showing {filteredProperties.length} of {properties.length} properties
           </div>
         )}
       </div>
