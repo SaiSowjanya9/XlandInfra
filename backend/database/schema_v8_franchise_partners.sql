@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS franchise_partners (
   -- Business Details
   gst_number VARCHAR(50),
   pan_number VARCHAR(20),
+  visible_password VARCHAR(255),
+  must_change_password BOOLEAN DEFAULT TRUE,
   agreement_start_date DATE,
   agreement_end_date DATE,
   territory_zones JSON,
