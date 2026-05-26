@@ -23,7 +23,8 @@ import {
   List,
   Package,
   PlusCircle,
-  Archive
+  Archive,
+  Home
 } from 'lucide-react';
 
 const SupervisorLayout = ({ admin, onLogout, children }) => {
@@ -36,9 +37,13 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     { path: '/supervisor', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/supervisor/properties', icon: Building2, label: 'Property Management' },
     { path: '/supervisor/work-orders', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/supervisor/customers', icon: FileInput, label: 'Add Customer' },
     { path: '/supervisor/user-management', icon: Shield, label: 'User Management' },
     { path: '/supervisor/qr-management', icon: QrCode, label: 'QR Management' },
+  ];
+
+  const customerSubItems = [
+    { path: '/supervisor/customers/add', icon: UserPlus, label: 'Add Customer' },
+    { path: '/supervisor/customers', icon: List, label: 'Customer List' }
   ];
 
   const vendorSubItems = [
@@ -54,10 +59,12 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     { path: '/supervisor/estimates/archived', icon: Archive, label: 'Archived' }
   ];
 
+  const isCustomerActive = customerSubItems.some(item => location.pathname === item.path);
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/supervisor/estimates';
 
   useEffect(() => {
+    if (isCustomerActive) setExpandedMenus(prev => ({ ...prev, customers: true }));
     if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
     if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
   }, [location.pathname]);
@@ -136,6 +143,46 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
             {navItems.map((item) => (
               <NavLink key={item.path} item={item} mobile />
             ))}
+
+            {/* Customer Management Section */}
+            <div className="mt-2">
+              <button
+                onClick={() => setExpandedMenus(prev => ({ ...prev, customers: !prev.customers }))}
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isCustomerActive && !expandedMenus.customers
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Home className="w-5 h-5" />
+                  <span className="font-medium">Customer Management</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.customers ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedMenus.customers && (
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                  {customerSubItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                          location.pathname === item.path
+                            ? 'bg-primary-600 text-white'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Vendor Management Section */}
             <div className="mt-2">

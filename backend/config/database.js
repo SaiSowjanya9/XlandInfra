@@ -138,6 +138,53 @@ const initOnboardingTables = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
+
+    // Create properties table for FP/Manager/Coordinator/Supervisor/Executive created properties
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS properties (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        property_id VARCHAR(50) UNIQUE NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        property_type VARCHAR(100) DEFAULT 'residential',
+        address TEXT,
+        city VARCHAR(100),
+        state VARCHAR(100),
+        zip_code VARCHAR(20),
+        contact_person VARCHAR(255),
+        contact_phone VARCHAR(50),
+        contact_email VARCHAR(255),
+        zone_id VARCHAR(100),
+        division_id VARCHAR(100),
+        franchise_partner_id INT,
+        manager_id INT,
+        coordinator_id INT,
+        supervisor_id INT,
+        executive_id INT,
+        created_by INT,
+        latitude DECIMAL(10,8),
+        longitude DECIMAL(11,8),
+        landmark VARCHAR(255),
+        notes TEXT,
+        entry_type VARCHAR(20),
+        category VARCHAR(50),
+        area_name VARCHAR(255),
+        number_of_blocks INT DEFAULT 1,
+        units_per_block JSON,
+        block_names JSON,
+        number_of_units INT,
+        villa_plot_number VARCHAR(100),
+        block_info VARCHAR(255),
+        status VARCHAR(20) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_fp_id (franchise_partner_id),
+        INDEX idx_manager_id (manager_id),
+        INDEX idx_coordinator_id (coordinator_id),
+        INDEX idx_supervisor_id (supervisor_id),
+        INDEX idx_executive_id (executive_id)
+      )
+    `);
+    console.log('  ✓ Properties table created/verified');
     
     // Add new columns if they don't exist (for existing tables)
     const columnsToAdd = [
@@ -403,6 +450,25 @@ const initOnboardingTables = async () => {
       )
     `);
     console.log('  ✅ Customer accounts table initialized');
+
+    // Add role columns to customer_accounts if not exist
+    const customerAccountColumns = [
+      { name: 'name', def: "VARCHAR(255)" },
+      { name: 'temp_password', def: "VARCHAR(100)" },
+      { name: 'franchise_partner_id', def: "INT DEFAULT NULL" },
+      { name: 'manager_id', def: "INT DEFAULT NULL" },
+      { name: 'coordinator_id', def: "INT DEFAULT NULL" },
+      { name: 'supervisor_id', def: "INT DEFAULT NULL" },
+      { name: 'executive_id', def: "INT DEFAULT NULL" }
+    ];
+    for (const col of customerAccountColumns) {
+      try {
+        await conn.execute(`ALTER TABLE customer_accounts ADD COLUMN ${col.name} ${col.def}`);
+        console.log(`  ✓ Added ${col.name} to customer_accounts`);
+      } catch (e) {
+        // Column already exists
+      }
+    }
 
     // Create users table for employee portal
     await conn.execute(`

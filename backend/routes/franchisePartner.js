@@ -1248,8 +1248,14 @@ router.post('/employees', requireFPScope, async (req, res) => {
     const firstName = nameParts[0];
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    // Generate employee code, user ID, and temporary password
-    const employeeCode = `FP${req.fpId}-EMP-${Date.now()}`;
+    // Generate sequential employee code (001, 002, 003...)
+    const [maxEmpCode] = await pool.execute(
+      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ?`,
+      [req.fpId]
+    );
+    const nextSeq = (maxEmpCode[0].count || 0) + 1;
+    const employeeCode = String(nextSeq).padStart(3, '0');
+    
     const userId = await generateUserId(role || 'executive');  // Global sequential ID
     const tempPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
