@@ -7,11 +7,12 @@ const { pool } = require('../config/database');
 
 /**
  * Attach supervisor scope to request
- * Extracts supervisor ID from authenticated user
+ * Extracts supervisor ID and franchise partner ID from authenticated user
  */
 const attachSupervisorScope = (req, res, next) => {
   if (req.user && (req.user.role === 'supervisor' || req.user.supervisorId)) {
     req.supervisorId = req.user.supervisorId || req.user.id;
+    req.franchisePartnerId = req.user.franchisePartnerId || null;
     req.supervisorScope = true;
   }
   next();

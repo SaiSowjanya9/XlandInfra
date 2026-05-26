@@ -140,7 +140,15 @@ const Login = ({ onLogin }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark-200 mb-1">Password</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-dark-200">Password</label>
+                <Link 
+                  to="/forgot-password" 
+                  className="text-sm text-gold-400 hover:text-gold-300 font-medium"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}

@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { 
   Eye, EyeOff, AlertCircle, ArrowLeft, Building2, User, Lock, Briefcase
 } from 'lucide-react';
+import ForgotPassword from './ForgotPassword';
 
 const FPLogin = ({ onLogin, onBack }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -53,6 +55,14 @@ const FPLogin = ({ onLogin, onBack }) => {
       setLoading(false);
     }
   };
+
+  if (showForgotPassword) {
+    return (
+      <ForgotPassword 
+        onBack={() => setShowForgotPassword(false)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-900 to-blue-800 flex items-center justify-center p-4 relative overflow-hidden">
@@ -103,7 +113,16 @@ const FPLogin = ({ onLogin, onBack }) => {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-blue-200">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-blue-200">Password</label>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-sm text-blue-300 hover:text-blue-200 font-medium"
+                >
+                  Forgot Password?
+                </button>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" strokeWidth={1.5} />
                 <input

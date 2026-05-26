@@ -129,12 +129,19 @@ const SupervisorEmployees = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div><h1 className="text-2xl font-bold text-gray-900">Employee Management</h1><p className="text-gray-500 mt-1">Manage your team members</p></div>
-        <div className="flex gap-2">
-          <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"><Download className="w-4 h-4" /><span>Export</span></button>
-          <button onClick={() => { resetForm(); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"><Plus className="w-4 h-4" /><span>Add Employee</span></button>
+      {/* View Only Access Banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <Eye className="w-6 h-6 text-amber-600" />
         </div>
+        <div>
+          <h3 className="font-semibold text-amber-800">View Only Access</h3>
+          <p className="text-sm text-amber-700">You have view-only access to employees.</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div><h1 className="text-2xl font-bold text-gray-900">Employee Management</h1><p className="text-gray-500 mt-1">View your team members</p></div>
       </div>
 
       {message.text && (
@@ -177,10 +184,9 @@ const SupervisorEmployees = ({ user }) => {
                     <td className="py-4 px-4">{employee.phone && <p className="text-sm text-gray-600 flex items-center gap-1"><Phone className="w-3 h-3" /> {employee.phone}</p>}{employee.email && <p className="text-sm text-gray-400 flex items-center gap-1"><Mail className="w-3 h-3" /> {employee.email}</p>}</td>
                     <td className="py-4 px-4"><div className="flex items-center gap-1"><MapPin className="w-4 h-4 text-gray-400" /><span className="text-sm text-gray-600">{employee.zone_names || 'No zones'}</span></div></td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => viewEmployeeDetails(employee)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="View Details"><Eye className="w-4 h-4" /></button>
-                        <button onClick={() => openEditModal(employee)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg" title="Edit"><Edit className="w-4 h-4" /></button>
-                        <button onClick={() => handleDelete(employee)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      <div className="flex items-center justify-end">
+                        {/* View Details - Only action available for Supervisor */}
+                        <button onClick={() => viewEmployeeDetails(employee)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg" title="View Details"><Eye className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>

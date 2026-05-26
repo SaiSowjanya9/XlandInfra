@@ -233,18 +233,18 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
 
 router.post('/properties', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
 
     const propertyId = `PROP-COORD-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
-        contact_person, contact_phone, contact_email, zone_id, ${scopeColumn})
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        contact_person, contact_phone, contact_email, zone_id, coordinator_id, franchise_partner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [propertyId, name, propertyType || 'residential', address, city, state, zipCode,
-        contactPerson, contactPhone, contactEmail, zoneId || null, scopeId]
+        contactPerson, contactPhone, contactEmail, zoneId || null, coordinatorId, franchisePartnerId]
     );
 
     res.json({
@@ -378,18 +378,18 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
 
 router.post('/work-orders', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate } = req.body;
 
     const workOrderId = `WO-COORD-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
-        priority, permission_to_enter, has_pet, scheduled_date, ${scopeColumn}, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested')`,
+        priority, permission_to_enter, has_pet, scheduled_date, coordinator_id, franchise_partner_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested')`,
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
-        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, scopeId]
+        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, coordinatorId, franchisePartnerId]
     );
 
     res.json({
@@ -406,9 +406,18 @@ router.post('/work-orders', requireCoordinatorScope, async (req, res) => {
 router.patch('/work-orders/:id/status', requireCoordinatorScope, validateOwnership('work_orders'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, cancellationNote } = req.body;
 
-    await pool.query('UPDATE work_orders SET status = ? WHERE id = ?', [status, id]);
+    // If cancelling, store the cancellation note
+    if (status === 'cancelled' && cancellationNote) {
+      await pool.query(
+        'UPDATE work_orders SET status = ?, cancellation_note = ?, cancelled_at = NOW() WHERE id = ?', 
+        [status, cancellationNote, id]
+      );
+    } else {
+      await pool.query('UPDATE work_orders SET status = ? WHERE id = ?', [status, id]);
+    }
+    
     res.json({ success: true, message: 'Status updated successfully' });
   } catch (error) {
     console.error('Status update error:', error);
@@ -430,6 +439,40 @@ router.patch('/work-orders/:id/assign-vendor', requireCoordinatorScope, validate
   } catch (error) {
     console.error('Assign vendor error:', error);
     res.status(500).json({ success: false, message: 'Failed to assign vendor' });
+  }
+});
+
+router.patch('/work-orders/:id/assign-employee', requireCoordinatorScope, validateOwnership('work_orders'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { employeeId } = req.body;
+
+    await pool.query(
+      'UPDATE work_orders SET assigned_employee_id = ?, status = ? WHERE id = ?',
+      [employeeId, 'assigned', id]
+    );
+
+    res.json({ success: true, message: 'Employee assigned successfully' });
+  } catch (error) {
+    console.error('Assign employee error:', error);
+    res.status(500).json({ success: false, message: 'Failed to assign employee' });
+  }
+});
+
+router.delete('/work-orders/:id', requireCoordinatorScope, validateOwnership('work_orders'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Soft delete - update status to cancelled
+    await pool.query(
+      'UPDATE work_orders SET status = ?, deleted_at = NOW() WHERE id = ?',
+      ['cancelled', id]
+    );
+
+    res.json({ success: true, message: 'Work order deleted successfully' });
+  } catch (error) {
+    console.error('Delete work order error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete work order' });
   }
 });
 
@@ -459,18 +502,18 @@ router.get('/customers', requireCoordinatorScope, async (req, res) => {
 
 router.post('/customers', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { name, email, phone, alternatePhone, address, city, state, zipCode, clientType, companyName, propertyId, gstNumber } = req.body;
 
     const clientId = `CLT-COORD-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
-        zip_code, client_type, company_name, property_id, gst_number, ${scopeColumn})
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        zip_code, client_type, company_name, property_id, gst_number, coordinator_id, franchise_partner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
-        clientType || 'individual', companyName, propertyId || null, gstNumber, scopeId]
+        clientType || 'individual', companyName, propertyId || null, gstNumber, coordinatorId, franchisePartnerId]
     );
 
     res.json({
@@ -517,17 +560,17 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
 
 router.post('/vendors', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber } = req.body;
 
     const vendorId = `VND-COORD-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO vendors (vendor_id, company_name, contact_person, email, phone, alternate_phone, 
-        address, city, state, zip_code, gst_number, pan_number, ${scopeColumn})
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [vendorId, companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber, scopeId]
+        address, city, state, zip_code, gst_number, pan_number, coordinator_id, franchise_partner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [vendorId, companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber, coordinatorId, franchisePartnerId]
     );
 
     res.json({
@@ -552,14 +595,41 @@ router.delete('/vendors/:id', requireCoordinatorScope, validateOwnership('vendor
 });
 
 // =====================================================
-// EMPLOYEES - DISABLED for Coordinator role
+// EMPLOYEES - Read-only access for work order assignment
 // =====================================================
 router.get('/employees', requireCoordinatorScope, async (req, res) => {
-  return res.status(403).json({ success: false, message: 'Employee management not allowed for this role' });
+  try {
+    const scopeId = getScopeId(req);
+    
+    // FP Coordinators get FP employees, standalone coordinators get coordinator employees
+    if (req.isFPCoordinator) {
+      const [employees] = await pool.query(
+        `SELECT id, first_name, last_name, email, role, is_active 
+         FROM fp_employees 
+         WHERE franchise_partner_id = ? AND is_active = 1
+         ORDER BY first_name, last_name`,
+        [scopeId]
+      );
+      return res.json({ success: true, data: employees });
+    }
+    
+    // For standalone coordinators, return coordinator employees
+    const [employees] = await pool.query(
+      `SELECT id, first_name, last_name, email, role, is_active 
+       FROM coordinator_employees 
+       WHERE coordinator_id = ? AND is_active = 1
+       ORDER BY first_name, last_name`,
+      [scopeId]
+    );
+    res.json({ success: true, data: employees });
+  } catch (error) {
+    console.error('Employees fetch error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch employees' });
+  }
 });
 
 router.get('/employees/:id', requireCoordinatorScope, async (req, res) => {
-  return res.status(403).json({ success: false, message: 'Employee management not allowed for this role' });
+  return res.status(403).json({ success: false, message: 'Employee details not allowed for this role' });
 });
 
 router.post('/employees', requireCoordinatorScope, async (req, res) => {
@@ -609,8 +679,8 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
 
 router.post('/estimates', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { clientId, propertyId, title, description, estimateType, subtotal, taxPercentage, discountPercentage, validUntil, items } = req.body;
 
     const estimateId = `EST-COORD-${Date.now()}`;
@@ -621,11 +691,11 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
     const [result] = await pool.query(
       `INSERT INTO estimates (estimate_id, client_id, property_id, title, description, estimate_type,
         subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount, total_amount,
-        valid_until, ${scopeColumn}, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+        valid_until, coordinator_id, franchise_partner_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
       [estimateId, clientId || null, propertyId || null, title, description, estimateType || 'property_based',
         subtotal, taxPercentage || 0, tax, discountPercentage || 0, discount, totalAmount,
-        validUntil || null, scopeId]
+        validUntil || null, coordinatorId, franchisePartnerId]
     );
 
     // Insert line items
@@ -685,12 +755,13 @@ router.post('/amc-packages', requireCoordinatorScope, async (req, res) => {
   }
   try {
     const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { name, description, durationMonths, basePrice, services, termsConditions, hidePricing } = req.body;
 
     const [result] = await pool.query(
-      `INSERT INTO coordinator_amc_packages (coordinator_id, name, description, duration_months, base_price, services, terms_conditions, hide_pricing)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [coordinatorId, name, description, durationMonths || 12, basePrice || 0,
+      `INSERT INTO coordinator_amc_packages (coordinator_id, franchise_partner_id, name, description, duration_months, base_price, services, terms_conditions, hide_pricing)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [coordinatorId, franchisePartnerId, name, description, durationMonths || 12, basePrice || 0,
         JSON.stringify(services || []), termsConditions, hidePricing || false]
     );
 
@@ -740,12 +811,13 @@ router.post('/addons', requireCoordinatorScope, async (req, res) => {
   }
   try {
     const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { name, description, price, unit, categoryId, hidePricing } = req.body;
 
     const [result] = await pool.query(
-      `INSERT INTO coordinator_addons (coordinator_id, name, description, price, unit, category_id, hide_pricing)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [coordinatorId, name, description, price || 0, unit || 'per_service', categoryId || null, hidePricing || false]
+      `INSERT INTO coordinator_addons (coordinator_id, franchise_partner_id, name, description, price, unit, category_id, hide_pricing)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [coordinatorId, franchisePartnerId, name, description, price || 0, unit || 'per_service', categoryId || null, hidePricing || false]
     );
 
     res.json({

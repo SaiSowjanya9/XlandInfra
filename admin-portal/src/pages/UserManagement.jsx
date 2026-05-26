@@ -3,7 +3,7 @@ import {
   Users, Search, Shield, Briefcase,
   Edit2, Trash2, ToggleLeft, ToggleRight, X, Eye, EyeOff,
   Phone, Mail, Filter, Building2,
-  UserPlus, CheckCircle, XCircle, MapPin,
+  UserPlus, CheckCircle, XCircle, MapPin, AlertCircle,
   Landmark, Percent, Send, Key, Loader2
 } from 'lucide-react';
 import { USER_ROLES } from '../utils/userStore';
@@ -24,6 +24,7 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [createdUser, setCreatedUser] = useState(null);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -85,6 +86,8 @@ const UserManagement = () => {
             phone: u.phone,
             role: u.role,
             roleName: u.roleName,
+            visiblePassword: u.visiblePassword,
+            mustChangePassword: u.mustChangePassword,
             status: u.isActive ? 'active' : 'inactive',
             isActive: u.isActive,
             lastLogin: u.lastLogin,
@@ -347,6 +350,13 @@ const UserManagement = () => {
     return labels[role] || role;
   };
 
+  const togglePasswordVisibility = (userId) => {
+    setVisiblePasswords(prev => ({
+      ...prev,
+      [userId]: !prev[userId]
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       {/* Toast */}
@@ -464,6 +474,7 @@ const UserManagement = () => {
               <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">User ID</th>
               <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">User</th>
               <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Role</th>
+              <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden lg:table-cell">Password</th>
               <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">Contact</th>
               <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Status</th>
               <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Actions</th>
@@ -503,6 +514,31 @@ const UserManagement = () => {
                       <Icon className="w-3 h-3 flex-shrink-0" />
                       <span className="truncate max-w-[80px]">{getRoleLabel(user.role)}</span>
                     </span>
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap hidden lg:table-cell">
+                    {user.visiblePassword ? (
+                      <div className="flex items-center gap-1">
+                        <code className={`text-xs px-2 py-1 rounded font-mono ${
+                          user.mustChangePassword 
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200' 
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {visiblePasswords[user.id] ? user.visiblePassword : '••••••••'}
+                        </code>
+                        <button
+                          onClick={() => togglePasswordVisibility(user.id)}
+                          className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                          title={visiblePasswords[user.id] ? 'Hide password' : 'Show password'}
+                        >
+                          {visiblePasswords[user.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                        {user.mustChangePassword && (
+                          <span className="text-[10px] text-amber-600 font-medium">(Temp)</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">Changed by user</span>
+                    )}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap hidden md:table-cell">
                     <div className="space-y-0.5">
@@ -987,6 +1023,48 @@ const UserManagement = () => {
                     <p className="text-sm text-gray-600 flex items-center gap-2">
                       <Phone className="w-4 h-4 text-gray-400" />
                       {viewingUser.phone}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Password Info */}
+              <div className={`rounded-lg p-4 ${viewingUser.mustChangePassword ? 'bg-amber-50 border border-amber-200' : 'bg-blue-50 border border-blue-200'}`}>
+                <h5 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <Key className="w-4 h-4 text-gray-500" />
+                  Password Information
+                </h5>
+                <div className="space-y-2">
+                  {viewingUser.visiblePassword ? (
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-600">Current Password:</span>
+                      <div className="flex items-center gap-2">
+                        <code className={`text-sm px-3 py-1.5 rounded font-mono ${
+                          viewingUser.mustChangePassword 
+                            ? 'bg-amber-100 text-amber-800' 
+                            : 'bg-white text-gray-800 border border-gray-200'
+                        }`}>
+                          {visiblePasswords[`view_${viewingUser.id}`] ? viewingUser.visiblePassword : '••••••••••••'}
+                        </code>
+                        <button
+                          onClick={() => setVisiblePasswords(prev => ({
+                            ...prev,
+                            [`view_${viewingUser.id}`]: !prev[`view_${viewingUser.id}`]
+                          }))}
+                          className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-white/50 rounded transition-colors"
+                          title={visiblePasswords[`view_${viewingUser.id}`] ? 'Hide password' : 'Show password'}
+                        >
+                          {visiblePasswords[`view_${viewingUser.id}`] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">User has set their own password</p>
+                  )}
+                  {viewingUser.mustChangePassword && (
+                    <p className="text-xs text-amber-700 flex items-center gap-1 mt-2">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      This is a temporary password. User must change it on first login.
                     </p>
                   )}
                 </div>

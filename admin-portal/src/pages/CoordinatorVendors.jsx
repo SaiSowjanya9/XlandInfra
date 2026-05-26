@@ -21,7 +21,9 @@ import {
   Zap,
   Wind,
   Sparkles,
-  Shield
+  Shield,
+  EyeOff,
+  FileSpreadsheet
 } from 'lucide-react';
 
 const CoordinatorVendors = ({ user }) => {
@@ -176,6 +178,38 @@ const CoordinatorVendors = ({ user }) => {
     }
   };
 
+  const handleExportVendor = (vendor) => {
+    const csvContent = [
+      ['Vendor ID', 'Company Name', 'Service Type', 'Owner', 'Zone', 'Area', 'Rate/Visit', 'Coverage/Day', 'Email', 'Phone', 'Address', 'City', 'State', 'Status', 'Created'],
+      [
+        vendor.vendor_id || '',
+        vendor.company_name || '',
+        vendor.service_type || '',
+        vendor.contact_person || '',
+        vendor.zone_name || vendor.zone || '',
+        vendor.area || '',
+        vendor.rate_per_visit || '',
+        vendor.coverage_per_day || '',
+        vendor.email || '',
+        vendor.phone || '',
+        vendor.address || '',
+        vendor.city || '',
+        vendor.state || '',
+        vendor.is_active ? 'Active' : 'Inactive',
+        vendor.created_at ? new Date(vendor.created_at).toLocaleDateString() : ''
+      ]
+    ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vendor_${vendor.vendor_id || vendor.id}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setMessage({ type: 'success', text: 'Vendor exported successfully!' });
+  };
+
   const openEditModal = (vendor) => {
     // FP Coordinators cannot modify vendors
     if (isFPCoordinator) {
@@ -251,6 +285,21 @@ const CoordinatorVendors = ({ user }) => {
 
   return (
     <div className="space-y-4">
+      {/* FP Coordinator - Just View Banner */}
+      {isFPCoordinator && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+          <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <Eye className="w-6 h-6 text-amber-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-amber-800">View Only Access</h3>
+            <p className="text-sm text-amber-700">
+              Vendor Management is view-only for your account. Rate/Visit information is hidden. You cannot add, modify, or delete vendors.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -265,14 +314,16 @@ const CoordinatorVendors = ({ user }) => {
           >
             <RefreshCw className="w-5 h-5 text-gray-600" />
           </button>
-          {/* Add Vendor - Allowed for Coordinator */}
-          <button
-            onClick={() => { resetForm(); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Vendor</span>
-          </button>
+          {/* Add Vendor - Hidden for FP Coordinator */}
+          {!isFPCoordinator && (
+            <button
+              onClick={() => { resetForm(); setShowModal(true); }}
+              className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Vendor</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -383,10 +434,18 @@ const CoordinatorVendors = ({ user }) => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Location</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor ID</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Service Type</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
+                  {/* Rate/Visit - Hidden for FP Coordinator */}
+                  {!isFPCoordinator && (
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Rate/Visit</th>
+                  )}
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
@@ -397,42 +456,41 @@ const CoordinatorVendors = ({ user }) => {
                     <td className="py-4 px-4">
                       <div>
                         <p className="font-medium text-gray-900">{vendor.company_name}</p>
-                        <p className="text-sm text-gray-500">{vendor.vendor_id}</p>
-                        {vendor.contact_person && (
-                          <p className="text-sm text-gray-400">{vendor.contact_person}</p>
-                        )}
+                        <p className="text-sm text-gray-500 font-mono">{vendor.vendor_id}</p>
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        vendor.vendor_type === 'own' 
-                          ? 'bg-purple-100 text-purple-700' 
-                          : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {vendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}
+                      <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-700">
+                        {vendor.service_type || '-'}
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="space-y-1">
-                        {vendor.phone && (
-                          <p className="text-sm text-gray-600 flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {vendor.phone}
-                          </p>
-                        )}
-                        {vendor.email && (
-                          <p className="text-sm text-gray-400 flex items-center gap-1">
-                            <Mail className="w-3 h-3" /> {vendor.email}
-                          </p>
-                        )}
-                      </div>
+                      <span className="text-sm text-gray-600">{vendor.contact_person || vendor.company_name}</span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-start gap-1">
-                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-gray-600">
-                          {vendor.city ? `${vendor.city}, ${vendor.state || ''}` : '-'}
+                      <span className="text-sm text-gray-600">{vendor.zone_name || vendor.zone || '-'}</span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-sm text-gray-600">{vendor.area || '-'}</span>
+                    </td>
+                    {/* Rate/Visit - Hidden for FP Coordinator */}
+                    {!isFPCoordinator && (
+                      <td className="py-4 px-4">
+                        <span className="text-sm font-medium text-gray-900">
+                          {vendor.rate_per_visit ? `₹${vendor.rate_per_visit}` : '-'}
                         </span>
-                      </div>
+                      </td>
+                    )}
+                    <td className="py-4 px-4">
+                      <span className="text-sm text-gray-600">{vendor.coverage_per_day || '-'}</span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-sm text-gray-600">{vendor.created_by_name || '-'}</span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-sm text-gray-500">
+                        {vendor.created_at ? new Date(vendor.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      </span>
                     </td>
                     <td className="py-4 px-4">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
@@ -442,11 +500,11 @@ const CoordinatorVendors = ({ user }) => {
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
                         {/* View Details - Always visible */}
                         <button
                           onClick={() => { setSelectedVendor(vendor); setShowViewModal(true); }}
-                          className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
+                          className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
@@ -455,7 +513,7 @@ const CoordinatorVendors = ({ user }) => {
                         {!isFPCoordinator && (
                           <button
                             onClick={() => openEditModal(vendor)}
-                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
+                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                             title="Modify Vendor"
                           >
                             <Edit className="w-4 h-4" />
@@ -464,18 +522,18 @@ const CoordinatorVendors = ({ user }) => {
                         {/* Export to Excel - Hidden for FP Coordinator */}
                         {!isFPCoordinator && (
                           <button
-                            onClick={() => { /* TODO: Export single vendor */ }}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            onClick={() => handleExportVendor(vendor)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Export to Excel"
                           >
-                            <Download className="w-4 h-4" />
+                            <FileSpreadsheet className="w-4 h-4" />
                           </button>
                         )}
                         {/* Delete - Hidden for FP Coordinator */}
                         {!isFPCoordinator && (
                           <button
                             onClick={() => handleDelete(vendor)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -699,6 +757,16 @@ const CoordinatorVendors = ({ user }) => {
                   <p className="text-sm text-gray-500">Coverage/Day</p>
                   <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || '-'}</p>
                 </div>
+                <div>
+                  <p className="text-sm text-gray-500">Created By</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.created_by_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Created</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedVendor.created_at ? new Date(selectedVendor.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                  </p>
+                </div>
                 <div className="col-span-2">
                   <p className="text-sm text-gray-500">Address</p>
                   <p className="font-medium text-gray-900">
@@ -707,10 +775,22 @@ const CoordinatorVendors = ({ user }) => {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4 border-t border-gray-100">
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                {/* Modify Vendor - Hidden for FP Coordinator */}
+                {!isFPCoordinator && selectedVendor.can_modify && (
+                  <button
+                    onClick={() => {
+                      setShowViewModal(false);
+                      openEditModal(selectedVendor);
+                    }}
+                    className="px-4 py-2 text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50"
+                  >
+                    Modify Vendor
+                  </button>
+                )}
                 <button
                   onClick={() => { setShowViewModal(false); setSelectedVendor(null); }}
-                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
                 >
                   Close
                 </button>

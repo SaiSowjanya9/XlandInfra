@@ -33,9 +33,9 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find executive user
+    // Find executive user (include franchise_partner_id for FP linking)
     const [users] = await pool.query(
-      `SELECT id, username, email, password_hash, first_name, last_name, role, is_active
+      `SELECT id, username, email, password_hash, first_name, last_name, role, is_active, franchise_partner_id
        FROM users 
        WHERE (username = ? OR email = ?) AND role = 'executive'`,
       [username, username]
@@ -66,13 +66,14 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generate JWT token
+    // Generate JWT token (include franchise_partner_id for FP data linking)
     const token = jwt.sign(
       {
         id: user.id,
         username: user.username,
         role: user.role,
-        executiveId: user.id
+        executiveId: user.id,
+        franchisePartnerId: user.franchise_partner_id || null
       },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
@@ -90,6 +91,7 @@ router.post('/login', async (req, res) => {
           lastName: user.last_name,
           role: user.role,
           executiveId: user.id,
+          franchisePartnerId: user.franchise_partner_id || null,
           portal: 'executive'
         }
       }
@@ -232,16 +234,17 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
 router.post('/properties', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
 
     const propertyId = `PROP-EXEC-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
-        contact_person, contact_phone, contact_email, zone_id, executive_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        contact_person, contact_phone, contact_email, zone_id, executive_id, franchise_partner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [propertyId, name, propertyType || 'residential', address, city, state, zipCode,
-        contactPerson, contactPhone, contactEmail, zoneId || null, executiveId]
+        contactPerson, contactPhone, contactEmail, zoneId || null, executiveId, franchisePartnerId]
     );
 
     res.json({
@@ -373,16 +376,17 @@ router.get('/work-orders/completed', requireExecutiveScope, async (req, res) => 
 router.post('/work-orders', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate } = req.body;
 
     const workOrderId = `WO-EXEC-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
-        priority, permission_to_enter, has_pet, scheduled_date, executive_id, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+        priority, permission_to_enter, has_pet, scheduled_date, executive_id, franchise_partner_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
-        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, executiveId]
+        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, executiveId, franchisePartnerId]
     );
 
     res.json({
@@ -422,16 +426,17 @@ router.get('/customers', requireExecutiveScope, async (req, res) => {
 router.post('/customers', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { name, email, phone, alternatePhone, address, city, state, zipCode, clientType, companyName, propertyId, gstNumber } = req.body;
 
     const clientId = `CLT-EXEC-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
-        zip_code, client_type, company_name, property_id, gst_number, executive_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        zip_code, client_type, company_name, property_id, gst_number, executive_id, franchise_partner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
-        clientType || 'individual', companyName, propertyId || null, gstNumber, executiveId]
+        clientType || 'individual', companyName, propertyId || null, gstNumber, executiveId, franchisePartnerId]
     );
 
     res.json({
@@ -516,15 +521,16 @@ router.get('/vendors', requireExecutiveScope, async (req, res) => {
 router.post('/vendors', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber } = req.body;
 
     const vendorId = `VND-EXEC-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO vendors (vendor_id, company_name, contact_person, email, phone, alternate_phone, 
-        address, city, state, zip_code, gst_number, pan_number, executive_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [vendorId, companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber, executiveId]
+        address, city, state, zip_code, gst_number, pan_number, executive_id, franchise_partner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [vendorId, companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber, executiveId, franchisePartnerId]
     );
 
     res.json({
@@ -630,14 +636,15 @@ router.get('/employees/:id', requireExecutiveScope, async (req, res) => {
 router.post('/employees', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { firstName, lastName, email, phone, role, assignedZones } = req.body;
 
     const employeeCode = `EMP-EXEC-${Date.now()}`;
 
     const [result] = await pool.query(
-      `INSERT INTO executive_employees (executive_id, employee_code, first_name, last_name, email, phone, role)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [executiveId, employeeCode, firstName, lastName, email, phone, role || 'exec_assistant']
+      `INSERT INTO executive_employees (executive_id, franchise_partner_id, employee_code, first_name, last_name, email, phone, role)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [executiveId, franchisePartnerId, employeeCode, firstName, lastName, email, phone, role || 'exec_assistant']
     );
 
     // Assign zones
@@ -757,6 +764,7 @@ router.get('/estimates', requireExecutiveScope, async (req, res) => {
 router.post('/estimates', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { clientId, propertyId, title, description, estimateType, subtotal, taxPercentage, discountPercentage, validUntil, items } = req.body;
 
     const estimateId = `EST-EXEC-${Date.now()}`;
@@ -767,11 +775,11 @@ router.post('/estimates', requireExecutiveScope, async (req, res) => {
     const [result] = await pool.query(
       `INSERT INTO estimates (estimate_id, client_id, property_id, title, description, estimate_type,
         subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount, total_amount,
-        valid_until, executive_id, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+        valid_until, executive_id, franchise_partner_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
       [estimateId, clientId || null, propertyId || null, title, description, estimateType || 'property_based',
         subtotal, taxPercentage || 0, tax, discountPercentage || 0, discount, totalAmount,
-        validUntil || null, executiveId]
+        validUntil || null, executiveId, franchisePartnerId]
     );
 
     // Insert line items
@@ -823,12 +831,13 @@ router.get('/amc-packages', requireExecutiveScope, async (req, res) => {
 router.post('/amc-packages', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { name, description, durationMonths, basePrice, services, termsConditions, hidePricing } = req.body;
 
     const [result] = await pool.query(
-      `INSERT INTO executive_amc_packages (executive_id, name, description, duration_months, base_price, services, terms_conditions, hide_pricing)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [executiveId, name, description, durationMonths || 12, basePrice || 0,
+      `INSERT INTO executive_amc_packages (executive_id, franchise_partner_id, name, description, duration_months, base_price, services, terms_conditions, hide_pricing)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [executiveId, franchisePartnerId, name, description, durationMonths || 12, basePrice || 0,
         JSON.stringify(services || []), termsConditions, hidePricing !== false]
     );
 
@@ -870,12 +879,13 @@ router.get('/addons', requireExecutiveScope, async (req, res) => {
 router.post('/addons', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { name, description, price, unit, categoryId, hidePricing } = req.body;
 
     const [result] = await pool.query(
-      `INSERT INTO executive_addons (executive_id, name, description, price, unit, category_id, hide_pricing)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [executiveId, name, description, price || 0, unit || 'per_service', categoryId || null, hidePricing !== false]
+      `INSERT INTO executive_addons (executive_id, franchise_partner_id, name, description, price, unit, category_id, hide_pricing)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [executiveId, franchisePartnerId, name, description, price || 0, unit || 'per_service', categoryId || null, hidePricing !== false]
     );
 
     res.json({

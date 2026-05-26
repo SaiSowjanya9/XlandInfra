@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
   Building2, Plus, Search, Edit, Trash2, Download, RefreshCw,
-  MapPin, Phone, X, Save, AlertCircle, CheckCircle, User, Store, Eye, Lock
+  MapPin, Phone, X, Save, AlertCircle, CheckCircle, User, Store, Eye, Lock,
+  FileSpreadsheet, Users
 } from 'lucide-react';
 
 const SupervisorProperties = ({ user }) => {
@@ -175,15 +176,23 @@ const SupervisorProperties = ({ user }) => {
 
   return (
     <div className="space-y-6">
+      {/* View Only Access Banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <Eye className="w-6 h-6 text-amber-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-amber-800">View Only Access</h3>
+          <p className="text-sm text-amber-700">
+            You have view-only access to properties.
+          </p>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-gray-500 mt-1">Manage your assigned properties</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => { resetForm(); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700">
-            <Plus className="w-4 h-4" /><span>Add Property</span>
-          </button>
+          <p className="text-gray-500 mt-1">View your assigned properties</p>
         </div>
       </div>
 
@@ -213,11 +222,17 @@ const SupervisorProperties = ({ user }) => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Name</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">ID</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Access</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Location</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Division</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Units</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Address</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">City</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contacts</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
@@ -226,32 +241,53 @@ const SupervisorProperties = ({ user }) => {
                   <tr key={property.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <p className="font-medium text-gray-900">{property.name}</p>
-                      <p className="text-sm text-gray-500">{property.property_id}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600 font-mono">{property.property_id}</p>
                     </td>
                     <td className="py-4 px-4">
                       <span className="inline-block px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium capitalize">{property.property_type}</span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${property.access_type === 'own' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {property.access_type === 'own' ? 'Own' : 'Assigned'}
+                      <p className="text-sm text-gray-600">{property.zone_name || '-'}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600">{property.area || property.city || '-'}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600">{property.division || '-'}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600">{property.units || property.total_units || 1}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600 max-w-[100px] truncate" title={property.address}>
+                        {property.address || '-'}
+                      </p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600">{property.city || '-'}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600">{property.contact_person || property.contacts || '-'}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                        property.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {property.status || 'active'}
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div><p className="text-sm text-gray-600">{property.city}, {property.state}</p><p className="text-xs text-gray-400">{property.zone_name || 'No zone'}</p></div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      {property.contact_person && <p className="text-sm text-gray-600">{property.contact_person}</p>}
-                      {property.contact_phone && <p className="text-xs text-gray-400 flex items-center gap-1"><Phone className="w-3 h-3" /> {property.contact_phone}</p>}
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-1">
-                        <span className="p-2 text-gray-400" title="View Only"><Eye className="w-4 h-4" /></span>
-                        {property.can_modify ? (
-                          <button onClick={() => openEditModal(property)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg" title="Edit Property"><Edit className="w-4 h-4" /></button>
-                        ) : <span className="p-2 text-gray-300"><Lock className="w-4 h-4" /></span>}
+                      <div className="flex items-center justify-end">
+                        {/* View Details - Only action available for Supervisor */}
+                        <button 
+                          onClick={() => { setSelectedProperty(property); setShowAssignModal(true); setAssignType('view'); }}
+                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" 
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -308,32 +344,32 @@ const SupervisorProperties = ({ user }) => {
         </div>
       )}
 
-      {showAssignModal && selectedProperty && (
+      {/* View Details Modal */}
+      {showAssignModal && selectedProperty && assignType === 'view' && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">Assign {assignType === 'vendor' ? 'Vendor' : 'Employee'}</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Property Details</h2>
               <button onClick={() => { setShowAssignModal(false); setSelectedProperty(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
-            <p className="px-6 text-sm text-gray-500">Property: {selectedProperty.name}</p>
             <div className="p-6">
-              {(assignType === 'vendor' ? vendors : employees).length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No {assignType === 'vendor' ? 'vendors' : 'employees'} available</p>
-              ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {(assignType === 'vendor' ? vendors : employees).map((item) => (
-                    <button key={item.id} onClick={() => handleAssign(item.id)} className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-amber-50 hover:border-amber-300 transition-colors text-left">
-                      <div className={`w-10 h-10 ${assignType === 'vendor' ? 'bg-purple-100' : 'bg-green-100'} rounded-full flex items-center justify-center`}>
-                        {assignType === 'vendor' ? <Store className="w-5 h-5 text-purple-600" /> : <User className="w-5 h-5 text-green-600" />}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{assignType === 'vendor' ? item.company_name : `${item.first_name} ${item.last_name}`}</p>
-                        <p className="text-sm text-gray-500">{assignType === 'vendor' ? (item.contact_person || item.email) : item.role}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div><p className="text-sm text-gray-500">Name</p><p className="font-medium text-gray-900">{selectedProperty.name}</p></div>
+                <div><p className="text-sm text-gray-500">ID</p><p className="font-mono text-gray-900">{selectedProperty.property_id}</p></div>
+                <div><p className="text-sm text-gray-500">Type</p><span className="inline-block px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium capitalize">{selectedProperty.property_type}</span></div>
+                <div><p className="text-sm text-gray-500">Zone</p><p className="text-gray-900">{selectedProperty.zone_name || '-'}</p></div>
+                <div><p className="text-sm text-gray-500">Area</p><p className="text-gray-900">{selectedProperty.area || selectedProperty.city || '-'}</p></div>
+                <div><p className="text-sm text-gray-500">Division</p><p className="text-gray-900">{selectedProperty.division || '-'}</p></div>
+                <div><p className="text-sm text-gray-500">Units</p><p className="text-gray-900">{selectedProperty.units || selectedProperty.total_units || 1}</p></div>
+                <div><p className="text-sm text-gray-500">Status</p><span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${selectedProperty.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{selectedProperty.status || 'active'}</span></div>
+                <div className="col-span-2 md:col-span-3"><p className="text-sm text-gray-500">Address</p><p className="text-gray-900">{selectedProperty.address || `${selectedProperty.city}, ${selectedProperty.state}`}</p></div>
+                <div><p className="text-sm text-gray-500">Contact Person</p><p className="text-gray-900">{selectedProperty.contact_person || '-'}</p></div>
+                <div><p className="text-sm text-gray-500">Contact Phone</p><p className="text-gray-900">{selectedProperty.contact_phone || '-'}</p></div>
+                <div><p className="text-sm text-gray-500">Contact Email</p><p className="text-gray-900">{selectedProperty.contact_email || '-'}</p></div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end">
+              <button onClick={() => { setShowAssignModal(false); setSelectedProperty(null); }} className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Close</button>
             </div>
           </div>
         </div>

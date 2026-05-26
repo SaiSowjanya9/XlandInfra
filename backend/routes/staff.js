@@ -11,7 +11,11 @@ const { pool } = require('../config/database');
 const { authenticate, generateToken } = require('../middleware/auth');
 const { adminOnly, managerOrAdmin, requireRole, ROLES } = require('../middleware/rbac');
 const { ROLE_NAMES } = require('../config/roles');
-const { sendEmployeeWelcomeEmail } = require('../services/emailService');
+const { sendEmployeeWelcomeEmail, sendPasswordResetEmail, sendPasswordResetSuccess } = require('../services/emailService');
+
+// Password reset expiry (48 hours)
+const PASSWORD_RESET_EXPIRY_HOURS = 48;
+const ADMIN_PORTAL_URL = process.env.ADMIN_PORTAL_URL || 'https://admin.xlandinfra.com';
 
 // User ID Prefixes by Role (Employees use numeric-only IDs)
 const USER_ID_PREFIXES = {
@@ -313,6 +317,345 @@ router.post('/login', async (req, res) => {
 });
 
 // ============================================
+// POST /api/staff/forgot-password - Request password reset for staff/admin users
+// ============================================
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    let user = null;
+    let userType = 'user';
+    let tableName = 'users';
+
+    // First check users table (admin, ops manager, manager, supervisor, coordinator, executive)
+    const [users] = await pool.execute(
+      `SELECT id, user_id, email, first_name, last_name, username, role, is_active
+       FROM users 
+       WHERE email = ?`,
+      [email.toLowerCase()]
+    );
+
+    if (users.length > 0) {
+      user = users[0];
+      userType = 'user';
+      tableName = 'users';
+    }
+
+    // If not found, check franchise_partners table
+    if (!user) {
+      const [fpUsers] = await pool.execute(
+        `SELECT id, partner_id as user_id, email, contact_person as first_name, '' as last_name, 
+                username, 'franchise_partner' as role, is_active
+         FROM franchise_partners 
+         WHERE email = ?`,
+        [email.toLowerCase()]
+      );
+      
+      if (fpUsers.length > 0) {
+        user = fpUsers[0];
+        userType = 'franchise_partner';
+        tableName = 'franchise_partners';
+      }
+    }
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return res.json({
+        success: true,
+        message: 'If an account exists with this email, you will receive password reset instructions.'
+      });
+    }
+
+    // Check if account is active
+    if (!user.is_active) {
+      return res.json({
+        success: true,
+        message: 'If an account exists with this email, you will receive password reset instructions.'
+      });
+    }
+
+    // Generate temporary password and reset token
+    const tempPassword = generateTempPassword();
+    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRY_HOURS * 60 * 60 * 1000);
+
+    // Store reset token, temp password, and update visible_password for admin
+    if (userType === 'user') {
+      await pool.execute(
+        `UPDATE users 
+         SET reset_token = ?, 
+             reset_token_expires = ?,
+             reset_temp_password_hash = ?,
+             visible_password = ?,
+             updated_at = NOW()
+         WHERE id = ?`,
+        [resetToken, resetExpires, tempPasswordHash, tempPassword, user.id]
+      );
+    } else {
+      await pool.execute(
+        `UPDATE franchise_partners 
+         SET reset_token = ?, 
+             reset_token_expires = ?,
+             reset_temp_password_hash = ?,
+             visible_password = ?,
+             updated_at = NOW()
+         WHERE id = ?`,
+        [resetToken, resetExpires, tempPasswordHash, tempPassword, user.id]
+      );
+    }
+
+    // Generate reset link
+    const resetLink = `${ADMIN_PORTAL_URL}/reset-password/${resetToken}`;
+
+    // Send password reset email
+    await sendPasswordResetEmail({
+      email: user.email,
+      firstName: user.first_name,
+      tempPassword,
+      resetLink,
+      userType: 'staff',
+      expiryHours: PASSWORD_RESET_EXPIRY_HOURS
+    });
+
+    console.log(`📧 Password reset requested for ${user.email} (${user.role})`);
+
+    res.json({
+      success: true,
+      message: 'If an account exists with this email, you will receive password reset instructions.'
+    });
+
+  } catch (error) {
+    console.error('Error requesting password reset:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing password reset request',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// GET /api/staff/verify-reset-token/:token - Verify reset token
+// ============================================
+router.get('/verify-reset-token/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token is required'
+      });
+    }
+
+    let user = null;
+    let userType = 'user';
+
+    // Check users table
+    const [users] = await pool.execute(
+      `SELECT id, email, first_name, reset_token_expires
+       FROM users 
+       WHERE reset_token = ? AND is_active = TRUE`,
+      [token]
+    );
+
+    if (users.length > 0) {
+      user = users[0];
+      userType = 'user';
+    }
+
+    // Check franchise_partners table
+    if (!user) {
+      const [fpUsers] = await pool.execute(
+        `SELECT id, email, contact_person as first_name, reset_token_expires
+         FROM franchise_partners 
+         WHERE reset_token = ? AND is_active = TRUE`,
+        [token]
+      );
+      
+      if (fpUsers.length > 0) {
+        user = fpUsers[0];
+        userType = 'franchise_partner';
+      }
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid or expired reset link. Please request a new password reset.'
+      });
+    }
+
+    // Check if token has expired
+    if (new Date(user.reset_token_expires) < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'This password reset link has expired. Please request a new one.',
+        expired: true
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Reset token is valid',
+      data: {
+        email: user.email,
+        firstName: user.first_name
+      }
+    });
+
+  } catch (error) {
+    console.error('Error verifying reset token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error verifying reset token',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// POST /api/staff/reset-password - Reset password with temp password
+// ============================================
+router.post('/reset-password', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const { token, tempPassword, newPassword } = req.body;
+
+    // Validate required fields
+    if (!token || !tempPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      });
+    }
+
+    // Password validation
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters long'
+      });
+    }
+
+    let user = null;
+    let userType = 'user';
+    let tableName = 'users';
+
+    // Check users table
+    const [users] = await conn.execute(
+      `SELECT id, user_id, email, first_name, role, reset_token_expires, reset_temp_password_hash
+       FROM users 
+       WHERE reset_token = ? AND is_active = TRUE`,
+      [token]
+    );
+
+    if (users.length > 0) {
+      user = users[0];
+      userType = 'user';
+      tableName = 'users';
+    }
+
+    // Check franchise_partners table
+    if (!user) {
+      const [fpUsers] = await conn.execute(
+        `SELECT id, partner_id as user_id, email, contact_person as first_name, 'franchise_partner' as role,
+                reset_token_expires, reset_temp_password_hash
+         FROM franchise_partners 
+         WHERE reset_token = ? AND is_active = TRUE`,
+        [token]
+      );
+      
+      if (fpUsers.length > 0) {
+        user = fpUsers[0];
+        userType = 'franchise_partner';
+        tableName = 'franchise_partners';
+      }
+    }
+
+    if (!user) {
+      await conn.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid reset link'
+      });
+    }
+
+    // Check if token has expired
+    if (new Date(user.reset_token_expires) < new Date()) {
+      await conn.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Password reset link has expired. Please request a new one.'
+      });
+    }
+
+    // Verify temporary password
+    const isTempPasswordValid = await bcrypt.compare(tempPassword, user.reset_temp_password_hash);
+    if (!isTempPasswordValid) {
+      await conn.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid temporary password'
+      });
+    }
+
+    // Hash new password and update
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    await conn.execute(
+      `UPDATE ${tableName} 
+       SET password_hash = ?,
+           reset_token = NULL,
+           reset_token_expires = NULL,
+           reset_temp_password_hash = NULL,
+           must_change_password = FALSE,
+           visible_password = NULL,
+           updated_at = NOW()
+       WHERE id = ?`,
+      [newPasswordHash, user.id]
+    );
+
+    await conn.commit();
+
+    // Send confirmation email
+    await sendPasswordResetSuccess({
+      email: user.email,
+      firstName: user.first_name,
+      userType: 'staff'
+    });
+
+    console.log(`✅ Password reset completed for ${user.email} (${user.role})`);
+
+    res.json({
+      success: true,
+      message: 'Password reset successful. You can now login with your new password.'
+    });
+
+  } catch (error) {
+    await conn.rollback();
+    console.error('Error resetting password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error resetting password',
+      error: error.message
+    });
+  } finally {
+    conn.release();
+  }
+});
+
+// ============================================
 // GET CURRENT USER
 // ============================================
 router.get('/me', authenticate, async (req, res) => {
@@ -407,8 +750,9 @@ router.post('/set-password', async (req, res) => {
     const newPasswordHash = await bcrypt.hash(newPassword, 10);
     
     if (userType === 'user') {
+      // Clear visible_password when user sets their own password
       await pool.execute(
-        `UPDATE users SET password_hash = ?, must_change_password = FALSE WHERE id = ?`,
+        `UPDATE users SET password_hash = ?, must_change_password = FALSE, visible_password = NULL WHERE id = ?`,
         [newPasswordHash, user.id]
       );
       
@@ -416,7 +760,7 @@ router.post('/set-password', async (req, res) => {
       if (user.role === 'franchise_partner' || user.role === 'franchise') {
         try {
           await pool.execute(
-            `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE WHERE email = ?`,
+            `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE, visible_password = NULL WHERE email = ?`,
             [newPasswordHash, user.email]
           );
         } catch (e) {
@@ -454,16 +798,16 @@ router.post('/set-password', async (req, res) => {
         }
       });
     } else {
-      // userType === 'franchise_partner'
+      // userType === 'franchise_partner' - Clear visible_password when user sets their own password
       await pool.execute(
-        `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE WHERE id = ?`,
+        `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE, visible_password = NULL WHERE id = ?`,
         [newPasswordHash, user.id]
       );
       
       // Also update users table if exists
       try {
         await pool.execute(
-          `UPDATE users SET password_hash = ?, must_change_password = FALSE WHERE email = ?`,
+          `UPDATE users SET password_hash = ?, must_change_password = FALSE, visible_password = NULL WHERE email = ?`,
           [newPasswordHash, user.email]
         );
       } catch (e) {
@@ -547,6 +891,7 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
       success: true,
       data: staff.map(s => ({
         id: s.id,
+        userId: s.user_id,
         username: s.username,
         email: s.email,
         firstName: s.first_name,
@@ -554,6 +899,7 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
         phone: s.phone,
         role: s.role,
         roleName: ROLE_NAMES[s.role],
+        visiblePassword: s.visible_password,
         permissions: {
           canView: s.can_view,
           canCreate: s.can_create,
@@ -564,6 +910,7 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
           canClose: s.can_close
         },
         isActive: s.is_active,
+        mustChangePassword: s.must_change_password,
         lastLogin: s.last_login,
         createdBy: s.created_by_name,
         createdAt: s.created_at
@@ -684,18 +1031,18 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
     const tempPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-    // Insert new user with must_change_password flag
+    // Insert new user with must_change_password flag and visible_password for admin
     const [result] = await pool.execute(
       `INSERT INTO users (
         user_id, username, email, password_hash, first_name, last_name, phone, role,
         can_view, can_create, can_edit, can_delete, can_approve, can_assign, can_close,
-        must_change_password, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)`,
+        must_change_password, visible_password, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?, ?)`,
       [
         userId, username, email, passwordHash, firstName, lastName, phone || null, role,
         canView ?? null, canCreate ?? null, canEdit ?? null, canDelete ?? null,
         canApprove ?? null, canAssign ?? null, canClose ?? null,
-        req.user.id
+        tempPassword, req.user.id
       ]
     );
 
@@ -710,14 +1057,14 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
         const [fpResult] = await pool.execute(
           `INSERT INTO franchise_partners (
             fp_code, username, email, password_hash, company_name, owner_name, phone,
-            address, city, state, zip_code, gst_number, pan_number, created_by
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            address, city, state, zip_code, gst_number, pan_number, visible_password, created_by
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             fpCode, username, email, passwordHash, 
             companyName || franchiseName || `${firstName} ${lastName}`,
             `${firstName} ${lastName}`, phone || null,
             address || null, city || null, state || null, pincode || null,
-            gstNumber || null, panNumber || null, req.user.id
+            gstNumber || null, panNumber || null, tempPassword, req.user.id
           ]
         );
         

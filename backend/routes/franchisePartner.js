@@ -1232,12 +1232,17 @@ router.post('/employees', requireFPScope, async (req, res) => {
     await connection.beginTransaction();
 
     try {
+      // Map FP role to user role
+      const userRole = role === 'supervisor' ? 'supervisor' : 
+                       role === 'coordinator' ? 'coordinator' : 
+                       role === 'executive' ? 'executive' : 'fp_executive';
+
       // 1. Create user account in users table with must_change_password flag
       const [userResult] = await connection.execute(
         `INSERT INTO users (
           user_id, username, email, password_hash, first_name, last_name, phone, 
           role, franchise_partner_id, must_change_password, is_active, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'fp_executive', ?, TRUE, TRUE, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, ?)`,
         [
           userId, 
           username, 
@@ -1246,6 +1251,7 @@ router.post('/employees', requireFPScope, async (req, res) => {
           firstName, 
           lastName, 
           phone || null,
+          userRole,
           req.fpId,
           req.user.id
         ]
@@ -1349,18 +1355,41 @@ router.post('/employees', requireFPScope, async (req, res) => {
   }
 });
 
-// Update employee status
+// Update employee status (activate/deactivate)
 router.put('/employees/:id/status', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+    const isActive = status === 'active' ? 1 : 0;
     
+    // Get employee to find linked user_id
+    const [employees] = await pool.execute(
+      `SELECT user_id FROM fp_employees WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+
+    if (employees.length === 0) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+
+    // Update fp_employees table
     await pool.execute(
       `UPDATE fp_employees SET status = ?, is_active = ? WHERE id = ? AND franchise_partner_id = ?`,
-      [status, status === 'active' ? 1 : 0, id, req.fpId]
+      [status, isActive, id, req.fpId]
     );
+
+    // Also update linked user account if exists
+    if (employees[0].user_id) {
+      await pool.execute(
+        `UPDATE users SET is_active = ? WHERE id = ?`,
+        [isActive, employees[0].user_id]
+      );
+    }
     
-    res.json({ success: true, message: 'Employee status updated' });
+    res.json({ 
+      success: true, 
+      message: status === 'active' ? 'Employee account activated' : 'Employee account deactivated'
+    });
   } catch (error) {
     console.error('Update employee status error:', error);
     res.status(500).json({ success: false, message: error.message });

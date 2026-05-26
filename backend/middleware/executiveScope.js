@@ -7,11 +7,12 @@ const { pool } = require('../config/database');
 
 /**
  * Attach executive scope to request
- * Extracts executive ID from authenticated user
+ * Extracts executive ID and franchise partner ID from authenticated user
  */
 const attachExecutiveScope = (req, res, next) => {
   if (req.user && (req.user.role === 'executive' || req.user.executiveId)) {
     req.executiveId = req.user.executiveId || req.user.id;
+    req.franchisePartnerId = req.user.franchisePartnerId || null;
     req.executiveScope = true;
   }
   next();

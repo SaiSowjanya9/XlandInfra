@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Building2, ArrowLeft, Eye, EyeOff, Loader2, AlertCircle, ChevronRight } from 'lucide-react';
 import SetPassword from './SetPassword';
+import ForgotPassword from './ForgotPassword';
 
 const ManagerLogin = ({ onLogin, onBack }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
@@ -8,6 +9,7 @@ const ManagerLogin = ({ onLogin, onBack }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showSetPassword, setShowSetPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
 
   const handleSubmit = async (e) => {
@@ -66,6 +68,15 @@ const ManagerLogin = ({ onLogin, onBack }) => {
     setPendingUser(null);
     onLogin({ ...updatedUser, portal: 'manager' });
   };
+
+  // Show Forgot Password screen
+  if (showForgotPassword) {
+    return (
+      <ForgotPassword 
+        onBack={() => setShowForgotPassword(false)}
+      />
+    );
+  }
 
   // Show Set Password screen if needed
   if (showSetPassword && pendingUser) {
@@ -150,9 +161,18 @@ const ManagerLogin = ({ onLogin, onBack }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-blue-100 mb-2">
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-blue-100">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-sm text-blue-300 hover:text-blue-200 font-medium"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}

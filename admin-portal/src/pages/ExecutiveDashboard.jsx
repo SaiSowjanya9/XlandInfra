@@ -48,7 +48,6 @@ const ExecutiveDashboard = ({ user }) => {
     { label: 'Properties', value: stats?.properties || 0, icon: Building2, color: 'indigo', path: '/executive/properties' },
     { label: 'Vendors', value: stats?.vendors || 0, icon: Store, color: 'purple', path: '/executive/vendors' },
     { label: 'Customers', value: stats?.customers || 0, icon: Users, color: 'green', path: '/executive/customers' },
-    { label: 'Employees', value: stats?.employees || 0, icon: Users, color: 'blue', path: '/executive/employees' },
     { label: 'Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, color: 'orange', path: '/executive/work-orders' },
     { label: 'Estimates', value: stats?.estimates || 0, icon: FileText, color: 'pink', path: '/executive/estimates' }
   ];
@@ -90,10 +89,10 @@ const ExecutiveDashboard = ({ user }) => {
   };
 
   const quickActions = [
-    { label: 'Add Property', icon: Building2, path: '/executive/properties', color: 'indigo' },
+    { label: 'Add Vendor', icon: Store, path: '/executive/vendors/add', color: 'purple' },
     { label: 'Create Work Order', icon: ClipboardList, path: '/executive/work-orders', color: 'orange' },
     { label: 'Add Customer', icon: Users, path: '/executive/customers', color: 'green' },
-    { label: 'Create Estimate', icon: FileText, path: '/executive/estimates/create', color: 'purple' }
+    { label: 'Create Estimate', icon: FileText, path: '/executive/estimates/create', color: 'pink' }
   ];
 
   if (loading) {

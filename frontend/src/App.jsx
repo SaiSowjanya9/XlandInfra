@@ -12,6 +12,8 @@ const Schedule = lazy(() => import('./pages/Schedule'));
 const Payment = lazy(() => import('./pages/Payment'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Login = lazy(() => import('./pages/Login'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const ActivateAccount = lazy(() => import('./pages/ActivateAccount'));
 const PropertyManagement = lazy(() => import('./pages/services/PropertyManagement'));
 const PropertySalesAdvisory = lazy(() => import('./pages/services/PropertySalesAdvisory'));
@@ -31,6 +33,9 @@ const PageLoader = () => (
     </div>
   </div>
 );
+
+// Session timeout in milliseconds (30 minutes)
+const SESSION_TIMEOUT = 30 * 60 * 1000;
 
 // Vendor Portal Coming Soon Component
 function VendorPortalComingSoon() {
@@ -107,22 +112,78 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Check if session is still valid
+  const isSessionValid = () => {
+    const lastActivity = sessionStorage.getItem('lastActivity');
+    if (!lastActivity) return false;
+    const elapsed = Date.now() - parseInt(lastActivity, 10);
+    return elapsed < SESSION_TIMEOUT;
+  };
+
+  // Update last activity timestamp
+  const updateActivity = () => {
+    sessionStorage.setItem('lastActivity', Date.now().toString());
+  };
+
   useEffect(() => {
-    const savedUser = localStorage.getItem('portalUser');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    try {
+      const savedUser = sessionStorage.getItem('portalUser');
+      
+      if (savedUser && isSessionValid()) {
+        setUser(JSON.parse(savedUser));
+        updateActivity(); // Refresh activity on load
+      } else if (savedUser) {
+        // Session expired - clear everything
+        sessionStorage.removeItem('portalUser');
+        sessionStorage.removeItem('lastActivity');
+      }
+    } catch (error) {
+      console.error('Error loading saved state:', error);
+      sessionStorage.removeItem('portalUser');
+      sessionStorage.removeItem('lastActivity');
     }
     setLoading(false);
   }, []);
 
+  // Track user activity to keep session alive
+  useEffect(() => {
+    if (!user) return;
+    
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    let activityTimeout;
+    
+    const handleActivity = () => {
+      clearTimeout(activityTimeout);
+      activityTimeout = setTimeout(updateActivity, 1000); // Debounce updates
+    };
+    
+    activityEvents.forEach(event => window.addEventListener(event, handleActivity));
+    
+    // Check session validity periodically
+    const intervalId = setInterval(() => {
+      if (!isSessionValid()) {
+        handleLogout();
+        alert('Session expired due to inactivity. Please log in again.');
+      }
+    }, 60000); // Check every minute
+    
+    return () => {
+      activityEvents.forEach(event => window.removeEventListener(event, handleActivity));
+      clearInterval(intervalId);
+      clearTimeout(activityTimeout);
+    };
+  }, [user]);
+
   const handleLogin = (userData) => {
     setUser(userData);
-    localStorage.setItem('portalUser', JSON.stringify(userData));
+    sessionStorage.setItem('portalUser', JSON.stringify(userData));
+    sessionStorage.setItem('lastActivity', Date.now().toString()); // Start session timer
   };
 
   const handleLogout = () => {
     setUser(null);
-    localStorage.removeItem('portalUser');
+    sessionStorage.removeItem('portalUser');
+    sessionStorage.removeItem('lastActivity');
   };
 
   if (loading) {
@@ -164,6 +225,10 @@ function App() {
         <Route path="/login" element={
           user ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />
         } />
+        <Route path="/forgot-password" element={
+          user ? <Navigate to="/dashboard" replace /> : <ForgotPassword />
+        } />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/activate/:token" element={<ActivateAccount />} />
         <Route path="/dashboard/*" element={
           user ? (

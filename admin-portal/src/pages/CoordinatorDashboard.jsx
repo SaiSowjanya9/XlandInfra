@@ -10,7 +10,9 @@ import {
   CheckCircle,
   RefreshCw,
   ArrowRight,
-  TrendingUp
+  TrendingUp,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 const CoordinatorDashboard = ({ user }) => {
@@ -18,6 +20,9 @@ const CoordinatorDashboard = ({ user }) => {
   const [stats, setStats] = useState(null);
   const [recentWorkOrders, setRecentWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Check if this is an FP-created Coordinator (has franchisePartnerId)
+  const isFPCoordinator = !!user?.franchisePartnerId;
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -89,12 +94,20 @@ const CoordinatorDashboard = ({ user }) => {
     });
   };
 
-  const quickActions = [
-    { label: 'Add Property', icon: Building2, path: '/coordinator/properties', color: 'teal' },
-    { label: 'Create Work Order', icon: ClipboardList, path: '/coordinator/work-orders', color: 'cyan' },
-    { label: 'Add Customer', icon: Users, path: '/coordinator/customers', color: 'green' },
-    { label: 'Create Estimate', icon: FileText, path: '/coordinator/estimates/create', color: 'purple' }
-  ];
+  // Quick actions - different for FP_Coordinator (view-only navigation)
+  const quickActions = isFPCoordinator 
+    ? [
+        { label: 'View Properties', icon: Building2, path: '/coordinator/properties', color: 'teal' },
+        { label: 'View Work Orders', icon: ClipboardList, path: '/coordinator/work-orders', color: 'cyan' },
+        { label: 'View Customers', icon: Users, path: '/coordinator/customers', color: 'green' },
+        { label: 'View Estimates', icon: FileText, path: '/coordinator/estimates', color: 'purple' }
+      ]
+    : [
+        { label: 'Add Property', icon: Building2, path: '/coordinator/properties', color: 'teal' },
+        { label: 'Create Work Order', icon: ClipboardList, path: '/coordinator/work-orders', color: 'cyan' },
+        { label: 'Add Customer', icon: Users, path: '/coordinator/customers', color: 'green' },
+        { label: 'Create Estimate', icon: FileText, path: '/coordinator/estimates/create', color: 'purple' }
+      ];
 
   if (loading) {
     return (
@@ -106,6 +119,19 @@ const CoordinatorDashboard = ({ user }) => {
 
   return (
     <div className="space-y-6">
+      {/* FP Coordinator - View Only Banner */}
+      {isFPCoordinator && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+          <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <Eye className="w-6 h-6 text-amber-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-amber-800">View Only Access</h3>
+            <p className="text-sm text-amber-700">You have view-only access. Some features are restricted.</p>
+          </div>
+        </div>
+      )}
+
       {/* Welcome Header */}
       <div className="bg-gradient-to-r from-teal-600 to-cyan-700 rounded-2xl p-6 text-white">
         <div className="flex items-center justify-between">
@@ -114,7 +140,9 @@ const CoordinatorDashboard = ({ user }) => {
               Welcome back, {user?.firstName || 'Coordinator'}!
             </h1>
             <p className="text-teal-100 mt-1">
-              Here's your operations overview for today.
+              {isFPCoordinator 
+                ? 'Here\'s your view-only operations overview.' 
+                : 'Here\'s your operations overview for today.'}
             </p>
           </div>
           <div className="hidden md:flex items-center gap-4">

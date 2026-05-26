@@ -392,19 +392,19 @@ const AMCPackageManager = ({ admin, showToast }) => {
                       {/* Table Header */}
                       <thead className="bg-slate-50 border-b border-gray-200">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                          <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
                             Package Name
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                          <th className="px-3 md:px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap min-w-[120px]">
                             Property Type
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                          <th className="px-3 md:px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
                             Billing
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                          <th className="px-3 md:px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
                             Services Included
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                          <th className="px-3 md:px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
                             Total Rate
                           </th>
                           {/* Actions column - Hidden for Operations Manager */}
@@ -430,28 +430,28 @@ const AMCPackageManager = ({ admin, showToast }) => {
                           
                           return (
                             <tr key={pkg.packageId} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-4">
-                                <span className="font-semibold text-gray-900">
+                              <td className="px-4 md:px-6 py-4">
+                                <span className="font-semibold text-gray-900 text-sm md:text-base">
                                   {pkg.packageName || 'Unnamed Package'}
                                 </span>
                               </td>
-                              <td className="px-4 py-4">
-                                <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">
+                              <td className="px-3 md:px-4 py-4">
+                                <span className="inline-block px-2 md:px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-lg border border-slate-200 whitespace-nowrap text-center">
                                   {PROPERTY_TYPE_OPTIONS.find(t => t.id === pkg.propertyType)?.label || pkg.propertyType || '-'}
                                 </span>
                               </td>
-                              <td className="px-4 py-4">
-                                <span className="px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+                              <td className="px-3 md:px-4 py-4">
+                                <span className="inline-block px-2 md:px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full border border-blue-200 whitespace-nowrap">
                                   {BILLING_DURATIONS.find(d => d.value === pkg.billingDuration)?.label || 'Monthly'}
                                 </span>
                               </td>
-                              <td className="px-4 py-4 max-w-xs">
+                              <td className="px-3 md:px-4 py-4 max-w-[200px] hidden sm:table-cell">
                                 <p className="text-sm text-gray-600 truncate" title={servicesText}>
                                   {servicesText || '-'}
                                 </p>
                               </td>
-                              <td className="px-4 py-4 text-right">
-                                <span className="text-lg font-bold text-slate-800">
+                              <td className="px-3 md:px-4 py-4 text-right">
+                                <span className="text-base md:text-lg font-bold text-slate-800 whitespace-nowrap">
                                   ₹{totalRate.toLocaleString()}
                                 </span>
                               </td>
@@ -512,14 +512,14 @@ const AMCPackageManager = ({ admin, showToast }) => {
             <h2 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h2>
             <p className="text-sm text-gray-500 mb-4">Choose the property type this package will be configured for</p>
             
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
               {PROPERTY_TYPE_OPTIONS.map((type) => {
                 const isSelected = selectedPropertyType === type.id;
                 return (
                   <button
                     key={type.id}
                     onClick={() => setSelectedPropertyType(type.id)}
-                    className={`px-4 py-3 rounded-lg border transition-all duration-200 text-sm font-medium text-center ${
+                    className={`px-3 md:px-4 py-2.5 md:py-3 rounded-lg border transition-all duration-200 text-sm font-medium text-center ${
                       isSelected
                         ? 'border-slate-400 bg-slate-100 text-slate-800 shadow-sm'
                         : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
@@ -563,13 +563,13 @@ const AMCPackageManager = ({ admin, showToast }) => {
               </div>
 
               {/* Service Configuration with Price on Right */}
-              <div className="flex gap-6">
+              <div className="flex flex-col lg:flex-row gap-6">
                 {/* Service Rows Section */}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <h3 className="text-sm font-semibold text-gray-700 mb-4">Service Configuration</h3>
                   
                   {/* Table Header */}
-                  <div className="grid grid-cols-12 gap-3 px-4 py-2 bg-slate-50 rounded-lg mb-3">
+                  <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-2 bg-slate-50 rounded-lg mb-3">
                     <div className="col-span-5">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</span>
                     </div>
@@ -587,9 +587,9 @@ const AMCPackageManager = ({ admin, showToast }) => {
                     {/* Service Rows */}
                   <div className="space-y-3">
                     {amcForm.serviceRows.map((row, index) => (
-                      <div key={index} className="grid grid-cols-12 gap-3 items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div key={index} className="flex flex-col md:grid md:grid-cols-12 gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                         {/* Service Name */}
-                        <div className="col-span-5">
+                        <div className="md:col-span-5">
                           <input
                             type="text"
                             value={row.service}
@@ -600,7 +600,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
                         </div>
                         
                         {/* Frequency Type - First to trigger auto-calculation */}
-                        <div className="col-span-3 relative">
+                        <div className="md:col-span-3 relative">
                           <select
                             value={row.frequencyType}
                             onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
@@ -614,7 +614,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
                         </div>
                         
                         {/* Visits - Auto-set based on frequency */}
-                        <div className="col-span-3">
+                        <div className="md:col-span-3">
                           <input
                             type="number"
                             min="1"
@@ -626,7 +626,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
                         </div>
                         
                         {/* Delete Button */}
-                        <div className="col-span-1 flex justify-center">
+                        <div className="md:col-span-1 flex justify-end md:justify-center">
                           <button
                             onClick={() => handleRemoveServiceRow(index)}
                             disabled={amcForm.serviceRows.length === 1}
@@ -658,7 +658,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
                 </div>
 
                 {/* Price Section - Right Side - LIGHT/ELEGANT Design */}
-                <div className="w-72 flex-shrink-0">
+                <div className="w-full lg:w-72 flex-shrink-0">
                   <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 h-full">
                     <h3 className="text-gray-600 text-xs uppercase tracking-wider mb-4 font-semibold">Price Summary</h3>
                     
@@ -777,14 +777,14 @@ const AMCPackageManager = ({ admin, showToast }) => {
               {/* Property Type Selection - Evenly distributed */}
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-3 block">Property Type</label>
-                <div className="grid grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
                   {PROPERTY_TYPE_OPTIONS.map((type) => {
                     const isSelected = selectedPropertyType === type.id;
                     return (
                       <button
                         key={type.id}
                         onClick={() => setSelectedPropertyType(type.id)}
-                        className={`px-3 py-2.5 rounded-lg border transition-all duration-200 text-sm font-medium text-center ${
+                        className={`px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg border transition-all duration-200 text-xs sm:text-sm font-medium text-center ${
                           isSelected
                             ? 'border-slate-400 bg-slate-100 text-slate-800 shadow-sm'
                             : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
@@ -798,7 +798,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
               </div>
 
               {/* Package Name and Price Row */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                     Package Name <span className="text-red-500">*</span>
@@ -811,7 +811,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                       Price (₹) <span className="text-red-500">*</span>
@@ -864,7 +864,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
                 </div>
                 
                 {/* Table Header */}
-                <div className="grid grid-cols-12 gap-3 px-3 py-2 bg-slate-50 rounded-lg mb-2">
+                <div className="hidden sm:grid grid-cols-12 gap-3 px-3 py-2 bg-slate-50 rounded-lg mb-2">
                   <div className="col-span-5"><span className="text-xs font-semibold text-gray-600 uppercase">Service</span></div>
                   <div className="col-span-3"><span className="text-xs font-semibold text-gray-600 uppercase">Frequency</span></div>
                   <div className="col-span-3"><span className="text-xs font-semibold text-gray-600 uppercase">Visits</span></div>
@@ -873,8 +873,8 @@ const AMCPackageManager = ({ admin, showToast }) => {
                 
                 <div className="space-y-2">
                   {amcForm.serviceRows.map((row, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-3 items-center p-2 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="col-span-5">
+                    <div key={index} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-3 p-2 sm:p-2 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="sm:col-span-5">
                         <input
                           type="text"
                           value={row.service}
@@ -884,7 +884,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
                         />
                       </div>
                       {/* Frequency Type - First to trigger auto-calculation */}
-                      <div className="col-span-3">
+                      <div className="sm:col-span-3">
                         <select
                           value={row.frequencyType}
                           onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
@@ -896,7 +896,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
                         </select>
                       </div>
                       {/* Visits - Auto-set based on frequency */}
-                      <div className="col-span-3">
+                      <div className="sm:col-span-3">
                         <input
                           type="number"
                           min="1"
@@ -905,7 +905,7 @@ const AMCPackageManager = ({ admin, showToast }) => {
                           className="w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
                         />
                       </div>
-                      <div className="col-span-1 flex justify-center">
+                      <div className="sm:col-span-1 flex justify-end sm:justify-center">
                         <button
                           onClick={() => handleRemoveServiceRow(index)}
                           disabled={amcForm.serviceRows.length === 1}
@@ -934,42 +934,42 @@ const AMCPackageManager = ({ admin, showToast }) => {
 
               {/* Price Summary - LIGHT Design */}
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
                   <div>
                     <span className="text-gray-500 text-xs">Package</span>
-                    <p className="font-semibold text-gray-800">{amcForm.packageName || 'Not specified'}</p>
+                    <p className="font-semibold text-gray-800 truncate max-w-[200px]">{amcForm.packageName || 'Not specified'}</p>
                   </div>
-                  <div className="text-center">
+                  <div className="sm:text-center">
                     <span className="text-gray-500 text-xs">Services</span>
                     <p className="font-semibold text-gray-800">{amcForm.serviceRows.filter(r => r.service.trim()).length}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="sm:text-right">
                     <span className="text-gray-500 text-xs">Total Rate</span>
-                    <p className="text-2xl font-bold text-gray-800">₹{getPrice().toLocaleString()}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-800">₹{getPrice().toLocaleString()}</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between sticky bottom-0">
+            <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 sticky bottom-0">
               <button
                 onClick={() => handleDeletePackage(editingPackage.packageId)}
-                className="px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 flex items-center gap-2"
+                className="px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 flex items-center justify-center gap-2 order-last sm:order-first"
               >
                 <Trash2 className="w-4 h-4" />
                 Delete
               </button>
-              <div className="flex gap-3">
+              <div className="flex gap-3 w-full sm:w-auto justify-end">
                 <button
                   onClick={handleCloseEditModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100"
+                  className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSavePackage}
-                  className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 flex items-center gap-2"
+                  className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   Save Changes

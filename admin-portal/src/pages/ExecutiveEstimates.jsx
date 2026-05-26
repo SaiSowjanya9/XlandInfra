@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, EyeOff } from 'lucide-react';
+import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye } from 'lucide-react';
 
 const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -115,8 +115,19 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
   return (
     <div className="space-y-6">
+      {/* View Only Access Banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <Eye className="w-6 h-6 text-amber-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-amber-800">View Only Access</h3>
+          <p className="text-sm text-amber-700">You can create estimates but AMC packages and add-ons are view-only. Pricing is hidden.</p>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div><h1 className="text-2xl font-bold text-gray-900">Estimates / AMC Management</h1><p className="text-gray-500 mt-1">Manage estimates, AMC packages, and add-ons</p></div>
+        <div><h1 className="text-2xl font-bold text-gray-900">Estimates / AMC Management</h1><p className="text-gray-500 mt-1">Create estimates and view AMC packages</p></div>
       </div>
 
       {message.text && (
@@ -210,16 +221,15 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
           {activeTab === 'amc' && (
             <div className="space-y-4">
-              <div className="flex justify-end"><button onClick={() => { setModalType('amc'); resetAmcForm(); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"><Plus className="w-4 h-4" /><span>Add AMC Package</span></button></div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {amcPackages.length === 0 ? (
                   <div className="col-span-full text-center py-12 bg-white rounded-xl border border-gray-100"><Package className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No AMC packages found</p></div>
                 ) : amcPackages.map((pkg) => (
                   <div key={pkg.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between"><h3 className="font-semibold text-gray-900">{pkg.name}</h3>{pkg.hide_pricing && <span className="flex items-center gap-1 text-xs text-gray-400"><EyeOff className="w-3 h-3" /> Hidden</span>}</div>
+                    <h3 className="font-semibold text-gray-900">{pkg.name}</h3>
                     <p className="text-sm text-gray-500 mt-1">{pkg.description || 'No description'}</p>
                     <div className="mt-4 flex items-center justify-between">
-                      <div><p className="text-xs text-gray-400">Base Price</p>{pkg.hide_pricing || pkg.pricing_hidden ? <p className="text-sm font-medium text-gray-400 italic">Hidden</p> : <p className="text-lg font-bold text-indigo-600">{formatCurrency(pkg.base_price)}</p>}</div>
+                      <div><p className="text-xs text-gray-400">Base Price</p><p className="text-sm font-medium text-gray-400 italic">Hidden</p></div>
                       <div className="text-right"><p className="text-xs text-gray-400">Duration</p><p className="text-sm font-medium text-gray-700">{pkg.duration_months} months</p></div>
                     </div>
                   </div>
@@ -230,62 +240,21 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
           {activeTab === 'addons' && (
             <div className="space-y-4">
-              <div className="flex justify-end"><button onClick={() => { setModalType('addon'); resetAddonForm(); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"><Plus className="w-4 h-4" /><span>Add Add-on</span></button></div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {addons.length === 0 ? (
                   <div className="col-span-full text-center py-12 bg-white rounded-xl border border-gray-100"><PlusCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No add-ons found</p></div>
                 ) : addons.map((addon) => (
                   <div key={addon.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between"><h3 className="font-semibold text-gray-900">{addon.name}</h3>{addon.hide_pricing && <span className="flex items-center gap-1 text-xs text-gray-400"><EyeOff className="w-3 h-3" /> Hidden</span>}</div>
+                    <h3 className="font-semibold text-gray-900">{addon.name}</h3>
                     <p className="text-sm text-gray-500 mt-1">{addon.description || 'No description'}</p>
                     {addon.category_name && <span className="inline-block mt-2 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs">{addon.category_name}</span>}
-                    <div className="mt-4">{addon.hide_pricing || addon.pricing_hidden ? <p className="text-sm font-medium text-gray-400 italic">Pricing Hidden</p> : <p className="text-lg font-bold text-indigo-600">{formatCurrency(addon.price)} <span className="text-xs font-normal text-gray-400">/ {addon.unit}</span></p>}</div>
+                    <div className="mt-4"><p className="text-sm font-medium text-gray-400 italic">Pricing Hidden</p></div>
                   </div>
                 ))}
               </div>
             </div>
           )}
         </>
-      )}
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">{modalType === 'amc' ? 'Add AMC Package' : 'Add Add-on'}</h2>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
-            </div>
-            <form onSubmit={modalType === 'amc' ? handleAmcSubmit : handleAddonSubmit} className="p-6 space-y-4">
-              {modalType === 'amc' ? (
-                <>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Package Name *</label><input type="text" required value={amcForm.name} onChange={(e) => setAmcForm({ ...amcForm, name: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea value={amcForm.description} onChange={(e) => setAmcForm({ ...amcForm, description: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" rows={2} /></div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Duration (months)</label><input type="number" value={amcForm.durationMonths} onChange={(e) => setAmcForm({ ...amcForm, durationMonths: parseInt(e.target.value) || 12 })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" /></div>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Base Price</label><input type="number" value={amcForm.basePrice} onChange={(e) => setAmcForm({ ...amcForm, basePrice: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" /></div>
-                  </div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Services (comma-separated)</label><input type="text" value={amcForm.services} onChange={(e) => setAmcForm({ ...amcForm, services: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Service 1, Service 2" /></div>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={amcForm.hidePricing} onChange={(e) => setAmcForm({ ...amcForm, hidePricing: e.target.checked })} className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" /><span className="text-sm text-gray-700">Hide pricing from other users</span></label>
-                </>
-              ) : (
-                <>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Add-on Name *</label><input type="text" required value={addonForm.name} onChange={(e) => setAddonForm({ ...addonForm, name: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea value={addonForm.description} onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" rows={2} /></div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Price</label><input type="number" value={addonForm.price} onChange={(e) => setAddonForm({ ...addonForm, price: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" /></div>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Unit</label><select value={addonForm.unit} onChange={(e) => setAddonForm({ ...addonForm, unit: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"><option value="per_service">Per Service</option><option value="per_hour">Per Hour</option><option value="per_sqft">Per Sq.ft</option><option value="fixed">Fixed</option></select></div>
-                  </div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Category</label><select value={addonForm.categoryId} onChange={(e) => setAddonForm({ ...addonForm, categoryId: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"><option value="">Select Category</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={addonForm.hidePricing} onChange={(e) => setAddonForm({ ...addonForm, hidePricing: e.target.checked })} className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" /><span className="text-sm text-gray-700">Hide pricing from other users</span></label>
-                </>
-              )}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button type="submit" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"><Save className="w-4 h-4" /><span>Save</span></button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
     </div>
   );
