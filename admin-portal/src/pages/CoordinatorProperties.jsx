@@ -17,7 +17,11 @@ import {
   Store,
   Eye,
   Lock,
-  Users
+  Users,
+  FileSpreadsheet,
+  Calendar,
+  Home,
+  Grid3X3
 } from 'lucide-react';
 
 const CoordinatorProperties = ({ user }) => {
@@ -36,6 +40,8 @@ const CoordinatorProperties = ({ user }) => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [editingProperty, setEditingProperty] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewProperty, setViewProperty] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     propertyType: 'residential',
@@ -189,6 +195,41 @@ const CoordinatorProperties = ({ user }) => {
     }
   };
 
+  const handleExportSingle = (property) => {
+    try {
+      // Create CSV content for single property export
+      const headers = ['Name', 'ID', 'Type', 'Zone', 'Area', 'Division', 'Units', 'Address', 'City', 'State', 'Contacts', 'Created By', 'Created', 'Status'];
+      const values = [
+        property.name,
+        property.property_id,
+        property.property_type,
+        property.zone_name || '',
+        property.area || property.city || '',
+        property.division || '',
+        property.units || property.total_units || 1,
+        property.address || '',
+        property.city || '',
+        property.state || '',
+        property.contacts || property.contact_person || '',
+        property.created_by || 'System',
+        property.created_at ? new Date(property.created_at).toLocaleDateString() : '',
+        property.status || 'active'
+      ];
+      
+      const csvContent = [headers.join(','), values.map(v => `"${v}"`).join(',')].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `property_${property.property_id}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setMessage({ type: 'success', text: 'Property exported successfully!' });
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Export failed' });
+    }
+  };
+
   const openEditModal = (property) => {
     if (!property.can_modify) {
       setMessage({ type: 'error', text: 'You do not have permission to edit this property' });
@@ -305,11 +346,18 @@ const CoordinatorProperties = ({ user }) => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Name</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">ID</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Access</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Location</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Division</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Units</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Address</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contacts</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
@@ -317,10 +365,10 @@ const CoordinatorProperties = ({ user }) => {
                 {filteredProperties.map((property) => (
                   <tr key={property.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-4 px-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{property.name}</p>
-                        <p className="text-sm text-gray-500">{property.property_id}</p>
-                      </div>
+                      <p className="font-medium text-gray-900">{property.name}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600 font-mono">{property.property_id}</p>
                     </td>
                     <td className="py-4 px-4">
                       <span className="inline-block px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium capitalize">
@@ -328,53 +376,88 @@ const CoordinatorProperties = ({ user }) => {
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        property.access_type === 'own' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-blue-100 text-blue-700'
+                      <p className="text-sm text-gray-600">{property.zone_name || '-'}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600">{property.area || property.city || '-'}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600">{property.division || '-'}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600">{property.units || property.total_units || 1}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600 max-w-[150px] truncate" title={property.address}>
+                        {property.address || `${property.city}, ${property.state}`}
+                      </p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600">{property.contacts || property.contact_person || '-'}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-600">{property.created_by || 'System'}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm text-gray-500">
+                        {property.created_at ? new Date(property.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      </p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                        property.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                       }`}>
-                        {property.access_type === 'own' ? 'Own' : 'Assigned'}
+                        {property.status || 'active'}
                       </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-600">{property.city}, {property.state}</p>
-                          <p className="text-xs text-gray-400">{property.zone_name || 'No zone'}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="space-y-1">
-                        {property.contact_person && (
-                          <p className="text-sm text-gray-600">{property.contact_person}</p>
-                        )}
-                        {property.contact_phone && (
-                          <p className="text-xs text-gray-400 flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {property.contact_phone}
-                          </p>
-                        )}
-                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-end gap-1">
                         {/* View Details - Always visible */}
                         <button
-                          onClick={() => openEditModal(property)}
+                          onClick={() => { setViewProperty(property); setShowViewModal(true); }}
                           className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Edit - Only for own properties */}
-                        {property.can_modify && (
+                        {/* Assign Vendor - Hidden for FP Coordinator */}
+                        {!isFPCoordinator && (
                           <button
-                            onClick={() => openEditModal(property)}
-                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
-                            title="Edit Property"
+                            onClick={() => openAssignModal(property, 'vendor')}
+                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
+                            title="Assign Vendor"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Store className="w-4 h-4" />
+                          </button>
+                        )}
+                        {/* Assign Employee - Hidden for FP Coordinator */}
+                        {!isFPCoordinator && (
+                          <button
+                            onClick={() => openAssignModal(property, 'employee')}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                            title="Assign Employee"
+                          >
+                            <Users className="w-4 h-4" />
+                          </button>
+                        )}
+                        {/* Export to Excel - Hidden for FP Coordinator */}
+                        {!isFPCoordinator && (
+                          <button
+                            onClick={() => handleExportSingle(property)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            title="Export to Excel"
+                          >
+                            <FileSpreadsheet className="w-4 h-4" />
+                          </button>
+                        )}
+                        {/* Delete - Hidden for FP Coordinator */}
+                        {!isFPCoordinator && property.can_delete && (
+                          <button
+                            onClick={() => handleDelete(property)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         )}
                       </div>
@@ -586,6 +669,120 @@ const CoordinatorProperties = ({ user }) => {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Details Modal */}
+      {showViewModal && viewProperty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Property Details</h2>
+                <button onClick={() => { setShowViewModal(false); setViewProperty(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Property Info Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Name</p>
+                  <p className="font-medium text-gray-900">{viewProperty.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">ID</p>
+                  <p className="font-mono text-gray-900">{viewProperty.property_id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Type</p>
+                  <span className="inline-block px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium capitalize">
+                    {viewProperty.property_type}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Zone</p>
+                  <p className="text-gray-900">{viewProperty.zone_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Area</p>
+                  <p className="text-gray-900">{viewProperty.area || viewProperty.city || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Division</p>
+                  <p className="text-gray-900">{viewProperty.division || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Units</p>
+                  <p className="text-gray-900">{viewProperty.units || viewProperty.total_units || 1}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Address</p>
+                  <p className="text-gray-900">{viewProperty.address || `${viewProperty.city}, ${viewProperty.state}`}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Contacts</p>
+                  <p className="text-gray-900">{viewProperty.contacts || viewProperty.contact_person || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Created By</p>
+                  <p className="text-gray-900">{viewProperty.created_by || 'System'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Created</p>
+                  <p className="text-gray-900">
+                    {viewProperty.created_at ? new Date(viewProperty.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                    viewProperty.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {viewProperty.status || 'active'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Contact Details */}
+              {(viewProperty.contact_person || viewProperty.contact_phone || viewProperty.contact_email) && (
+                <div className="border-t border-gray-100 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Contact Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {viewProperty.contact_person && (
+                      <div>
+                        <p className="text-sm text-gray-500">Contact Person</p>
+                        <p className="text-gray-900">{viewProperty.contact_person}</p>
+                      </div>
+                    )}
+                    {viewProperty.contact_phone && (
+                      <div>
+                        <p className="text-sm text-gray-500">Phone</p>
+                        <p className="text-gray-900">{viewProperty.contact_phone}</p>
+                      </div>
+                    )}
+                    {viewProperty.contact_email && (
+                      <div>
+                        <p className="text-sm text-gray-500">Email</p>
+                        <p className="text-gray-900">{viewProperty.contact_email}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => { setShowViewModal(false); setViewProperty(null); }}
+                className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

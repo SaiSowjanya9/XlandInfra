@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, ChevronDown, ArrowRight } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 
@@ -66,7 +66,14 @@ const MainHeader = () => {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-24">
           {/* Logo */}
-          <Link to="/" className="group">
+          <button 
+            onClick={() => {
+              navigate('/');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setMobileMenuOpen(false);
+            }}
+            className="group cursor-pointer"
+          >
             <div className="relative">
               <div className="absolute inset-0 bg-gold-400/20 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <div className="relative transition-transform duration-500 group-hover:scale-105">
@@ -74,7 +81,7 @@ const MainHeader = () => {
                 <BrandLogo size="sm" className="sm:hidden" />
               </div>
             </div>
-          </Link>
+          </button>
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-2">

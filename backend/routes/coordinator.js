@@ -207,9 +207,16 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     const scopeId = getScopeId(req);
     const scopeColumn = getScopeColumn(req);
 
-    // Get properties scoped to FP or Coordinator
+    // Get properties scoped to FP or Coordinator with all required fields
     const [properties] = await pool.query(
-      `SELECT p.*, z.name as zone_name
+      `SELECT p.*, 
+        z.name as zone_name,
+        COALESCE(p.area_name, p.city) as area,
+        COALESCE(p.division, 'General') as division,
+        COALESCE(p.total_units, 1) as units,
+        COALESCE(p.status, 'active') as status,
+        COALESCE(p.created_by, 'System') as created_by,
+        CONCAT(COALESCE(p.contact_person, ''), CASE WHEN p.contact_phone IS NOT NULL THEN CONCAT(' | ', p.contact_phone) ELSE '' END) as contacts
        FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id
        WHERE p.${scopeColumn} = ?
