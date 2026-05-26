@@ -271,12 +271,12 @@ const DesignConceptualization = () => {
                 return (
                   <div key={stage.id} className="group">
                     <div className="h-full p-4 service-card-dark rounded-xl hover:border-zinc-600/50 transition-all duration-300 group-hover:translate-y-[-2px]">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 flex-shrink-0 bg-zinc-800/50 border border-zinc-700/30 rounded-lg flex items-center justify-center group-hover:border-zinc-600/50 transition-colors">
+                      <div className="flex flex-col">
+                        <div className="w-10 h-10 mb-3 flex-shrink-0 bg-zinc-800/50 border border-zinc-700/30 rounded-lg flex items-center justify-center group-hover:border-zinc-600/50 transition-colors">
                           <Icon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-400 transition-colors" strokeWidth={1.5} />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-medium text-zinc-400 group-hover:text-zinc-300 transition-colors truncate">{stage.title}</h3>
+                        <div className="flex-1">
+                          <h3 className="text-sm font-medium text-white group-hover:text-zinc-300 transition-colors leading-tight">{stage.title}</h3>
                           <p className="text-zinc-600 text-xs leading-relaxed mt-1">{stage.desc}</p>
                         </div>
                       </div>
@@ -291,15 +291,15 @@ const DesignConceptualization = () => {
               {secondaryStages.map((stage) => {
                 const Icon = stage.icon;
                 return (
-                  <div key={stage.id} className="group flex items-center gap-4 p-4 bg-zinc-800/30 border border-zinc-700/30 rounded-xl hover:border-zinc-600/50 transition-all duration-300">
-                    <div className="w-10 h-10 flex-shrink-0 bg-zinc-800 border border-zinc-700/50 rounded-lg flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-zinc-500" strokeWidth={1.5} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-medium text-zinc-300 truncate">{stage.title}</h3>
+                  <div key={stage.id} className="group p-4 bg-zinc-800/30 border border-zinc-700/30 rounded-xl hover:border-zinc-600/50 transition-all duration-300">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 flex-shrink-0 bg-zinc-800 border border-zinc-700/50 rounded-lg flex items-center justify-center">
+                        <Icon className="w-5 h-5 text-zinc-500" strokeWidth={1.5} />
                       </div>
-                      <p className="text-zinc-600 text-xs mt-0.5">{stage.desc}</p>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium text-white leading-tight">{stage.title}</h3>
+                        <p className="text-zinc-600 text-xs mt-1 leading-relaxed">{stage.desc}</p>
+                      </div>
                     </div>
                   </div>
                 );
