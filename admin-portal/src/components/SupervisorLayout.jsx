@@ -16,9 +16,7 @@ import {
   FileInput,
   Hammer,
   ClipboardCheck,
-  Shield,
   MapPin,
-  QrCode,
   Plus,
   List,
   Package,
@@ -38,8 +36,6 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     { path: '/supervisor/properties', icon: Building2, label: 'Property Management' },
     { path: '/supervisor/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/supervisor/customers/add', icon: UserPlus, label: 'Add Customer' },
-    { path: '/supervisor/user-management', icon: Shield, label: 'User Management' },
-    { path: '/supervisor/qr-management', icon: QrCode, label: 'QR Management' },
   ];
 
   const vendorSubItems = [

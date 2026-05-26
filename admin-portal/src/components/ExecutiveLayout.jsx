@@ -16,9 +16,7 @@ import {
   FileInput,
   Hammer,
   ClipboardCheck,
-  Shield,
   MapPin,
-  QrCode,
   Plus,
   List,
   Package,
@@ -39,8 +37,6 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
     { path: '/executive/properties', icon: Building2, label: 'Property Management' },
     { path: '/executive/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/executive/customers/add', icon: UserPlus, label: 'Add Customer' },
-    { path: '/executive/user-management', icon: Shield, label: 'User Management' },
-    { path: '/executive/qr-management', icon: QrCode, label: 'QR Management' },
   ];
 
   const vendorSubItems = [

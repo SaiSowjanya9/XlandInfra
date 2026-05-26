@@ -499,7 +499,7 @@ const CoordinatorWorkOrders = ({ user }) => {
             </div>
           </div>
 
-          <form onSubmit={handleCreateWorkOrder} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Property Information */}
             <div className="bg-gray-50 rounded-xl p-5 space-y-4">
               <div className="flex items-center gap-2 text-gray-700 font-medium">
