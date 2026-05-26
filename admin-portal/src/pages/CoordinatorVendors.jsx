@@ -439,10 +439,6 @@ const CoordinatorVendors = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
-                  {/* Rate/Visit - Hidden for FP Coordinator */}
-                  {!isFPCoordinator && (
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Rate/Visit</th>
-                  )}
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
@@ -473,14 +469,6 @@ const CoordinatorVendors = ({ user }) => {
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-600">{vendor.area || '-'}</span>
                     </td>
-                    {/* Rate/Visit - Hidden for FP Coordinator */}
-                    {!isFPCoordinator && (
-                      <td className="py-4 px-4">
-                        <span className="text-sm font-medium text-gray-900">
-                          {vendor.rate_per_visit ? `₹${vendor.rate_per_visit}` : '-'}
-                        </span>
-                      </td>
-                    )}
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-600">{vendor.coverage_per_day || '-'}</span>
                     </td>
@@ -501,7 +489,7 @@ const CoordinatorVendors = ({ user }) => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-end gap-1">
-                        {/* View Details - Always visible */}
+                        {/* View Details - Only action available for Coordinators */}
                         <button
                           onClick={() => { setSelectedVendor(vendor); setShowViewModal(true); }}
                           className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
@@ -509,36 +497,6 @@ const CoordinatorVendors = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Modify Vendor - Hidden for FP Coordinator */}
-                        {!isFPCoordinator && (
-                          <button
-                            onClick={() => openEditModal(vendor)}
-                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                            title="Modify Vendor"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        )}
-                        {/* Export to Excel - Hidden for FP Coordinator */}
-                        {!isFPCoordinator && (
-                          <button
-                            onClick={() => handleExportVendor(vendor)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Export to Excel"
-                          >
-                            <FileSpreadsheet className="w-4 h-4" />
-                          </button>
-                        )}
-                        {/* Delete - Hidden for FP Coordinator */}
-                        {!isFPCoordinator && (
-                          <button
-                            onClick={() => handleDelete(vendor)}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -746,13 +704,6 @@ const CoordinatorVendors = ({ user }) => {
                   <p className="text-sm text-gray-500">Area</p>
                   <p className="font-medium text-gray-900">{selectedVendor.area || '-'}</p>
                 </div>
-                {/* Rate/Visit - Hidden for FP Coordinator */}
-                {!isFPCoordinator && (
-                  <div>
-                    <p className="text-sm text-gray-500">Rate/Visit</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.rate_per_visit || '-'}</p>
-                  </div>
-                )}
                 <div>
                   <p className="text-sm text-gray-500">Coverage/Day</p>
                   <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || '-'}</p>
@@ -776,18 +727,6 @@ const CoordinatorVendors = ({ user }) => {
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                {/* Modify Vendor - Hidden for FP Coordinator */}
-                {!isFPCoordinator && selectedVendor.can_modify && (
-                  <button
-                    onClick={() => {
-                      setShowViewModal(false);
-                      openEditModal(selectedVendor);
-                    }}
-                    className="px-4 py-2 text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50"
-                  >
-                    Modify Vendor
-                  </button>
-                )}
                 <button
                   onClick={() => { setShowViewModal(false); setSelectedVendor(null); }}
                   className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"

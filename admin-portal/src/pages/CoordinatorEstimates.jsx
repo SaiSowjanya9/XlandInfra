@@ -554,13 +554,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                           placeholder="Qty"
                           min="1"
                         />
-                        <input
-                          type="number"
-                          value={item.unitPrice}
-                          onChange={(e) => updateLineItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
-                          className="w-32 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                          placeholder="Price"
-                        />
+                        {/* Price field hidden for Coordinators */}
                         <button
                           type="button"
                           onClick={() => removeLineItem(index)}
@@ -573,26 +567,8 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                   </div>
                 </div>
 
-                {/* Totals */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tax %</label>
-                    <input
-                      type="number"
-                      value={estimateForm.taxPercentage}
-                      onChange={(e) => setEstimateForm({ ...estimateForm, taxPercentage: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Discount %</label>
-                    <input
-                      type="number"
-                      value={estimateForm.discountPercentage}
-                      onChange={(e) => setEstimateForm({ ...estimateForm, discountPercentage: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
+                {/* Valid Until - Pricing fields hidden for Coordinators */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Valid Until</label>
                     <input
@@ -602,9 +578,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
-                  <div className="bg-teal-50 p-3 rounded-lg">
-                    <p className="text-xs text-teal-600 font-medium">TOTAL</p>
-                    <p className="text-xl font-bold text-teal-700">{formatCurrency(calculateTotals().total)}</p>
+                  <div className="flex items-center text-sm text-gray-500 italic">
+                    <EyeOff className="w-4 h-4 mr-2" />
+                    Pricing will be added by admin
                   </div>
                 </div>
 
@@ -632,19 +608,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
           {/* AMC Tab */}
           {activeTab === 'amc' && (
             <div className="space-y-4">
-              {/* Hide Add AMC Package button for FP Coordinators */}
-              {!isFPCoordinator && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => { setModalType('amc'); resetAmcForm(); setShowModal(true); }}
-                    className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add AMC Package</span>
-                  </button>
-                </div>
-              )}
-
+              {/* Add AMC Package button removed for all Coordinators - view only */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {amcPackages.length === 0 ? (
                   <div className="col-span-full text-center py-12 bg-white rounded-xl border border-gray-100">
@@ -690,19 +654,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Addons Tab */}
           {activeTab === 'addons' && (
             <div className="space-y-4">
-              {/* Hide Add Add-on button for FP Coordinators */}
-              {!isFPCoordinator && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => { setModalType('addon'); resetAddonForm(); setShowModal(true); }}
-                    className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Add-on</span>
-                  </button>
-                </div>
-              )}
-
+              {/* Add Add-on button removed for all Coordinators - view only */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {addons.length === 0 ? (
                   <div className="col-span-full text-center py-12 bg-white rounded-xl border border-gray-100">

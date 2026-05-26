@@ -54,6 +54,7 @@ import CoordinatorProperties from './pages/CoordinatorProperties';
 import CoordinatorWorkOrders from './pages/CoordinatorWorkOrders';
 import CoordinatorCustomers from './pages/CoordinatorCustomers';
 import CoordinatorVendors from './pages/CoordinatorVendors';
+import CoordinatorAddVendor from './pages/CoordinatorAddVendor';
 import CoordinatorEmployees from './pages/CoordinatorEmployees';
 import CoordinatorEstimates from './pages/CoordinatorEstimates';
 
@@ -64,6 +65,7 @@ import SupervisorProperties from './pages/SupervisorProperties';
 import SupervisorWorkOrders from './pages/SupervisorWorkOrders';
 import SupervisorCustomers from './pages/SupervisorCustomers';
 import SupervisorVendors from './pages/SupervisorVendors';
+import SupervisorAddVendor from './pages/SupervisorAddVendor';
 import SupervisorEstimates from './pages/SupervisorEstimates';
 
 import ExecutiveLogin from './pages/ExecutiveLogin';
@@ -73,6 +75,7 @@ import ExecutiveProperties from './pages/ExecutiveProperties';
 import ExecutiveWorkOrders from './pages/ExecutiveWorkOrders';
 import ExecutiveCustomers from './pages/ExecutiveCustomers';
 import ExecutiveVendors from './pages/ExecutiveVendors';
+import ExecutiveAddVendor from './pages/ExecutiveAddVendor';
 import ExecutiveEstimates from './pages/ExecutiveEstimates';
 
 import AddEmployee from './pages/AddEmployee';
@@ -378,6 +381,7 @@ function App() {
             <Route path="/coordinator/customers" element={<CoordinatorCustomers user={user} />} />
             <Route path="/coordinator/customers/add" element={<CoordinatorCustomers user={user} defaultTab="add" />} />
             <Route path="/coordinator/vendors" element={<CoordinatorVendors user={user} />} />
+            <Route path="/coordinator/vendors/add" element={<CoordinatorAddVendor user={user} />} />
             <Route path="/coordinator/vendors/assigned" element={<AssignedVendors />} />
             <Route path="/coordinator/estimates" element={<CoordinatorEstimates user={user} defaultTab="list" />} />
             <Route path="/coordinator/estimates/create" element={<CoordinatorEstimates user={user} defaultTab="create" />} />
@@ -402,6 +406,7 @@ function App() {
             <Route path="/supervisor/customers" element={<SupervisorCustomers user={user} />} />
             <Route path="/supervisor/customers/add" element={<SupervisorCustomers user={user} defaultTab="add" />} />
             <Route path="/supervisor/vendors" element={<SupervisorVendors user={user} />} />
+            <Route path="/supervisor/vendors/add" element={<SupervisorAddVendor user={user} />} />
             <Route path="/supervisor/vendors/assigned" element={<AssignedVendors />} />
             <Route path="/supervisor/estimates" element={<SupervisorEstimates user={user} defaultTab="list" />} />
             <Route path="/supervisor/estimates/create" element={<SupervisorEstimates user={user} defaultTab="create" />} />
@@ -426,6 +431,7 @@ function App() {
             <Route path="/executive/customers" element={<ExecutiveCustomers user={user} />} />
             <Route path="/executive/customers/add" element={<ExecutiveCustomers user={user} defaultTab="add" />} />
             <Route path="/executive/vendors" element={<ExecutiveVendors user={user} />} />
+            <Route path="/executive/vendors/add" element={<ExecutiveAddVendor user={user} />} />
             <Route path="/executive/vendors/assigned" element={<AssignedVendors />} />
             <Route path="/executive/estimates" element={<ExecutiveEstimates user={user} defaultTab="list" />} />
             <Route path="/executive/estimates/create" element={<ExecutiveEstimates user={user} defaultTab="create" />} />
