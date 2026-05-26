@@ -282,11 +282,11 @@ router.post('/set-password', async (req, res) => {
     // Hash new password
     const newPasswordHash = await bcrypt.hash(newPassword, 10);
     
-    // Update password in users table
+    // Update password in users table with visible_password for admin visibility
     if (user.id && !user.fp_employee_id) {
       await pool.query(
-        `UPDATE users SET password_hash = ?, must_change_password = FALSE WHERE id = ?`,
-        [newPasswordHash, user.id]
+        `UPDATE users SET password_hash = ?, must_change_password = FALSE, visible_password = ? WHERE id = ?`,
+        [newPasswordHash, newPassword, user.id]
       );
       console.log(`[Employee Set-Password] Updated users table for id: ${user.id}`);
     }
@@ -300,11 +300,11 @@ router.post('/set-password', async (req, res) => {
       );
       console.log(`[Employee Set-Password] Updated fp_employees table`);
       
-      // Also update users table via user_id link
+      // Also update users table via user_id link with visible_password
       if (user.id) {
         await pool.query(
-          `UPDATE users SET password_hash = ?, must_change_password = FALSE WHERE id = ?`,
-          [newPasswordHash, user.id]
+          `UPDATE users SET password_hash = ?, must_change_password = FALSE, visible_password = ? WHERE id = ?`,
+          [newPasswordHash, newPassword, user.id]
         );
       }
     }

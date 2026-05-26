@@ -620,10 +620,10 @@ router.post('/reset-password', async (req, res) => {
            reset_token_expires = NULL,
            reset_temp_password_hash = NULL,
            must_change_password = FALSE,
-           visible_password = NULL,
+           visible_password = ?,
            updated_at = NOW()
        WHERE id = ?`,
-      [newPasswordHash, user.id]
+      [newPasswordHash, newPassword, user.id]
     );
 
     await conn.commit();
@@ -750,18 +750,18 @@ router.post('/set-password', async (req, res) => {
     const newPasswordHash = await bcrypt.hash(newPassword, 10);
     
     if (userType === 'user') {
-      // Clear visible_password when user sets their own password
+      // Store new password in visible_password for admin visibility
       await pool.execute(
-        `UPDATE users SET password_hash = ?, must_change_password = FALSE, visible_password = NULL WHERE id = ?`,
-        [newPasswordHash, user.id]
+        `UPDATE users SET password_hash = ?, must_change_password = FALSE, visible_password = ? WHERE id = ?`,
+        [newPasswordHash, newPassword, user.id]
       );
       
       // Also update franchise_partners table if this is an FP user
       if (user.role === 'franchise_partner' || user.role === 'franchise') {
         try {
           await pool.execute(
-            `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE, visible_password = NULL WHERE email = ?`,
-            [newPasswordHash, user.email]
+            `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE, visible_password = ? WHERE email = ?`,
+            [newPasswordHash, newPassword, user.email]
           );
         } catch (e) {
           // FP record may not exist - ignore
@@ -798,17 +798,17 @@ router.post('/set-password', async (req, res) => {
         }
       });
     } else {
-      // userType === 'franchise_partner' - Clear visible_password when user sets their own password
+      // userType === 'franchise_partner' - Store new password for admin visibility
       await pool.execute(
-        `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE, visible_password = NULL WHERE id = ?`,
-        [newPasswordHash, user.id]
+        `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE, visible_password = ? WHERE id = ?`,
+        [newPasswordHash, newPassword, user.id]
       );
       
       // Also update users table if exists
       try {
         await pool.execute(
-          `UPDATE users SET password_hash = ?, must_change_password = FALSE, visible_password = NULL WHERE email = ?`,
-          [newPasswordHash, user.email]
+          `UPDATE users SET password_hash = ?, must_change_password = FALSE, visible_password = ? WHERE email = ?`,
+          [newPasswordHash, newPassword, user.email]
         );
       } catch (e) {
         // User record may not exist - ignore
