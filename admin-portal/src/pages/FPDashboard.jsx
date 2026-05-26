@@ -11,7 +11,11 @@ import {
   AlertCircle,
   RefreshCw,
   Calendar,
-  ArrowRight
+  ArrowRight,
+  UserCog,
+  UserCheck,
+  Briefcase,
+  Shield
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -218,6 +222,81 @@ const FPDashboard = ({ user }) => {
         ))}
       </div>
 
+      {/* Employee Team Overview */}
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Your Team</h2>
+          <Link
+            to="/fp/employees"
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+          >
+            View All <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-indigo-50 rounded-xl p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <UserCog className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-indigo-700">{stats?.employeeRoles?.managers || 0}</p>
+                <p className="text-sm text-indigo-600">Managers</p>
+              </div>
+            </div>
+            <div className="text-xs text-indigo-500 bg-indigo-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
+              <ClipboardList className="w-3 h-3" />
+              {stats?.workOrders?.byRole?.managers || 0} Work Orders
+            </div>
+          </div>
+          <div className="bg-purple-50 rounded-xl p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <UserCheck className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-purple-700">{stats?.employeeRoles?.coordinators || 0}</p>
+                <p className="text-sm text-purple-600">Coordinators</p>
+              </div>
+            </div>
+            <div className="text-xs text-purple-500 bg-purple-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
+              <ClipboardList className="w-3 h-3" />
+              {stats?.workOrders?.byRole?.coordinators || 0} Work Orders
+            </div>
+          </div>
+          <div className="bg-amber-50 rounded-xl p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Shield className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-700">{stats?.employeeRoles?.supervisors || 0}</p>
+                <p className="text-sm text-amber-600">Supervisors</p>
+              </div>
+            </div>
+            <div className="text-xs text-amber-500 bg-amber-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
+              <ClipboardList className="w-3 h-3" />
+              {stats?.workOrders?.byRole?.supervisors || 0} Work Orders
+            </div>
+          </div>
+          <div className="bg-teal-50 rounded-xl p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-teal-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-teal-700">{stats?.employeeRoles?.executives || 0}</p>
+                <p className="text-sm text-teal-600">Executives</p>
+              </div>
+            </div>
+            <div className="text-xs text-teal-500 bg-teal-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
+              <ClipboardList className="w-3 h-3" />
+              {stats?.workOrders?.byRole?.executives || 0} Work Orders
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Quick Actions */}
       <div className="bg-white rounded-xl border border-gray-100 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
@@ -239,14 +318,14 @@ const FPDashboard = ({ user }) => {
             <ClipboardList className="w-8 h-8 text-indigo-600 mb-2" />
             <span className="text-sm font-medium text-indigo-700">Create Work Order</span>
           </Link>
-          {/* Add Customer - Hidden for FP Manager */}
+          {/* Add Employee */}
           {!isFPManager && (
             <Link
-              to="/fp/customers"
+              to="/fp/employees/add"
               className="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
             >
-              <Users className="w-8 h-8 text-blue-600 mb-2" />
-              <span className="text-sm font-medium text-blue-700">Add Customer</span>
+              <Users className="w-8 h-8 text-green-600 mb-2" />
+              <span className="text-sm font-medium text-green-700">Add Employee</span>
             </Link>
           )}
           <Link
@@ -291,6 +370,7 @@ const FPDashboard = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">ID</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Category</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                 </tr>
@@ -306,6 +386,14 @@ const FPDashboard = ({ user }) => {
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm text-gray-600">{wo.category_name || '-'}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div>
+                        <span className="text-sm text-gray-900">{wo.created_by_name || 'System'}</span>
+                        {wo.created_by_role && (
+                          <span className="block text-xs text-gray-400 capitalize">{wo.created_by_role}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>

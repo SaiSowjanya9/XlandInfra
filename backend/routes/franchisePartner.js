@@ -159,15 +159,53 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
     const employees = await safeCount(
       'SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ?', [fpId]
     );
+    
+    // Employee role breakdown
+    const managers = await safeCount(
+      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND role = 'manager' AND is_active = 1`, [fpId]
+    );
+    const coordinators = await safeCount(
+      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND role = 'coordinator' AND is_active = 1`, [fpId]
+    );
+    const supervisors = await safeCount(
+      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND role = 'supervisor' AND is_active = 1`, [fpId]
+    );
+    const executives = await safeCount(
+      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND role = 'executive' AND is_active = 1`, [fpId]
+    );
 
-    // Recent work orders (safely handle missing table)
+    // Work orders by employee role
+    const workOrdersByManagers = await safeCount(
+      `SELECT COUNT(*) as count FROM work_orders wo
+       INNER JOIN fp_employees e ON wo.created_by = e.id
+       WHERE wo.franchise_partner_id = ? AND e.role = 'manager'`, [fpId]
+    );
+    const workOrdersByCoordinators = await safeCount(
+      `SELECT COUNT(*) as count FROM work_orders wo
+       INNER JOIN fp_employees e ON wo.created_by = e.id
+       WHERE wo.franchise_partner_id = ? AND e.role = 'coordinator'`, [fpId]
+    );
+    const workOrdersBySupervisors = await safeCount(
+      `SELECT COUNT(*) as count FROM work_orders wo
+       INNER JOIN fp_employees e ON wo.created_by = e.id
+       WHERE wo.franchise_partner_id = ? AND e.role = 'supervisor'`, [fpId]
+    );
+    const workOrdersByExecutives = await safeCount(
+      `SELECT COUNT(*) as count FROM work_orders wo
+       INNER JOIN fp_employees e ON wo.created_by = e.id
+       WHERE wo.franchise_partner_id = ? AND e.role = 'executive'`, [fpId]
+    );
+
+    // Recent work orders with creator info
     let recentWorkOrders = [];
     try {
       const [rows] = await pool.execute(
-        `SELECT wo.*, p.name as property_name, c.name as category_name
+        `SELECT wo.*, p.name as property_name, c.name as category_name,
+                e.name as created_by_name, e.role as created_by_role
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN categories c ON wo.category_id = c.id
+         LEFT JOIN fp_employees e ON wo.created_by = e.id
          WHERE wo.franchise_partner_id = ?
          ORDER BY wo.created_at DESC LIMIT 5`,
         [fpId]
@@ -187,10 +225,22 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
           workOrders: {
             total: totalWorkOrders,
             pending: pendingWorkOrders,
-            completed: completedWorkOrders
+            completed: completedWorkOrders,
+            byRole: {
+              managers: workOrdersByManagers,
+              coordinators: workOrdersByCoordinators,
+              supervisors: workOrdersBySupervisors,
+              executives: workOrdersByExecutives
+            }
           },
           estimates,
-          employees
+          employees,
+          employeeRoles: {
+            managers,
+            coordinators,
+            supervisors,
+            executives
+          }
         },
         recentWorkOrders
       }
@@ -324,13 +374,19 @@ router.put('/properties/:id', requireFPScope, validateOwnership('properties'), a
   }
 });
 
-// Delete property - DISABLED for Franchise Partner role
+// Delete property
 router.delete('/properties/:id', requireFPScope, validateOwnership('properties'), async (req, res) => {
-  // Role restriction: Delete property not allowed for Franchise Partner
-  return res.status(403).json({
-    success: false,
-    message: 'Delete operation not allowed for this role'
-  });
+  try {
+    const { id } = req.params;
+    await pool.execute(
+      `DELETE FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+    res.json({ success: true, message: 'Property deleted successfully' });
+  } catch (error) {
+    console.error('Delete property error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 // ============================================
@@ -516,6 +572,53 @@ router.patch('/work-orders/:id/assign-vendor', requireFPScope, validateOwnership
       message: 'Failed to assign vendor',
       error: error.message
     });
+  }
+});
+
+// Update work order status (PUT)
+router.put('/work-orders/:id/status', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    await pool.execute(
+      `UPDATE work_orders SET status = ?, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+      [status, id, req.fpId]
+    );
+
+    // Log status change
+    try {
+      await pool.execute(
+        `INSERT INTO work_order_status_history (work_order_id, to_status, changed_by, changed_by_role)
+         VALUES (?, ?, ?, ?)`,
+        [id, status, req.user.id, req.user.role]
+      );
+    } catch (e) {
+      // Ignore if history table doesn't exist
+    }
+
+    res.json({ success: true, message: 'Status updated' });
+  } catch (error) {
+    console.error('Update status error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete work order
+router.delete('/work-orders/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Soft delete or hard delete
+    await pool.execute(
+      `DELETE FROM work_orders WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+
+    res.json({ success: true, message: 'Work order deleted' });
+  } catch (error) {
+    console.error('Delete work order error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -1243,6 +1346,59 @@ router.post('/employees', requireFPScope, async (req, res) => {
       message: 'Failed to create employee account',
       error: error.message
     });
+  }
+});
+
+// Update employee status
+router.put('/employees/:id/status', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    await pool.execute(
+      `UPDATE fp_employees SET status = ?, is_active = ? WHERE id = ? AND franchise_partner_id = ?`,
+      [status, status === 'active' ? 1 : 0, id, req.fpId]
+    );
+    
+    res.json({ success: true, message: 'Employee status updated' });
+  } catch (error) {
+    console.error('Update employee status error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update employee zones
+router.put('/employees/:id/zones', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { zones } = req.body;
+    
+    // Delete existing zone assignments
+    await pool.execute(
+      `DELETE FROM fp_employee_zones WHERE fp_employee_id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+    
+    // Get zone IDs from zone names
+    if (zones && zones.length > 0) {
+      for (const zoneName of zones) {
+        const [zoneRows] = await pool.execute(
+          `SELECT id FROM zones WHERE name = ?`,
+          [zoneName]
+        );
+        if (zoneRows.length > 0) {
+          await pool.execute(
+            `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_id) VALUES (?, ?, ?)`,
+            [req.fpId, id, zoneRows[0].id]
+          );
+        }
+      }
+    }
+    
+    res.json({ success: true, message: 'Employee zones updated' });
+  } catch (error) {
+    console.error('Update employee zones error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

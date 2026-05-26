@@ -51,25 +51,19 @@ const FPLayout = ({ admin, onLogout, children }) => {
   );
 
 
-  // Base nav items - filtered based on role
-  const allNavItems = [
+  // Base nav items
+  const navItems = [
     { path: '/fp', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/fp/properties', icon: Building2, label: 'Property Management' },
     { path: '/fp/work-orders', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/fp/customers', icon: UserPlus, label: 'Add Customer', fpOnly: true }, // Hidden for FP Manager
   ];
-  
-  // Filter nav items for FP Manager (remove Add Customer)
-  const navItems = isFPManager 
-    ? allNavItems.filter(item => !item.fpOnly)
-    : allNavItems;
 
 
   // Vendor sub-items - Add Vendor hidden for FP Manager, Assigned Vendors is view-only
   const allVendorSubItems = [
-    { path: '/fp/vendors/add', icon: UserPlus, label: 'Add Vendor', fpOnly: true },
+    { path: '/fp/vendors/add', icon: UserPlus, label: 'Add New Vendor', fpOnly: true },
     { path: '/fp/vendors', icon: Hammer, label: 'Vendor Details' },
-    { path: '/fp/vendors/assigned', icon: ClipboardCheck, label: 'Assigned Vendors' }, // View-only for FP Manager
+    { path: '/fp/vendors/assigned', icon: ClipboardCheck, label: 'Assigned Vendors' },
   ];
   
   const vendorSubItems = isFPManager
@@ -79,8 +73,8 @@ const FPLayout = ({ admin, onLogout, children }) => {
   // Employee sub-items - For FP Manager: ONLY Zone Management visible
   const allEmployeeSubItems = [
     { path: '/fp/employees/add', icon: UserPlus, label: 'Add Employee', fpOnly: true },
-    { path: '/fp/employees', icon: Users, label: 'Employee Details', fpOnly: true }, // Hidden for FP Manager
-    { path: '/fp/employees/zones', icon: MapPin, label: 'Zone Management' }, // Only this visible for FP Manager
+    { path: '/fp/employees', icon: Users, label: 'Employee Details', fpOnly: true },
+    { path: '/fp/employees/zones', icon: MapPin, label: 'Employee Zone Management' },
   ];
   
   const employeeSubItems = isFPManager
@@ -89,11 +83,11 @@ const FPLayout = ({ admin, onLogout, children }) => {
 
   // Estimates sub-items - FP Manager can create estimates but not AMC Packages/Add-ons
   const allEstimatesSubItems = [
-    { path: '/fp/estimates/create', icon: Plus, label: 'Create Estimate' }, // Available for FP Manager
+    { path: '/fp/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/fp/estimates', icon: List, label: 'All Estimates' },
     { path: '/fp/estimates/amc', icon: Package, label: 'AMC Packages' },
     { path: '/fp/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
-    { path: '/fp/estimates/archived', icon: Archive, label: 'Archived' },
+    { path: '/fp/estimates/archived', icon: Archive, label: 'Archived Estimates' },
   ];
   
   const estimatesSubItems = allEstimatesSubItems;

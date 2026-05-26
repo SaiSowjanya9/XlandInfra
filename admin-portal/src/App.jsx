@@ -27,7 +27,6 @@ import FPLogin from './pages/FPLogin';
 import FPDashboard from './pages/FPDashboard';
 import FPProperties from './pages/FPProperties';
 import FPWorkOrders from './pages/FPWorkOrders';
-import FPCustomers from './pages/FPCustomers';
 import FPVendors from './pages/FPVendors';
 import FPAddVendor from './pages/FPAddVendor';
 import FPEmployees from './pages/FPEmployees';
@@ -304,7 +303,6 @@ function App() {
             <Route path="/fp" element={<FPDashboard user={user} />} />
             <Route path="/fp/properties" element={<FPProperties user={user} />} />
             <Route path="/fp/work-orders" element={<FPWorkOrders user={user} />} />
-            <Route path="/fp/customers" element={<FPCustomers user={user} />} />
             <Route path="/fp/vendors" element={<FPVendors user={user} />} />
             <Route path="/fp/vendors/add" element={<FPAddVendor user={user} />} />
             <Route path="/fp/vendors/assigned" element={<AssignedVendors user={user} />} />
