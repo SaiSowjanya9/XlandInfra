@@ -537,6 +537,7 @@ const initOnboardingTables = async () => {
         gst_number VARCHAR(50),
         pan_number VARCHAR(20),
         must_change_password BOOLEAN DEFAULT TRUE,
+        visible_password VARCHAR(255),
         is_active BOOLEAN DEFAULT TRUE,
         last_login TIMESTAMP NULL,
         created_by INT DEFAULT NULL,
@@ -551,6 +552,7 @@ const initOnboardingTables = async () => {
       { name: 'owner_name', definition: 'VARCHAR(200) AFTER company_name' },
       { name: 'zip_code', definition: 'VARCHAR(20) AFTER state' },
       { name: 'must_change_password', definition: 'BOOLEAN DEFAULT TRUE AFTER pan_number' },
+      { name: 'visible_password', definition: 'VARCHAR(255) AFTER must_change_password' },
       { name: 'created_by', definition: 'INT DEFAULT NULL AFTER last_login' }
     ];
     
