@@ -16,6 +16,7 @@ import {
   RotateCcw,
   Trash2,
   ExternalLink,
+  UserPlus,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -209,6 +210,15 @@ const FPEmployees = ({ user }) => {
             {employees.length} employees • Manage and view all registered employees
           </p>
         </div>
+        {!isFPManager && (
+          <button
+            onClick={() => navigate('/fp/employees/add')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add Employee
+          </button>
+        )}
       </div>
 
       {/* Filters */}

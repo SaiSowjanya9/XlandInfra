@@ -15,7 +15,12 @@ import {
   ChevronDown,
   AlertCircle,
   CheckCircle,
-  X
+  X,
+  Eye,
+  UserPlus,
+  Truck,
+  MoreVertical,
+  Trash2
 } from 'lucide-react';
 
 const FPProperties = ({ user }) => {
@@ -33,6 +38,9 @@ const FPProperties = ({ user }) => {
   const [statusFilter, setStatusFilter] = useState('active');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [actionDropdown, setActionDropdown] = useState(null);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -72,6 +80,26 @@ const FPProperties = ({ user }) => {
     fetchZones();
   }, []);
 
+  const handleDeleteProperty = async (propertyId) => {
+    if (!window.confirm('Are you sure you want to delete this property?')) return;
+    
+    try {
+      const response = await fetch(`/api/fp/properties/${propertyId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Property deleted successfully' });
+        fetchProperties();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Failed to delete property' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to delete property' });
+    }
+    setActionDropdown(null);
+  };
 
   // Property type tabs
   const tabs = [
@@ -339,6 +367,8 @@ const FPProperties = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">City</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contacts</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -379,6 +409,69 @@ const FPProperties = ({ user }) => {
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-500">{formatDate(property.created_at)}</span>
                       </td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                          property.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {property.is_active !== false ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 relative">
+                        <button
+                          onClick={() => setActionDropdown(actionDropdown === property.id ? null : property.id)}
+                          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                          <MoreVertical className="w-4 h-4 text-gray-500" />
+                        </button>
+                        
+                        {actionDropdown === property.id && (
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                            <button
+                              onClick={() => {
+                                setSelectedProperty(property);
+                                setShowDetailsModal(true);
+                                setActionDropdown(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View Details
+                            </button>
+                            {!isFPManager && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setMessage({ type: 'info', text: 'Assign Vendor feature coming soon' });
+                                    setActionDropdown(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                                >
+                                  <Truck className="w-4 h-4" />
+                                  Assign Vendor
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setMessage({ type: 'info', text: 'Assign Employee feature coming soon' });
+                                    setActionDropdown(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                                >
+                                  <UserPlus className="w-4 h-4" />
+                                  Assign Employee
+                                </button>
+                                <div className="border-t border-gray-100 my-1"></div>
+                                <button
+                                  onClick={() => handleDeleteProperty(property.id)}
+                                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -394,6 +487,89 @@ const FPProperties = ({ user }) => {
           </>
         )}
       </div>
+
+      {/* View Details Modal */}
+      {showDetailsModal && selectedProperty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Property Details</h2>
+              <button
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  setSelectedProperty(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Property Name</p>
+                  <p className="text-sm font-medium">{selectedProperty.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Property ID</p>
+                  <p className="text-sm font-medium">{selectedProperty.property_id}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Type</p>
+                  <p className="text-sm font-medium">{selectedProperty.property_type?.replace(/_/g, ' ')}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Zone</p>
+                  <p className="text-sm font-medium">{selectedProperty.zone_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Division</p>
+                  <p className="text-sm font-medium">{selectedProperty.division || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Units</p>
+                  <p className="text-sm font-medium">{selectedProperty.units || '-'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-gray-500 mb-1">Address</p>
+                  <p className="text-sm font-medium">{selectedProperty.address}, {selectedProperty.city}, {selectedProperty.state} {selectedProperty.zip_code}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Contact Person</p>
+                  <p className="text-sm font-medium">{selectedProperty.contact_person || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Contact Phone</p>
+                  <p className="text-sm font-medium">{selectedProperty.contact_phone || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Contact Email</p>
+                  <p className="text-sm font-medium">{selectedProperty.contact_email || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Status</p>
+                  <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                    selectedProperty.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {selectedProperty.is_active !== false ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  setSelectedProperty(null);
+                }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
