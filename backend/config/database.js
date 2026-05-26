@@ -457,6 +457,17 @@ const initOnboardingTables = async () => {
     }
     console.log('  ✅ Users table initialized');
 
+    // Update role ENUM to include all roles (for existing deployments)
+    try {
+      await conn.execute(`
+        ALTER TABLE users 
+        MODIFY COLUMN role ENUM('admin', 'operations_manager', 'manager', 'coordinator', 'supervisor', 'executive', 'franchise', 'franchise_partner') NOT NULL DEFAULT 'executive'
+      `);
+      console.log('  ✅ Updated users role ENUM');
+    } catch (e) {
+      // ENUM already correct or table locked - ignore
+    }
+
     // Seed default users if table is empty (Password: Password@123)
     const [userCount] = await conn.execute('SELECT COUNT(*) as cnt FROM users');
     if (userCount[0].cnt === 0) {
