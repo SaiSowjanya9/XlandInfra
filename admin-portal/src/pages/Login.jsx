@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import SetPassword from './SetPassword';
+import ForgotPassword from './ForgotPassword';
 
 const Login = ({ onLogin }) => {
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -69,6 +71,15 @@ const Login = ({ onLogin }) => {
     onLogin(updatedUser);
   };
 
+  // Show Forgot Password screen
+  if (showForgotPassword) {
+    return (
+      <ForgotPassword 
+        onBack={() => setShowForgotPassword(false)}
+      />
+    );
+  }
+
   // Show Set Password screen if needed
   if (showSetPassword && pendingUser) {
     return (
@@ -110,9 +121,18 @@ const Login = ({ onLogin }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+              >
+                Forgot Password?
+              </button>
+            </div>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}

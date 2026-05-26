@@ -917,6 +917,188 @@ const sendEstimateActionNotification = async (estimate, action, customerName) =>
   }
 };
 
+// Send password reset email with temporary password
+const sendPasswordResetEmail = async (userData) => {
+  const { email, firstName, tempPassword, resetLink, userType, expiryHours } = userData;
+  
+  const portalName = userType === 'customer' ? 'Customer Portal' : 'Service Portal';
+  const portalLabel = userType === 'customer' ? 'HomeHub' : 'Admin';
+  
+  const mailOptions = {
+    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    replyTo: process.env.EMAIL_USER,
+    to: email,
+    subject: `Password Reset Request - XLAND INFRA ${portalLabel} Portal`,
+    headers: {
+      ...getDefaultHeaders(),
+      'X-Entity-Ref-ID': `password-reset-${Date.now()}`,
+      'Message-ID': `<pwd-reset-${Date.now()}@xlandinfra.com>`
+    },
+    text: `Password Reset Request\n\nHello ${firstName || 'User'},\n\nWe received a request to reset your password for XLAND INFRA ${portalName}.\n\nTemporary Password: ${tempPassword}\n\nReset your password: ${resetLink}\n\nThis link expires in ${expiryHours || 48} hours.\n\nIf you did not request this, please ignore this email.\n\nRegards,\nXLAND INFRA Team`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+          <!-- Header -->
+          <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%); border-radius: 16px 16px 0 0; border: 1px solid #D8B25C33; border-bottom: none;">
+            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 300; letter-spacing: 2px;">
+              XLAND<span style="color: #D8B25C;">INFRA</span>
+            </h1>
+            <p style="margin: 5px 0 0 0; color: #888; font-size: 11px; letter-spacing: 3px;">PRIVATE LIMITED</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none;">
+            <div style="text-align: center; margin-bottom: 25px;">
+              <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #D8B25C22 0%, #D8B25C11 100%); border-radius: 50%; margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: center; border: 2px solid #D8B25C44;">
+                <span style="font-size: 32px;">🔐</span>
+              </div>
+              <h2 style="color: #D8B25C; margin: 0; font-size: 24px; font-weight: 400;">Password Reset Request</h2>
+            </div>
+            
+            <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 25px 0; text-align: center;">
+              Hello <strong style="color: #ffffff;">${firstName || 'User'}</strong>, we received a request to reset your password for the <strong style="color: #D8B25C;">${portalName}</strong>.
+            </p>
+            
+            <!-- Temporary Password Box -->
+            <div style="background: #0D0D0D; border: 1px solid #D8B25C44; border-radius: 12px; padding: 25px; margin: 30px 0;">
+              <h3 style="color: #D8B25C; margin: 0 0 20px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; text-align: center;">Your Temporary Password</h3>
+              
+              <div style="text-align: center;">
+                <p style="color: #D8B25C; font-size: 28px; margin: 0; font-family: monospace; background: #1a1a1a; padding: 15px 20px; border-radius: 8px; border: 1px solid #D8B25C44; letter-spacing: 4px; font-weight: bold; display: inline-block;">${tempPassword}</p>
+              </div>
+              
+              <p style="color: #888; font-size: 12px; text-align: center; margin: 15px 0 0 0;">
+                Use this temporary password along with your new password to complete the reset
+              </p>
+            </div>
+            
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${resetLink}" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
+                RESET PASSWORD
+              </a>
+            </div>
+            
+            <p style="color: #888; font-size: 13px; text-align: center; margin: 25px 0 0 0;">
+              Or copy and paste this link in your browser:<br>
+              <a href="${resetLink}" style="color: #D8B25C; word-break: break-all; font-size: 12px;">${resetLink}</a>
+            </p>
+            
+            <!-- Warning -->
+            <div style="background: #2a1a0a; border: 1px solid #D8B25C44; border-radius: 8px; padding: 15px 20px; margin-top: 30px;">
+              <p style="color: #D8B25C; font-size: 13px; margin: 0; line-height: 1.6;">
+                ⚠️ <strong>Important:</strong> This password reset link will expire in <strong>${expiryHours || 48} hours</strong>. 
+                If you did not request this password reset, please ignore this email or contact support.
+              </p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #0D0D0D; padding: 25px 30px; border-radius: 0 0 16px 16px; border: 1px solid #D8B25C33; border-top: 2px solid #D8B25C;">
+            <p style="color: #666; font-size: 12px; margin: 0 0 10px 0; text-align: center;">
+              If you did not request this password reset, you can safely ignore this email.
+            </p>
+            <p style="color: #444; font-size: 11px; margin: 0; text-align: center;">
+              © ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`📧 Password reset email sent to ${email} (Message ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error sending password reset email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send password reset success confirmation
+const sendPasswordResetSuccess = async (userData) => {
+  const { email, firstName, userType } = userData;
+  
+  const portalName = userType === 'customer' ? 'Customer Portal' : 'Service Portal';
+  const loginUrl = userType === 'customer' 
+    ? (process.env.FRONTEND_URL || 'https://xlandinfra.com') + '/login'
+    : (process.env.ADMIN_PORTAL_URL || 'https://admin.xlandinfra.com');
+  
+  const mailOptions = {
+    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `Password Reset Successful - XLAND INFRA`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+          <!-- Header -->
+          <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%); border-radius: 16px 16px 0 0; border: 1px solid #D8B25C33; border-bottom: none;">
+            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 300; letter-spacing: 2px;">
+              XLAND<span style="color: #D8B25C;">INFRA</span>
+            </h1>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none; text-align: center;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 50%; margin: 0 auto 25px auto; display: flex; align-items: center; justify-content: center;">
+              <span style="font-size: 40px; color: white;">✓</span>
+            </div>
+            
+            <h2 style="color: #22c55e; margin: 0 0 20px 0; font-size: 24px; font-weight: 400;">Password Reset Successful!</h2>
+            
+            <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 30px 0;">
+              Hi ${firstName || 'User'}, your password for the <strong style="color: #D8B25C;">${portalName}</strong> has been successfully reset. 
+              You can now log in with your new password.
+            </p>
+            
+            <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px;">
+              LOGIN NOW
+            </a>
+            
+            <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 15px 20px; margin-top: 30px;">
+              <p style="color: #888; font-size: 13px; margin: 0; line-height: 1.6;">
+                🔒 <strong style="color: #ccc;">Security Tip:</strong> If you did not make this change, please contact our support team immediately.
+              </p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #0D0D0D; padding: 25px 30px; border-radius: 0 0 16px 16px; border: 1px solid #D8B25C33; border-top: 2px solid #D8B25C;">
+            <p style="color: #444; font-size: 11px; margin: 0; text-align: center;">
+              © ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`📧 Password reset success email sent to ${email}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending password reset success email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWorkOrderNotification,
   sendContactNotification,
@@ -927,5 +1109,7 @@ module.exports = {
   sendFPEmployeeWelcomeEmail,
   sendEstimateEmail,
   sendEstimateActionNotification,
+  sendPasswordResetEmail,
+  sendPasswordResetSuccess,
   NOTIFICATION_EMAIL
 };

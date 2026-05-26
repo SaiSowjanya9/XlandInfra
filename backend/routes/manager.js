@@ -235,21 +235,21 @@ router.get('/properties', requireManagerScope, async (req, res) => {
   }
 });
 
-// Create property - uses FP scope if FP Manager
+// Create property - dual-tag with manager_id AND franchise_partner_id
 router.post('/properties', requireManagerScope, async (req, res) => {
   try {
     const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
     
     const propertyId = `PROP-MGR-${Date.now()}`;
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const managerId = req.managerId;
+    const franchisePartnerId = req.isFPManager ? req.franchisePartnerId : null;
     
     const [result] = await pool.execute(
       `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
-        contact_person, contact_phone, contact_email, zone_id, ${scopeColumn}, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        contact_person, contact_phone, contact_email, zone_id, manager_id, franchise_partner_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [propertyId, name, propertyType || 'residential', address, city, state, zipCode, 
-       contactPerson, contactPhone, contactEmail, zoneId || null, scopeId]
+       contactPerson, contactPhone, contactEmail, zoneId || null, managerId, franchisePartnerId]
     );
 
     res.json({ success: true, message: 'Property created', data: { id: result.insertId, propertyId } });
@@ -507,21 +507,21 @@ router.get('/customers', requireManagerScope, async (req, res) => {
   }
 });
 
-// Create customer
+// Create customer - dual-tag with manager_id AND franchise_partner_id
 router.post('/customers', requireManagerScope, async (req, res) => {
   try {
     const { name, email, phone, alternatePhone, address, city, state, zipCode, clientType, companyName, propertyId, gstNumber } = req.body;
     
     const clientId = `CLT-MGR-${Date.now()}`;
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const managerId = req.managerId;
+    const franchisePartnerId = req.isFPManager ? req.franchisePartnerId : null;
     
     const [result] = await pool.execute(
       `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
-        zip_code, client_type, company_name, property_id, gst_number, ${scopeColumn}, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        zip_code, client_type, company_name, property_id, gst_number, manager_id, franchise_partner_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
-       clientType || 'individual', companyName, propertyId || null, gstNumber, scopeId]
+       clientType || 'individual', companyName, propertyId || null, gstNumber, managerId, franchisePartnerId]
     );
 
     res.json({ success: true, message: 'Customer created', data: { id: result.insertId, clientId } });
@@ -559,21 +559,21 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
   }
 });
 
-// Create vendor
+// Create vendor - dual-tag with manager_id AND franchise_partner_id
 router.post('/vendors', requireManagerScope, async (req, res) => {
   try {
     const { companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber } = req.body;
     
     const vendorId = `VND-MGR-${Date.now()}`;
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const managerId = req.managerId;
+    const franchisePartnerId = req.isFPManager ? req.franchisePartnerId : null;
     
     const [result] = await pool.execute(
       `INSERT INTO vendors (vendor_id, company_name, contact_person, email, phone, alternate_phone, 
-        address, city, state, zip_code, gst_number, pan_number, ${scopeColumn}, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        address, city, state, zip_code, gst_number, pan_number, manager_id, franchise_partner_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [vendorId, companyName, contactPerson, email, phone, alternatePhone, address, city, state, 
-       zipCode, gstNumber, panNumber, scopeId]
+       zipCode, gstNumber, panNumber, managerId, franchisePartnerId]
     );
 
     res.json({ success: true, message: 'Vendor created', data: { id: result.insertId, vendorId } });
@@ -643,7 +643,7 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
   }
 });
 
-// Create estimate
+// Create estimate - dual-tag with manager_id AND franchise_partner_id
 router.post('/estimates', requireManagerScope, async (req, res) => {
   try {
     const { clientId, propertyId, title, description, estimateType, items, subtotal, taxPercentage, discountPercentage, validUntil } = req.body;
@@ -652,17 +652,17 @@ router.post('/estimates', requireManagerScope, async (req, res) => {
     const tax = (subtotal * (taxPercentage || 0)) / 100;
     const discount = (subtotal * (discountPercentage || 0)) / 100;
     const total = subtotal + tax - discount;
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const managerId = req.managerId;
+    const franchisePartnerId = req.isFPManager ? req.franchisePartnerId : null;
     
     const [result] = await pool.execute(
       `INSERT INTO estimates (estimate_id, client_id, property_id, title, description, estimate_type,
         subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount, total_amount,
-        valid_until, status, ${scopeColumn}, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, NOW())`,
+        valid_until, status, manager_id, franchise_partner_id, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, NOW())`,
       [estimateId, clientId || null, propertyId || null, title, description, estimateType || 'property_based',
        subtotal, taxPercentage || 0, tax, discountPercentage || 0, discount, total,
-       validUntil || null, scopeId, req.user.id]
+       validUntil || null, managerId, franchisePartnerId, req.user.id]
     );
 
     // Insert line items

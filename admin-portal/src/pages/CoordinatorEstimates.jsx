@@ -13,7 +13,9 @@ import {
   Archive,
   List,
   Trash2,
-  EyeOff
+  EyeOff,
+  Eye,
+  Lock
 } from 'lucide-react';
 
 const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
@@ -67,13 +69,19 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
 
   const token = sessionStorage.getItem('pm_auth_token');
 
-  const tabs = [
+  // Define tabs - Create tab is hidden for FP Coordinator
+  const allTabs = [
     { id: 'list', label: 'All Estimates', icon: List },
-    { id: 'create', label: 'Create Estimate', icon: Plus },
+    { id: 'create', label: 'Create Estimate', icon: Plus, restricted: true },
     { id: 'amc', label: 'AMC Packages', icon: Package },
     { id: 'addons', label: 'Add-ons', icon: PlusCircle },
     { id: 'archived', label: 'Archived', icon: Archive }
   ];
+
+  // Filter tabs for FP Coordinator
+  const tabs = isFPCoordinator 
+    ? allTabs.filter(tab => !tab.restricted)
+    : allTabs;
 
   const fetchData = async () => {
     setLoading(true);
@@ -303,11 +311,30 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
 
   return (
     <div className="space-y-6">
+      {/* FP Coordinator - Hide Pricing Banner */}
+      {isFPCoordinator && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+          <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <EyeOff className="w-6 h-6 text-amber-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-amber-800">View Only - Pricing Hidden</h3>
+            <p className="text-sm text-amber-700">
+              You can view estimates, AMC packages, and add-ons but cannot create new ones. Pricing information is hidden.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Estimates / AMC Management</h1>
-          <p className="text-gray-500 mt-1">Manage estimates, AMC packages, and add-ons</p>
+          <p className="text-gray-500 mt-1">
+            {isFPCoordinator 
+              ? 'View estimates, AMC packages, and add-ons' 
+              : 'Manage estimates, AMC packages, and add-ons'}
+          </p>
         </div>
       </div>
 
@@ -381,8 +408,12 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                           <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Estimate</th>
                           <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Customer</th>
                           <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
-                          <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Amount</th>
+                          {/* Hide Amount column for FP Coordinator */}
+                          {!isFPCoordinator && (
+                            <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Amount</th>
+                          )}
                           <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -400,12 +431,20 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                             <td className="py-4 px-4">
                               <span className="text-sm text-gray-600">{estimate.property_name || '-'}</span>
                             </td>
-                            <td className="py-4 px-4">
-                              <span className="font-medium text-gray-900">{formatCurrency(estimate.total_amount)}</span>
-                            </td>
+                            {/* Hide Amount for FP Coordinator */}
+                            {!isFPCoordinator && (
+                              <td className="py-4 px-4">
+                                <span className="font-medium text-gray-900">{formatCurrency(estimate.total_amount)}</span>
+                              </td>
+                            )}
                             <td className="py-4 px-4">
                               <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(estimate.status)}`}>
                                 {estimate.status?.replace(/_/g, ' ').toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className="text-sm text-gray-500">
+                                {estimate.created_at ? new Date(estimate.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
                               </span>
                             </td>
                           </tr>
@@ -418,8 +457,19 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           )}
 
-          {/* Create Tab */}
+          {/* Create Tab - Blocked for FP Coordinator */}
           {activeTab === 'create' && (
+            isFPCoordinator ? (
+              <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-8 h-8 text-red-500" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Access Restricted</h2>
+                <p className="text-gray-500 max-w-md mx-auto">
+                  Creating estimates is not available for your account. Please contact your administrator.
+                </p>
+              </div>
+            ) : (
             <div className="bg-white rounded-xl border border-gray-100 p-6">
               <form onSubmit={handleEstimateSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -576,6 +626,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               </form>
             </div>
+            )
           )}
 
           {/* AMC Tab */}
@@ -615,8 +666,11 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="mt-4 flex items-center justify-between">
                         <div>
                           <p className="text-xs text-gray-400">Base Price</p>
-                          {pkg.hide_pricing || pkg.pricing_hidden ? (
-                            <p className="text-sm font-medium text-gray-400 italic">Hidden</p>
+                          {/* Hide pricing for FP Coordinator */}
+                          {isFPCoordinator || pkg.hide_pricing || pkg.pricing_hidden ? (
+                            <p className="text-sm font-medium text-gray-400 italic flex items-center gap-1">
+                              <EyeOff className="w-3 h-3" /> Hidden
+                            </p>
                           ) : (
                             <p className="text-lg font-bold text-teal-600">{formatCurrency(pkg.base_price)}</p>
                           )}
@@ -673,8 +727,11 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                         </span>
                       )}
                       <div className="mt-4">
-                        {addon.hide_pricing || addon.pricing_hidden ? (
-                          <p className="text-sm font-medium text-gray-400 italic">Pricing Hidden</p>
+                        {/* Hide pricing for FP Coordinator */}
+                        {isFPCoordinator || addon.hide_pricing || addon.pricing_hidden ? (
+                          <p className="text-sm font-medium text-gray-400 italic flex items-center gap-1">
+                            <EyeOff className="w-3 h-3" /> Pricing Hidden
+                          </p>
                         ) : (
                           <p className="text-lg font-bold text-teal-600">
                             {formatCurrency(addon.price)} <span className="text-xs font-normal text-gray-400">/ {addon.unit}</span>

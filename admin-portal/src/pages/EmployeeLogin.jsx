@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { initializeUsers, getPortalTypeFromRole } from '../utils/userStore';
 import SetPassword from './SetPassword';
+import ForgotPassword from './ForgotPassword';
 
 const EmployeeLogin = ({ onLogin, onBack }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
@@ -11,6 +12,7 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSetPassword, setShowSetPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
 
   useEffect(() => {
@@ -81,6 +83,15 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
     onLogin(updatedUser);
   };
 
+  // Show Forgot Password screen
+  if (showForgotPassword) {
+    return (
+      <ForgotPassword 
+        onBack={() => setShowForgotPassword(false)}
+      />
+    );
+  }
+
   // Show Set Password screen if needed
   if (showSetPassword && pendingUser) {
     return (
@@ -150,7 +161,16 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-zinc-300">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-zinc-300">Password</label>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-sm text-amber-400 hover:text-amber-300 font-medium"
+                >
+                  Forgot Password?
+                </button>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" strokeWidth={1.5} />
                 <input

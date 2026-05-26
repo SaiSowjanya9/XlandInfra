@@ -48,7 +48,6 @@ const SupervisorDashboard = ({ user }) => {
     { label: 'Properties', value: stats?.properties || 0, icon: Building2, color: 'amber', path: '/supervisor/properties' },
     { label: 'Vendors', value: stats?.vendors || 0, icon: Store, color: 'purple', path: '/supervisor/vendors' },
     { label: 'Customers', value: stats?.customers || 0, icon: Users, color: 'green', path: '/supervisor/customers' },
-    { label: 'Employees', value: stats?.employees || 0, icon: Users, color: 'blue', path: '/supervisor/employees' },
     { label: 'Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, color: 'orange', path: '/supervisor/work-orders' },
     { label: 'Estimates', value: stats?.estimates || 0, icon: FileText, color: 'pink', path: '/supervisor/estimates' }
   ];
@@ -89,11 +88,12 @@ const SupervisorDashboard = ({ user }) => {
     });
   };
 
+  // Quick actions - View only for Supervisor
   const quickActions = [
-    { label: 'Add Property', icon: Building2, path: '/supervisor/properties', color: 'amber' },
-    { label: 'Create Work Order', icon: ClipboardList, path: '/supervisor/work-orders', color: 'orange' },
-    { label: 'Add Customer', icon: Users, path: '/supervisor/customers', color: 'green' },
-    { label: 'Create Estimate', icon: FileText, path: '/supervisor/estimates/create', color: 'purple' }
+    { label: 'View Properties', icon: Building2, path: '/supervisor/properties', color: 'amber' },
+    { label: 'View Work Orders', icon: ClipboardList, path: '/supervisor/work-orders', color: 'orange' },
+    { label: 'View Customers', icon: Users, path: '/supervisor/customers', color: 'green' },
+    { label: 'View Estimates', icon: FileText, path: '/supervisor/estimates', color: 'purple' }
   ];
 
   if (loading) {
@@ -106,6 +106,19 @@ const SupervisorDashboard = ({ user }) => {
 
   return (
     <div className="space-y-6">
+      {/* View Only Access Banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <Eye className="w-6 h-6 text-amber-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-amber-800">View Only Access</h3>
+          <p className="text-sm text-amber-700">
+            You have view-only access to data. Some features are restricted based on your role.
+          </p>
+        </div>
+      </div>
+
       {/* Welcome Header */}
       <div className="bg-gradient-to-r from-amber-600 to-orange-700 rounded-2xl p-6 text-white">
         <div className="flex items-center justify-between">
@@ -114,7 +127,7 @@ const SupervisorDashboard = ({ user }) => {
               Welcome back, {user?.firstName || 'Supervisor'}!
             </h1>
             <p className="text-amber-100 mt-1">
-              Here's your field operations overview for today.
+              Here's your view-only field operations overview.
             </p>
           </div>
           <div className="hidden md:flex items-center gap-4">

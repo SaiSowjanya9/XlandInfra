@@ -286,12 +286,28 @@ const CoordinatorProperties = ({ user }) => {
 
   return (
     <div className="space-y-6">
+      {/* FP Coordinator - View Only Banner */}
+      {isFPCoordinator && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+          <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <Eye className="w-6 h-6 text-amber-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-amber-800">View Only Access</h3>
+            <p className="text-sm text-amber-700">You have view-only access to properties.</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-gray-500 mt-1">Manage your assigned properties</p>
+          <p className="text-gray-500 mt-1">
+            {isFPCoordinator ? 'View your assigned properties' : 'Manage your assigned properties'}
+          </p>
         </div>
+        {/* Add Property - Visible for all (can add to their scope) */}
         <div className="flex gap-2">
           <button
             onClick={() => { resetForm(); setShowModal(true); }}

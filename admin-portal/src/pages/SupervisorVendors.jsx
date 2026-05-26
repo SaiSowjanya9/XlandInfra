@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Store, Plus, Search, Edit, Trash2, Download, RefreshCw, X, Save, AlertCircle, CheckCircle, Phone, Mail, MapPin, Eye, Lock } from 'lucide-react';
+import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Phone, Mail, MapPin, Eye, Calendar, User } from 'lucide-react';
 
 const SupervisorVendors = ({ user }) => {
   const location = useLocation();
@@ -8,10 +8,9 @@ const SupervisorVendors = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
-  const [showModal, setShowModal] = useState(false);
-  const [editingVendor, setEditingVendor] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [formData, setFormData] = useState({ companyName: '', contactPerson: '', email: '', phone: '', alternatePhone: '', address: '', city: '', state: '', zipCode: '', gstNumber: '', panNumber: '' });
 
   const viewType = location.pathname.includes('/assigned') ? 'assigned' : 'all';
   const token = sessionStorage.getItem('pm_auth_token');
@@ -31,75 +30,43 @@ const SupervisorVendors = ({ user }) => {
 
   useEffect(() => { fetchVendors(); if (viewType === 'assigned') setActiveTab('assigned'); }, [viewType]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage({ type: '', text: '' });
-    try {
-      const url = editingVendor ? `/api/supervisor/vendors/${editingVendor.id}` : '/api/supervisor/vendors';
-      const response = await fetch(url, {
-        method: editingVendor ? 'PUT' : 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      const result = await response.json();
-      if (result.success) {
-        setMessage({ type: 'success', text: `Vendor ${editingVendor ? 'updated' : 'created'} successfully!` });
-        setShowModal(false);
-        resetForm();
-        fetchVendors();
-      } else {
-        setMessage({ type: 'error', text: result.message || 'Operation failed' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to save vendor' });
-    }
+  const viewVendorDetails = (vendor) => {
+    setSelectedVendor(vendor);
+    setShowDetailModal(true);
   };
 
-  const handleDelete = async (vendor) => {
-    if (!vendor.can_delete) { setMessage({ type: 'error', text: 'You do not have permission to delete this vendor' }); return; }
-    if (!window.confirm('Are you sure you want to delete this vendor?')) return;
-    try {
-      const response = await fetch(`/api/supervisor/vendors/${vendor.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-      const result = await response.json();
-      if (result.success) { setMessage({ type: 'success', text: 'Vendor deleted successfully!' }); fetchVendors(); }
-      else setMessage({ type: 'error', text: result.message || 'Delete failed' });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to delete vendor' });
-    }
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  const handleExport = async () => {
-    try {
-      const response = await fetch('/api/supervisor/export/vendors', { headers: { 'Authorization': `Bearer ${token}` } });
-      const result = await response.json();
-      const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'supervisor_vendors_export.json'; a.click();
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Export failed' });
-    }
+  const getStatusColor = (status) => {
+    const colors = {
+      active: 'bg-green-100 text-green-700',
+      inactive: 'bg-gray-100 text-gray-600',
+      pending: 'bg-yellow-100 text-yellow-700'
+    };
+    return colors[status] || colors.active;
   };
-
-  const openEditModal = (vendor) => {
-    if (!vendor.can_modify) { setMessage({ type: 'error', text: 'You do not have permission to edit this vendor (View Only)' }); return; }
-    setEditingVendor(vendor);
-    setFormData({ companyName: vendor.company_name || '', contactPerson: vendor.contact_person || '', email: vendor.email || '', phone: vendor.phone || '', alternatePhone: vendor.alternate_phone || '', address: vendor.address || '', city: vendor.city || '', state: vendor.state || '', zipCode: vendor.zip_code || '', gstNumber: vendor.gst_number || '', panNumber: vendor.pan_number || '' });
-    setShowModal(true);
-  };
-
-  const resetForm = () => { setEditingVendor(null); setFormData({ companyName: '', contactPerson: '', email: '', phone: '', alternatePhone: '', address: '', city: '', state: '', zipCode: '', gstNumber: '', panNumber: '' }); };
 
   const getVendorList = () => { switch (activeTab) { case 'own': return vendors.own || []; case 'assigned': return vendors.assigned || []; default: return vendors.all || []; } };
-  const filteredVendors = getVendorList().filter(v => v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) || v.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) || v.email?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredVendors = getVendorList().filter(v => v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) || v.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) || v.vendor_id?.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div><h1 className="text-2xl font-bold text-gray-900">Vendor Management</h1><p className="text-gray-500 mt-1">{activeTab === 'assigned' ? 'View assigned vendors' : 'Manage your vendors'}</p></div>
-        <div className="flex gap-2">
-          <button onClick={() => { resetForm(); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"><Plus className="w-4 h-4" /><span>Add Vendor</span></button>
+      {/* View Only Access Banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <Eye className="w-6 h-6 text-amber-600" />
         </div>
+        <div>
+          <h3 className="font-semibold text-amber-800">View Only Access</h3>
+          <p className="text-sm text-amber-700">You have view-only access to vendors.</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div><h1 className="text-2xl font-bold text-gray-900">Vendor Management</h1><p className="text-gray-500 mt-1">View your assigned vendors</p></div>
       </div>
 
       {message.text && (
@@ -131,21 +98,60 @@ const SupervisorVendors = ({ user }) => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Location</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Access</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor ID</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Service Type</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredVendors.map((vendor) => (
                   <tr key={vendor.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-4 px-4"><p className="font-medium text-gray-900">{vendor.company_name}</p><p className="text-sm text-gray-500">{vendor.vendor_id}</p>{vendor.contact_person && <p className="text-sm text-gray-400">{vendor.contact_person}</p>}</td>
-                    <td className="py-4 px-4"><span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${vendor.vendor_type === 'own' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{vendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}</span></td>
-                    <td className="py-4 px-4">{vendor.phone && <p className="text-sm text-gray-600 flex items-center gap-1"><Phone className="w-3 h-3" /> {vendor.phone}</p>}{vendor.email && <p className="text-sm text-gray-400 flex items-center gap-1"><Mail className="w-3 h-3" /> {vendor.email}</p>}</td>
-                    <td className="py-4 px-4"><div className="flex items-start gap-1"><MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" /><span className="text-sm text-gray-600">{vendor.city ? `${vendor.city}, ${vendor.state || ''}` : '-'}</span></div></td>
-                    <td className="py-4 px-4">{vendor.can_modify ? <span className="text-xs text-green-600 flex items-center gap-1"><Edit className="w-3 h-3" /> Edit</span> : <span className="text-xs text-gray-400 flex items-center gap-1"><Eye className="w-3 h-3" /> View Only</span>}</td>
+                    <td className="py-3 px-4">
+                      <p className="font-medium text-gray-900">{vendor.vendor_id || '-'}</p>
+                      <p className="text-xs text-gray-500">{vendor.company_name}</p>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-gray-700">{vendor.service_type || vendor.vendor_type || '-'}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <p className="text-sm text-gray-700">{vendor.contact_person || '-'}</p>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-gray-600">{vendor.zone_name || '-'}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-gray-600">{vendor.city || vendor.area || '-'}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-gray-600">{vendor.coverage_per_day || '-'}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-gray-600">{vendor.created_by_name || '-'}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-gray-500">{formatDate(vendor.created_at)}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(vendor.status || 'active')}`}>
+                        {vendor.status || 'Active'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => viewVendorDetails(vendor)}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>View Details</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -154,31 +160,101 @@ const SupervisorVendors = ({ user }) => {
         )}
       </div>
 
-      {showModal && (
+      {/* View Details Modal */}
+      {showDetailModal && selectedVendor && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">{editingVendor ? 'Edit Vendor' : 'Add New Vendor'}</h2>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Vendor Details</h2>
+                <p className="text-sm text-gray-500">{selectedVendor.vendor_id}</p>
+              </div>
+              <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Company Name *</label><input type="text" required value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label><input type="text" value={formData.contactPerson} onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Email *</label><input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label><input type="tel" required value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Alternate Phone</label><input type="tel" value={formData.alternatePhone} onChange={(e) => setFormData({ ...formData, alternatePhone: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-                <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Address</label><textarea value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" rows={2} /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">City</label><input type="text" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">State</label><input type="text" value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label><input type="text" value={formData.gstNumber} onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">PAN Number</label><input type="text" value={formData.panNumber} onChange={(e) => setFormData({ ...formData, panNumber: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Company Name</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.company_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Service Type</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.service_type || selectedVendor.vendor_type || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Owner/Contact Person</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.contact_person || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Zone</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.zone_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Area</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.city || selectedVendor.area || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Coverage/Day</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedVendor.status || 'active')}`}>
+                    {selectedVendor.status || 'Active'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Created By</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.created_by_name || '-'}</p>
+                </div>
               </div>
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button type="submit" className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"><Save className="w-4 h-4" /><span>{editingVendor ? 'Update' : 'Add'} Vendor</span></button>
+
+              <div className="border-t border-gray-100 pt-4">
+                <h3 className="font-semibold text-gray-900 mb-3">Contact Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-700">{selectedVendor.phone || '-'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-700">{selectedVendor.email || '-'}</span>
+                  </div>
+                  <div className="col-span-2 flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+                    <span className="text-gray-700">
+                      {[selectedVendor.address, selectedVendor.city, selectedVendor.state, selectedVendor.zip_code].filter(Boolean).join(', ') || '-'}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </form>
+
+              <div className="border-t border-gray-100 pt-4">
+                <h3 className="font-semibold text-gray-900 mb-3">Additional Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">GST Number</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.gst_number || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">PAN Number</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.pan_number || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Created Date</p>
+                    <p className="font-medium text-gray-900 flex items-center gap-1">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      {formatDate(selectedVendor.created_at)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100">
+              <button onClick={() => setShowDetailModal(false)} className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

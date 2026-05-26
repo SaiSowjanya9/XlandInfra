@@ -4,10 +4,11 @@ const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const { sendCustomerActivationEmail, sendPasswordResetConfirmation } = require('../services/emailService');
+const { sendCustomerActivationEmail, sendPasswordResetConfirmation, sendPasswordResetEmail, sendPasswordResetSuccess } = require('../services/emailService');
 
 // Constants
 const ACTIVATION_EXPIRY_HOURS = 72; // 72 hours
+const PASSWORD_RESET_EXPIRY_HOURS = 48; // 48 hours for password reset
 const JWT_SECRET = process.env.JWT_SECRET || 'xlandinfra-customer-portal-secret-key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://xlandinfra.com';
@@ -522,6 +523,277 @@ router.post('/login', async (req, res) => {
       message: 'Error during login',
       error: error.message
     });
+  }
+});
+
+// ============================================
+// POST /api/customers/forgot-password - Request password reset
+// ============================================
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Find customer by email
+    const [customers] = await pool.execute(
+      `SELECT id, customer_id, email, first_name, last_name, is_activated, is_active
+       FROM customer_accounts 
+       WHERE email = ?`,
+      [email.toLowerCase()]
+    );
+
+    // Always return success to prevent email enumeration
+    if (customers.length === 0) {
+      return res.json({
+        success: true,
+        message: 'If an account exists with this email, you will receive password reset instructions.'
+      });
+    }
+
+    const customer = customers[0];
+
+    // Check if account is active
+    if (!customer.is_active) {
+      return res.json({
+        success: true,
+        message: 'If an account exists with this email, you will receive password reset instructions.'
+      });
+    }
+
+    // Check if account is activated
+    if (!customer.is_activated) {
+      return res.status(400).json({
+        success: false,
+        message: 'Your account has not been activated yet. Please check your email for the activation link or contact support.',
+        notActivated: true
+      });
+    }
+
+    // Generate temporary password and reset token
+    const tempPassword = generateTempPassword();
+    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRY_HOURS * 60 * 60 * 1000);
+
+    // Store reset token and temp password
+    await pool.execute(
+      `UPDATE customer_accounts 
+       SET reset_token = ?, 
+           reset_token_expires = ?,
+           reset_temp_password_hash = ?,
+           updated_at = NOW()
+       WHERE id = ?`,
+      [resetToken, resetExpires, tempPasswordHash, customer.id]
+    );
+
+    // Generate reset link
+    const resetLink = `${FRONTEND_URL}/reset-password/${resetToken}`;
+
+    // Send password reset email
+    await sendPasswordResetEmail({
+      email: customer.email,
+      firstName: customer.first_name,
+      tempPassword,
+      resetLink,
+      userType: 'customer',
+      expiryHours: PASSWORD_RESET_EXPIRY_HOURS
+    });
+
+    // Log activity
+    await pool.execute(
+      `INSERT INTO customer_activity_log (customer_id, action, details, ip_address)
+       VALUES (?, 'password_reset_requested', ?, ?)`,
+      [customer.id, JSON.stringify({ method: 'email' }), req.ip]
+    );
+
+    res.json({
+      success: true,
+      message: 'If an account exists with this email, you will receive password reset instructions.'
+    });
+
+  } catch (error) {
+    console.error('Error requesting password reset:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing password reset request',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// GET /api/customers/verify-reset-token/:token - Verify reset token
+// ============================================
+router.get('/verify-reset-token/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token is required'
+      });
+    }
+
+    // Find customer by reset token
+    const [customers] = await pool.execute(
+      `SELECT id, email, first_name, reset_token_expires
+       FROM customer_accounts 
+       WHERE reset_token = ? AND is_active = TRUE`,
+      [token]
+    );
+
+    if (customers.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid or expired reset link. Please request a new password reset.'
+      });
+    }
+
+    const customer = customers[0];
+
+    // Check if token has expired
+    if (new Date(customer.reset_token_expires) < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'This password reset link has expired. Please request a new one.',
+        expired: true
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Reset token is valid',
+      data: {
+        email: customer.email,
+        firstName: customer.first_name
+      }
+    });
+
+  } catch (error) {
+    console.error('Error verifying reset token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error verifying reset token',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// POST /api/customers/reset-password - Reset password with temp password
+// ============================================
+router.post('/reset-password', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const { token, tempPassword, newPassword } = req.body;
+
+    // Validate required fields
+    if (!token || !tempPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      });
+    }
+
+    // Password validation
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters long'
+      });
+    }
+
+    // Find customer by reset token
+    const [customers] = await conn.execute(
+      `SELECT id, customer_id, email, first_name, reset_token_expires, reset_temp_password_hash
+       FROM customer_accounts 
+       WHERE reset_token = ? AND is_active = TRUE`,
+      [token]
+    );
+
+    if (customers.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid reset link'
+      });
+    }
+
+    const customer = customers[0];
+
+    // Check if token has expired
+    if (new Date(customer.reset_token_expires) < new Date()) {
+      await conn.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Password reset link has expired. Please request a new one.'
+      });
+    }
+
+    // Verify temporary password
+    const isTempPasswordValid = await bcrypt.compare(tempPassword, customer.reset_temp_password_hash);
+    if (!isTempPasswordValid) {
+      await conn.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid temporary password'
+      });
+    }
+
+    // Hash new password and update
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    await conn.execute(
+      `UPDATE customer_accounts 
+       SET password_hash = ?,
+           reset_token = NULL,
+           reset_token_expires = NULL,
+           reset_temp_password_hash = NULL,
+           updated_at = NOW()
+       WHERE id = ?`,
+      [newPasswordHash, customer.id]
+    );
+
+    // Log activity
+    await conn.execute(
+      `INSERT INTO customer_activity_log (customer_id, action, details)
+       VALUES (?, 'password_reset_completed', ?)`,
+      [customer.id, JSON.stringify({ method: 'email_reset' })]
+    );
+
+    await conn.commit();
+
+    // Send confirmation email
+    await sendPasswordResetSuccess({
+      email: customer.email,
+      firstName: customer.first_name,
+      userType: 'customer'
+    });
+
+    res.json({
+      success: true,
+      message: 'Password reset successful. You can now login with your new password.'
+    });
+
+  } catch (error) {
+    await conn.rollback();
+    console.error('Error resetting password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error resetting password',
+      error: error.message
+    });
+  } finally {
+    conn.release();
   }
 });
 

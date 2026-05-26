@@ -63,7 +63,6 @@ import SupervisorProperties from './pages/SupervisorProperties';
 import SupervisorWorkOrders from './pages/SupervisorWorkOrders';
 import SupervisorCustomers from './pages/SupervisorCustomers';
 import SupervisorVendors from './pages/SupervisorVendors';
-import SupervisorEmployees from './pages/SupervisorEmployees';
 import SupervisorEstimates from './pages/SupervisorEstimates';
 
 import ExecutiveLogin from './pages/ExecutiveLogin';
@@ -73,7 +72,6 @@ import ExecutiveProperties from './pages/ExecutiveProperties';
 import ExecutiveWorkOrders from './pages/ExecutiveWorkOrders';
 import ExecutiveCustomers from './pages/ExecutiveCustomers';
 import ExecutiveVendors from './pages/ExecutiveVendors';
-import ExecutiveEmployees from './pages/ExecutiveEmployees';
 import ExecutiveEstimates from './pages/ExecutiveEstimates';
 
 import AddEmployee from './pages/AddEmployee';
@@ -83,6 +81,7 @@ import Estimates from './pages/Estimates';
 import UserManagement from './pages/UserManagement';
 import QRManagement from './pages/QRManagement';
 import EstimateAction from './pages/EstimateAction';
+import ResetPassword from './pages/ResetPassword';
 
 // Session timeout in milliseconds (30 minutes)
 const SESSION_TIMEOUT = 30 * 60 * 1000;
@@ -207,6 +206,17 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
+    );
+  }
+
+  // Public route: Password Reset page (accessible without login)
+  if (window.location.pathname.startsWith('/reset-password/')) {
+    return (
+      <Router>
+        <Routes>
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+        </Routes>
+      </Router>
     );
   }
 

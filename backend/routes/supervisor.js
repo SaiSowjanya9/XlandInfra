@@ -21,6 +21,7 @@ const {
 
 // =====================================================
 // SUPERVISOR LOGIN (No auth required)
+// Handles both standalone supervisors and FP-created supervisors
 // =====================================================
 router.post('/login', async (req, res) => {
   try {
@@ -33,27 +34,78 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find supervisor user
+    let user = null;
+    let userSource = null;
+    let franchisePartnerId = null;
+
+    // First, try to find in users table (standalone supervisors)
     const [users] = await pool.query(
-      `SELECT id, username, email, password_hash, first_name, last_name, role, is_active
+      `SELECT id, username, email, password_hash, first_name, last_name, role, is_active, franchise_partner_id
        FROM users 
        WHERE (username = ? OR email = ?) AND role = 'supervisor'`,
       [username, username]
     );
 
-    if (users.length === 0) {
+    if (users.length > 0) {
+      user = users[0];
+      userSource = 'users';
+      franchisePartnerId = user.franchise_partner_id;
+    }
+
+    // If not found, try fp_employees table (FP-created supervisors)
+    if (!user) {
+      const [fpSupervisors] = await pool.query(
+        `SELECT fe.*, fe.id as employee_id
+         FROM fp_employees fe
+         WHERE (fe.username = ? OR fe.email = ?) AND fe.role = 'supervisor'`,
+        [username, username]
+      );
+
+      if (fpSupervisors.length > 0) {
+        const fpSup = fpSupervisors[0];
+        
+        // Check for linked user record
+        if (fpSup.user_id) {
+          const [linkedUsers] = await pool.query(
+            `SELECT * FROM users WHERE id = ?`,
+            [fpSup.user_id]
+          );
+          if (linkedUsers.length > 0) {
+            user = linkedUsers[0];
+            userSource = 'fp_employees_linked';
+            franchisePartnerId = fpSup.franchise_partner_id;
+          }
+        }
+
+        // If no linked user but fp_employee has password_hash
+        if (!user && fpSup.password_hash) {
+          user = {
+            id: fpSup.user_id || fpSup.id,
+            username: fpSup.username,
+            email: fpSup.email,
+            password_hash: fpSup.password_hash,
+            first_name: fpSup.first_name,
+            last_name: fpSup.last_name,
+            role: 'supervisor',
+            is_active: fpSup.is_active
+          };
+          userSource = 'fp_employees_direct';
+          franchisePartnerId = fpSup.franchise_partner_id;
+        }
+      }
+    }
+
+    if (!user) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
-    const user = users[0];
-
     if (!user.is_active) {
       return res.status(401).json({
         success: false,
-        message: 'Account is inactive'
+        message: 'Account is inactive. Please contact your administrator to activate your account.'
       });
     }
 
@@ -72,7 +124,8 @@ router.post('/login', async (req, res) => {
         id: user.id,
         username: user.username,
         role: user.role,
-        supervisorId: user.id
+        supervisorId: user.id,
+        franchisePartnerId: franchisePartnerId || null
       },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
@@ -90,6 +143,7 @@ router.post('/login', async (req, res) => {
           lastName: user.last_name,
           role: user.role,
           supervisorId: user.id,
+          franchisePartnerId: franchisePartnerId || null,
           portal: 'supervisor'
         }
       }
@@ -232,16 +286,17 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
 router.post('/properties', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
 
     const propertyId = `PROP-SUP-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
-        contact_person, contact_phone, contact_email, zone_id, supervisor_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        contact_person, contact_phone, contact_email, zone_id, supervisor_id, franchise_partner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [propertyId, name, propertyType || 'residential', address, city, state, zipCode,
-        contactPerson, contactPhone, contactEmail, zoneId || null, supervisorId]
+        contactPerson, contactPhone, contactEmail, zoneId || null, supervisorId, franchisePartnerId]
     );
 
     res.json({
@@ -433,16 +488,17 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
 router.post('/work-orders', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate } = req.body;
 
     const workOrderId = `WO-SUP-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
-        priority, permission_to_enter, has_pet, scheduled_date, supervisor_id, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested')`,
+        priority, permission_to_enter, has_pet, scheduled_date, supervisor_id, franchise_partner_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested')`,
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
-        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, supervisorId]
+        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, supervisorId, franchisePartnerId]
     );
 
     res.json({
@@ -461,10 +517,10 @@ router.patch('/work-orders/:id/status', requireSupervisorScope, validateOwnershi
     const { id } = req.params;
     const { status } = req.body;
 
-    // Supervisors have limited status update abilities
-    const allowedStatuses = ['requested', 'under_review'];
+    // Supervisors can change status for completed work orders and revert to pending
+    const allowedStatuses = ['requested', 'under_review', 'assigned', 'in_progress', 'completed', 'cancelled', 'closed'];
     if (!allowedStatuses.includes(status)) {
-      return res.status(403).json({ success: false, message: 'You can only update status to requested or under_review' });
+      return res.status(403).json({ success: false, message: 'Invalid status value' });
     }
 
     await pool.query('UPDATE work_orders SET status = ? WHERE id = ?', [status, id]);
@@ -501,16 +557,17 @@ router.get('/customers', requireSupervisorScope, async (req, res) => {
 router.post('/customers', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { name, email, phone, alternatePhone, address, city, state, zipCode, clientType, companyName, propertyId, gstNumber } = req.body;
 
     const clientId = `CLT-SUP-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
-        zip_code, client_type, company_name, property_id, gst_number, supervisor_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        zip_code, client_type, company_name, property_id, gst_number, supervisor_id, franchise_partner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
-        clientType || 'individual', companyName, propertyId || null, gstNumber, supervisorId]
+        clientType || 'individual', companyName, propertyId || null, gstNumber, supervisorId, franchisePartnerId]
     );
 
     res.json({
@@ -565,15 +622,16 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
 router.post('/vendors', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber } = req.body;
 
     const vendorId = `VND-SUP-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO vendors (vendor_id, company_name, contact_person, email, phone, alternate_phone, 
-        address, city, state, zip_code, gst_number, pan_number, supervisor_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [vendorId, companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber, supervisorId]
+        address, city, state, zip_code, gst_number, pan_number, supervisor_id, franchise_partner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [vendorId, companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber, supervisorId, franchisePartnerId]
     );
 
     res.json({
@@ -679,14 +737,15 @@ router.get('/employees/:id', requireSupervisorScope, async (req, res) => {
 router.post('/employees', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { firstName, lastName, email, phone, role, assignedZones } = req.body;
 
     const employeeCode = `EMP-SUP-${Date.now()}`;
 
     const [result] = await pool.query(
-      `INSERT INTO supervisor_employees (supervisor_id, employee_code, first_name, last_name, email, phone, role)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [supervisorId, employeeCode, firstName, lastName, email, phone, role || 'sup_executive']
+      `INSERT INTO supervisor_employees (supervisor_id, franchise_partner_id, employee_code, first_name, last_name, email, phone, role)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [supervisorId, franchisePartnerId, employeeCode, firstName, lastName, email, phone, role || 'sup_executive']
     );
 
     // Assign zones
@@ -806,6 +865,7 @@ router.get('/estimates', requireSupervisorScope, async (req, res) => {
 router.post('/estimates', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { clientId, propertyId, title, description, estimateType, subtotal, taxPercentage, discountPercentage, validUntil, items } = req.body;
 
     const estimateId = `EST-SUP-${Date.now()}`;
@@ -816,11 +876,11 @@ router.post('/estimates', requireSupervisorScope, async (req, res) => {
     const [result] = await pool.query(
       `INSERT INTO estimates (estimate_id, client_id, property_id, title, description, estimate_type,
         subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount, total_amount,
-        valid_until, supervisor_id, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+        valid_until, supervisor_id, franchise_partner_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
       [estimateId, clientId || null, propertyId || null, title, description, estimateType || 'property_based',
         subtotal, taxPercentage || 0, tax, discountPercentage || 0, discount, totalAmount,
-        validUntil || null, supervisorId]
+        validUntil || null, supervisorId, franchisePartnerId]
     );
 
     // Insert line items
@@ -872,12 +932,13 @@ router.get('/amc-packages', requireSupervisorScope, async (req, res) => {
 router.post('/amc-packages', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { name, description, durationMonths, basePrice, services, termsConditions, hidePricing } = req.body;
 
     const [result] = await pool.query(
-      `INSERT INTO supervisor_amc_packages (supervisor_id, name, description, duration_months, base_price, services, terms_conditions, hide_pricing)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [supervisorId, name, description, durationMonths || 12, basePrice || 0,
+      `INSERT INTO supervisor_amc_packages (supervisor_id, franchise_partner_id, name, description, duration_months, base_price, services, terms_conditions, hide_pricing)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [supervisorId, franchisePartnerId, name, description, durationMonths || 12, basePrice || 0,
         JSON.stringify(services || []), termsConditions, hidePricing !== false]
     );
 
@@ -919,12 +980,13 @@ router.get('/addons', requireSupervisorScope, async (req, res) => {
 router.post('/addons', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { name, description, price, unit, categoryId, hidePricing } = req.body;
 
     const [result] = await pool.query(
-      `INSERT INTO supervisor_addons (supervisor_id, name, description, price, unit, category_id, hide_pricing)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [supervisorId, name, description, price || 0, unit || 'per_service', categoryId || null, hidePricing !== false]
+      `INSERT INTO supervisor_addons (supervisor_id, franchise_partner_id, name, description, price, unit, category_id, hide_pricing)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [supervisorId, franchisePartnerId, name, description, price || 0, unit || 'per_service', categoryId || null, hidePricing !== false]
     );
 
     res.json({

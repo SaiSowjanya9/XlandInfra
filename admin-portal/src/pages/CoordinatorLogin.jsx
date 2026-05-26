@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { User, Lock, ArrowLeft, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import SetPassword from './SetPassword';
+import ForgotPassword from './ForgotPassword';
 
 const CoordinatorLogin = ({ onLogin, onBack }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
@@ -8,6 +9,7 @@ const CoordinatorLogin = ({ onLogin, onBack }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showSetPassword, setShowSetPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
 
   const handleSubmit = async (e) => {
@@ -58,6 +60,14 @@ const CoordinatorLogin = ({ onLogin, onBack }) => {
     setPendingUser(null);
     onLogin({ ...updatedUser, portal: 'coordinator' }, 'coordinator');
   };
+
+  if (showForgotPassword) {
+    return (
+      <ForgotPassword 
+        onBack={() => setShowForgotPassword(false)}
+      />
+    );
+  }
 
   if (showSetPassword && pendingUser) {
     return (
@@ -126,9 +136,18 @@ const CoordinatorLogin = ({ onLogin, onBack }) => {
             </div>
 
             <div>
-              <label className="block text-teal-200 text-sm font-medium mb-2">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-teal-200 text-sm font-medium">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-sm text-teal-300 hover:text-teal-200 font-medium"
+                >
+                  Forgot Password?
+                </button>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-400" />
                 <input
