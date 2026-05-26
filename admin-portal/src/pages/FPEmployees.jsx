@@ -323,7 +323,7 @@ const FPEmployees = ({ user }) => {
                         </div>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
-                        {employee.employeeId || employee.employee_id}
+                        {employee.employee_code || employee.employeeId || employee.employee_id}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         {employee.countryCode || employee.country_code || '+91'} {employee.phone}

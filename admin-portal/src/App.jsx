@@ -33,6 +33,7 @@ import FPEmployees from './pages/FPEmployees';
 import FPAddEmployee from './pages/FPAddEmployee';
 import FPEmployeeZones from './pages/FPEmployeeZones';
 import FPEstimates from './pages/FPEstimates';
+import FPCustomers from './pages/FPCustomers';
 
 import ManagerLogin from './pages/ManagerLogin';
 import ManagerLayout from './components/ManagerLayout';
@@ -313,6 +314,8 @@ function App() {
             <Route path="/fp" element={<FPDashboard user={user} />} />
             <Route path="/fp/properties" element={<FPProperties user={user} />} />
             <Route path="/fp/work-orders" element={<FPWorkOrders user={user} />} />
+            <Route path="/fp/customers" element={<FPCustomers user={user} />} />
+            <Route path="/fp/customers/add" element={<FPCustomers user={user} defaultTab="add" />} />
             <Route path="/fp/vendors" element={<FPVendors user={user} />} />
             <Route path="/fp/vendors/add" element={<FPAddVendor user={user} />} />
             <Route path="/fp/vendors/assigned" element={<AssignedVendors user={user} />} />
@@ -343,6 +346,7 @@ function App() {
             <Route path="/manager/work-orders/pending" element={<ManagerWorkOrders user={user} />} />
             <Route path="/manager/work-orders/completed" element={<ManagerWorkOrders user={user} />} />
             <Route path="/manager/customers" element={<ManagerCustomers user={user} />} />
+            <Route path="/manager/customers/add" element={<ManagerCustomers user={user} defaultTab="add" />} />
             <Route path="/manager/vendors" element={<ManagerVendors user={user} />} />
             <Route path="/manager/vendors/add" element={<ManagerAddVendor user={user} />} />
             <Route path="/manager/vendors/assigned" element={<AssignedVendors />} />
@@ -372,6 +376,7 @@ function App() {
             <Route path="/coordinator/work-orders/pending" element={<CoordinatorWorkOrders user={user} />} />
             <Route path="/coordinator/work-orders/completed" element={<CoordinatorWorkOrders user={user} />} />
             <Route path="/coordinator/customers" element={<CoordinatorCustomers user={user} />} />
+            <Route path="/coordinator/customers/add" element={<CoordinatorCustomers user={user} defaultTab="add" />} />
             <Route path="/coordinator/vendors" element={<CoordinatorVendors user={user} />} />
             <Route path="/coordinator/vendors/assigned" element={<AssignedVendors />} />
             <Route path="/coordinator/estimates" element={<CoordinatorEstimates user={user} defaultTab="list" />} />
@@ -395,6 +400,7 @@ function App() {
             <Route path="/supervisor/work-orders/pending" element={<SupervisorWorkOrders user={user} />} />
             <Route path="/supervisor/work-orders/completed" element={<SupervisorWorkOrders user={user} />} />
             <Route path="/supervisor/customers" element={<SupervisorCustomers user={user} />} />
+            <Route path="/supervisor/customers/add" element={<SupervisorCustomers user={user} defaultTab="add" />} />
             <Route path="/supervisor/vendors" element={<SupervisorVendors user={user} />} />
             <Route path="/supervisor/vendors/assigned" element={<AssignedVendors />} />
             <Route path="/supervisor/estimates" element={<SupervisorEstimates user={user} defaultTab="list" />} />
@@ -418,6 +424,7 @@ function App() {
             <Route path="/executive/work-orders/pending" element={<ExecutiveWorkOrders user={user} />} />
             <Route path="/executive/work-orders/completed" element={<ExecutiveWorkOrders user={user} />} />
             <Route path="/executive/customers" element={<ExecutiveCustomers user={user} />} />
+            <Route path="/executive/customers/add" element={<ExecutiveCustomers user={user} defaultTab="add" />} />
             <Route path="/executive/vendors" element={<ExecutiveVendors user={user} />} />
             <Route path="/executive/vendors/assigned" element={<AssignedVendors />} />
             <Route path="/executive/estimates" element={<ExecutiveEstimates user={user} defaultTab="list" />} />

@@ -23,7 +23,9 @@ import {
   Layers,
   Loader2,
   Navigation,
-  Trash2
+  Trash2,
+  Triangle,
+  Map
 } from 'lucide-react';
 import LocationPicker from '../components/common/LocationPicker';
 
@@ -49,9 +51,9 @@ const CATEGORIES = [
 const ENTRY_TYPES = [
   { id: 'GC', name: 'Gated Community', icon: Building2, color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
   { id: 'APT', name: 'Apartment', icon: Home, color: 'bg-gradient-to-br from-emerald-500 to-emerald-600' },
-  { id: 'VILLA', name: 'Villa', icon: Home, color: 'bg-gradient-to-br from-amber-500 to-amber-600' },
+  { id: 'VILLA', name: 'Villa', icon: Triangle, color: 'bg-gradient-to-br from-amber-500 to-amber-600' },
   { id: 'FLAT', name: 'Flat', icon: Grid3X3, color: 'bg-gradient-to-br from-cyan-500 to-cyan-600' },
-  { id: 'PLOT', name: 'Plot', icon: MapPin, color: 'bg-gradient-to-br from-rose-500 to-rose-600' }
+  { id: 'PLOT', name: 'Plot', icon: Map, color: 'bg-gradient-to-br from-rose-500 to-rose-600' }
 ];
 
 // Property types per entry type
@@ -116,7 +118,7 @@ const INDIAN_STATES = [
   'Puducherry',
 ];
 
-const FPCustomers = ({ user }) => {
+const FPCustomers = ({ user, defaultTab = 'list' }) => {
   const [customers, setCustomers] = useState([]);
   const [properties, setProperties] = useState([]);
   const [zones, setZones] = useState([]);
@@ -124,7 +126,8 @@ const FPCustomers = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   
-  // View states
+  // View states - 'list' or 'add'
+  const [activeView, setActiveView] = useState(defaultTab);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedEntryType, setSelectedEntryType] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
@@ -385,14 +388,103 @@ const FPCustomers = ({ user }) => {
     c.client_id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Category Selection View (Initial)
-  if (!selectedCategory) {
+  // Customer List View
+  if (activeView === 'list' && !selectedCategory) {
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-          <p className="text-gray-500 mt-1">Customer Creation Module</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
+            <p className="text-gray-500 mt-1">{filteredCustomers.length} customers</p>
+          </div>
+          <button
+            onClick={() => setActiveView('add')}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Add Customer
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search customers by name, email, phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        {/* Customer List */}
+        <div className="bg-white rounded-xl border border-gray-100">
+          {loading ? (
+            <div className="p-8 text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary-600 mx-auto" />
+              <p className="text-gray-500 mt-2">Loading customers...</p>
+            </div>
+          ) : filteredCustomers.length === 0 ? (
+            <div className="p-8 text-center">
+              <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">No customers found</p>
+              <button
+                onClick={() => setActiveView('add')}
+                className="mt-4 text-primary-600 hover:text-primary-700 font-medium"
+              >
+                Add your first customer
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {filteredCustomers.map((customer) => (
+                <div key={customer.id} className="p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                        <span className="text-primary-600 font-semibold">
+                          {customer.name?.charAt(0).toUpperCase() || 'C'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{customer.name || customer.community_name}</p>
+                        <p className="text-sm text-gray-500">{customer.email || customer.client_id}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">{customer.phone}</p>
+                      <p className="text-xs text-gray-400">{customer.property_type}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Category Selection View (Add Customer)
+  if (activeView === 'add' && !selectedCategory) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setActiveView('list')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
+            <p className="text-gray-500 mt-1">Customer Creation Module</p>
+          </div>
         </div>
 
         {/* Message */}
@@ -454,25 +546,26 @@ const FPCustomers = ({ user }) => {
   if (selectedCategory && !selectedEntryType) {
     return (
       <div className="space-y-6">
-        {/* Header with Back */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={goBack}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
-          </button>
+        {/* Header with Back to Categories */}
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-            <p className="text-gray-500">Select property type for {selectedCategory}</p>
+            <p className="text-gray-500 mt-1">Customer Creation Module</p>
           </div>
+          <button
+            onClick={goBack}
+            className="flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back to Categories
+          </button>
         </div>
 
         {/* Entry Type Selection */}
         <div className="bg-white rounded-xl border border-gray-100 p-8">
           <div className="text-center mb-8">
-            <h2 className="text-xl font-semibold text-gray-900">Select Property Type</h2>
-            <p className="text-gray-500 mt-1">Choose the type of property</p>
+            <h2 className="text-xl font-semibold text-gray-900">Select Entry Type</h2>
+            <p className="text-gray-500 mt-1">Choose the type of customer data you want to enter</p>
           </div>
 
           <div className="flex flex-wrap justify-center gap-4">

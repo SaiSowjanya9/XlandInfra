@@ -504,23 +504,84 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
   try {
     const coordinatorId = req.coordinatorId;
     const franchisePartnerId = req.franchisePartnerId;
-    const { name, email, phone, alternatePhone, address, city, state, zipCode, clientType, companyName, propertyId, gstNumber } = req.body;
+    const {
+      // Property form data
+      zone, areaName, division, propertyType, communityName,
+      associationContacts, numberOfBlocks, unitsPerBlock, blockNames,
+      numberOfUnits, villaPlotNumber, blockInfo, blockNA,
+      address, city, state, postalCode, landmark, mapLocation, notes,
+      entryType, category,
+      // Simple customer data (backward compatibility)
+      name, email, phone, alternatePhone, zipCode,
+      clientType, companyName, propertyId, gstNumber
+    } = req.body;
 
-    const clientId = `CLT-COORD-${Date.now()}`;
+    // Check if this is a property form submission
+    if (zone && communityName) {
+      const propertyIdGen = `COORD-${entryType || 'GC'}-${Date.now()}`;
+      const clientId = `COORD-CLT-${Date.now()}`;
+      
+      const contact = associationContacts?.[0] || {};
+      const contactName = contact.name || '';
+      const contactEmail = contact.email || '';
+      const contactPhone = contact.phone || '';
+      const contactCountryCode = contact.countryCode || '+91';
 
-    const [result] = await pool.query(
-      `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
-        zip_code, client_type, company_name, property_id, gst_number, coordinator_id, franchise_partner_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
-        clientType || 'individual', companyName, propertyId || null, gstNumber, coordinatorId, franchisePartnerId]
-    );
+      const [propertyResult] = await pool.query(
+        `INSERT INTO properties (
+          property_id, name, property_type, address, city, state, zip_code,
+          contact_person, contact_phone, contact_email, zone_id, division_id,
+          coordinator_id, franchise_partner_id, created_by, latitude, longitude, landmark, notes,
+          entry_type, category, area_name, number_of_blocks, units_per_block,
+          block_names, number_of_units, villa_plot_number, block_info
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          propertyIdGen, communityName, propertyType || 'residential', address, city, state, postalCode || '',
+          contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
+          zone || null, division || null,
+          coordinatorId, franchisePartnerId, req.user.id, 
+          mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
+          entryType || null, category || null, areaName || '',
+          numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}),
+          JSON.stringify(blockNames || {}), numberOfUnits || null, villaPlotNumber || '', blockInfo || ''
+        ]
+      );
 
-    res.json({
-      success: true,
-      message: 'Customer created successfully',
-      data: { id: result.insertId, clientId }
-    });
+      let customerResult = null;
+      if (contactEmail) {
+        const tempPassword = Math.random().toString(36).slice(-8);
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        
+        const [existing] = await pool.query('SELECT id FROM customer_accounts WHERE email = ?', [contactEmail]);
+        
+        if (existing.length === 0) {
+          [customerResult] = await pool.query(
+            `INSERT INTO customer_accounts (
+              customer_id, name, email, phone, password_hash, property_id,
+              coordinator_id, franchise_partner_id, is_activated, temp_password
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [clientId, contactName, contactEmail, `${contactCountryCode}${contactPhone}`,
+              hashedPassword, propertyResult.insertId, coordinatorId, franchisePartnerId, 0, tempPassword]
+          );
+        }
+      }
+
+      res.status(201).json({
+        success: true,
+        message: 'Property and customer created successfully',
+        data: { propertyId: propertyIdGen, clientId, customerId: customerResult?.insertId || null }
+      });
+    } else {
+      const clientId = `CLT-COORD-${Date.now()}`;
+      const [result] = await pool.query(
+        `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
+          zip_code, client_type, company_name, property_id, gst_number, coordinator_id, franchise_partner_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
+          clientType || 'individual', companyName, propertyId || null, gstNumber, coordinatorId, franchisePartnerId]
+      );
+      res.json({ success: true, message: 'Customer created successfully', data: { id: result.insertId, clientId } });
+    }
   } catch (error) {
     console.error('Customer create error:', error);
     res.status(500).json({ success: false, message: 'Failed to create customer' });

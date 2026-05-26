@@ -1,19 +1,28 @@
 const nodemailer = require('nodemailer');
 
 // Email configuration - uses environment variables
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS // Use App Password for Gmail
-  },
-  // Improved deliverability settings
-  pool: true,
-  maxConnections: 5,
-  maxMessages: 100,
-  rateDelta: 1000,
-  rateLimit: 5
-});
+// Supports both Gmail and custom SMTP servers (Hostinger, GoDaddy, cPanel, etc.)
+const createTransporter = () => {
+  const config = {
+    host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+    port: parseInt(process.env.SMTP_PORT) || 465,
+    secure: process.env.SMTP_SECURE !== 'false', // true for 465, false for other ports
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    },
+    // Improved deliverability settings
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+    rateDelta: 1000,
+    rateLimit: 5
+  };
+
+  return nodemailer.createTransport(config);
+};
+
+const transporter = createTransporter();
 
 // Default email headers for better deliverability
 const getDefaultHeaders = () => ({
