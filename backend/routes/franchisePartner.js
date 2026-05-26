@@ -1270,7 +1270,8 @@ router.post('/employees', requireFPScope, async (req, res) => {
 
     try {
       // Map FP role to user role
-      const userRole = role === 'supervisor' ? 'supervisor' : 
+      const userRole = role === 'manager' ? 'manager' :
+                       role === 'supervisor' ? 'supervisor' : 
                        role === 'coordinator' ? 'coordinator' : 
                        role === 'executive' ? 'executive' : 'fp_executive';
 
