@@ -15,9 +15,7 @@ import {
   FileInput,
   Hammer,
   ClipboardCheck,
-  Shield,
   MapPin,
-  QrCode,
   Plus,
   List,
   Package,
@@ -37,8 +35,6 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
     { path: '/coordinator/properties', icon: Building2, label: 'Property Management' },
     { path: '/coordinator/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/coordinator/customers/add', icon: UserPlus, label: 'Add Customer' },
-    { path: '/coordinator/user-management', icon: Shield, label: 'User Management' },
-    { path: '/coordinator/qr-management', icon: QrCode, label: 'QR Management' },
   ];
 
   const vendorSubItems = [
