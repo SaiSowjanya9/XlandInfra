@@ -307,6 +307,18 @@ router.post('/properties', requireFPScope, async (req, res) => {
     } = req.body;
 
     const propertyId = `FP${req.fpId}-PROP-${Date.now()}`;
+    
+    // Get creator name from user info
+    let creatorName = 'Franchise Partner';
+    if (req.user) {
+      if (req.user.firstName && req.user.lastName) {
+        creatorName = `${req.user.firstName} ${req.user.lastName}`.trim();
+      } else if (req.user.name) {
+        creatorName = req.user.name;
+      } else if (req.user.username && req.user.username !== req.user.role) {
+        creatorName = req.user.username;
+      }
+    }
 
     const [result] = await pool.execute(
       `INSERT INTO properties (
@@ -317,7 +329,7 @@ router.post('/properties', requireFPScope, async (req, res) => {
       [
         propertyId, name, propertyType || 'residential', address, city, state, zipCode,
         contactPerson, contactPhone, contactEmail, zoneId || null, divisionId || null,
-        req.fpId, req.user.id
+        req.fpId, creatorName
       ]
     );
 
@@ -333,6 +345,42 @@ router.post('/properties', requireFPScope, async (req, res) => {
       message: 'Failed to create property',
       error: error.message
     });
+  }
+});
+
+// Get single property by ID (for auto-populate in work orders)
+router.get('/properties/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Try properties table first
+    const [properties] = await pool.execute(
+      `SELECT p.*, p.contact_person, p.contact_phone, p.contact_email
+       FROM properties p
+       WHERE (p.id = ? OR p.property_id = ?) AND p.franchise_partner_id = ?`,
+      [id, id, req.fpId]
+    );
+    
+    if (properties.length > 0) {
+      return res.json({ success: true, data: properties[0] });
+    }
+    
+    // Try onboarded_properties table
+    const [onboarded] = await pool.execute(
+      `SELECT op.*, op.community_name as name, op.contact_person, op.contact_phone, op.contact_email
+       FROM onboarded_properties op
+       WHERE (op.id = ? OR op.property_id = ?) AND (op.franchise_partner_id = ? OR op.franchise_partner_id IS NULL)`,
+      [id, id, req.fpId]
+    );
+    
+    if (onboarded.length > 0) {
+      return res.json({ success: true, data: onboarded[0] });
+    }
+    
+    res.status(404).json({ success: false, message: 'Property not found' });
+  } catch (error) {
+    console.error('Get property error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch property' });
   }
 });
 

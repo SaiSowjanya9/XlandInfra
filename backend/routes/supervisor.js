@@ -327,13 +327,25 @@ router.post('/properties', requireSupervisorScope, async (req, res) => {
     const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
 
     const propertyId = `PROP-SUP-${Date.now()}`;
+    
+    // Get creator name from user info
+    let creatorName = 'Supervisor';
+    if (req.user) {
+      if (req.user.firstName && req.user.lastName) {
+        creatorName = `${req.user.firstName} ${req.user.lastName}`.trim();
+      } else if (req.user.name) {
+        creatorName = req.user.name;
+      } else if (req.user.username && req.user.username !== req.user.role) {
+        creatorName = req.user.username;
+      }
+    }
 
     const [result] = await pool.query(
       `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
-        contact_person, contact_phone, contact_email, zone_id, supervisor_id, franchise_partner_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        contact_person, contact_phone, contact_email, zone_id, supervisor_id, franchise_partner_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [propertyId, name, propertyType || 'residential', address, city, state, zipCode,
-        contactPerson, contactPhone, contactEmail, zoneId || null, supervisorId, franchisePartnerId]
+        contactPerson, contactPhone, contactEmail, zoneId || null, supervisorId, franchisePartnerId, creatorName]
     );
 
     res.json({
