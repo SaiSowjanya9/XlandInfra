@@ -257,37 +257,39 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
 
-    // Get both own and assigned properties
+    // Get both own and assigned properties with creator name
     const [regularProperties] = await pool.query(
       `SELECT p.*, z.name as zone_name, 
               COALESCE(p.area_name, p.city) as area,
               COALESCE(p.division_id, p.division, 'General') as division,
               COALESCE(p.number_of_units, p.total_units, 1) as units,
-              COALESCE(p.created_by, 'System') as created_by_name,
+              COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'own' as access_type, TRUE as can_modify, TRUE as can_delete,
               TRUE as can_assign_vendor, TRUE as can_assign_employee,
               'properties' as source_table
        FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id
+       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE p.supervisor_id = ?
        UNION
        SELECT p.*, z.name as zone_name,
               COALESCE(p.area_name, p.city) as area,
               COALESCE(p.division_id, p.division, 'General') as division,
               COALESCE(p.number_of_units, p.total_units, 1) as units,
-              COALESCE(p.created_by, 'System') as created_by_name,
+              COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'assigned' as access_type, sap.can_modify, sap.can_delete,
               sap.can_assign_vendor, sap.can_assign_employee,
               'properties' as source_table
        FROM properties p
        INNER JOIN supervisor_assigned_properties sap ON p.id = sap.property_id
        LEFT JOIN zones z ON p.zone_id = z.id
+       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE sap.supervisor_id = ?
        ORDER BY created_at DESC`,
       [supervisorId, supervisorId]
     );
 
-    // Also fetch from onboarded_properties
+    // Also fetch from onboarded_properties with creator name
     let onboardedProperties = [];
     try {
       const scopeColumn = franchisePartnerId ? 'franchise_partner_id' : 'supervisor_id';
@@ -297,11 +299,13 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
                 op.zone_id as zone_name, op.division, op.total_units as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
-                op.created_by as created_by_name, op.created_at, op.status,
+                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
+                op.created_at, op.status,
                 'own' as access_type, TRUE as can_modify, TRUE as can_delete,
                 TRUE as can_assign_vendor, TRUE as can_assign_employee,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
+         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
          WHERE op.${scopeColumn} = ? AND op.status = 'active'
          ORDER BY op.created_at DESC`,
         [scopeId]

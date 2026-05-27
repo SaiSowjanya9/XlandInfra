@@ -207,7 +207,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     const scopeId = getScopeId(req);
     const scopeColumn = getScopeColumn(req);
 
-    // Get properties scoped to FP or Coordinator with all required fields
+    // Get properties scoped to FP or Coordinator with creator name
     const [regularProperties] = await pool.query(
       `SELECT p.*, 
         z.name as zone_name,
@@ -215,17 +215,18 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
         COALESCE(p.division, 'General') as division,
         COALESCE(p.total_units, 1) as units,
         COALESCE(p.status, 'active') as status,
-        COALESCE(p.created_by, 'System') as created_by_name,
+        COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
         CONCAT(COALESCE(p.contact_person, ''), CASE WHEN p.contact_phone IS NOT NULL THEN CONCAT(' | ', p.contact_phone) ELSE '' END) as contacts,
         'properties' as source_table
        FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id
+       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE p.${scopeColumn} = ?
        ORDER BY p.created_at DESC`,
       [scopeId]
     );
 
-    // Also fetch from onboarded_properties
+    // Also fetch from onboarded_properties with creator name
     let onboardedProperties = [];
     try {
       const [rows] = await pool.execute(
@@ -233,9 +234,11 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
                 op.zone_id as zone_name, op.division, op.total_units as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
-                op.created_by as created_by_name, op.created_at, op.status,
+                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
+                op.created_at, op.status,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
+         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
          WHERE op.${scopeColumn} = ? AND op.status = 'active'
          ORDER BY op.created_at DESC`,
         [scopeId]
