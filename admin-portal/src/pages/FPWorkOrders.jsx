@@ -234,6 +234,18 @@ const FPWorkOrders = ({ user }) => {
     setSubcategories(category?.subcategories || []);
   };
 
+  // Handle property selection and auto-populate customer details
+  const handlePropertySelect = async (property) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      propertyId: property.id,
+      customerName: property.contact_person || '',
+      customerEmail: property.contact_email || property.email || '',
+      customerPhone: property.contact_phone || ''
+    }));
+    setPropertySearch(property.name + ' - ' + (property.property_id || ''));
+  };
+
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) return;
     
@@ -576,10 +588,7 @@ const FPWorkOrders = ({ user }) => {
                       <button
                         key={p.id}
                         type="button"
-                        onClick={() => {
-                          setFormData({ ...formData, propertyId: p.id });
-                          setPropertySearch(p.name + ' - ' + p.property_id);
-                        }}
+                        onClick={() => handlePropertySelect(p)}
                         className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
                       >
                         <span className="font-medium">{p.name}</span>

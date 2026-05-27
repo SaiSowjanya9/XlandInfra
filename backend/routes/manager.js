@@ -270,17 +270,67 @@ router.post('/properties', requireManagerScope, async (req, res) => {
     const managerId = req.managerId;
     const franchisePartnerId = req.isFPManager ? req.franchisePartnerId : null;
     
+    // Get creator name from user info
+    let creatorName = 'Manager';
+    if (req.user) {
+      if (req.user.firstName && req.user.lastName) {
+        creatorName = `${req.user.firstName} ${req.user.lastName}`.trim();
+      } else if (req.user.name) {
+        creatorName = req.user.name;
+      } else if (req.user.username && req.user.username !== req.user.role) {
+        creatorName = req.user.username;
+      }
+    }
+    
     const [result] = await pool.execute(
       `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
-        contact_person, contact_phone, contact_email, zone_id, manager_id, franchise_partner_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        contact_person, contact_phone, contact_email, zone_id, manager_id, franchise_partner_id, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [propertyId, name, propertyType || 'residential', address, city, state, zipCode, 
-       contactPerson, contactPhone, contactEmail, zoneId || null, managerId, franchisePartnerId]
+       contactPerson, contactPhone, contactEmail, zoneId || null, managerId, franchisePartnerId, creatorName]
     );
 
     res.json({ success: true, message: 'Property created', data: { id: result.insertId, propertyId } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get single property by ID (for auto-populate in work orders)
+router.get('/properties/:id', requireManagerScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
+    
+    // Try properties table first
+    const [properties] = await pool.execute(
+      `SELECT p.*, p.contact_person, p.contact_phone, p.contact_email
+       FROM properties p
+       WHERE (p.id = ? OR p.property_id = ?) AND p.${scopeColumn} = ?`,
+      [id, id, scopeId]
+    );
+    
+    if (properties.length > 0) {
+      return res.json({ success: true, data: properties[0] });
+    }
+    
+    // Try onboarded_properties table
+    const [onboarded] = await pool.execute(
+      `SELECT op.*, op.community_name as name, op.contact_person, op.contact_phone, op.contact_email
+       FROM onboarded_properties op
+       WHERE (op.id = ? OR op.property_id = ?) AND op.${scopeColumn} = ?`,
+      [id, id, scopeId]
+    );
+    
+    if (onboarded.length > 0) {
+      return res.json({ success: true, data: onboarded[0] });
+    }
+    
+    res.status(404).json({ success: false, message: 'Property not found' });
+  } catch (error) {
+    console.error('Get property error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch property' });
   }
 });
 
