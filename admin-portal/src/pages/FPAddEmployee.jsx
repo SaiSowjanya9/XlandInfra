@@ -336,8 +336,9 @@ const FPAddEmployee = ({ user }) => {
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => updateField('phone', e.target.value.replace(/[^\d+\s-]/g, ''))}
-                  placeholder="+91 9876543210"
+                  onChange={(e) => updateField('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  maxLength={10}
+                  placeholder="9876543210"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
                 />
               </div>

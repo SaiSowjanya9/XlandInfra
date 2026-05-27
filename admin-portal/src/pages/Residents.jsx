@@ -319,7 +319,12 @@ const Residents = ({ admin }) => {
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setFormData({ ...formData, phone: value });
+                      }}
+                      maxLength={10}
+                      placeholder="9876543210"
                   className="input-field"
                 />
               </div>
