@@ -906,16 +906,57 @@ router.post('/addons', requireCoordinatorScope, async (req, res) => {
 // =====================================================
 router.get('/zones', requireCoordinatorScope, async (req, res) => {
   try {
-    // FP Coordinators get zones from fp_zones, standalone get global zones
-    if (req.isFPCoordinator) {
-      const [zones] = await pool.query(
-        'SELECT * FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY name',
-        [req.franchisePartnerId]
-      );
-      return res.json({ success: true, data: zones });
+    // Get global zones
+    const [globalZones] = await pool.query('SELECT id, name FROM zones WHERE is_active = TRUE');
+    
+    // Get zones from properties (FP-scoped or coordinator-scoped)
+    const scopeColumn = req.isFPCoordinator ? 'franchise_partner_id' : 'coordinator_id';
+    const scopeId = req.isFPCoordinator ? req.franchisePartnerId : req.coordinatorId;
+    const [propertyZones] = await pool.query(
+      `SELECT DISTINCT zone_id as name FROM properties 
+       WHERE ${scopeColumn} = ? AND zone_id IS NOT NULL AND zone_id != ''`,
+      [scopeId]
+    );
+
+    // Get FP zones if FP Coordinator
+    let fpZones = [];
+    if (req.isFPCoordinator && req.franchisePartnerId) {
+      try {
+        const [fz] = await pool.query(
+          'SELECT id, name FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1',
+          [req.franchisePartnerId]
+        );
+        fpZones = fz;
+      } catch (_) {}
     }
-    const [zones] = await pool.query('SELECT * FROM zones WHERE is_active = TRUE ORDER BY name');
-    res.json({ success: true, data: zones });
+
+    // Combine and deduplicate
+    const allZoneNames = new Set();
+    const combinedZones = [];
+
+    globalZones.forEach(z => {
+      if (!allZoneNames.has(z.name)) {
+        allZoneNames.add(z.name);
+        combinedZones.push({ id: z.id, name: z.name });
+      }
+    });
+
+    fpZones.forEach(z => {
+      if (!allZoneNames.has(z.name)) {
+        allZoneNames.add(z.name);
+        combinedZones.push({ id: z.id, name: z.name });
+      }
+    });
+
+    propertyZones.forEach(z => {
+      if (z.name && !allZoneNames.has(z.name)) {
+        allZoneNames.add(z.name);
+        combinedZones.push({ id: `custom-${z.name}`, name: z.name });
+      }
+    });
+
+    combinedZones.sort((a, b) => a.name.localeCompare(b.name));
+    res.json({ success: true, data: combinedZones });
   } catch (error) {
     console.error('Zones fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch zones' });

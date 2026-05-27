@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
+const { authenticate } = require('../middleware/auth');
 
 // Generate unique property ID: PREFIX-XXXX-YYYYMMDD
 const generatePropertyId = (entryType) => {
@@ -13,7 +14,7 @@ const generatePropertyId = (entryType) => {
 // ============================================
 // POST /api/onboarding  — Create a new onboarded property
 // ============================================
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -44,9 +45,13 @@ router.post('/', async (req, res) => {
       landmark,
       mapLocation,
       notes,
-      associationContacts,
-      createdBy
+      associationContacts
     } = req.body;
+
+    // Get actual user name from authenticated user
+    const creatorName = req.user?.firstName && req.user?.lastName 
+      ? `${req.user.firstName} ${req.user.lastName}`.trim()
+      : req.user?.name || req.user?.username || 'System';
 
     // Calculate total units
     let totalUnits = 0;
@@ -99,7 +104,7 @@ router.post('/', async (req, res) => {
         mapLocation?.lng || null,
         mapLocation?.address || null,
         notes || null,
-        String(createdBy || 'system')
+        creatorName
       ]
     );
 
