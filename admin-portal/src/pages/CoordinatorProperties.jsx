@@ -911,23 +911,23 @@ const CoordinatorProperties = ({ user }) => {
               {(viewProperty.contact_person || viewProperty.contact_phone || viewProperty.contact_email) && (
                 <div className="border-t border-gray-100 pt-4">
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Contact Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {viewProperty.contact_person && (
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-sm text-gray-500">Contact Person</p>
                         <p className="text-gray-900">{viewProperty.contact_person}</p>
                       </div>
                     )}
-                    {viewProperty.contact_phone && (
-                      <div>
-                        <p className="text-sm text-gray-500">Phone</p>
-                        <p className="text-gray-900">{viewProperty.contact_phone}</p>
+                    {viewProperty.contact_email && (
+                      <div className="min-w-0 md:col-span-2">
+                        <p className="text-sm text-gray-500">Email</p>
+                        <p className="text-gray-900 break-all">{viewProperty.contact_email}</p>
                       </div>
                     )}
-                    {viewProperty.contact_email && (
-                      <div>
-                        <p className="text-sm text-gray-500">Email</p>
-                        <p className="text-gray-900">{viewProperty.contact_email}</p>
+                    {viewProperty.contact_phone && (
+                      <div className="min-w-0">
+                        <p className="text-sm text-gray-500">Phone</p>
+                        <p className="text-gray-900 whitespace-nowrap">{viewProperty.contact_phone}</p>
                       </div>
                     )}
                   </div>

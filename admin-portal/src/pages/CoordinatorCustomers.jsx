@@ -147,6 +147,9 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
     villaPlotNumber: '',
     blockInfo: '',
     blockNA: false,
+    flatBlockInfo: '',
+    flatBlockNA: false,
+    plotNA: false,
     address: '',
     city: '',
     state: '',
@@ -286,9 +289,20 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
       return basicValid && contactValid && addressValid && aptValid;
     }
     
-    if (selectedEntryType === 'VILLA' || selectedEntryType === 'FLAT' || selectedEntryType === 'PLOT') {
+    if (selectedEntryType === 'VILLA') {
       const numberValid = formData.villaPlotNumber.trim();
       return basicValid && contactValid && addressValid && numberValid;
+    }
+    
+    if (selectedEntryType === 'FLAT') {
+      const flatNumberValid = formData.villaPlotNumber.trim();
+      const flatBlockValid = formData.flatBlockNA || formData.flatBlockInfo.trim();
+      return basicValid && contactValid && addressValid && flatNumberValid && flatBlockValid;
+    }
+    
+    if (selectedEntryType === 'PLOT') {
+      const plotValid = formData.plotNA || formData.villaPlotNumber.trim();
+      return basicValid && contactValid && addressValid && plotValid;
     }
 
     return basicValid && contactValid && addressValid;
@@ -312,6 +326,9 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
       villaPlotNumber: '',
       blockInfo: '',
       blockNA: false,
+      flatBlockInfo: '',
+      flatBlockNA: false,
+      plotNA: false,
       address: '',
       city: '',
       state: '',
@@ -1004,18 +1021,50 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
               <div className="p-8 border-b border-gray-200">
                 <h2 className="text-xl font-medium text-gray-800 mb-6">Flat Details</h2>
                 
-                <div className="max-w-md">
-                  <label className="block text-sm text-gray-700 mb-1.5">
-                    Flat Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.villaPlotNumber}
-                    onChange={(e) => updateFormData('villaPlotNumber', e.target.value)}
-                    className={inputClass(hasError && !formData.villaPlotNumber.trim())}
-                    placeholder="Enter flat number"
-                  />
-                  <FieldError show={hasError && !formData.villaPlotNumber.trim()} message="Flat number is required" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1.5">
+                      Flat Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.villaPlotNumber}
+                      onChange={(e) => updateFormData('villaPlotNumber', e.target.value)}
+                      className={inputClass(hasError && !formData.villaPlotNumber.trim())}
+                      placeholder="Enter flat number"
+                    />
+                    <FieldError show={hasError && !formData.villaPlotNumber.trim()} message="Flat number is required" />
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <label className="block text-sm text-gray-700">
+                        Block Number
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="flatBlockNA"
+                          checked={formData.flatBlockNA}
+                          onChange={(e) => updateFormData('flatBlockNA', e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="flatBlockNA" className="text-sm text-gray-600">Not Applicable</label>
+                      </div>
+                    </div>
+                    {!formData.flatBlockNA && (
+                      <>
+                        <input
+                          type="text"
+                          value={formData.flatBlockInfo}
+                          onChange={(e) => updateFormData('flatBlockInfo', e.target.value)}
+                          className={inputClass(hasError && !formData.flatBlockNA && formData.flatBlockInfo.trim() === '')}
+                          placeholder="Block A, Tower 1, etc."
+                        />
+                        <FieldError show={hasError && !formData.flatBlockNA && formData.flatBlockInfo.trim() === ''} message="Block info required (or mark N/A)" />
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -1026,17 +1075,33 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
                 <h2 className="text-xl font-medium text-gray-800 mb-6">Plot Details</h2>
                 
                 <div className="max-w-md">
-                  <label className="block text-sm text-gray-700 mb-1.5">
-                    Plot Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.villaPlotNumber}
-                    onChange={(e) => updateFormData('villaPlotNumber', e.target.value)}
-                    className={inputClass(hasError && !formData.villaPlotNumber.trim())}
-                    placeholder="Enter plot number"
-                  />
-                  <FieldError show={hasError && !formData.villaPlotNumber.trim()} message="Plot number is required" />
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <label className="block text-sm text-gray-700">
+                      Plot Number
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="plotNA"
+                        checked={formData.plotNA}
+                        onChange={(e) => updateFormData('plotNA', e.target.checked)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="plotNA" className="text-sm text-gray-600">Not Applicable</label>
+                    </div>
+                  </div>
+                  {!formData.plotNA && (
+                    <>
+                      <input
+                        type="text"
+                        value={formData.villaPlotNumber}
+                        onChange={(e) => updateFormData('villaPlotNumber', e.target.value)}
+                        className={inputClass(hasError && !formData.plotNA && !formData.villaPlotNumber.trim())}
+                        placeholder="Enter plot number"
+                      />
+                      <FieldError show={hasError && !formData.plotNA && !formData.villaPlotNumber.trim()} message="Plot number required (or mark N/A)" />
+                    </>
+                  )}
                 </div>
               </div>
             )}

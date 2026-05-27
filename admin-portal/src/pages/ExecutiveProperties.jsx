@@ -301,9 +301,9 @@ const ExecutiveProperties = ({ user }) => {
                       {selectedProperty.contact_phone || '-'}
                     </p>
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-2 min-w-0">
                     <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium text-gray-900">{selectedProperty.contact_email || '-'}</p>
+                    <p className="font-medium text-gray-900 break-all">{selectedProperty.contact_email || '-'}</p>
                   </div>
                 </div>
               </div>

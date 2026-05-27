@@ -831,18 +831,18 @@ const Properties = () => {
                       <div className="space-y-3">
                         {viewProperty.contacts.map((c, i) => (
                           <div key={i} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                               <div className="min-w-0">
                                 <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
                                 <p className="text-sm font-medium text-gray-900">{c.name || 'N/A'}</p>
                               </div>
-                              <div className="min-w-0 sm:col-span-1">
+                              <div className="min-w-0 sm:col-span-2">
                                 <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
-                                <p className="text-sm text-gray-900 truncate" title={c.email}>{c.email || 'N/A'}</p>
+                                <p className="text-sm text-gray-900 break-all" title={c.email}>{c.email || 'N/A'}</p>
                               </div>
                               <div className="min-w-0">
                                 <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
-                                <p className="text-sm text-gray-900">{c.countryCode || '+91'} {c.phone || 'N/A'}</p>
+                                <p className="text-sm text-gray-900 whitespace-nowrap">{c.countryCode || '+91'} {c.phone || 'N/A'}</p>
                               </div>
                             </div>
                           </div>
