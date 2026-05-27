@@ -471,7 +471,12 @@ const CoordinatorEmployees = ({ user }) => {
                   type="tel"
                   required
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, phone: value });
+                  }}
+                  maxLength={10}
+                  placeholder="9876543210"
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
                 />
               </div>

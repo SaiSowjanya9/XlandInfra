@@ -657,9 +657,13 @@ const EmployeeManagement = () => {
                     <input
                       type="tel"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setFormData({ ...formData, phone: value });
+                      }}
+                      maxLength={10}
                       className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                      placeholder="+91 9876543210"
+                      placeholder="9876543210"
                     />
                   </div>
                 </div>
