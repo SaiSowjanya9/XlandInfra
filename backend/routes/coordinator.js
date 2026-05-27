@@ -915,10 +915,27 @@ router.get('/zones', requireCoordinatorScope, async (req, res) => {
 
 router.get('/categories', requireCoordinatorScope, async (req, res) => {
   try {
-    const [categories] = await pool.query(
-      'SELECT * FROM categories WHERE is_active = TRUE OR is_active = 1 ORDER BY sort_order, name'
-    );
-    res.json({ success: true, data: categories });
+    // Try to get from database first
+    try {
+      const [categories] = await pool.query(
+        'SELECT id, name, sort_order FROM categories WHERE is_active = TRUE OR is_active = 1 ORDER BY sort_order, name'
+      );
+      
+      // Get subcategories for each category
+      for (let cat of categories) {
+        const [subcats] = await pool.query(
+          'SELECT id, name, sort_order FROM subcategories WHERE category_id = ? AND (is_active = TRUE OR is_active = 1) ORDER BY sort_order, name',
+          [cat.id]
+        );
+        cat.subcategories = subcats;
+      }
+      
+      return res.json({ success: true, data: categories });
+    } catch (dbError) {
+      // Fallback to config file
+      const categoriesConfig = require('../config/categories');
+      return res.json({ success: true, data: categoriesConfig });
+    }
   } catch (error) {
     console.error('Categories fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch categories' });
