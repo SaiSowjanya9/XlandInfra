@@ -80,6 +80,27 @@ const authenticate = async (req, res, next) => {
           [decoded.id]
         );
         user = vendors[0];
+      } else if (decoded.role === ROLES.FRANCHISE_PARTNER) {
+        // FPs are in franchise_partners table
+        const [fps] = await pool.execute(
+          'SELECT id, is_active FROM franchise_partners WHERE id = ?',
+          [decoded.id]
+        );
+        user = fps[0];
+        // Set fpId on request for later use
+        if (user) {
+          req.fpId = user.id;
+        }
+      } else if (decoded.franchisePartnerId || decoded.fpId) {
+        // FP employees (manager, coordinator, supervisor, executive)
+        const [employees] = await pool.execute(
+          'SELECT id, is_active, franchise_partner_id FROM fp_employees WHERE id = ?',
+          [decoded.id]
+        );
+        user = employees[0];
+        if (user) {
+          req.fpId = user.franchise_partner_id;
+        }
       } else {
         const [users] = await pool.execute(
           'SELECT id, is_active FROM users WHERE id = ?',
@@ -88,7 +109,7 @@ const authenticate = async (req, res, next) => {
         user = users[0];
       }
 
-      if (!user || !user.is_active) {
+      if (!user || user.is_active === false) {
         return res.status(401).json({
           success: false,
           message: 'User account is inactive or does not exist.'
