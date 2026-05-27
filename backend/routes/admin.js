@@ -336,11 +336,25 @@ router.post('/properties', authenticate, managerOrAdmin, async (req, res) => {
     }
 
     const propertyId = `PROP-${Date.now().toString(36).toUpperCase()}`;
+    
+    // Get actual user name from database
+    let creatorName = 'System';
+    try {
+      const [userRows] = await pool.execute(
+        'SELECT first_name, last_name FROM users WHERE id = ? OR email = ?',
+        [req.user?.id, req.user?.email]
+      );
+      if (userRows.length > 0) {
+        creatorName = `${userRows[0].first_name || ''} ${userRows[0].last_name || ''}`.trim() || 'System';
+      }
+    } catch (e) {
+      console.log('Could not fetch creator name:', e.message);
+    }
 
     const [result] = await pool.execute(
-      `INSERT INTO properties (property_id, name, address, city, state, zip_code, country)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [propertyId, name, address, city || null, state || null, zipCode || null, country || 'USA']
+      `INSERT INTO properties (property_id, name, address, city, state, zip_code, country, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [propertyId, name, address, city || null, state || null, zipCode || null, country || 'USA', creatorName]
     );
 
     res.status(201).json({
