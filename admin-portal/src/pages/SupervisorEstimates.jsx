@@ -1,5 +1,20 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye } from 'lucide-react';
+import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Download, Mail, EyeOff, Calendar, Filter, Home, Building2 } from 'lucide-react';
+
+const PROPERTY_TYPE_OPTIONS = [
+  { id: 'GC', label: 'Gated Community' },
+  { id: 'Apt', label: 'Apartment' },
+  { id: 'Villa', label: 'Villa' },
+  { id: 'Flat', label: 'Flat' },
+  { id: 'Plot', label: 'Plot' },
+];
+
+const BILLING_DURATIONS = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'half-yearly', label: 'Half-Yearly' },
+  { value: 'yearly', label: 'Yearly' }
+];
 
 const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -14,6 +29,15 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('estimate');
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [filterPropertyType, setFilterPropertyType] = useState('all');
+  const [addonFilterPropertyType, setAddonFilterPropertyType] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [estimateTypeFilter, setEstimateTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const clearAllFilters = () => { setEstimateTypeFilter('all'); setStatusFilter('all'); setCategoryFilter('all'); setFromDate(''); setToDate(''); setSearchTerm(''); };
 
   const [estimateForm, setEstimateForm] = useState({ clientId: '', propertyId: '', title: '', description: '', estimateType: 'property_based', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
   const [amcForm, setAmcForm] = useState({ name: '', description: '', durationMonths: 12, basePrice: 0, services: '', termsConditions: '', hidePricing: true });
@@ -154,28 +178,45 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
         <>
           {(activeTab === 'list' || activeTab === 'archived') && (
             <div className="space-y-4">
-              <div className="bg-white rounded-xl border border-gray-100 p-4">
-                <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search estimates..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
+              <div className="flex gap-4">
+                <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search estimates..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" /></div>
+                <button onClick={() => setShowFilters(!showFilters)} className={`px-4 py-2.5 rounded-lg border font-medium flex items-center gap-2 ${showFilters ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}><Filter className="w-4 h-4" />Filters</button>
               </div>
-              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              {showFilters && (
+                <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div><label className="block text-xs font-medium text-gray-500 mb-1">Estimate Type</label><select value={estimateTypeFilter} onChange={(e) => setEstimateTypeFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Estimates</option><option value="property_based">Property Based</option><option value="direct">Direct</option></select></div>
+                    <div><label className="block text-xs font-medium text-gray-500 mb-1">Status</label><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Statuses</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="archived">Archived</option></select></div>
+                    <div><label className="block text-xs font-medium text-gray-500 mb-1">Property Category</label><select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Categories</option>{PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
+                    <div><label className="block text-xs font-medium text-gray-500 mb-1">From Date</label><input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-medium text-gray-500 mb-1">To Date</label><input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                  </div>
+                  <button onClick={clearAllFilters} className="text-sm text-blue-600 hover:underline">Clear all filters</button>
+                </div>
+              )}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 {filteredEstimates.length === 0 ? (
                   <div className="text-center py-12"><FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No estimates found</p></div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50 border-b border-gray-100">
-                        <tr><th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Estimate</th><th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Customer</th><th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th><th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Amount</th><th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th></tr>
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimate ID</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th><th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th></tr>
                       </thead>
-                      <tbody>
-                        {filteredEstimates.map((estimate) => (
-                          <tr key={estimate.id} className="border-b border-gray-50 hover:bg-gray-50">
-                            <td className="py-4 px-4"><p className="font-medium text-gray-900">{estimate.title}</p><p className="text-sm text-gray-500">{estimate.estimate_id}</p></td>
-                            <td className="py-4 px-4 text-sm text-gray-600">{estimate.client_name || '-'}</td>
-                            <td className="py-4 px-4 text-sm text-gray-600">{estimate.property_name || '-'}</td>
-                            <td className="py-4 px-4 font-medium text-gray-900">{formatCurrency(estimate.total_amount)}</td>
-                            <td className="py-4 px-4"><span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(estimate.status)}`}>{estimate.status?.replace(/_/g, ' ').toUpperCase()}</span></td>
-                          </tr>
-                        ))}
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredEstimates.map((estimate) => {
+                          const TypeIcon = estimate.property_type === 'Apt' ? Home : Building2;
+                          return (
+                            <tr key={estimate.id} className="hover:bg-gray-50">
+                              <td className="py-4 px-4"><span className="font-medium text-gray-900">{estimate.estimate_id || `EST-${estimate.id}`}</span></td>
+                              <td className="py-4 px-4"><div className="flex items-center gap-2"><TypeIcon className="w-4 h-4 text-gray-400" /><span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">{estimate.property_type || 'GC'}</span></div></td>
+                              <td className="py-4 px-4"><span className="text-gray-700">{estimate.client_name || '-'}</span></td>
+                              <td className="py-4 px-4"><div className="flex items-center gap-1.5 text-gray-600"><Calendar className="w-4 h-4" />{estimate.created_at ? new Date(estimate.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : '-'}</div></td>
+                              <td className="py-4 px-4"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(estimate.status)}`}>{estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}</span></td>
+                              <td className="py-4 px-4"><div className="flex items-center justify-center"><button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button></div></td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -185,72 +226,215 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
           )}
 
           {activeTab === 'create' && (
-            <div className="bg-white rounded-xl border border-gray-100 p-6">
-              <form onSubmit={handleEstimateSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Title *</label><input type="text" required value={estimateForm.title} onChange={(e) => setEstimateForm({ ...estimateForm, title: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" placeholder="Estimate title" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Customer</label><select value={estimateForm.clientId} onChange={(e) => setEstimateForm({ ...estimateForm, clientId: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"><option value="">Select Customer</option>{customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Property</label><select value={estimateForm.propertyId} onChange={(e) => setEstimateForm({ ...estimateForm, propertyId: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"><option value="">Select Property</option>{properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-                  <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea value={estimateForm.description} onChange={(e) => setEstimateForm({ ...estimateForm, description: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" rows={2} /></div>
-                </div>
-                <div><div className="flex items-center justify-between mb-3"><label className="text-sm font-medium text-gray-700">Line Items</label><button type="button" onClick={addLineItem} className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1"><Plus className="w-4 h-4" /> Add Item</button></div>
-                  <div className="space-y-3">
-                    {estimateForm.items.map((item, index) => (
-                      <div key={index} className="flex gap-3 items-start">
-                        <input type="text" value={item.description} onChange={(e) => updateLineItem(index, 'description', e.target.value)} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" placeholder="Description" />
-                        <input type="number" value={item.quantity} onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 0)} className="w-20 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" placeholder="Qty" min="1" />
-                        <input type="number" value={item.unitPrice} onChange={(e) => updateLineItem(index, 'unitPrice', parseFloat(e.target.value) || 0)} className="w-32 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" placeholder="Price" />
-                        <button type="button" onClick={() => removeLineItem(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    ))}
+            <div className="space-y-6">
+              {!estimateForm.estimateType || estimateForm.estimateType === 'select' ? (
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-6">Select Estimate Type</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'property_based' })} className="p-6 border-2 border-gray-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition-all text-center">
+                      <FileText className="w-8 h-8 mx-auto mb-3 text-gray-400" />
+                      <p className="font-semibold text-gray-900">Property-Based Estimate</p>
+                      <p className="text-sm text-amber-600 mt-1">Enter Property ID to auto-fill details</p>
+                    </button>
+                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'direct' })} className="p-6 border-2 border-gray-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition-all text-center">
+                      <Eye className="w-8 h-8 mx-auto mb-3 text-gray-400" />
+                      <p className="font-semibold text-gray-900">Direct-Based Estimate</p>
+                      <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
+                    </button>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Tax %</label><input type="number" value={estimateForm.taxPercentage} onChange={(e) => setEstimateForm({ ...estimateForm, taxPercentage: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Discount %</label><input type="number" value={estimateForm.discountPercentage} onChange={(e) => setEstimateForm({ ...estimateForm, discountPercentage: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Valid Until</label><input type="date" value={estimateForm.validUntil} onChange={(e) => setEstimateForm({ ...estimateForm, validUntil: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-                  <div className="bg-amber-50 p-3 rounded-lg"><p className="text-xs text-amber-600 font-medium">TOTAL</p><p className="text-xl font-bold text-amber-700">{formatCurrency(calculateTotals().total)}</p></div>
-                </div>
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                  <button type="button" onClick={resetEstimateForm} className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">Reset</button>
-                  <button type="submit" className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"><Save className="w-4 h-4" /><span>Create Estimate</span></button>
-                </div>
-              </form>
+              ) : (
+                <form onSubmit={handleEstimateSubmit} className="space-y-6">
+                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Estimate Details</h3></div>
+                    <div className="p-6">
+                      {estimateForm.estimateType === 'property_based' ? (
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Property ID <span className="text-red-500">*</span></label><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Type Property ID (e.g., GC-2024-001)" value={estimateForm.propertyId} onChange={(e) => setEstimateForm({ ...estimateForm, propertyId: e.target.value })} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div></div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Customer Name <span className="text-red-500">*</span></label><input type="text" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Customer name" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input type="text" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Phone number" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Email address" /></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">AMC Package</h3></div>
+                    <div className="p-6 space-y-4">
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Select AMC Package <span className="text-red-500">*</span></label><select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"><option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>{amcPackages.map((pkg) => (<option key={pkg.id} value={pkg.id}>{pkg.name}</option>))}</select></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Add Service from Add-ons</label><select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"><option value="">+ Select Add-on to add</option>{addons.map((addon) => (<option key={addon.id} value={addon.id}>{addon.name}</option>))}</select><div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center text-sm text-amber-700">No add-ons selected. Use the dropdown above to add services.</div></div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3">
+                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'select' })} className="px-6 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
+                    <button type="submit" className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium">Save</button>
+                  </div>
+                </form>
+              )}
             </div>
           )}
 
           {activeTab === 'amc' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {amcPackages.length === 0 ? (
-                  <div className="col-span-full text-center py-12 bg-white rounded-xl border border-gray-100"><Package className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No AMC packages found</p></div>
-                ) : amcPackages.map((pkg) => (
-                  <div key={pkg.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
-                    <h3 className="font-semibold text-gray-900">{pkg.name}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{pkg.description || 'No description'}</p>
-                    <div className="mt-4 flex items-center justify-between">
-                      <div><p className="text-xs text-gray-400">Base Price</p><p className="text-sm font-medium text-gray-400 italic">Hidden</p></div>
-                      <div className="text-right"><p className="text-xs text-gray-400">Duration</p><p className="text-sm font-medium text-gray-700">{pkg.duration_months} months</p></div>
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
+                  <Package className="w-5 h-5 text-slate-600" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">AMC Packages</h1>
+                  <p className="text-sm text-gray-500">Create and manage service packages</p>
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+                <button className="px-5 py-2.5 text-sm font-medium rounded-lg bg-white text-slate-700 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4" />
+                    All Packages
+                    {amcPackages.length > 0 && (
+                      <span className="px-1.5 py-0.5 bg-slate-600 text-white rounded-full text-xs">{amcPackages.length}</span>
+                    )}
+                  </div>
+                </button>
+              </div>
+
+              {/* All Packages Table */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800">All Packages</h3>
+                      <p className="text-sm text-gray-500">
+                        {filterPropertyType === 'all' 
+                          ? `${amcPackages.length} package(s) available` 
+                          : `${amcPackages.filter(p => p.property_type === filterPropertyType).length} package(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
+                      </p>
                     </div>
                   </div>
-                ))}
+                  
+                  {/* Property Type Filter */}
+                  <div className="flex gap-2 flex-wrap">
+                    <button onClick={() => setFilterPropertyType('all')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${filterPropertyType === 'all' ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>All</button>
+                    {PROPERTY_TYPE_OPTIONS.map((type) => (
+                      <button key={type.id} onClick={() => setFilterPropertyType(type.id)} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${filterPropertyType === type.id ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>{type.label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {amcPackages.length === 0 ? (
+                  <div className="p-12 text-center"><Package className="w-12 h-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-500">No AMC packages available</p></div>
+                ) : (filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => p.property_type === filterPropertyType)).length === 0 ? (
+                  <div className="p-8 text-center"><p className="text-gray-500">No packages found for this property type</p><button onClick={() => setFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">Show all packages</button></div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Package Name</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Property Type</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Billing</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Services Included</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Total Rate</th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {(filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => p.property_type === filterPropertyType)).map((pkg) => {
+                          const servicesText = pkg.services || (pkg.services_data ? pkg.services_data.map(s => s.name).join(', ') : '-');
+                          const getBillingBadgeColor = (billing) => {
+                            switch(billing) {
+                              case 'monthly': return 'bg-blue-100 text-blue-700 border-blue-200';
+                              case 'quarterly': return 'bg-purple-100 text-purple-700 border-purple-200';
+                              case 'half-yearly': return 'bg-amber-100 text-amber-700 border-amber-200';
+                              case 'yearly': return 'bg-green-100 text-green-700 border-green-200';
+                              default: return 'bg-gray-100 text-gray-700 border-gray-200';
+                            }
+                          };
+                          return (
+                            <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4"><span className="font-semibold text-gray-900">{pkg.name || 'Unnamed Package'}</span></td>
+                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{PROPERTY_TYPE_OPTIONS.find(t => t.id === pkg.property_type)?.label || pkg.property_type || '-'}</span></td>
+                              <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getBillingBadgeColor(pkg.billing_duration)}`}>{BILLING_DURATIONS.find(d => d.value === pkg.billing_duration)?.label || 'Monthly'}</span></td>
+                              <td className="px-4 py-4 max-w-xs"><p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText}</p></td>
+                              <td className="px-4 py-4 text-right"><span className="text-sm text-gray-400 italic flex items-center justify-end gap-1"><EyeOff className="w-3 h-3" /> Hidden</span></td>
+                              <td className="px-4 py-4">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button>
+                                  <button className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Export PDF"><Download className="w-4 h-4" /></button>
+                                  <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Email"><Mail className="w-4 h-4" /></button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {activeTab === 'addons' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {addons.length === 0 ? (
-                  <div className="col-span-full text-center py-12 bg-white rounded-xl border border-gray-100"><PlusCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No add-ons found</p></div>
-                ) : addons.map((addon) => (
-                  <div key={addon.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
-                    <h3 className="font-semibold text-gray-900">{addon.name}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{addon.description || 'No description'}</p>
-                    {addon.category_name && <span className="inline-block mt-2 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs">{addon.category_name}</span>}
-                    <div className="mt-4"><p className="text-sm font-medium text-gray-400 italic">Pricing Hidden</p></div>
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center"><PlusCircle className="w-5 h-5 text-slate-600" /></div>
+                <div><h1 className="text-xl font-bold text-gray-900">Add-ons</h1><p className="text-sm text-gray-500">Create optional services for AMC packages by property type</p></div>
+              </div>
+              {/* Tabs */}
+              <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+                <button className="px-5 py-2.5 text-sm font-medium rounded-lg bg-white text-slate-700 shadow-sm">
+                  <div className="flex items-center gap-2"><Layers className="w-4 h-4" />All Add-ons{addons.length > 0 && <span className="px-1.5 py-0.5 bg-slate-600 text-white rounded-full text-xs">{addons.length}</span>}</div>
+                </button>
+              </div>
+              {/* All Add-ons Table */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div><h3 className="text-lg font-semibold text-gray-800">All Add-ons</h3><p className="text-sm text-gray-500">{addonFilterPropertyType === 'all' ? `${addons.length} add-on(s) available` : `${addons.filter(a => a.property_type === addonFilterPropertyType).length} add-on(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === addonFilterPropertyType)?.label}`}</p></div>
                   </div>
-                ))}
+                  <div className="flex gap-2 flex-wrap">
+                    <button onClick={() => setAddonFilterPropertyType('all')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${addonFilterPropertyType === 'all' ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>All</button>
+                    {PROPERTY_TYPE_OPTIONS.map((type) => (<button key={type.id} onClick={() => setAddonFilterPropertyType(type.id)} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${addonFilterPropertyType === type.id ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>{type.label}</button>))}
+                  </div>
+                </div>
+                {addons.length === 0 ? (<div className="p-12 text-center"><PlusCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-500">No add-ons available</p></div>
+                ) : (addonFilterPropertyType === 'all' ? addons : addons.filter(a => a.property_type === addonFilterPropertyType)).length === 0 ? (<div className="p-8 text-center"><p className="text-gray-500">No add-ons found for this property type</p><button onClick={() => setAddonFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">Show all add-ons</button></div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Add-on Name</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Property Type</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Frequency</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">No.of Visits</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Total Rate</th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {(addonFilterPropertyType === 'all' ? addons : addons.filter(a => a.property_type === addonFilterPropertyType)).map((addon) => {
+                          const getFrequencyBadgeColor = (freq) => { switch(freq?.toLowerCase()) { case 'monthly': return 'bg-blue-100 text-blue-700 border-blue-200'; case 'every 2 months': return 'bg-cyan-100 text-cyan-700 border-cyan-200'; case 'quarterly': return 'bg-purple-100 text-purple-700 border-purple-200'; default: return 'bg-gray-100 text-gray-700 border-gray-200'; } };
+                          return (
+                            <tr key={addon.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4"><span className="font-semibold text-gray-900">{addon.name || 'Unnamed Add-on'}</span></td>
+                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{PROPERTY_TYPE_OPTIONS.find(t => t.id === addon.property_type)?.label || addon.property_type || '-'}</span></td>
+                              <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getFrequencyBadgeColor(addon.frequency_type || addon.frequency)}`}>{addon.frequency_type || addon.frequency || 'Monthly'}</span></td>
+                              <td className="px-4 py-4"><span className="text-sm text-gray-600">{addon.frequency_count || addon.visits || '12'}x</span></td>
+                              <td className="px-4 py-4 text-right"><span className="text-sm text-gray-400 italic flex items-center justify-end gap-1"><EyeOff className="w-3 h-3" /> Hidden</span></td>
+                              <td className="px-4 py-4"><div className="flex items-center justify-center gap-1"><button className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button><button className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button></div></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -313,14 +313,7 @@ const FPEmployees = ({ user }) => {
                   return (
                     <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-indigo-100 rounded-full flex items-center justify-center">
-                            <span className="text-indigo-600 font-semibold text-sm">
-                              {employee.name?.charAt(0).toUpperCase() || 'E'}
-                            </span>
-                          </div>
-                          <span className="font-medium text-gray-900">{employee.name}</span>
-                        </div>
+                        <span className="font-medium text-gray-900">{employee.name}</span>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
                         {employee.employee_code || employee.employeeId || employee.employee_id}

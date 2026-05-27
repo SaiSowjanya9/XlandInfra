@@ -145,6 +145,10 @@ const FPProperties = ({ user }) => {
     // Division filter
     if (selectedDivision && p.division !== selectedDivision) return false;
     
+    // Status filter
+    if (statusFilter === 'active' && p.status !== 'active') return false;
+    if (statusFilter === 'inactive' && p.status !== 'inactive') return false;
+    
     return true;
   });
 
@@ -181,34 +185,34 @@ const FPProperties = ({ user }) => {
         )}
 
         {/* Category Selection */}
-        <div className="bg-white rounded-xl border border-gray-100 p-8">
-          <div className="text-center mb-8">
-            <h2 className="text-xl font-semibold text-gray-900">Select Category</h2>
-            <p className="text-gray-500 mt-1">Choose the customer category to view</p>
+        <div className="bg-gray-50 rounded-2xl p-12">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
+            <p className="text-gray-500 mt-2">Choose the customer category to proceed</p>
           </div>
 
-          <div className="flex justify-center gap-6">
+          <div className="flex justify-center gap-8">
             {/* Residential Card */}
             <button
               onClick={() => setSelectedCategory('residential')}
-              className="w-48 p-6 border-2 border-teal-500 rounded-xl hover:shadow-lg transition-all duration-200 bg-white group"
+              className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
             >
-              <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
                 <Home className="w-7 h-7 text-white" />
               </div>
-              <p className="font-semibold text-gray-900">Residential</p>
+              <p className="text-lg font-semibold text-gray-900">Residential</p>
             </button>
 
             {/* Commercial Card - Coming Soon */}
-            <div className="w-48 p-6 border border-gray-200 rounded-xl bg-white relative cursor-not-allowed">
-              <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded-full border border-gray-200">
-                <Lock className="w-3 h-3 text-gray-400" />
-                <span className="text-xs text-gray-500">Coming Soon</span>
+            <div className="w-72 h-52 p-8 border border-gray-200 rounded-2xl bg-white relative cursor-not-allowed flex flex-col items-start justify-center">
+              <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
+                <Lock className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-xs font-medium text-gray-500">Coming Soon</span>
               </div>
-              <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mb-5">
                 <Building className="w-7 h-7 text-gray-400" />
               </div>
-              <p className="font-medium text-gray-400">Commercial</p>
+              <p className="text-lg font-medium text-gray-400">Commercial</p>
             </div>
           </div>
         </div>
@@ -282,20 +286,19 @@ const FPProperties = ({ user }) => {
         })}
       </div>
 
-      {/* Search and Filters - Hidden for FP Manager */}
-      {!isFPManager && (
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name, ID, zone, or address..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name, ID, zone, or address..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      
         <div className="relative">
           <select
             value={selectedDivision}
@@ -337,7 +340,6 @@ const FPProperties = ({ user }) => {
           <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         </div>
       </div>
-      )}
 
       {/* Properties Table */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">

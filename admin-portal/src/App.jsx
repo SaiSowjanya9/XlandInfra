@@ -353,9 +353,7 @@ function App() {
             <Route path="/manager/vendors" element={<ManagerVendors user={user} />} />
             <Route path="/manager/vendors/add" element={<ManagerAddVendor user={user} />} />
             <Route path="/manager/vendors/assigned" element={<AssignedVendors />} />
-            <Route path="/manager/employees" element={<ManagerEmployees user={user} />} />
-            <Route path="/manager/employees/add" element={<ManagerEmployees user={user} />} />
-            <Route path="/manager/employees/zones" element={<ManagerEmployeeZones user={user} />} />
+            <Route path="/manager/employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
             <Route path="/manager/estimates" element={<ManagerEstimates user={user} defaultTab="list" />} />
             <Route path="/manager/estimates/create" element={<ManagerEstimates user={user} defaultTab="create" />} />
             <Route path="/manager/estimates/amc" element={<ManagerEstimates user={user} defaultTab="amc" />} />
@@ -384,6 +382,7 @@ function App() {
             <Route path="/coordinator/vendors" element={<CoordinatorVendors user={user} />} />
             <Route path="/coordinator/vendors/add" element={<CoordinatorAddVendor user={user} />} />
             <Route path="/coordinator/vendors/assigned" element={<AssignedVendors />} />
+            <Route path="/coordinator/employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
             <Route path="/coordinator/estimates" element={<CoordinatorEstimates user={user} defaultTab="list" />} />
             <Route path="/coordinator/estimates/create" element={<CoordinatorEstimates user={user} defaultTab="create" />} />
             <Route path="/coordinator/estimates/archived" element={<CoordinatorEstimates user={user} defaultTab="archived" />} />
@@ -409,6 +408,7 @@ function App() {
             <Route path="/supervisor/vendors" element={<SupervisorVendors user={user} />} />
             <Route path="/supervisor/vendors/add" element={<SupervisorAddVendor user={user} />} />
             <Route path="/supervisor/vendors/assigned" element={<AssignedVendors />} />
+            <Route path="/supervisor/employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
             <Route path="/supervisor/estimates" element={<SupervisorEstimates user={user} defaultTab="list" />} />
             <Route path="/supervisor/estimates/create" element={<SupervisorEstimates user={user} defaultTab="create" />} />
             <Route path="/supervisor/estimates/archived" element={<SupervisorEstimates user={user} defaultTab="archived" />} />
@@ -434,6 +434,7 @@ function App() {
             <Route path="/executive/vendors" element={<ExecutiveVendors user={user} />} />
             <Route path="/executive/vendors/add" element={<ExecutiveAddVendor user={user} />} />
             <Route path="/executive/vendors/assigned" element={<AssignedVendors />} />
+            <Route path="/executive/employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
             <Route path="/executive/estimates" element={<ExecutiveEstimates user={user} defaultTab="list" />} />
             <Route path="/executive/estimates/create" element={<ExecutiveEstimates user={user} defaultTab="create" />} />
             <Route path="/executive/estimates/archived" element={<ExecutiveEstimates user={user} defaultTab="archived" />} />

@@ -352,16 +352,9 @@ const FPEmployeeZones = ({ user }) => {
               >
                 {/* Employee Header */}
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
-                      <span className="text-white font-bold text-lg">
-                        {employee.name?.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{employee.name}</h3>
-                      <p className="text-xs font-mono text-gray-500">{employee.employeeId || employee.employee_id}</p>
-                    </div>
+                  <div>
+                    <p className="text-xs font-mono text-gray-500 mb-1">{employee.employeeId || employee.employee_id || employee.employee_code}</p>
+                    <h3 className="font-semibold text-gray-900">{employee.name}</h3>
                   </div>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                     hasZones
@@ -429,16 +422,10 @@ const FPEmployeeZones = ({ user }) => {
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <span className="text-white font-bold text-xl">
-                      {selectedEmployee.name?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">{selectedEmployee.name}</h2>
-                    <p className="text-sm text-gray-500">{selectedEmployee.email}</p>
-                  </div>
+                <div>
+                  <p className="text-xs font-mono text-gray-500 mb-1">{selectedEmployee.employeeId || selectedEmployee.employee_id || selectedEmployee.employee_code}</p>
+                  <h2 className="text-xl font-bold text-gray-900">{selectedEmployee.name}</h2>
+                  <p className="text-sm text-gray-500">{selectedEmployee.email}</p>
                 </div>
                 <button onClick={closeModal} className="p-2 hover:bg-white/50 rounded-lg transition-colors">
                   <X className="w-5 h-5 text-gray-500" />

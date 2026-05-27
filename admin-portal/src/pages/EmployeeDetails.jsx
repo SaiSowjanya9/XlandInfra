@@ -51,14 +51,42 @@ const EmployeeDetails = () => {
   const [viewEmployee, setViewEmployee] = useState(null);
   const [editEmployee, setEditEmployee] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const token = sessionStorage.getItem('pm_auth_token');
 
   useEffect(() => {
     loadData();
   }, [statusFilter]);
 
-  const loadData = () => {
-    setEmployees(getEmployees(statusFilter));
-    setZones(getZones('active'));
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Fetch employees from API
+      const response = await fetch('/api/staff', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        let empList = result.data || [];
+        // Filter by status
+        if (statusFilter !== 'all') {
+          empList = empList.filter(e => (e.status || (e.is_active ? 'active' : 'inactive')) === statusFilter);
+        }
+        setEmployees(empList);
+      } else {
+        // Fallback to localStorage if API fails
+        setEmployees(getEmployees(statusFilter));
+      }
+      setZones(getZones('active'));
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      // Fallback to localStorage
+      setEmployees(getEmployees(statusFilter));
+      setZones(getZones('active'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const showToast = (message, type = 'success') => {
@@ -66,31 +94,85 @@ const EmployeeDetails = () => {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleDeactivate = (employee) => {
-    const result = deactivateEmployee(employee.id);
-    if (result.success) {
-      showToast(`${employee.name} has been deactivated`);
-      loadData();
-    } else {
-      showToast(result.message, 'error');
+  const handleDeactivate = async (employee) => {
+    try {
+      const response = await fetch(`/api/staff/${employee.id}/status`, {
+        method: 'PATCH',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'inactive' })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast(`${employee.name} has been deactivated`);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to deactivate', 'error');
+      }
+    } catch (error) {
+      // Fallback to localStorage
+      const result = deactivateEmployee(employee.id);
+      if (result.success) {
+        showToast(`${employee.name} has been deactivated`);
+        loadData();
+      } else {
+        showToast(result.message, 'error');
+      }
     }
   };
 
-  const handleReactivate = (employee) => {
-    const result = reactivateEmployee(employee.id);
-    if (result.success) {
-      showToast(`${employee.name} has been reactivated`);
-      loadData();
-    } else {
-      showToast(result.message, 'error');
+  const handleReactivate = async (employee) => {
+    try {
+      const response = await fetch(`/api/staff/${employee.id}/status`, {
+        method: 'PATCH',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'active' })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast(`${employee.name} has been reactivated`);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to reactivate', 'error');
+      }
+    } catch (error) {
+      // Fallback to localStorage
+      const result = reactivateEmployee(employee.id);
+      if (result.success) {
+        showToast(`${employee.name} has been reactivated`);
+        loadData();
+      } else {
+        showToast(result.message, 'error');
+      }
     }
   };
 
-  const handleDelete = (employee) => {
-    deleteEmployee(employee.id);
-    showToast(`${employee.name} has been permanently deleted`);
-    setDeleteConfirm(null);
-    loadData();
+  const handleDelete = async (employee) => {
+    try {
+      const response = await fetch(`/api/staff/${employee.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast(`${employee.name} has been permanently deleted`);
+        setDeleteConfirm(null);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to delete', 'error');
+      }
+    } catch (error) {
+      // Fallback to localStorage
+      deleteEmployee(employee.id);
+      showToast(`${employee.name} has been permanently deleted`);
+      setDeleteConfirm(null);
+      loadData();
+    }
   };
 
   const goToZoneManagement = () => {
