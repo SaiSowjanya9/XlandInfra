@@ -18,7 +18,8 @@ import {
   Trash2,
   Truck,
   UserPlus,
-  RotateCcw
+  RotateCcw,
+  Store
 } from 'lucide-react';
 
 const FPWorkOrders = ({ user }) => {
@@ -33,7 +34,9 @@ const FPWorkOrders = ({ user }) => {
   const [activeTab, setActiveTab] = useState('pending');
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignType, setAssignType] = useState('vendor');
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const [employees, setEmployees] = useState([]);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [propertySearch, setPropertySearch] = useState('');
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
@@ -148,15 +151,30 @@ const FPWorkOrders = ({ user }) => {
 
       if (propData.success) setProperties(propData.data);
       if (catData.success) setCategories(catData.data);
-      if (vendData.success) setVendors(vendData.data.all || []);
+      if (vendData.success) setVendors(vendData.data?.all || vendData.data || []);
     } catch (error) {
       console.error('Fetch dependencies error:', error);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await fetch('/api/fp/employees', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setEmployees(result.data || []);
+      }
+    } catch (error) {
+      console.error('Fetch employees error:', error);
     }
   };
 
   useEffect(() => {
     fetchWorkOrders();
     fetchDependencies();
+    fetchEmployees();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -259,23 +277,33 @@ const FPWorkOrders = ({ user }) => {
     }
   };
 
-  const handleAssignVendor = async (vendorId) => {
+  const openAssignModal = (workOrder, type) => {
+    setSelectedWorkOrder(workOrder);
+    setAssignType(type);
+    setShowAssignModal(true);
+  };
+
+  const handleAssign = async (assigneeId) => {
     if (!selectedWorkOrder) return;
 
     try {
-      const response = await fetch(`/api/fp/work-orders/${selectedWorkOrder.id}/assign-vendor`, {
+      const endpoint = assignType === 'vendor'
+        ? `/api/fp/work-orders/${selectedWorkOrder.id}/assign-vendor`
+        : `/api/fp/work-orders/${selectedWorkOrder.id}/assign-employee`;
+
+      const response = await fetch(endpoint, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ vendorId })
+        body: JSON.stringify(assignType === 'vendor' ? { vendorId: assigneeId } : { employeeId: assigneeId })
       });
 
       const result = await response.json();
 
       if (result.success) {
-        setMessage({ type: 'success', text: 'Vendor assigned successfully!' });
+        setMessage({ type: 'success', text: `${assignType === 'vendor' ? 'Vendor' : 'Employee'} assigned successfully!` });
         setShowAssignModal(false);
         setSelectedWorkOrder(null);
         fetchWorkOrders();
@@ -283,7 +311,7 @@ const FPWorkOrders = ({ user }) => {
         setMessage({ type: 'error', text: result.message || 'Assignment failed' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to assign vendor' });
+      setMessage({ type: 'error', text: `Failed to assign ${assignType}` });
     }
   };
 
@@ -1006,18 +1034,18 @@ const FPWorkOrders = ({ user }) => {
                             {activeTab === 'pending' && !isFPManager && (
                               <>
                                 <button
-                                  onClick={() => setMessage({ type: 'info', text: 'Assign Vendor feature coming soon' })}
-                                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                  onClick={() => openAssignModal(wo, 'vendor')}
+                                  className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
                                   title="Assign Vendor"
                                 >
-                                  <Truck className="w-4 h-4 text-gray-500" />
+                                  <Truck className="w-4 h-4 text-purple-500" />
                                 </button>
                                 <button
-                                  onClick={() => setMessage({ type: 'info', text: 'Assign Employee feature coming soon' })}
-                                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                  onClick={() => openAssignModal(wo, 'employee')}
+                                  className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
                                   title="Assign Employee"
                                 >
-                                  <UserPlus className="w-4 h-4 text-gray-500" />
+                                  <UserPlus className="w-4 h-4 text-green-500" />
                                 </button>
                                 <button
                                   onClick={() => handleDeleteWorkOrder(wo.id)}
@@ -1141,13 +1169,15 @@ const FPWorkOrders = ({ user }) => {
         </div>
       )}
 
-      {/* Assign Vendor Modal */}
+      {/* Assign Vendor/Employee Modal */}
       {showAssignModal && selectedWorkOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Assign Vendor</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Assign {assignType === 'vendor' ? 'Vendor' : 'Employee'}
+                </h2>
                 <button onClick={() => { setShowAssignModal(false); setSelectedWorkOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
@@ -1158,22 +1188,36 @@ const FPWorkOrders = ({ user }) => {
             </div>
 
             <div className="p-6">
-              {vendors.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No vendors available</p>
+              {(assignType === 'vendor' ? vendors : employees).length === 0 ? (
+                <p className="text-gray-500 text-center py-4">
+                  No {assignType === 'vendor' ? 'vendors' : 'employees'} available
+                </p>
               ) : (
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {vendors.map((vendor) => (
+                  {(assignType === 'vendor' ? vendors : employees).map((item) => (
                     <button
-                      key={vendor.id}
-                      onClick={() => handleAssignVendor(vendor.id)}
+                      key={item.id}
+                      onClick={() => handleAssign(item.id)}
                       className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
                     >
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-purple-600" />
+                      <div className={`w-10 h-10 ${assignType === 'vendor' ? 'bg-purple-100' : 'bg-green-100'} rounded-full flex items-center justify-center`}>
+                        {assignType === 'vendor' ? (
+                          <Store className="w-5 h-5 text-purple-600" />
+                        ) : (
+                          <User className="w-5 h-5 text-green-600" />
+                        )}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{vendor.company_name}</p>
-                        <p className="text-sm text-gray-500">{vendor.contact_person || vendor.email}</p>
+                        <p className="font-medium text-gray-900">
+                          {assignType === 'vendor'
+                            ? (item.ownerName || item.owner_name || item.company_name || 'Unknown Vendor')
+                            : (`${item.first_name || ''} ${item.last_name || ''}`.trim() || item.name || 'Unknown Employee')}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {assignType === 'vendor'
+                            ? (item.serviceType || item.service_type || item.email || '-')
+                            : (item.role || item.email || '-')}
+                        </p>
                       </div>
                     </button>
                   ))}

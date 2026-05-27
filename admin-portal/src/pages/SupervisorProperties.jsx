@@ -335,15 +335,25 @@ const SupervisorProperties = ({ user }) => {
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-end">
-                        {/* View Details - Only action available for Supervisor */}
+                      <div className="flex items-center justify-end gap-1">
+                        {/* View Details */}
                         <button 
                           onClick={() => { setSelectedProperty(property); setShowAssignModal(true); setAssignType('view'); }}
-                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" 
+                          className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors" 
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        {/* Edit Property */}
+                        {property.can_modify && (
+                          <button 
+                            onClick={() => openEditModal(property)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" 
+                            title="Edit Property"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
