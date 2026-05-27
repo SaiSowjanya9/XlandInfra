@@ -501,38 +501,39 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
         )}
 
         {/* Category Selection Card */}
-        <div className="bg-white rounded-xl border border-gray-100 p-10">
+        <div className="bg-gray-50 rounded-2xl p-12">
           <div className="text-center mb-10">
-            <h2 className="text-xl font-semibold text-gray-900">Select Category</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
             <p className="text-gray-500 mt-2">Choose the customer category to proceed</p>
           </div>
 
           <div className="flex justify-center gap-8">
             {CATEGORIES.map((category) => {
               const Icon = category.icon;
-              return (
+              return category.locked ? (
+                <div
+                  key={category.id}
+                  className="w-72 h-52 p-8 border border-gray-200 rounded-2xl bg-white relative cursor-not-allowed flex flex-col items-start justify-center"
+                >
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
+                    <Lock className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-xs font-medium text-gray-500">Coming Soon</span>
+                  </div>
+                  <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mb-5">
+                    <Icon className="w-7 h-7 text-gray-400" />
+                  </div>
+                  <p className="text-lg font-medium text-gray-400">{category.name}</p>
+                </div>
+              ) : (
                 <button
                   key={category.id}
-                  onClick={() => !category.locked && setSelectedCategory(category.id)}
-                  disabled={category.locked}
-                  className={`relative flex flex-col items-center px-10 py-8 rounded-xl border-2 transition-all min-w-[180px] ${
-                    category.locked
-                      ? 'border-gray-200 bg-white cursor-not-allowed'
-                      : 'border-emerald-400 hover:border-emerald-500 hover:shadow-md cursor-pointer'
-                  }`}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
                 >
-                  {category.locked && (
-                    <span className="absolute top-3 right-3 flex items-center gap-1 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                      <Lock className="w-3 h-3" />
-                      Coming Soon
-                    </span>
-                  )}
-                  <div className={`w-16 h-16 ${category.locked ? 'bg-gray-100' : category.color} rounded-2xl flex items-center justify-center mb-6`}>
-                    <Icon className={`w-8 h-8 ${category.locked ? 'text-gray-400' : 'text-white'}`} />
+                  <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                    <Icon className="w-7 h-7 text-white" />
                   </div>
-                  <p className={`font-medium text-base ${category.locked ? 'text-gray-400' : 'text-gray-900'}`}>
-                    {category.name}
-                  </p>
+                  <p className="text-lg font-semibold text-gray-900">{category.name}</p>
                 </button>
               );
             })}

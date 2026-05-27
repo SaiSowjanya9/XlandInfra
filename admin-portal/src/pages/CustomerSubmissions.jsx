@@ -416,81 +416,39 @@ const CustomerSubmissions = () => {
         </div>
 
         {/* Category Selection Card */}
-        <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl shadow-sm border border-gray-100 p-10">
+        <div className="bg-gray-50 rounded-2xl p-12">
           <div className="text-center mb-10">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Category</h2>
-            <p className="text-gray-500 text-sm">Choose the customer category to view</p>
+            <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
+            <p className="text-gray-500 mt-2">Choose the customer category to proceed</p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+          <div className="flex justify-center gap-8">
             {CUSTOMER_CATEGORIES.map((category) => {
               const Icon = category.icon;
-              const isResidential = category.id === 'residential';
-              return (
+              return category.locked ? (
+                <div
+                  key={category.id}
+                  className="w-72 h-52 p-8 border border-gray-200 rounded-2xl bg-white relative cursor-not-allowed flex flex-col items-start justify-center"
+                >
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
+                    <Lock className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-xs font-medium text-gray-500">Coming Soon</span>
+                  </div>
+                  <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mb-5">
+                    <Icon className="w-7 h-7 text-gray-400" />
+                  </div>
+                  <p className="text-lg font-medium text-gray-400">{category.name}</p>
+                </div>
+              ) : (
                 <button
                   key={category.id}
-                  onClick={() => !category.locked && setSelectedCategory(category.id)}
-                  disabled={category.locked}
-                  className={`group relative overflow-hidden rounded-2xl transition-all duration-300 text-left ${
-                    category.locked
-                      ? 'cursor-not-allowed'
-                      : 'hover:shadow-xl hover:-translate-y-1 cursor-pointer'
-                  }`}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
                 >
-                  {/* Card Background */}
-                  <div className={`absolute inset-0 ${
-                    category.locked 
-                      ? 'bg-gradient-to-br from-gray-50 to-gray-100' 
-                      : isResidential 
-                        ? 'bg-gradient-to-br from-emerald-50 via-white to-teal-50 group-hover:from-emerald-100 group-hover:to-teal-100' 
-                        : 'bg-gradient-to-br from-blue-50 via-white to-indigo-50'
-                  } transition-all duration-300`} />
-                  
-                  {/* Border */}
-                  <div className={`absolute inset-0 rounded-2xl border-2 ${
-                    category.locked 
-                      ? 'border-gray-200' 
-                      : isResidential 
-                        ? 'border-emerald-200 group-hover:border-emerald-400' 
-                        : 'border-blue-200'
-                  } transition-colors duration-300`} />
-                  
-                  {/* Content */}
-                  <div className="relative p-8">
-                    {/* Coming Soon Badge */}
-                    {category.locked && (
-                      <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 bg-white/80 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
-                        <Lock className="w-3 h-3 text-gray-400" />
-                        <span className="text-xs font-medium text-gray-500">Coming Soon</span>
-                      </div>
-                    )}
-                    
-                    {/* Icon */}
-                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-5 shadow-lg ${
-                      category.locked 
-                        ? 'bg-gradient-to-br from-gray-300 to-gray-400' 
-                        : isResidential 
-                          ? 'bg-gradient-to-br from-emerald-500 to-teal-600 group-hover:scale-110 group-hover:shadow-emerald-200' 
-                          : 'bg-gradient-to-br from-blue-500 to-indigo-600'
-                    } transition-all duration-300`}>
-                      <Icon className="w-8 h-8 text-white" />
-                    </div>
-                    
-                    {/* Text */}
-                    <h3 className={`text-xl font-semibold ${
-                      category.locked ? 'text-gray-400' : 'text-gray-900'
-                    }`}>{category.name}</h3>
-                    
-                    {/* Subtle arrow indicator for active cards */}
-                    {!category.locked && (
-                      <div className="mt-4 flex items-center text-sm font-medium text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <span>View Properties</span>
-                        <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    )}
+                  <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                    <Icon className="w-7 h-7 text-white" />
                   </div>
+                  <p className="text-lg font-semibold text-gray-900">{category.name}</p>
                 </button>
               );
             })}
