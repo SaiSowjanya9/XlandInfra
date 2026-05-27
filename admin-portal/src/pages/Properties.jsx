@@ -71,11 +71,11 @@ const Properties = () => {
 
   const token = sessionStorage.getItem('pm_auth_token');
 
-  // Load properties from backend API
+  // Load properties from backend API (onboarding endpoint)
   const loadData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/properties', {
+      const response = await fetch('/api/onboarding', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -106,7 +106,7 @@ const Properties = () => {
   // Delete handler
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`/api/properties/${id}`, {
+      const response = await fetch(`/api/onboarding/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -514,6 +514,7 @@ const Properties = () => {
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Address</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">City</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Contacts</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created By</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created</th>
                   <th className="px-4 py-3 text-center font-medium text-gray-600 whitespace-nowrap">Actions</th>
                 </tr>
@@ -554,6 +555,9 @@ const Properties = () => {
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
                         {property.contacts?.length || 0}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                        {property.createdBy || 'System'}
                       </td>
                       <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                         {formatDate(property.createdAt)}

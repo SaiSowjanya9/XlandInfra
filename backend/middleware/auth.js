@@ -112,15 +112,25 @@ const authenticate = async (req, res, next) => {
         user = users[0];
       }
 
-      if (!user || user.is_active === false) {
+      // Check if user exists and is active (handle both boolean and integer values)
+      if (!user || user.is_active === false || user.is_active === 0) {
         return res.status(401).json({
           success: false,
           message: 'User account is inactive or does not exist.'
         });
       }
     } catch (dbError) {
-      // If database is not available, continue with token data
+      // If database is not available, continue with token data and set fpId from token
       console.log('Database check skipped:', dbError.message);
+      // Still set fpId from token if available
+      if (decoded.fpId || decoded.franchisePartnerId) {
+        req.fpId = decoded.fpId || decoded.franchisePartnerId;
+      }
+    }
+
+    // Ensure fpId is set from token if not already set from database
+    if (!req.fpId && (decoded.fpId || decoded.franchisePartnerId)) {
+      req.fpId = decoded.fpId || decoded.franchisePartnerId;
     }
 
     next();
