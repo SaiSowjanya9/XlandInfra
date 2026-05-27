@@ -215,19 +215,10 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
         COALESCE(p.division, 'General') as division,
         COALESCE(p.total_units, 1) as units,
         COALESCE(p.status, 'active') as status,
-        COALESCE(
-          e.name,
-          CONCAT(e.first_name, ' ', e.last_name),
-          fpe.name,
-          CONCAT(fpe.first_name, ' ', fpe.last_name),
-          p.created_by,
-          'System'
-        ) as created_by_name,
+        COALESCE(p.created_by, 'System') as created_by_name,
         CONCAT(COALESCE(p.contact_person, ''), CASE WHEN p.contact_phone IS NOT NULL THEN CONCAT(' | ', p.contact_phone) ELSE '' END) as contacts
        FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id
-       LEFT JOIN employees e ON p.created_by = e.id
-       LEFT JOIN fp_employees fpe ON p.created_by = fpe.id
        WHERE p.${scopeColumn} = ?
        ORDER BY p.created_at DESC`,
       [scopeId]

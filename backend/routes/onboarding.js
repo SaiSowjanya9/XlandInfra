@@ -179,29 +179,16 @@ router.post('/', authenticate, async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { status } = req.query;
-    let query = `SELECT op.*,
-      COALESCE(
-        u.name,
-        CONCAT(u.first_name, ' ', u.last_name),
-        fpe.name,
-        CONCAT(fpe.first_name, ' ', fpe.last_name),
-        e.name,
-        CONCAT(e.first_name, ' ', e.last_name),
-        op.created_by,
-        'System'
-      ) as created_by_name
-      FROM onboarded_properties op
-      LEFT JOIN users u ON op.created_by = u.id
-      LEFT JOIN fp_employees fpe ON op.created_by = fpe.id
-      LEFT JOIN employees e ON op.created_by = e.id`;
+    // Simple query without JOINs that might fail due to missing tables
+    let query = `SELECT * FROM onboarded_properties`;
     let params = [];
     
     if (status === 'all') {
-      query += ` ORDER BY op.created_at DESC`;
+      query += ` ORDER BY created_at DESC`;
     } else if (status === 'deleted') {
-      query += ` WHERE op.status = 'deleted' ORDER BY op.created_at DESC`;
+      query += ` WHERE status = 'deleted' ORDER BY created_at DESC`;
     } else {
-      query += ` WHERE op.status = 'active' ORDER BY op.created_at DESC`;
+      query += ` WHERE status = 'active' ORDER BY created_at DESC`;
     }
     
     const [rows] = await pool.execute(query, params);
@@ -261,7 +248,7 @@ router.get('/', async (req, res) => {
       notes: row.notes,
       contacts: contactsMap[row.id] || [],
       status: row.status,
-      createdBy: row.created_by_name || row.created_by || 'System',
+      createdBy: row.created_by || 'System',
       createdAt: row.created_at
     }));
 
