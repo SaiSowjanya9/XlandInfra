@@ -208,7 +208,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     const scopeColumn = getScopeColumn(req);
 
     // Get properties scoped to FP or Coordinator with all required fields
-    const [properties] = await pool.query(
+    const [regularProperties] = await pool.query(
       `SELECT p.*, 
         z.name as zone_name,
         COALESCE(p.area_name, p.city) as area,
@@ -216,7 +216,8 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
         COALESCE(p.total_units, 1) as units,
         COALESCE(p.status, 'active') as status,
         COALESCE(p.created_by, 'System') as created_by_name,
-        CONCAT(COALESCE(p.contact_person, ''), CASE WHEN p.contact_phone IS NOT NULL THEN CONCAT(' | ', p.contact_phone) ELSE '' END) as contacts
+        CONCAT(COALESCE(p.contact_person, ''), CASE WHEN p.contact_phone IS NOT NULL THEN CONCAT(' | ', p.contact_phone) ELSE '' END) as contacts,
+        'properties' as source_table
        FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id
        WHERE p.${scopeColumn} = ?
@@ -224,7 +225,29 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
       [scopeId]
     );
 
-    res.json({ success: true, data: properties });
+    // Also fetch from onboarded_properties
+    let onboardedProperties = [];
+    try {
+      const [rows] = await pool.execute(
+        `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
+                op.zone_id as zone_name, op.division, op.total_units as units,
+                op.address, op.city, op.state, op.pincode as zip_code,
+                op.contact_person, op.contact_phone, op.contact_email as email,
+                op.created_by as created_by_name, op.created_at, op.status,
+                'onboarded_properties' as source_table
+         FROM onboarded_properties op
+         WHERE op.${scopeColumn} = ? AND op.status = 'active'
+         ORDER BY op.created_at DESC`,
+        [scopeId]
+      );
+      onboardedProperties = rows;
+    } catch (e) {
+      console.log('onboarded_properties fetch error:', e.message);
+    }
+
+    const allProperties = [...regularProperties, ...onboardedProperties];
+
+    res.json({ success: true, data: allProperties });
   } catch (error) {
     console.error('Properties fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch properties' });

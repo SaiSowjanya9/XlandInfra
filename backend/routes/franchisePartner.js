@@ -241,7 +241,8 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
 // Get all FP properties
 router.get('/properties', requireFPScope, async (req, res) => {
   try {
-    const [properties] = await pool.execute(
+    // Fetch from properties table
+    const [regularProperties] = await pool.execute(
       `SELECT p.*,
         p.zone_id as zone_name,
         p.division_id as division,
@@ -253,16 +254,39 @@ router.get('/properties', requireFPScope, async (req, res) => {
         p.landmark,
         p.latitude,
         p.longitude,
-        COALESCE(p.created_by, 'System') as created_by_name
+        COALESCE(p.created_by, 'System') as created_by_name,
+        'properties' as source_table
        FROM properties p
        WHERE p.franchise_partner_id = ?
        ORDER BY p.created_at DESC`,
       [req.fpId]
     );
 
+    // Also fetch from onboarded_properties
+    let onboardedProperties = [];
+    try {
+      const [rows] = await pool.execute(
+        `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
+                op.zone_id as zone_name, op.division, op.total_units as units,
+                op.address, op.city, op.state, op.pincode as zip_code,
+                op.contact_person, op.contact_phone, op.contact_email as email,
+                op.created_by as created_by_name, op.created_at, op.status,
+                'onboarded_properties' as source_table
+         FROM onboarded_properties op
+         WHERE op.franchise_partner_id = ? AND op.status = 'active'
+         ORDER BY op.created_at DESC`,
+        [req.fpId]
+      );
+      onboardedProperties = rows;
+    } catch (e) {
+      console.log('onboarded_properties fetch error:', e.message);
+    }
+
+    const allProperties = [...regularProperties, ...onboardedProperties];
+
     res.json({
       success: true,
-      data: properties
+      data: allProperties
     });
   } catch (error) {
     console.error('Get properties error:', error);

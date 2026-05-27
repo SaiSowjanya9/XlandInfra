@@ -274,18 +274,41 @@ router.delete('/residents/:id', authenticate, adminOnly, async (req, res) => {
 // Get all properties (Admin, Manager can manage; Supervisor, Executive can view)
 router.get('/properties', authenticate, dataEntryRoles, async (req, res) => {
   try {
-    const [properties] = await pool.execute(
+    // Fetch from both properties and onboarded_properties tables
+    const [regularProperties] = await pool.execute(
       `SELECT p.*, 
               COALESCE(p.total_units, p.number_of_units, 1) as total_units,
               0 as occupied_units,
-              p.created_by as created_by_name
+              p.created_by as created_by_name,
+              'properties' as source_table
        FROM properties p 
        ORDER BY p.name`
     );
 
+    let onboardedProperties = [];
+    try {
+      const [rows] = await pool.execute(
+        `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
+                op.zone_id as zone, op.division, op.total_units, 0 as occupied_units,
+                op.address, op.city, op.state, op.pincode as zip_code,
+                op.contact_person, op.contact_phone, op.contact_email as email,
+                op.created_by as created_by_name, op.created_at, op.status,
+                'onboarded_properties' as source_table
+         FROM onboarded_properties op
+         WHERE op.status = 'active'
+         ORDER BY op.community_name`
+      );
+      onboardedProperties = rows;
+    } catch (e) {
+      console.log('onboarded_properties fetch error:', e.message);
+    }
+
+    // Combine both sources
+    const allProperties = [...regularProperties, ...onboardedProperties];
+
     res.json({
       success: true,
-      data: properties
+      data: allProperties
     });
   } catch (error) {
     console.error('Error fetching properties:', error);
