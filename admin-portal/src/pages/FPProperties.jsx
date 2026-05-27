@@ -418,61 +418,44 @@ const FPProperties = ({ user }) => {
                           {property.is_active !== false ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="py-3 px-4 relative">
-                        <button
-                          onClick={() => setActionDropdown(actionDropdown === property.id ? null : property.id)}
-                          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                          <MoreVertical className="w-4 h-4 text-gray-500" />
-                        </button>
-                        
-                        {actionDropdown === property.id && (
-                          <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                            <button
-                              onClick={() => {
-                                setSelectedProperty(property);
-                                setShowDetailsModal(true);
-                                setActionDropdown(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                            >
-                              <Eye className="w-4 h-4" />
-                              View Details
-                            </button>
-                            {!isFPManager && (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    setMessage({ type: 'info', text: 'Assign Vendor feature coming soon' });
-                                    setActionDropdown(null);
-                                  }}
-                                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                                >
-                                  <Truck className="w-4 h-4" />
-                                  Assign Vendor
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setMessage({ type: 'info', text: 'Assign Employee feature coming soon' });
-                                    setActionDropdown(null);
-                                  }}
-                                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                                >
-                                  <UserPlus className="w-4 h-4" />
-                                  Assign Employee
-                                </button>
-                                <div className="border-t border-gray-100 my-1"></div>
-                                <button
-                                  onClick={() => handleDeleteProperty(property.id)}
-                                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  Delete
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        )}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              setSelectedProperty(property);
+                              setShowDetailsModal(true);
+                            }}
+                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4 text-gray-500" />
+                          </button>
+                          {!isFPManager && (
+                            <>
+                              <button
+                                onClick={() => setMessage({ type: 'info', text: 'Assign Vendor feature coming soon' })}
+                                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="Assign Vendor"
+                              >
+                                <Truck className="w-4 h-4 text-gray-500" />
+                              </button>
+                              <button
+                                onClick={() => setMessage({ type: 'info', text: 'Assign Employee feature coming soon' })}
+                                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="Assign Employee"
+                              >
+                                <UserPlus className="w-4 h-4 text-gray-500" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProperty(property.id)}
+                                className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

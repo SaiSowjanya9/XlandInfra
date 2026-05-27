@@ -1098,7 +1098,7 @@ router.delete('/vendors/:id', requireFPScope, async (req, res) => {
 router.get('/employees', requireFPScope, async (req, res) => {
   try {
     const [employees] = await pool.execute(
-      `SELECT e.*, GROUP_CONCAT(z.name) as zone_names
+      `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name, GROUP_CONCAT(z.name) as zone_names
        FROM fp_employees e
        LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id
        LEFT JOIN zones z ON ez.zone_id = z.id
@@ -1394,6 +1394,68 @@ router.post('/employees', requireFPScope, async (req, res) => {
       message: 'Failed to create employee account',
       error: error.message
     });
+  }
+});
+
+// Get single employee for editing
+router.get('/employees/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [employees] = await pool.execute(
+      `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name
+       FROM fp_employees e
+       WHERE e.id = ? AND e.franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+    
+    if (employees.length === 0) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+    
+    res.json({ success: true, data: employees[0] });
+  } catch (error) {
+    console.error('Get employee error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update employee details
+router.put('/employees/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { firstName, lastName, email, phone, countryCode, aadhaar, role } = req.body;
+    
+    // Verify employee belongs to this FP
+    const [existing] = await pool.execute(
+      'SELECT id, user_id FROM fp_employees WHERE id = ? AND franchise_partner_id = ?',
+      [id, req.fpId]
+    );
+    
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+    
+    // Update fp_employees table
+    await pool.execute(
+      `UPDATE fp_employees SET 
+        first_name = ?, last_name = ?, email = ?, phone = ?, 
+        country_code = ?, aadhaar = ?, role = ?, updated_at = NOW()
+       WHERE id = ? AND franchise_partner_id = ?`,
+      [firstName, lastName, email, phone, countryCode || '+91', aadhaar || null, role || 'field_staff', id, req.fpId]
+    );
+    
+    // Also update linked user account if exists
+    if (existing[0].user_id) {
+      await pool.execute(
+        `UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?`,
+        [`${firstName} ${lastName}`, email, phone, existing[0].user_id]
+      );
+    }
+    
+    res.json({ success: true, message: 'Employee updated successfully' });
+  } catch (error) {
+    console.error('Update employee error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

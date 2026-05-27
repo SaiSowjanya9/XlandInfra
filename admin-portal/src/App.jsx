@@ -31,6 +31,7 @@ import FPVendors from './pages/FPVendors';
 import FPAddVendor from './pages/FPAddVendor';
 import FPEmployees from './pages/FPEmployees';
 import FPAddEmployee from './pages/FPAddEmployee';
+import FPEditEmployee from './pages/FPEditEmployee';
 import FPEmployeeZones from './pages/FPEmployeeZones';
 import FPEstimates from './pages/FPEstimates';
 import FPCustomers from './pages/FPCustomers';
@@ -324,6 +325,7 @@ function App() {
             <Route path="/fp/vendors/assigned" element={<AssignedVendors user={user} />} />
             <Route path="/fp/employees" element={<FPEmployees user={user} />} />
             <Route path="/fp/employees/add" element={<FPAddEmployee user={user} />} />
+            <Route path="/fp/employees/edit/:id" element={<FPEditEmployee user={user} />} />
             <Route path="/fp/employees/zones" element={<FPEmployeeZones user={user} />} />
             <Route path="/fp/estimates" element={<FPEstimates user={user} defaultTab="list" />} />
             <Route path="/fp/estimates/create" element={<FPEstimates user={user} defaultTab="create" />} />
