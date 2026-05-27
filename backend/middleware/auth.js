@@ -21,17 +21,20 @@ const generateToken = (user) => {
     lastName: user.last_name || user.lastName
   };
   
-  // Include FP-specific fields if present
-  if (user.fpId) {
-    payload.fpId = user.fpId;
-    payload.franchisePartnerId = user.fpId;
+  // Include FP-specific fields if present (check both camelCase and snake_case)
+  const fpId = user.fpId || user.franchise_partner_id || user.franchisePartnerId;
+  if (fpId) {
+    payload.fpId = fpId;
+    payload.franchisePartnerId = fpId;
   }
-  if (user.franchisePartnerId) {
-    payload.franchisePartnerId = user.franchisePartnerId;
+  if (user.userId || user.user_id) {
+    payload.userId = user.userId || user.user_id;
   }
-  if (user.userId) {
-    payload.userId = user.userId;
-  }
+  // Include coordinatorId, managerId, supervisorId, executiveId if present
+  if (user.coordinatorId) payload.coordinatorId = user.coordinatorId;
+  if (user.managerId) payload.managerId = user.managerId;
+  if (user.supervisorId) payload.supervisorId = user.supervisorId;
+  if (user.executiveId) payload.executiveId = user.executiveId;
   
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 };
