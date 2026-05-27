@@ -2330,13 +2330,62 @@ router.get('/export/:type', requireFPScope, async (req, res) => {
 
 router.get('/zones', requireFPScope, async (req, res) => {
   try {
-    const [zones] = await pool.execute(
-      'SELECT * FROM zones WHERE is_active = TRUE ORDER BY name'
+    // Get zones from global zones table
+    const [globalZones] = await pool.execute(
+      'SELECT id, name FROM zones WHERE is_active = TRUE'
     );
+
+    // Get zones from FP's properties (custom zones entered by FP)
+    const [propertyZones] = await pool.execute(
+      `SELECT DISTINCT zone_id as name FROM properties 
+       WHERE franchise_partner_id = ? AND zone_id IS NOT NULL AND zone_id != ''`,
+      [req.fpId]
+    );
+
+    // Get zones from FP zones table if exists
+    let fpZones = [];
+    try {
+      const [fz] = await pool.execute(
+        'SELECT id, name FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1',
+        [req.fpId]
+      );
+      fpZones = fz;
+    } catch (_) {}
+
+    // Combine and deduplicate
+    const allZoneNames = new Set();
+    const combinedZones = [];
+
+    // Add global zones
+    globalZones.forEach(z => {
+      if (!allZoneNames.has(z.name)) {
+        allZoneNames.add(z.name);
+        combinedZones.push({ id: z.id, name: z.name });
+      }
+    });
+
+    // Add FP zones
+    fpZones.forEach(z => {
+      if (!allZoneNames.has(z.name)) {
+        allZoneNames.add(z.name);
+        combinedZones.push({ id: z.id, name: z.name });
+      }
+    });
+
+    // Add property zones (custom entered)
+    propertyZones.forEach(z => {
+      if (z.name && !allZoneNames.has(z.name)) {
+        allZoneNames.add(z.name);
+        combinedZones.push({ id: `custom-${z.name}`, name: z.name });
+      }
+    });
+
+    // Sort by name
+    combinedZones.sort((a, b) => a.name.localeCompare(b.name));
 
     res.json({
       success: true,
-      data: zones
+      data: combinedZones
     });
   } catch (error) {
     console.error('Get zones error:', error);

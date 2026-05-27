@@ -965,8 +965,55 @@ router.post('/addons', requireExecutiveScope, async (req, res) => {
 // =====================================================
 router.get('/zones', requireExecutiveScope, async (req, res) => {
   try {
-    const [zones] = await pool.query('SELECT * FROM zones WHERE is_active = TRUE ORDER BY name');
-    res.json({ success: true, data: zones });
+    // Get global zones
+    const [globalZones] = await pool.query('SELECT id, name FROM zones WHERE is_active = TRUE');
+    
+    // Get zones from executive's properties
+    const [propertyZones] = await pool.query(
+      `SELECT DISTINCT zone_id as name FROM properties 
+       WHERE executive_id = ? AND zone_id IS NOT NULL AND zone_id != ''`,
+      [req.executiveId]
+    );
+
+    // Get FP zones if executive belongs to FP
+    let fpZones = [];
+    if (req.franchisePartnerId) {
+      try {
+        const [fz] = await pool.query(
+          'SELECT id, name FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1',
+          [req.franchisePartnerId]
+        );
+        fpZones = fz;
+      } catch (_) {}
+    }
+
+    // Combine and deduplicate
+    const allZoneNames = new Set();
+    const combinedZones = [];
+
+    globalZones.forEach(z => {
+      if (!allZoneNames.has(z.name)) {
+        allZoneNames.add(z.name);
+        combinedZones.push({ id: z.id, name: z.name });
+      }
+    });
+
+    fpZones.forEach(z => {
+      if (!allZoneNames.has(z.name)) {
+        allZoneNames.add(z.name);
+        combinedZones.push({ id: z.id, name: z.name });
+      }
+    });
+
+    propertyZones.forEach(z => {
+      if (z.name && !allZoneNames.has(z.name)) {
+        allZoneNames.add(z.name);
+        combinedZones.push({ id: `custom-${z.name}`, name: z.name });
+      }
+    });
+
+    combinedZones.sort((a, b) => a.name.localeCompare(b.name));
+    res.json({ success: true, data: combinedZones });
   } catch (error) {
     console.error('Zones fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch zones' });
