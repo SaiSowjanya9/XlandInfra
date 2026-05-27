@@ -17,6 +17,7 @@ import {
   Trash2,
   ExternalLink,
   UserPlus,
+  Edit2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -370,9 +371,16 @@ const FPEmployees = ({ user }) => {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {/* Deactivate/Reactivate/Delete buttons - Hidden for FP Manager */}
+                          {/* Modify/Deactivate/Reactivate/Delete buttons - Hidden for FP Manager */}
                           {!isFPManager && (
                             <>
+                              <button
+                                onClick={() => navigate(`/fp/employees/edit/${employee.id}`)}
+                                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                title="Modify"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
                               {empStatus === 'active' ? (
                                 <button
                                   onClick={() => handleDeactivate(employee)}
