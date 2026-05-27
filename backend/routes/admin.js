@@ -274,14 +274,15 @@ router.delete('/residents/:id', authenticate, adminOnly, async (req, res) => {
 // Get all properties (Admin, Manager can manage; Supervisor, Executive can view)
 router.get('/properties', authenticate, dataEntryRoles, async (req, res) => {
   try {
-    // Fetch from both properties and onboarded_properties tables
+    // Fetch from both properties and onboarded_properties tables with creator name
     const [regularProperties] = await pool.execute(
       `SELECT p.*, 
               COALESCE(p.total_units, p.number_of_units, 1) as total_units,
               0 as occupied_units,
-              p.created_by as created_by_name,
+              COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'properties' as source_table
        FROM properties p 
+       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
        ORDER BY p.name`
     );
 
@@ -292,9 +293,11 @@ router.get('/properties', authenticate, dataEntryRoles, async (req, res) => {
                 op.zone_id as zone, op.division, op.total_units, 0 as occupied_units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
-                op.created_by as created_by_name, op.created_at, op.status,
+                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
+                op.created_at, op.status,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
+         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
          WHERE op.status = 'active'
          ORDER BY op.community_name`
       );

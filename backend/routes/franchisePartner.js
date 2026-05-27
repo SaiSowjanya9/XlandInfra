@@ -241,7 +241,7 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
 // Get all FP properties
 router.get('/properties', requireFPScope, async (req, res) => {
   try {
-    // Fetch from properties table
+    // Fetch from properties table with creator name
     const [regularProperties] = await pool.execute(
       `SELECT p.*,
         p.zone_id as zone_name,
@@ -254,15 +254,16 @@ router.get('/properties', requireFPScope, async (req, res) => {
         p.landmark,
         p.latitude,
         p.longitude,
-        COALESCE(p.created_by, 'System') as created_by_name,
+        COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
         'properties' as source_table
        FROM properties p
+       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE p.franchise_partner_id = ?
        ORDER BY p.created_at DESC`,
       [req.fpId]
     );
 
-    // Also fetch from onboarded_properties
+    // Also fetch from onboarded_properties with creator name
     let onboardedProperties = [];
     try {
       const [rows] = await pool.execute(
@@ -270,9 +271,11 @@ router.get('/properties', requireFPScope, async (req, res) => {
                 op.zone_id as zone_name, op.division, op.total_units as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
-                op.created_by as created_by_name, op.created_at, op.status,
+                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
+                op.created_at, op.status,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
+         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
          WHERE op.franchise_partner_id = ? AND op.status = 'active'
          ORDER BY op.created_at DESC`,
         [req.fpId]
@@ -518,11 +521,25 @@ router.post('/work-orders', requireFPScope, async (req, res) => {
       permissionToEnter, hasPet, scheduledDate
     } = req.body;
 
-    // Validate property belongs to FP
-    const [property] = await pool.execute(
-      'SELECT id FROM properties WHERE id = ? AND franchise_partner_id = ?',
-      [propertyId, req.fpId]
+    // Validate property belongs to FP - check both tables
+    let property = [];
+    
+    // Check properties table first
+    const [regularProp] = await pool.execute(
+      'SELECT id FROM properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
+      [propertyId, propertyId, req.fpId]
     );
+    
+    if (regularProp.length > 0) {
+      property = regularProp;
+    } else {
+      // Check onboarded_properties table
+      const [onboardedProp] = await pool.execute(
+        'SELECT id FROM onboarded_properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
+        [propertyId, propertyId, req.fpId]
+      );
+      property = onboardedProp;
+    }
 
     if (property.length === 0) {
       return res.status(403).json({
