@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList,
   Plus,
@@ -40,6 +40,9 @@ const ManagerWorkOrders = ({ user }) => {
     description: '',
     priority: 'medium'
   });
+
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -782,6 +785,7 @@ const ManagerWorkOrders = ({ user }) => {
                 </button>
                 <button
                   type="button"
+                  onClick={() => cameraInputRef.current?.click()}
                   className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all"
                 >
                   <Camera className="w-8 h-8 text-gray-400 mb-2" />
@@ -801,6 +805,14 @@ const ManagerWorkOrders = ({ user }) => {
                 type="file"
                 multiple
                 accept="image/*,.pdf,.doc,.docx"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
                 onChange={handleFileSelect}
                 className="hidden"
               />
