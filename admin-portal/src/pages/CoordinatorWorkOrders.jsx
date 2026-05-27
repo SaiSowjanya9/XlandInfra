@@ -57,6 +57,7 @@ const CoordinatorWorkOrders = ({ user }) => {
   const [employees, setEmployees] = useState([]);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [propertySearch, setPropertySearch] = useState('');
+  const [attachments, setAttachments] = useState([]);
   const [formData, setFormData] = useState({
     propertyId: '',
     categoryId: '',
@@ -126,7 +127,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     try {
       const [propRes, catRes, custRes, vendRes, empRes] = await Promise.all([
         fetch('/api/coordinator/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/coordinator/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/coordinator/customers', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/coordinator/vendors', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/coordinator/employees', { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ json: () => ({ success: false }) }))
@@ -332,22 +333,27 @@ const CoordinatorWorkOrders = ({ user }) => {
       categoryId: '',
       subcategoryId: '',
       clientId: '',
+      customerName: '',
+      customerEmail: '',
+      customerPhone: '',
       title: '',
       description: '',
       priority: 'medium',
-      permissionToEnter: 'no',
-      hasPet: 'no',
+      permissionToEnter: '',
+      hasPet: '',
+      entryNotes: '',
       scheduledDate: ''
     });
     setSubcategories([]);
+    setAttachments([]);
+    setPropertySearch('');
   };
 
   // Handle category change to load subcategories
-  const handleCategoryChange = async (categoryId) => {
-    setFormData({ ...formData, categoryId, subcategoryId: '' });
+  const fetchSubcategories = async (categoryId) => {
     if (categoryId) {
       try {
-        const response = await fetch(`/api/coordinator/categories/${categoryId}/subcategories`, {
+        const response = await fetch(`/api/categories/${categoryId}/subcategories`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await response.json();
@@ -743,28 +749,78 @@ const CoordinatorWorkOrders = ({ user }) => {
                 Attachments <span className="text-gray-400">(Optional - max 5 files)</span>
               </label>
               <div className="grid grid-cols-3 gap-3">
-                <button
-                  type="button"
-                  className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors"
-                >
+                <label className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (attachments.length + files.length <= 5) {
+                        setAttachments([...attachments, ...files]);
+                      } else {
+                        setMessage({ type: 'error', text: 'Maximum 5 files allowed' });
+                      }
+                    }}
+                  />
                   <Image className="w-6 h-6 text-gray-400 mb-1" />
                   <span className="text-sm text-gray-500">Gallery</span>
-                </button>
-                <button
-                  type="button"
-                  className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors"
-                >
+                </label>
+                <label className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (attachments.length + files.length <= 5) {
+                        setAttachments([...attachments, ...files]);
+                      } else {
+                        setMessage({ type: 'error', text: 'Maximum 5 files allowed' });
+                      }
+                    }}
+                  />
                   <Camera className="w-6 h-6 text-gray-400 mb-1" />
                   <span className="text-sm text-gray-500">Camera</span>
-                </button>
-                <button
-                  type="button"
-                  className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors"
-                >
+                </label>
+                <label className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (attachments.length + files.length <= 5) {
+                        setAttachments([...attachments, ...files]);
+                      } else {
+                        setMessage({ type: 'error', text: 'Maximum 5 files allowed' });
+                      }
+                    }}
+                  />
                   <FileText className="w-6 h-6 text-gray-400 mb-1" />
                   <span className="text-sm text-gray-500">Files</span>
-                </button>
+                </label>
               </div>
+              {/* Show selected files */}
+              {attachments.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {attachments.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
+                      <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Submit Button */}

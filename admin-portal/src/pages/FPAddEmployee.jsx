@@ -7,6 +7,7 @@ import {
   Send,
   Key,
   MapPin,
+  ChevronDown,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -251,17 +252,20 @@ const FPAddEmployee = ({ user }) => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Employee Role <span className="text-red-500">*</span>
             </label>
-            <select
-              value={formData.role}
-              onChange={(e) => updateField('role', e.target.value)}
-              className={`w-full md:w-1/2 px-4 py-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none appearance-none bg-white ${
-                errors.role ? 'border-red-300 bg-red-50' : 'border-gray-300'
-              }`}
-            >
-              {EMPLOYEE_ROLES.map(role => (
-                <option key={role.value} value={role.value}>{role.label}</option>
-              ))}
-            </select>
+            <div className="relative w-full md:w-1/2">
+              <select
+                value={formData.role}
+                onChange={(e) => updateField('role', e.target.value)}
+                className={`w-full px-4 py-3 pr-10 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none appearance-none bg-white cursor-pointer ${
+                  errors.role ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
+              >
+                {EMPLOYEE_ROLES.map(role => (
+                  <option key={role.value} value={role.value}>{role.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            </div>
             {selectedRole && (
               <p className="text-sm text-gray-500 mt-2">{selectedRole.description}</p>
             )}

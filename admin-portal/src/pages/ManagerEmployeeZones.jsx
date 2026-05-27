@@ -11,7 +11,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 
-const ManagerEmployeeZones = ({ user }) => {
+const ManagerEmployeeZones = ({ user, viewOnly = false }) => {
   const [employees, setEmployees] = useState([]);
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -214,7 +214,7 @@ const ManagerEmployeeZones = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Assigned Zones</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                  {!viewOnly && <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -266,6 +266,7 @@ const ManagerEmployeeZones = ({ user }) => {
                         </span>
                       )}
                     </td>
+                    {!viewOnly && (
                     <td className="py-4 px-4">
                       <div className="flex justify-end">
                         <button
@@ -277,6 +278,7 @@ const ManagerEmployeeZones = ({ user }) => {
                         </button>
                       </div>
                     </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -285,8 +287,8 @@ const ManagerEmployeeZones = ({ user }) => {
         )}
       </div>
 
-      {/* Assign Zones Modal */}
-      {showAssignModal && selectedEmployee && (
+      {/* Assign Zones Modal - Only show when not in viewOnly mode */}
+      {!viewOnly && showAssignModal && selectedEmployee && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-lg w-full max-h-[80vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">

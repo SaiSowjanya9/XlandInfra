@@ -51,15 +51,12 @@ const FPLayout = ({ admin, onLogout, children }) => {
     location.pathname.startsWith('/fp/estimates')
   );
 
-  const [customerOpen, setCustomerOpen] = useState(
-    location.pathname.startsWith('/fp/customers')
-  );
-
-  // Base nav items
+  // Base nav items - Add Customer is standalone (not expandable)
   const navItems = [
     { path: '/fp', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/fp/properties', icon: Building2, label: 'Property Management' },
     { path: '/fp/work-orders', icon: ClipboardList, label: 'Work Orders' },
+    { path: '/fp/customers/add', icon: UserPlus, label: 'Add Customer' },
   ];
 
 
@@ -96,16 +93,9 @@ const FPLayout = ({ admin, onLogout, children }) => {
   
   const estimatesSubItems = allEstimatesSubItems;
 
-  // Customer sub-items
-  const customerSubItems = [
-    { path: '/fp/customers/add', icon: UserPlus, label: 'Add Customer' },
-    { path: '/fp/customers', icon: List, label: 'Customer List' },
-  ];
-
   const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEmployeeSectionActive = employeeSubItems.some(item => location.pathname === item.path);
   const isEstimatesSectionActive = estimatesSubItems.some(item => location.pathname === item.path);
-  const isCustomerSectionActive = customerSubItems.some(item => location.pathname === item.path);
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
@@ -190,35 +180,6 @@ const FPLayout = ({ admin, onLogout, children }) => {
             {navItems.map((item) => (
               <NavLink key={item.path} item={item} mobile />
             ))}
-
-            {/* Customer Management Section */}
-            <div className="mt-2">
-              <button
-                onClick={() => setCustomerOpen(!customerOpen)}
-                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
-                  isCustomerSectionActive && !customerOpen
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <Home className="w-5 h-5" />
-                  <span className="font-medium">Customer Management</span>
-                </div>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    customerOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-              {customerOpen && (
-                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
-                  {customerSubItems.map((item) => (
-                    <NavLink key={item.path} item={item} mobile />
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Vendor Management Section */}
             <div className="mt-2">

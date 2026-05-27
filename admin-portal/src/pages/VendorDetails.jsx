@@ -6,7 +6,6 @@ import {
   Settings, Flame, ArrowUpDown, Droplets, Trash, Waves,
   FileCheck, Edit3, Save
 } from 'lucide-react';
-import { getVendors, deleteVendor, updateVendor, getVendorNotifications, markAllVendorNotificationsRead } from '../utils/vendorStore';
 import * as XLSX from 'xlsx';
 
 // Service Type Tabs (like Client Submissions tabs)
@@ -37,14 +36,23 @@ const VendorDetails = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [toast, setToast] = useState(null);
 
+  const token = sessionStorage.getItem('pm_auth_token');
+
   // Load vendors from backend API
   const loadData = async () => {
     setLoading(true);
     setFetchError(null);
     try {
-      const data = await getVendors(statusFilter);
-      setVendors(data);
-      setNotifications(getVendorNotifications());
+      const response = await fetch(`/api/vendors?status=${statusFilter}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setVendors(result.data || []);
+      } else {
+        setVendors([]);
+      }
+      setNotifications([]);
     } catch (error) {
       console.error('Error fetching vendors:', error);
       setFetchError('Failed to load vendors. Please check if the backend server is running.');
@@ -65,19 +73,27 @@ const VendorDetails = () => {
   };
 
   const handleDelete = async (id) => {
-    const success = await deleteVendor(id);
-    if (success) {
-      await loadData();
-      showToast('Vendor deleted successfully');
-    } else {
+    try {
+      const response = await fetch(`/api/vendors/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        await loadData();
+        showToast('Vendor deleted successfully');
+      } else {
+        showToast(result.message || 'Failed to delete vendor', 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting vendor:', error);
       showToast('Failed to delete vendor', 'error');
     }
     setDeleteConfirm(null);
   };
 
   const handleMarkAllRead = () => {
-    markAllVendorNotificationsRead();
-    setNotifications(getVendorNotifications());
+    setNotifications([]);
   };
 
   const handleOpenEdit = (vendor) => {
@@ -110,10 +126,22 @@ const VendorDetails = () => {
     if (!editVendor) return;
     setSaving(true);
     try {
-      await updateVendor(editVendor.vendorId, editForm);
-      showToast('Vendor updated successfully');
-      setEditVendor(null);
-      await loadData();
+      const response = await fetch(`/api/vendors/${editVendor.id || editVendor.vendorId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(editForm)
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Vendor updated successfully');
+        setEditVendor(null);
+        await loadData();
+      } else {
+        showToast(result.message || 'Failed to update vendor', 'error');
+      }
     } catch (error) {
       console.error('Error updating vendor:', error);
       showToast('Failed to update vendor', 'error');

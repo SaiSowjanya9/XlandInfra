@@ -14,12 +14,8 @@ import {
   CheckCircle2,
   XCircle,
   Layers,
+  RefreshCw,
 } from 'lucide-react';
-import {
-  getEmployees,
-  updateEmployeeZones,
-} from '../utils/employeeStore';
-import { getZones } from '../utils/zoneStore';
 
 const EmployeeZoneManagement = () => {
   const [employees, setEmployees] = useState([]);
@@ -30,31 +26,55 @@ const EmployeeZoneManagement = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [selectedZones, setSelectedZones] = useState([]);
   const [assignedZonesMap, setAssignedZonesMap] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  const token = sessionStorage.getItem('pm_auth_token');
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    const allEmployees = getEmployees('active');
-    const allZones = getZones('active');
-    setEmployees(allEmployees);
-    setZones(allZones);
-    
-    // Build a map of which zones are assigned to which employees
-    const zoneMap = {};
-    allEmployees.forEach(emp => {
-      if (emp.assignedZones === 'all') {
-        allZones.forEach(zone => {
-          zoneMap[zone.name] = { employeeId: emp.id, employeeName: emp.name };
-        });
-      } else if (Array.isArray(emp.assignedZones)) {
-        emp.assignedZones.forEach(zoneName => {
-          zoneMap[zoneName] = { employeeId: emp.id, employeeName: emp.name };
-        });
-      }
-    });
-    setAssignedZonesMap(zoneMap);
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Fetch employees and zones from API
+      const [empResponse, zoneResponse] = await Promise.all([
+        fetch('/api/staff', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/zones', { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      
+      const empResult = await empResponse.json();
+      const zoneResult = await zoneResponse.json();
+      
+      const allEmployees = empResult.success ? (empResult.data || []).filter(e => 
+        (e.status || (e.is_active ? 'active' : 'inactive')) === 'active'
+      ) : [];
+      const allZones = zoneResult.success ? (zoneResult.data || []).filter(z => z.status === 'active' || z.is_active) : [];
+      
+      setEmployees(allEmployees);
+      setZones(allZones);
+      
+      // Build a map of which zones are assigned to which employees
+      const zoneMap = {};
+      allEmployees.forEach(emp => {
+        const empZones = emp.assignedZones || emp.assigned_zones;
+        if (empZones === 'all') {
+          allZones.forEach(zone => {
+            zoneMap[zone.name] = { employeeId: emp.id, employeeName: emp.name || `${emp.first_name} ${emp.last_name}` };
+          });
+        } else if (Array.isArray(empZones)) {
+          empZones.forEach(zoneName => {
+            zoneMap[zoneName] = { employeeId: emp.id, employeeName: emp.name || `${emp.first_name} ${emp.last_name}` };
+          });
+        }
+      });
+      setAssignedZonesMap(zoneMap);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      showToast('Failed to load data', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const showToast = (message, type = 'success') => {
@@ -130,16 +150,29 @@ const EmployeeZoneManagement = () => {
     return availableZones.every(zone => selectedZones.includes(zone.name));
   };
 
-  const handleSaveZones = () => {
+  const handleSaveZones = async () => {
     if (!selectedEmployee) return;
 
-    const result = updateEmployeeZones(selectedEmployee.id, selectedZones);
-    if (result.success) {
-      showToast(`Zones updated for ${selectedEmployee.name}`);
-      closeModal();
-      loadData();
-    } else {
-      showToast(result.message || 'Failed to update zones', 'error');
+    try {
+      const response = await fetch(`/api/staff/${selectedEmployee.id}/zones`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ zones: selectedZones })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast(`Zones updated for ${selectedEmployee.name || selectedEmployee.first_name}`);
+        closeModal();
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to update zones', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating zones:', error);
+      showToast('Failed to update zones', 'error');
     }
   };
 
@@ -313,16 +346,9 @@ const EmployeeZoneManagement = () => {
               >
                 {/* Employee Header */}
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
-                      <span className="text-white font-bold text-lg">
-                        {employee.name?.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{employee.name}</h3>
-                      <p className="text-xs font-mono text-gray-500">{employee.employeeId}</p>
-                    </div>
+                  <div>
+                    <p className="text-xs font-mono text-gray-500 mb-1">{employee.employeeId || employee.employee_id || employee.user_id}</p>
+                    <h3 className="font-semibold text-gray-900">{employee.name || `${employee.first_name} ${employee.last_name}`}</h3>
                   </div>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                     hasZones
@@ -392,16 +418,10 @@ const EmployeeZoneManagement = () => {
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <span className="text-white font-bold text-xl">
-                      {selectedEmployee.name?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">{selectedEmployee.name}</h2>
-                    <p className="text-sm text-gray-500">{selectedEmployee.email}</p>
-                  </div>
+                <div>
+                  <p className="text-xs font-mono text-gray-500 mb-1">{selectedEmployee.employeeId || selectedEmployee.employee_id || selectedEmployee.user_id}</p>
+                  <h2 className="text-xl font-bold text-gray-900">{selectedEmployee.name || `${selectedEmployee.first_name} ${selectedEmployee.last_name}`}</h2>
+                  <p className="text-sm text-gray-500">{selectedEmployee.email}</p>
                 </div>
                 <button onClick={closeModal} className="p-2 hover:bg-white/50 rounded-lg transition-colors">
                   <X className="w-5 h-5 text-gray-500" />

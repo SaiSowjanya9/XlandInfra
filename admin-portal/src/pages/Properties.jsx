@@ -3,11 +3,8 @@ import {
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Briefcase, Lock, 
   ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, FileText,
-  Package, Plus, Calendar, DollarSign, Receipt, Tag, Users, UserCheck
+  Package, Plus, Calendar, DollarSign, Receipt, Tag, Users, UserCheck, RefreshCw
 } from 'lucide-react';
-import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
-import { getEstimatesByPropertyId } from '../utils/estimateStore';
-import { hasVendorAssignments, getServiceVendorAssignmentsByProperty } from '../utils/assignmentStore';
 import VendorAssignmentModal from '../components/VendorAssignmentModal';
 import * as XLSX from 'xlsx';
 
@@ -62,6 +59,7 @@ const Properties = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   
   // Property detail view state
   const [detailTab, setDetailTab] = useState('details'); // 'details' or 'estimates'
@@ -71,11 +69,25 @@ const Properties = () => {
   // Vendor assignment modal state
   const [vendorAssignmentProperty, setVendorAssignmentProperty] = useState(null);
 
-  // Load properties from backend API and notifications from localStorage
+  const token = sessionStorage.getItem('pm_auth_token');
+
+  // Load properties from backend API
   const loadData = async () => {
-    const props = await getProperties();
-    setProperties(props);
-    setNotifications(getNotifications());
+    setLoading(true);
+    try {
+      const response = await fetch('/api/properties', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setProperties(result.data || []);
+      }
+      setNotifications([]);
+    } catch (error) {
+      console.error('Error loading properties:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -93,24 +105,41 @@ const Properties = () => {
 
   // Delete handler
   const handleDelete = async (id) => {
-    const success = await deleteProperty(id);
-    if (success) {
-      await loadData();
-      showToast('Property deleted successfully');
-    } else {
+    try {
+      const response = await fetch(`/api/properties/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        await loadData();
+        showToast('Property deleted successfully');
+      } else {
+        showToast(result.message || 'Failed to delete property', 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting property:', error);
       showToast('Failed to delete property', 'error');
     }
     setDeleteConfirm(null);
   };
 
   // Handle viewing a property - load its estimates
-  const handleViewProperty = (property) => {
+  const handleViewProperty = async (property) => {
     setViewProperty(property);
     setDetailTab('details');
     setSelectedEstimate(null);
-    // Load estimates for this property
-    const estimates = getEstimatesByPropertyId(property.propertyId);
-    setPropertyEstimates(estimates);
+    // Load estimates for this property from API
+    try {
+      const response = await fetch(`/api/estimates?propertyId=${property.propertyId || property.property_id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      setPropertyEstimates(result.success ? (result.data || []) : []);
+    } catch (error) {
+      console.error('Error loading estimates:', error);
+      setPropertyEstimates([]);
+    }
   };
 
   // Handle closing property view
@@ -123,8 +152,13 @@ const Properties = () => {
 
   // Mark all notifications as read
   const handleMarkAllRead = () => {
-    markAllNotificationsRead();
-    setNotifications(getNotifications());
+    setNotifications([]);
+  };
+  
+  // Helper to check if property has vendor assignments
+  const hasVendorAssignments = (propertyId) => {
+    const property = properties.find(p => p.propertyId === propertyId || p.property_id === propertyId);
+    return property?.hasVendorAssignments || property?.vendor_assignments_count > 0;
   };
 
 
@@ -251,37 +285,39 @@ const Properties = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Category</h2>
-          <p className="text-gray-600 mb-8">Choose the property category to view</p>
+        <div className="bg-gray-50 rounded-2xl p-12">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
+            <p className="text-gray-500 mt-2">Choose the customer category to proceed</p>
+          </div>
 
-          <div className="grid md:grid-cols-2 gap-6 max-w-2xl">
+          <div className="flex justify-center gap-8">
             {PROPERTY_CATEGORIES.map((category) => {
               const Icon = category.icon;
-              return (
+              return category.locked ? (
+                <div
+                  key={category.id}
+                  className="w-72 h-52 p-8 border border-gray-200 rounded-2xl bg-white relative cursor-not-allowed flex flex-col items-start justify-center"
+                >
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
+                    <Lock className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-xs font-medium text-gray-500">Coming Soon</span>
+                  </div>
+                  <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mb-5">
+                    <Icon className="w-7 h-7 text-gray-400" />
+                  </div>
+                  <p className="text-lg font-medium text-gray-400">{category.name}</p>
+                </div>
+              ) : (
                 <button
                   key={category.id}
-                  onClick={() => !category.locked && setSelectedCategory(category.id)}
-                  disabled={category.locked}
-                  className={`group relative p-6 bg-white border-2 rounded-xl transition-all duration-200 text-left ${
-                    category.locked
-                      ? 'border-gray-200 opacity-60 cursor-not-allowed'
-                      : 'border-gray-200 hover:border-primary-500 hover:shadow-lg'
-                  }`}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
                 >
-                  {category.locked && (
-                    <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
-                      <Lock className="w-3 h-3 text-gray-500" />
-                      <span className="text-xs font-medium text-gray-500">Coming Soon</span>
-                    </div>
-                  )}
-                  <div className={`w-14 h-14 ${category.color} rounded-xl flex items-center justify-center mb-4 ${
-                    category.locked ? '' : 'group-hover:scale-110'
-                  } transition-transform`}>
+                  <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
                     <Icon className="w-7 h-7 text-white" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{category.name}</h3>
-                  <p className="text-sm text-gray-600">{category.description}</p>
+                  <p className="text-lg font-semibold text-gray-900">{category.name}</p>
                 </button>
               );
             })}

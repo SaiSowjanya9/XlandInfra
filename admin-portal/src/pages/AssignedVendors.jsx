@@ -23,19 +23,6 @@ import {
   UserCheck,
   Filter,
 } from 'lucide-react';
-import {
-  getVendorAssignments,
-  removeVendorAssignment,
-  getServiceVendorAssignments,
-  removeServiceVendorAssignmentWithSync,
-  updateServiceVendorAssignmentWithSync,
-  subscribeToAssignmentChanges,
-  getAssignmentsGroupedByProperty,
-  getUniqueServiceTypes,
-  getUniqueZones,
-} from '../utils/assignmentStore';
-import { getVendors } from '../utils/vendorStore';
-
 const AssignedVendors = ({ user }) => {
   // Check if user is FP Manager (view-only mode)
   const isFPManager = user?.role === 'manager';
@@ -54,18 +41,10 @@ const AssignedVendors = ({ user }) => {
   const [editAssignment, setEditAssignment] = useState(null);
   const [editModalData, setEditModalData] = useState(null);
 
+  const token = sessionStorage.getItem('pm_auth_token');
+
   useEffect(() => {
     loadData();
-  }, [statusFilter]);
-
-  // Subscribe to real-time assignment changes from Property Management
-  useEffect(() => {
-    const unsubscribe = subscribeToAssignmentChanges((change) => {
-      console.log('[AssignedVendors] Received sync event:', change);
-      loadData(); // Reload data when changes are made from Property Management
-    });
-    
-    return unsubscribe;
   }, [statusFilter]);
 
   // Refresh data when page becomes visible (handles navigation back to this page)
@@ -81,26 +60,30 @@ const AssignedVendors = ({ user }) => {
   }, [statusFilter]);
 
   const loadData = async () => {
-    // Load property-level assignments
-    const propertyAssignments = getVendorAssignments(statusFilter);
-    setAssignments(propertyAssignments);
-    
-    // Load service-wise vendor assignments (from estimates)
-    const serviceAssignmentsData = getServiceVendorAssignments(statusFilter);
-    setServiceAssignments(serviceAssignmentsData);
-    
-    // Debug logging
-    console.log('[AssignedVendors] Loaded data:', {
-      propertyAssignments: propertyAssignments.length,
-      serviceAssignments: serviceAssignmentsData.length,
-      statusFilter
-    });
-    
     try {
-      const vendorList = await getVendors('active');
-      setVendors(vendorList);
+      // Load vendor assignments from API
+      const [assignResponse, vendorResponse] = await Promise.all([
+        fetch(`/api/vendors/assignments?status=${statusFilter}`, { 
+          headers: { 'Authorization': `Bearer ${token}` } 
+        }),
+        fetch('/api/vendors?status=active', { 
+          headers: { 'Authorization': `Bearer ${token}` } 
+        })
+      ]);
+      
+      const assignResult = await assignResponse.json();
+      const vendorResult = await vendorResponse.json();
+      
+      if (assignResult.success) {
+        setAssignments(assignResult.data?.propertyAssignments || []);
+        setServiceAssignments(assignResult.data?.serviceAssignments || []);
+      }
+      
+      if (vendorResult.success) {
+        setVendors(vendorResult.data || []);
+      }
     } catch (err) {
-      console.error('Error loading vendors:', err);
+      console.error('Error loading data:', err);
     }
   };
 
@@ -109,50 +92,80 @@ const AssignedVendors = ({ user }) => {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleRemoveAssignment = (assignment) => {
-    const result = removeVendorAssignment(assignment.id);
-    if (result.success) {
-      showToast('Vendor assignment removed successfully');
-      setRemoveConfirm(null);
-      loadData();
-    } else {
-      showToast(result.message, 'error');
+  const handleRemoveAssignment = async (assignment) => {
+    try {
+      const response = await fetch(`/api/vendors/assignments/${assignment.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Vendor assignment removed successfully');
+        setRemoveConfirm(null);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to remove assignment', 'error');
+      }
+    } catch (error) {
+      console.error('Error removing assignment:', error);
+      showToast('Failed to remove assignment', 'error');
     }
   };
 
-  const handleRemoveServiceAssignment = (assignment) => {
-    const result = removeServiceVendorAssignmentWithSync(assignment.id);
-    if (result.success) {
-      showToast('Service vendor assignment removed successfully');
-      setRemoveConfirm(null);
-      loadData();
-    } else {
-      showToast(result.message, 'error');
+  const handleRemoveServiceAssignment = async (assignment) => {
+    try {
+      const response = await fetch(`/api/vendors/service-assignments/${assignment.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Service vendor assignment removed successfully');
+        setRemoveConfirm(null);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to remove assignment', 'error');
+      }
+    } catch (error) {
+      console.error('Error removing assignment:', error);
+      showToast('Failed to remove assignment', 'error');
     }
   };
 
-  const handleUpdateServiceVendor = (assignment, newVendorId) => {
-    const vendor = vendors.find(v => v.vendorId === newVendorId);
+  const handleUpdateServiceVendor = async (assignment, newVendorId) => {
+    const vendor = vendors.find(v => v.vendorId === newVendorId || v.id === newVendorId);
     if (!vendor) {
       showToast('Vendor not found', 'error');
       return;
     }
 
-    // Update just this single assignment with sync
-    const result = updateServiceVendorAssignmentWithSync(assignment.id, {
-      vendorId: vendor.vendorId,
-      vendorName: vendor.ownerName,
-      vendorZone: vendor.zone,
-      vendorServiceType: vendor.serviceType
-    });
-
-    if (result.success) {
-      showToast('Vendor updated successfully - changes synced to Property Management');
-      setEditAssignment(null);
-      setEditModalData(null);
-      loadData();
-    } else {
-      showToast(result.message || 'Failed to update', 'error');
+    try {
+      const response = await fetch(`/api/vendors/service-assignments/${assignment.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          vendorId: vendor.vendorId || vendor.id,
+          vendorName: vendor.ownerName || vendor.owner_name,
+          vendorZone: vendor.zone,
+          vendorServiceType: vendor.serviceType || vendor.service_type
+        })
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        showToast('Vendor updated successfully');
+        setEditAssignment(null);
+        setEditModalData(null);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to update', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating vendor:', error);
+      showToast('Failed to update vendor', 'error');
     }
   };
 

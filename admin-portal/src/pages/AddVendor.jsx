@@ -17,9 +17,7 @@ import {
   Building2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { saveVendor } from '../utils/vendorStore';
 import SelectWithAdd from '../components/SelectWithAdd';
-import { getServiceTypes, addServiceType, getDivisions, addDivision } from '../utils/fieldOptionsStore';
 
 // Zone options
 const ZONES = [
@@ -131,6 +129,7 @@ const AddVendor = ({ admin }) => {
     }
 
     setSubmitting(true);
+    const token = sessionStorage.getItem('pm_auth_token');
     
     try {
       const vendorData = {
@@ -139,12 +138,21 @@ const AddVendor = ({ admin }) => {
         createdAt: new Date().toISOString()
       };
       
-      const result = await saveVendor(vendorData);
-      if (!result) {
-        alert('Failed to save vendor. Please check the backend connection and try again.');
+      const response = await fetch('/api/vendors', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(vendorData)
+      });
+      const result = await response.json();
+      
+      if (!result.success) {
+        alert(result.message || 'Failed to save vendor. Please try again.');
         return;
       }
-      setCreatedVendor(result);
+      setCreatedVendor(result.data || { vendorId: result.vendorId || 'NEW' });
       setSubmitted(true);
     } catch (error) {
       console.error('Error saving vendor:', error);
