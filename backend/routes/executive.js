@@ -203,19 +203,22 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
 router.get('/properties', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
 
     // Get both own and assigned properties
-    const [properties] = await pool.query(
+    const [regularProperties] = await pool.query(
       `SELECT p.*, z.name as zone_name, 
               'own' as access_type, TRUE as can_modify, FALSE as can_delete,
-              FALSE as can_assign_vendor, FALSE as can_assign_employee
+              FALSE as can_assign_vendor, FALSE as can_assign_employee,
+              'properties' as source_table
        FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id
        WHERE p.executive_id = ?
        UNION
        SELECT p.*, z.name as zone_name,
               'assigned' as access_type, eap.can_modify, eap.can_delete,
-              eap.can_assign_vendor, eap.can_assign_employee
+              eap.can_assign_vendor, eap.can_assign_employee,
+              'properties' as source_table
        FROM properties p
        INNER JOIN executive_assigned_properties eap ON p.id = eap.property_id
        LEFT JOIN zones z ON p.zone_id = z.id
@@ -224,7 +227,33 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
       [executiveId, executiveId]
     );
 
-    res.json({ success: true, data: properties });
+    // Also fetch from onboarded_properties
+    let onboardedProperties = [];
+    try {
+      const scopeColumn = franchisePartnerId ? 'franchise_partner_id' : 'executive_id';
+      const scopeId = franchisePartnerId || executiveId;
+      const [rows] = await pool.execute(
+        `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
+                op.zone_id as zone_name, op.division, op.total_units as units,
+                op.address, op.city, op.state, op.pincode as zip_code,
+                op.contact_person, op.contact_phone, op.contact_email as email,
+                op.created_by as created_by_name, op.created_at, op.status,
+                'own' as access_type, TRUE as can_modify, FALSE as can_delete,
+                FALSE as can_assign_vendor, FALSE as can_assign_employee,
+                'onboarded_properties' as source_table
+         FROM onboarded_properties op
+         WHERE op.${scopeColumn} = ? AND op.status = 'active'
+         ORDER BY op.created_at DESC`,
+        [scopeId]
+      );
+      onboardedProperties = rows;
+    } catch (e) {
+      console.log('onboarded_properties fetch error:', e.message);
+    }
+
+    const allProperties = [...regularProperties, ...onboardedProperties];
+
+    res.json({ success: true, data: allProperties });
   } catch (error) {
     console.error('Properties fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch properties' });
