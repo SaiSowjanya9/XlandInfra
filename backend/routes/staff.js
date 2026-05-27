@@ -11,7 +11,7 @@ const { pool } = require('../config/database');
 const { authenticate, generateToken } = require('../middleware/auth');
 const { adminOnly, managerOrAdmin, requireRole, ROLES } = require('../middleware/rbac');
 const { ROLE_NAMES } = require('../config/roles');
-const { sendEmployeeWelcomeEmail, sendPasswordResetEmail, sendPasswordResetSuccess } = require('../services/emailService');
+const { sendEmployeeWelcomeEmail, sendPasswordResetEmail, sendPasswordResetSuccess, sendPasswordUpdatedByAdminEmail } = require('../services/emailService');
 
 // Password reset expiry (48 hours)
 const PASSWORD_RESET_EXPIRY_HOURS = 48;
@@ -1133,9 +1133,9 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       canView, canCreate, canEdit, canDelete, canApprove, canAssign, canClose 
     } = req.body;
 
-    // Check if user exists
+    // Check if user exists and get current details for email
     const [existing] = await pool.execute(
-      `SELECT id FROM users WHERE id = ?`,
+      `SELECT id, email, first_name, role FROM users WHERE id = ?`,
       [id]
     );
 
@@ -1145,6 +1145,8 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
         message: 'Staff member not found'
       });
     }
+    
+    const currentUser = existing[0];
 
     // Check for duplicate username/email
     if (username || email) {
@@ -1180,11 +1182,13 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
     if (canAssign !== undefined) { updateFields.push('can_assign = ?'); params.push(canAssign); }
     if (canClose !== undefined) { updateFields.push('can_close = ?'); params.push(canClose); }
 
-    // Update password if provided
+    // Update password if provided (also store visible_password for admin)
     if (password) {
       const passwordHash = await bcrypt.hash(password, 10);
       updateFields.push('password_hash = ?');
       params.push(passwordHash);
+      updateFields.push('visible_password = ?');
+      params.push(password);
     }
 
     if (updateFields.length === 0) {
@@ -1201,9 +1205,28 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       params
     );
 
+    // Send email notification if password was updated
+    if (password) {
+      const userEmail = email || currentUser.email;
+      const userFirstName = firstName || currentUser.first_name;
+      
+      try {
+        await sendPasswordUpdatedByAdminEmail({
+          email: userEmail,
+          firstName: userFirstName,
+          newPassword: password,
+          portalUrl: ADMIN_PORTAL_URL
+        });
+        console.log(`📧 Password update email sent to ${userEmail}`);
+      } catch (emailError) {
+        console.error('Failed to send password update email:', emailError);
+        // Don't fail the request if email fails
+      }
+    }
+
     res.json({
       success: true,
-      message: 'Staff member updated successfully'
+      message: password ? 'Staff member updated successfully. Password notification sent.' : 'Staff member updated successfully'
     });
   } catch (error) {
     console.error('Error updating staff member:', error);

@@ -1108,6 +1108,97 @@ const sendPasswordResetSuccess = async (userData) => {
   }
 };
 
+// Send email when admin updates user's password
+const sendPasswordUpdatedByAdminEmail = async (userData) => {
+  const { email, firstName, newPassword, portalUrl } = userData;
+  
+  const mailOptions = {
+    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    replyTo: process.env.EMAIL_USER,
+    to: email,
+    subject: `Your Password Has Been Updated - XLAND INFRA`,
+    headers: {
+      ...getDefaultHeaders(),
+      'X-Entity-Ref-ID': `password-update-${Date.now()}`,
+      'Message-ID': `<pwd-update-${Date.now()}@xlandinfra.com>`
+    },
+    text: `Password Updated\n\nHello ${firstName || 'User'},\n\nYour password has been updated by an administrator.\n\nNew Password: ${newPassword}\n\nLogin: ${portalUrl}\n\nPlease change your password after logging in for security.\n\nRegards,\nXLAND INFRA Team`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+          <!-- Header -->
+          <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%); border-radius: 16px 16px 0 0; border: 1px solid #D8B25C33; border-bottom: none;">
+            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 300; letter-spacing: 2px;">
+              XLAND<span style="color: #D8B25C;">INFRA</span>
+            </h1>
+            <p style="margin: 5px 0 0 0; color: #888; font-size: 11px; letter-spacing: 3px;">PRIVATE LIMITED</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none;">
+            <div style="text-align: center; margin-bottom: 25px;">
+              <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #D8B25C22 0%, #D8B25C11 100%); border-radius: 50%; margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: center; border: 2px solid #D8B25C44;">
+                <span style="font-size: 32px;">🔑</span>
+              </div>
+              <h2 style="color: #D8B25C; margin: 0; font-size: 24px; font-weight: 400;">Password Updated</h2>
+            </div>
+            
+            <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 25px 0; text-align: center;">
+              Hello <strong style="color: #ffffff;">${firstName || 'User'}</strong>, your password has been updated by an administrator.
+            </p>
+            
+            <!-- New Password Box -->
+            <div style="background: #0D0D0D; border: 1px solid #D8B25C44; border-radius: 12px; padding: 25px; margin: 30px 0;">
+              <h3 style="color: #D8B25C; margin: 0 0 20px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; text-align: center;">Your New Password</h3>
+              
+              <div style="text-align: center;">
+                <p style="color: #D8B25C; font-size: 28px; margin: 0; font-family: monospace; background: #1a1a1a; padding: 15px 20px; border-radius: 8px; border: 1px solid #D8B25C44; letter-spacing: 4px; font-weight: bold; display: inline-block;">${newPassword}</p>
+              </div>
+            </div>
+            
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${portalUrl}" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
+                LOGIN NOW
+              </a>
+            </div>
+            
+            <!-- Security Note -->
+            <div style="background: #2a1a0a; border: 1px solid #D8B25C44; border-radius: 8px; padding: 15px 20px; margin-top: 30px;">
+              <p style="color: #D8B25C; font-size: 13px; margin: 0; line-height: 1.6;">
+                ⚠️ <strong>Security Tip:</strong> We recommend changing your password after logging in for enhanced security.
+              </p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #0D0D0D; padding: 25px 30px; border-radius: 0 0 16px 16px; border: 1px solid #D8B25C33; border-top: none; text-align: center;">
+            <p style="color: #666; font-size: 12px; margin: 0;">
+              © ${new Date().getFullYear()} XLAND INFRA. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`📧 Password updated email sent to ${email}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending password updated email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWorkOrderNotification,
   sendContactNotification,
@@ -1120,5 +1211,6 @@ module.exports = {
   sendEstimateActionNotification,
   sendPasswordResetEmail,
   sendPasswordResetSuccess,
+  sendPasswordUpdatedByAdminEmail,
   NOTIFICATION_EMAIL
 };
