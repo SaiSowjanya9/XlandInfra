@@ -740,37 +740,39 @@ const Onboarding = ({ admin }) => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Category</h2>
-          <p className="text-gray-600 mb-8">Choose the onboarding category to proceed</p>
+        <div className="bg-gray-50 rounded-2xl p-12">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
+            <p className="text-gray-500 mt-2">Choose the onboarding category to proceed</p>
+          </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="flex justify-center gap-8">
             {CATEGORIES.map((category) => {
               const Icon = category.icon;
-              return (
+              return category.locked ? (
+                <div
+                  key={category.id}
+                  className="w-72 h-52 p-8 border border-gray-200 rounded-2xl bg-white relative cursor-not-allowed flex flex-col items-start justify-center"
+                >
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
+                    <Lock className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-xs font-medium text-gray-500">Coming Soon</span>
+                  </div>
+                  <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mb-5">
+                    <Icon className="w-7 h-7 text-gray-400" />
+                  </div>
+                  <p className="text-lg font-medium text-gray-400">{category.name}</p>
+                </div>
+              ) : (
                 <button
                   key={category.id}
-                  onClick={() => !category.locked && setSelectedCategory(category.id)}
-                  disabled={category.locked}
-                  className={`group relative p-6 bg-white border-2 rounded-xl transition-all duration-200 text-left ${
-                    category.locked
-                      ? 'border-gray-200 opacity-60 cursor-not-allowed'
-                      : 'border-gray-200 hover:border-primary-500 hover:shadow-lg'
-                  }`}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
                 >
-                  {category.locked && (
-                    <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
-                      <Lock className="w-3 h-3 text-gray-500" />
-                      <span className="text-xs font-medium text-gray-500">Coming Soon</span>
-                    </div>
-                  )}
-                  <div className={`w-14 h-14 ${category.color} rounded-xl flex items-center justify-center mb-4 ${
-                    category.locked ? '' : 'group-hover:scale-110'
-                  } transition-transform`}>
+                  <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
                     <Icon className="w-7 h-7 text-white" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{category.name}</h3>
-                  <p className="text-sm text-gray-600">{category.description}</p>
+                  <p className="text-lg font-semibold text-gray-900">{category.name}</p>
                 </button>
               );
             })}
