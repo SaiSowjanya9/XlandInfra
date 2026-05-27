@@ -274,8 +274,21 @@ router.get('/properties', authenticate, dataEntryRoles, async (req, res) => {
     const [properties] = await pool.execute(
       `SELECT p.*, 
               (SELECT COUNT(*) FROM units WHERE property_id = p.id AND is_active = TRUE) as total_units,
-              (SELECT COUNT(*) FROM units WHERE property_id = p.id AND is_occupied = TRUE AND is_active = TRUE) as occupied_units
+              (SELECT COUNT(*) FROM units WHERE property_id = p.id AND is_occupied = TRUE AND is_active = TRUE) as occupied_units,
+              COALESCE(
+                e.name,
+                CONCAT(e.first_name, ' ', e.last_name),
+                fpe.name,
+                CONCAT(fpe.first_name, ' ', fpe.last_name),
+                u.name,
+                CONCAT(u.first_name, ' ', u.last_name),
+                p.created_by,
+                'System'
+              ) as created_by_name
        FROM properties p 
+       LEFT JOIN employees e ON p.created_by = e.id
+       LEFT JOIN fp_employees fpe ON p.created_by = fpe.id
+       LEFT JOIN users u ON p.created_by = u.id
        ORDER BY p.name`
     );
 
