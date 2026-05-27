@@ -453,11 +453,12 @@ const ManagerProperties = ({ user }) => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Location</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Property</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Created By</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -494,6 +495,9 @@ const ManagerProperties = ({ user }) => {
                           </p>
                         )}
                       </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-sm text-gray-600">{property.created_by_name || '-'}</span>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-end gap-1">

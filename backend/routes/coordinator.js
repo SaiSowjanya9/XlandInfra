@@ -265,16 +265,18 @@ router.post('/properties', requireCoordinatorScope, async (req, res) => {
 
     const propertyId = `PROP-COORD-${Date.now()}`;
     
-    // Get creator name from user info
-    let creatorName = 'Coordinator';
-    if (req.user) {
-      if (req.user.firstName && req.user.lastName) {
-        creatorName = `${req.user.firstName} ${req.user.lastName}`.trim();
-      } else if (req.user.name) {
-        creatorName = req.user.name;
-      } else if (req.user.username && req.user.username !== req.user.role) {
-        creatorName = req.user.username;
+    // Get actual user name from database
+    let creatorName = 'System';
+    try {
+      const [userRows] = await pool.execute(
+        'SELECT first_name, last_name FROM users WHERE id = ? OR email = ?',
+        [req.user?.id, req.user?.email]
+      );
+      if (userRows.length > 0) {
+        creatorName = `${userRows[0].first_name || ''} ${userRows[0].last_name || ''}`.trim() || 'System';
       }
+    } catch (e) {
+      console.log('Could not fetch creator name:', e.message);
     }
 
     const [result] = await pool.query(
