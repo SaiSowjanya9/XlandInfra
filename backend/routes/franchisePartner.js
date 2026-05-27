@@ -2281,14 +2281,34 @@ router.get('/zones', requireFPScope, async (req, res) => {
 
 router.get('/categories', requireFPScope, async (req, res) => {
   try {
-    const [categories] = await pool.execute(
-      'SELECT * FROM categories WHERE is_active = TRUE ORDER BY name'
-    );
-
-    res.json({
-      success: true,
-      data: categories
-    });
+    // Try to get from database first
+    try {
+      const [categories] = await pool.execute(
+        `SELECT id, name, sort_order 
+         FROM categories 
+         WHERE is_active = TRUE 
+         ORDER BY sort_order, name`
+      );
+      
+      // Get subcategories for each category
+      for (let cat of categories) {
+        const [subcats] = await pool.execute(
+          `SELECT id, name, sort_order 
+           FROM subcategories 
+           WHERE category_id = ? AND is_active = TRUE 
+           ORDER BY sort_order, name`,
+          [cat.id]
+        );
+        cat.subcategories = subcats;
+      }
+      
+      return res.json({ success: true, data: categories });
+    } catch (dbError) {
+      // Fallback to config file if database tables don't exist
+      console.log('Using config categories (DB tables not available)');
+      const categoriesConfig = require('../config/categories');
+      return res.json({ success: true, data: categoriesConfig });
+    }
   } catch (error) {
     console.error('Get categories error:', error);
     res.status(500).json({
