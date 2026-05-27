@@ -216,7 +216,7 @@ const CoordinatorProperties = ({ user }) => {
         property.city || '',
         property.state || '',
         property.contacts || property.contact_person || '',
-        property.created_by || 'System',
+        property.created_by_name || 'System',
         property.created_at ? new Date(property.created_at).toLocaleDateString() : '',
         property.status || 'active'
       ];
@@ -548,7 +548,7 @@ const CoordinatorProperties = ({ user }) => {
                       <p className="text-sm text-gray-600">{property.contacts || property.contact_person || '-'}</p>
                     </td>
                     <td className="py-4 px-4">
-                      <p className="text-sm text-gray-600">{property.created_by || 'System'}</p>
+                      <p className="text-sm text-gray-600">{property.created_by_name || 'System'}</p>
                     </td>
                     <td className="py-4 px-4">
                       <p className="text-sm text-gray-500">
@@ -572,6 +572,16 @@ const CoordinatorProperties = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        {/* Edit Property - Hidden for FP Coordinator */}
+                        {!isFPCoordinator && property.can_modify && (
+                          <button
+                            onClick={() => openEditModal(property)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            title="Edit Property"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
                         {/* Assign Vendor - Hidden for FP Coordinator */}
                         {!isFPCoordinator && (
                           <button
@@ -879,7 +889,7 @@ const CoordinatorProperties = ({ user }) => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Created By</p>
-                  <p className="text-gray-900">{viewProperty.created_by || 'System'}</p>
+                  <p className="text-gray-900">{viewProperty.created_by_name || 'System'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Created</p>

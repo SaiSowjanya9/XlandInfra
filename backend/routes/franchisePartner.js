@@ -257,8 +257,21 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
 router.get('/properties', requireFPScope, async (req, res) => {
   try {
     const [properties] = await pool.execute(
-      `SELECT p.*, p.zone_id as zone_name, p.division_id as division_name
+      `SELECT p.*,
+        p.zone_id as zone_name,
+        p.division_id as division,
+        p.area_name as area,
+        COALESCE(p.number_of_units, p.number_of_blocks, 1) as units,
+        p.block_names,
+        p.units_per_block,
+        p.villa_plot_number,
+        p.landmark,
+        p.latitude,
+        p.longitude,
+        COALESCE(e.name, CONCAT(e.first_name, ' ', e.last_name), e.role, 'System') as created_by_name,
+        e.role as created_by_role
        FROM properties p
+       LEFT JOIN fp_employees e ON p.created_by = e.id
        WHERE p.franchise_partner_id = ?
        ORDER BY p.created_at DESC`,
       [req.fpId]
@@ -324,7 +337,7 @@ router.put('/properties/:id', requireFPScope, validateOwnership('properties'), a
 
     const allowedFields = [
       'name', 'property_type', 'address', 'city', 'state', 'zip_code',
-      'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'is_active'
+      'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active'
     ];
 
     const setClauses = [];

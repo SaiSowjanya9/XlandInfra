@@ -19,9 +19,19 @@ import {
   Eye,
   UserPlus,
   Truck,
-  MoreVertical,
-  Trash2
+  Trash2,
+  User,
+  Store,
+  Edit2,
+  Save,
+  ExternalLink,
+  FileText,
+  MapPin,
+  Calendar,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const FPProperties = ({ user }) => {
   // Check if user is FP Manager (restricted access - view only)
@@ -38,9 +48,14 @@ const FPProperties = ({ user }) => {
   const [statusFilter, setStatusFilter] = useState('active');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [actionDropdown, setActionDropdown] = useState(null);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignType, setAssignType] = useState('vendor');
+  const [vendors, setVendors] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({});
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -75,9 +90,39 @@ const FPProperties = ({ user }) => {
     }
   };
 
+  const fetchVendors = async () => {
+    try {
+      const response = await fetch('/api/fp/vendors', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setVendors(result.data?.all || result.data || []);
+      }
+    } catch (error) {
+      console.error('Fetch vendors error:', error);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await fetch('/api/fp/employees', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setEmployees(result.data || []);
+      }
+    } catch (error) {
+      console.error('Fetch employees error:', error);
+    }
+  };
+
   useEffect(() => {
     fetchProperties();
     fetchZones();
+    fetchVendors();
+    fetchEmployees();
   }, []);
 
   const handleDeleteProperty = async (propertyId) => {
@@ -98,7 +143,171 @@ const FPProperties = ({ user }) => {
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to delete property' });
     }
-    setActionDropdown(null);
+  };
+
+  const openAssignModal = (property, type) => {
+    setSelectedProperty(property);
+    setAssignType(type);
+    setShowAssignModal(true);
+  };
+
+  const handleAssign = async (assigneeId) => {
+    if (!selectedProperty) return;
+
+    try {
+      const endpoint = assignType === 'vendor'
+        ? `/api/fp/properties/${selectedProperty.id}/assign-vendor`
+        : `/api/fp/properties/${selectedProperty.id}/assign-employee`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(assignType === 'vendor' ? { vendorId: assigneeId } : { employeeId: assigneeId })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage({ type: 'success', text: `${assignType === 'vendor' ? 'Vendor' : 'Employee'} assigned successfully!` });
+        setShowAssignModal(false);
+        setSelectedProperty(null);
+        fetchProperties();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Assignment failed' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to assign' });
+    }
+  };
+
+  const openEditModal = (property) => {
+    setEditFormData({
+      id: property.id,
+      name: property.name || '',
+      propertyType: property.property_type || 'residential',
+      address: property.address || '',
+      city: property.city || '',
+      state: property.state || '',
+      zipCode: property.zip_code || '',
+      contactPerson: property.contact_person || '',
+      contactPhone: property.contact_phone || '',
+      contactEmail: property.contact_email || '',
+      zone: property.zone_name || property.zone_id || '',
+      division: property.division || property.division_id || '',
+      area: property.area || property.area_name || '',
+      isActive: property.is_active !== false
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const response = await fetch(`/api/fp/properties/${editFormData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: editFormData.name,
+          propertyType: editFormData.propertyType,
+          address: editFormData.address,
+          city: editFormData.city,
+          state: editFormData.state,
+          zipCode: editFormData.zipCode,
+          contactPerson: editFormData.contactPerson,
+          contactPhone: editFormData.contactPhone,
+          contactEmail: editFormData.contactEmail,
+          zoneId: editFormData.zone,
+          divisionId: editFormData.division,
+          areaName: editFormData.area,
+          isActive: editFormData.isActive
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Property updated successfully!' });
+        setShowEditModal(false);
+        setEditFormData({});
+        fetchProperties();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Update failed' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to update property' });
+    }
+  };
+
+  // Export single property to CSV
+  const exportSingleProperty = (property) => {
+    const headers = ['Property ID', 'Name', 'Type', 'Zone', 'Area', 'Division', 'Units', 'Address', 'City', 'State', 'ZIP', 'Contact', 'Phone', 'Email', 'Created By', 'Created Date', 'Status'];
+    const values = [
+      property.property_id || '',
+      property.name || '',
+      property.property_type?.replace(/_/g, ' ') || '',
+      property.zone_name || '',
+      property.area || property.area_name || '',
+      property.division || '',
+      property.units || property.number_of_units || '1',
+      property.address || '',
+      property.city || '',
+      property.state || '',
+      property.zip_code || '',
+      property.contact_person || '',
+      property.contact_phone || '',
+      property.contact_email || '',
+      property.created_by_name || 'System',
+      property.created_at ? new Date(property.created_at).toLocaleDateString() : '',
+      property.is_active !== false ? 'Active' : 'Inactive'
+    ];
+    
+    const csvContent = [headers.join(','), values.map(v => `"${v}"`).join(',')].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `property_${property.property_id || property.id}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Export all properties to Excel
+  const exportAllProperties = () => {
+    if (filteredProperties.length === 0) {
+      setMessage({ type: 'error', text: 'No properties to export' });
+      return;
+    }
+
+    const exportData = filteredProperties.map(property => ({
+      'Property ID': property.property_id || '',
+      'Name': property.name || '',
+      'Type': property.property_type?.replace(/_/g, ' ') || '',
+      'Zone': property.zone_name || '',
+      'Area': property.area || property.area_name || '',
+      'Division': property.division || '',
+      'Units': property.units || property.number_of_units || '1',
+      'Address': property.address || '',
+      'City': property.city || '',
+      'State': property.state || '',
+      'ZIP Code': property.zip_code || '',
+      'Contact Person': property.contact_person || '',
+      'Phone': property.contact_phone || '',
+      'Email': property.contact_email || '',
+      'Created By': property.created_by_name || 'System',
+      'Created Date': property.created_at ? new Date(property.created_at).toLocaleDateString() : '',
+      'Status': property.is_active !== false ? 'Active' : 'Inactive'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Properties');
+    XLSX.writeFile(wb, `fp_properties_${new Date().toISOString().split('T')[0]}.xlsx`);
+    setMessage({ type: 'success', text: `Exported ${filteredProperties.length} properties` });
   };
 
   // Property type tabs
@@ -339,6 +548,23 @@ const FPProperties = ({ user }) => {
           </select>
           <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         </div>
+
+        <button
+          onClick={fetchProperties}
+          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          title="Refresh"
+        >
+          <RefreshCw className="w-5 h-5" />
+        </button>
+
+        <button
+          onClick={exportAllProperties}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+          title="Export All Properties"
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          Export All
+        </button>
       </div>
 
       {/* Properties Table */}
@@ -368,6 +594,7 @@ const FPProperties = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Address</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">City</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contacts</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created By</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
@@ -409,6 +636,9 @@ const FPProperties = ({ user }) => {
                         <span className="text-sm text-gray-600">{property.contact_phone || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">{property.created_by_name || 'System'}</span>
+                      </td>
+                      <td className="py-3 px-4">
                         <span className="text-sm text-gray-500">{formatDate(property.created_at)}</span>
                       </td>
                       <td className="py-3 px-4">
@@ -430,21 +660,35 @@ const FPProperties = ({ user }) => {
                           >
                             <Eye className="w-4 h-4 text-gray-500" />
                           </button>
+                          <button
+                            onClick={() => exportSingleProperty(property)}
+                            className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Export to CSV"
+                          >
+                            <Download className="w-4 h-4 text-gray-400 hover:text-emerald-600" />
+                          </button>
                           {!isFPManager && (
                             <>
                               <button
-                                onClick={() => setMessage({ type: 'info', text: 'Assign Vendor feature coming soon' })}
-                                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                                title="Assign Vendor"
+                                onClick={() => openEditModal(property)}
+                                className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Edit Property"
                               >
-                                <Truck className="w-4 h-4 text-gray-500" />
+                                <Edit2 className="w-4 h-4 text-blue-500" />
                               </button>
                               <button
-                                onClick={() => setMessage({ type: 'info', text: 'Assign Employee feature coming soon' })}
-                                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                onClick={() => openAssignModal(property, 'vendor')}
+                                className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
+                                title="Assign Vendor"
+                              >
+                                <Truck className="w-4 h-4 text-purple-500" />
+                              </button>
+                              <button
+                                onClick={() => openAssignModal(property, 'employee')}
+                                className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
                                 title="Assign Employee"
                               >
-                                <UserPlus className="w-4 h-4 text-gray-500" />
+                                <UserPlus className="w-4 h-4 text-green-500" />
                               </button>
                               <button
                                 onClick={() => handleDeleteProperty(property.id)}
@@ -477,13 +721,246 @@ const FPProperties = ({ user }) => {
       {showDetailsModal && selectedProperty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900">Property Details</h2>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-gray-900">{selectedProperty.name}</h2>
+                  <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                    {selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Property'}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">{selectedProperty.property_id}</p>
+              </div>
               <button
-                onClick={() => {
-                  setShowDetailsModal(false);
-                  setSelectedProperty(null);
-                }}
+                onClick={() => { setShowDetailsModal(false); setSelectedProperty(null); }}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Property Information */}
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Zone</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.zone_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Area Name</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.area || selectedProperty.area_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Division</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.division || selectedProperty.division_id || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Property Type</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.units || selectedProperty.number_of_units || selectedProperty.number_of_blocks || '1'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Created Date</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {selectedProperty.created_at ? new Date(selectedProperty.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Block Details */}
+              {(selectedProperty.block_names || selectedProperty.units_per_block) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
+                  <div className="space-y-2">
+                    {(() => {
+                      try {
+                        const blockNames = typeof selectedProperty.block_names === 'string' 
+                          ? JSON.parse(selectedProperty.block_names) 
+                          : selectedProperty.block_names || {};
+                        const unitsPerBlock = typeof selectedProperty.units_per_block === 'string'
+                          ? JSON.parse(selectedProperty.units_per_block)
+                          : selectedProperty.units_per_block || {};
+                        return Object.keys(blockNames).map(key => (
+                          <div key={key}>
+                            <p className="text-xs text-gray-500">{blockNames[key] || `Block ${key}`}</p>
+                            <p className="text-sm font-medium text-gray-900">{unitsPerBlock[key] || 0} units</p>
+                          </div>
+                        ));
+                      } catch {
+                        return <p className="text-sm text-gray-500">No block details available</p>;
+                      }
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Address */}
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Address</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <p className="text-xs text-gray-500 mb-1">Street Address</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.address || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Apt/Suite</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.villa_plot_number || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">City</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.city || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">State/Province</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.state || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">ZIP/Postal Code</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.zip_code || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Map Location */}
+              {(selectedProperty.latitude || selectedProperty.longitude || selectedProperty.landmark) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Map Location</h3>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-700 mb-3">
+                      {selectedProperty.landmark || `${selectedProperty.address}, ${selectedProperty.city}, ${selectedProperty.state}, ${selectedProperty.zip_code}`}
+                    </p>
+                    {(selectedProperty.latitude && selectedProperty.longitude) && (
+                      <>
+                        <a
+                          href={`https://www.google.com/maps?q=${selectedProperty.latitude},${selectedProperty.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          Open in Maps
+                        </a>
+                        <p className="text-xs text-blue-600 mt-3 font-mono">
+                          {selectedProperty.latitude}, {selectedProperty.longitude}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Contact Information */}
+              {(selectedProperty.contact_person || selectedProperty.contact_email || selectedProperty.contact_phone) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Contact Information</h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Name</p>
+                        <p className="text-sm font-medium text-gray-900">{selectedProperty.contact_person || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Email</p>
+                        <p className="text-sm font-medium text-gray-900">{selectedProperty.contact_email || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Phone</p>
+                        <p className="text-sm font-medium text-gray-900">{selectedProperty.contact_phone || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Estimates Section */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="w-4 h-4 text-gray-500" />
+                  <h3 className="text-base font-semibold text-gray-900">Estimates (0)</h3>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-8 text-center">
+                  <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm text-gray-500">No estimates for this property</p>
+                  <p className="text-xs text-gray-400 mt-1">Create an estimate from the Estimates section</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Modal */}
+      {showAssignModal && selectedProperty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Assign {assignType === 'vendor' ? 'Vendor' : 'Employee'}
+                </h2>
+                <button onClick={() => { setShowAssignModal(false); setSelectedProperty(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">Property: {selectedProperty.name}</p>
+            </div>
+
+            <div className="p-6">
+              {(assignType === 'vendor' ? vendors : employees).length === 0 ? (
+                <p className="text-gray-500 text-center py-4">
+                  No {assignType === 'vendor' ? 'vendors' : 'employees'} available
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {(assignType === 'vendor' ? vendors : employees).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleAssign(item.id)}
+                      className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
+                    >
+                      <div className={`w-10 h-10 ${assignType === 'vendor' ? 'bg-purple-100' : 'bg-green-100'} rounded-full flex items-center justify-center`}>
+                        {assignType === 'vendor' ? (
+                          <Store className="w-5 h-5 text-purple-600" />
+                        ) : (
+                          <User className="w-5 h-5 text-green-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {assignType === 'vendor' 
+                            ? (item.ownerName || item.owner_name || item.company_name || 'Unknown Vendor')
+                            : (`${item.first_name || ''} ${item.last_name || ''}`.trim() || item.name || 'Unknown Employee')}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {assignType === 'vendor' 
+                            ? (item.serviceType || item.service_type || item.email || '-')
+                            : (item.role || item.email || '-')}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Property Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Edit Property</h2>
+              <button
+                onClick={() => { setShowEditModal(false); setEditFormData({}); }}
                 className="p-2 hover:bg-gray-100 rounded-lg"
               >
                 <X className="w-5 h-5 text-gray-500" />
@@ -491,65 +968,146 @@ const FPProperties = ({ user }) => {
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Property Name</p>
-                  <p className="text-sm font-medium">{selectedProperty.name}</p>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Name *</label>
+                  <input
+                    type="text"
+                    value={editFormData.name || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Property ID</p>
-                  <p className="text-sm font-medium">{selectedProperty.property_id}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                  <input
+                    type="text"
+                    value={editFormData.zone || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, zone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Type</p>
-                  <p className="text-sm font-medium">{selectedProperty.property_type?.replace(/_/g, ' ')}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Area</label>
+                  <input
+                    type="text"
+                    value={editFormData.area || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, area: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Zone</p>
-                  <p className="text-sm font-medium">{selectedProperty.zone_name || '-'}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Division</label>
+                  <input
+                    type="text"
+                    value={editFormData.division || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, division: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Division</p>
-                  <p className="text-sm font-medium">{selectedProperty.division || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Units</p>
-                  <p className="text-sm font-medium">{selectedProperty.units || '-'}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
+                  <select
+                    value={editFormData.propertyType || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, propertyType: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="residential">Residential</option>
+                    <option value="gated_community">Gated Community</option>
+                    <option value="apartment">Apartment</option>
+                    <option value="villa">Villa</option>
+                    <option value="plot">Plot</option>
+                    <option value="flat">Flat</option>
+                  </select>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-xs text-gray-500 mb-1">Address</p>
-                  <p className="text-sm font-medium">{selectedProperty.address}, {selectedProperty.city}, {selectedProperty.state} {selectedProperty.zip_code}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                  <textarea
+                    value={editFormData.address || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    rows={2}
+                  />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Contact Person</p>
-                  <p className="text-sm font-medium">{selectedProperty.contact_person || '-'}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <input
+                    type="text"
+                    value={editFormData.city || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Contact Phone</p>
-                  <p className="text-sm font-medium">{selectedProperty.contact_phone || '-'}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                  <input
+                    type="text"
+                    value={editFormData.state || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Contact Email</p>
-                  <p className="text-sm font-medium">{selectedProperty.contact_email || '-'}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                  <input
+                    type="text"
+                    value={editFormData.zipCode || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, zipCode: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Status</p>
-                  <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                    selectedProperty.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {selectedProperty.is_active !== false ? 'Active' : 'Inactive'}
-                  </span>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                  <input
+                    type="text"
+                    value={editFormData.contactPerson || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, contactPerson: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+                  <input
+                    type="tel"
+                    value={editFormData.contactPhone || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+                  <input
+                    type="email"
+                    value={editFormData.contactEmail || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    value={editFormData.isActive ? 'active' : 'inactive'}
+                    onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.value === 'active' })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
               <button
-                onClick={() => {
-                  setShowDetailsModal(false);
-                  setSelectedProperty(null);
-                }}
+                onClick={() => { setShowEditModal(false); setEditFormData({}); }}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
               >
-                Close
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Save className="w-4 h-4" />
+                Save Changes
               </button>
             </div>
           </div>

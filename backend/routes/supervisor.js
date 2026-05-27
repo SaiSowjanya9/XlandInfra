@@ -259,18 +259,30 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
     // Get both own and assigned properties
     const [properties] = await pool.query(
       `SELECT p.*, z.name as zone_name, 
+              COALESCE(p.area_name, p.city) as area,
+              COALESCE(p.division_id, p.division, 'General') as division,
+              COALESCE(p.number_of_units, p.total_units, 1) as units,
+              COALESCE(e.name, CONCAT(e.first_name, ' ', e.last_name), fpe.name, CONCAT(fpe.first_name, ' ', fpe.last_name), 'System') as created_by_name,
               'own' as access_type, TRUE as can_modify, TRUE as can_delete,
               TRUE as can_assign_vendor, TRUE as can_assign_employee
        FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id
+       LEFT JOIN employees e ON p.created_by = e.id
+       LEFT JOIN fp_employees fpe ON p.created_by = fpe.id
        WHERE p.supervisor_id = ?
        UNION
        SELECT p.*, z.name as zone_name,
+              COALESCE(p.area_name, p.city) as area,
+              COALESCE(p.division_id, p.division, 'General') as division,
+              COALESCE(p.number_of_units, p.total_units, 1) as units,
+              COALESCE(e.name, CONCAT(e.first_name, ' ', e.last_name), fpe.name, CONCAT(fpe.first_name, ' ', fpe.last_name), 'System') as created_by_name,
               'assigned' as access_type, sap.can_modify, sap.can_delete,
               sap.can_assign_vendor, sap.can_assign_employee
        FROM properties p
        INNER JOIN supervisor_assigned_properties sap ON p.id = sap.property_id
        LEFT JOIN zones z ON p.zone_id = z.id
+       LEFT JOIN employees e ON p.created_by = e.id
+       LEFT JOIN fp_employees fpe ON p.created_by = fpe.id
        WHERE sap.supervisor_id = ?
        ORDER BY created_at DESC`,
       [supervisorId, supervisorId]
