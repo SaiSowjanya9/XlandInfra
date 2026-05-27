@@ -40,6 +40,9 @@ const FPWorkOrders = ({ user }) => {
   const [propertySearch, setPropertySearch] = useState('');
   const [actionDropdown, setActionDropdown] = useState(null);
   const [statusDropdown, setStatusDropdown] = useState(null);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newSubcategoryName, setNewSubcategoryName] = useState('');
   const [formData, setFormData] = useState({
     propertyId: '',
     categoryId: '',
@@ -215,6 +218,25 @@ const FPWorkOrders = ({ user }) => {
     setFormData({ ...formData, categoryId, subcategoryId: '' });
     const category = categories.find(c => c.id === parseInt(categoryId));
     setSubcategories(category?.subcategories || []);
+  };
+
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) return;
+    
+    const newId = Math.max(...categories.map(c => c.id), 0) + 100;
+    const newCategory = {
+      id: newId,
+      name: newCategoryName.trim(),
+      subcategories: newSubcategoryName.trim() 
+        ? [{ id: newId * 100 + 1, name: newSubcategoryName.trim() }, { id: newId * 100 + 99, name: 'Other' }]
+        : [{ id: newId * 100 + 99, name: 'Other' }]
+    };
+    
+    setCategories([...categories, newCategory]);
+    setNewCategoryName('');
+    setNewSubcategoryName('');
+    setShowAddCategoryModal(false);
+    setMessage({ type: 'success', text: `Category "${newCategory.name}" added successfully` });
   };
 
   const handleStatusUpdate = async (id, newStatus) => {
@@ -614,6 +636,7 @@ const FPWorkOrders = ({ user }) => {
                   </select>
                   <button
                     type="button"
+                    onClick={() => setShowAddCategoryModal(true)}
                     className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
                   >
                     <Plus className="w-4 h-4" />
@@ -1213,6 +1236,67 @@ const FPWorkOrders = ({ user }) => {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Category Modal */}
+      {showAddCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Add New Category</h2>
+                <button 
+                  onClick={() => { setShowAddCategoryModal(false); setNewCategoryName(''); setNewSubcategoryName(''); }} 
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Enter category name"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  First Subcategory <span className="text-gray-400">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={newSubcategoryName}
+                  onChange={(e) => setNewSubcategoryName(e.target.value)}
+                  placeholder="Enter subcategory name"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">"Other" will be added automatically</p>
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={() => { setShowAddCategoryModal(false); setNewCategoryName(''); setNewSubcategoryName(''); }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddCategory}
+                disabled={!newCategoryName.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add Category
+              </button>
             </div>
           </div>
         </div>
