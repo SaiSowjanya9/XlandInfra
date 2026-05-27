@@ -1148,7 +1148,7 @@ const sendPasswordUpdatedByAdminEmail = async (userData) => {
           <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none;">
             <div style="text-align: center; margin-bottom: 25px;">
               <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #D8B25C22 0%, #D8B25C11 100%); border-radius: 50%; margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: center; border: 2px solid #D8B25C44;">
-                <span style="font-size: 32px;">🔑</span>
+                <span style="font-size: 32px;">�</span>
               </div>
               <h2 style="color: #D8B25C; margin: 0; font-size: 24px; font-weight: 400;">Password Updated</h2>
             </div>
