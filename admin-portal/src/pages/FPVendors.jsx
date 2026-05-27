@@ -18,7 +18,6 @@ import {
   Edit2,
   Trash2,
   Save,
-  MoreVertical
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -49,7 +48,6 @@ const FPVendors = ({ user }) => {
   const [editVendor, setEditVendor] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [toast, setToast] = useState(null);
-  const [actionDropdown, setActionDropdown] = useState(null);
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -325,53 +323,34 @@ const FPVendors = ({ user }) => {
                         {vendor.status === 'deleted' ? 'Deleted' : 'Active'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap relative">
-                      <button
-                        onClick={() => setActionDropdown(actionDropdown === vendor.id ? null : vendor.id)}
-                        className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors mx-auto block"
-                      >
-                        <MoreVertical className="w-4 h-4 text-gray-500" />
-                      </button>
-                      
-                      {actionDropdown === vendor.id && (
-                        <div className="absolute right-4 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                          <button
-                            onClick={() => {
-                              setViewVendor(vendor);
-                              setActionDropdown(null);
-                            }}
-                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                          >
-                            <Eye className="w-4 h-4" />
-                            View Details
-                          </button>
-                          {!isFPManager && vendor.status !== 'deleted' && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setEditVendor(vendor);
-                                  setActionDropdown(null);
-                                }}
-                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                                Modify Vendor
-                              </button>
-                              <div className="border-t border-gray-100 my-1"></div>
-                              <button
-                                onClick={() => {
-                                  setDeleteConfirm(vendor);
-                                  setActionDropdown(null);
-                                }}
-                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Delete
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => setViewVendor(vendor)}
+                          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4 text-gray-500" />
+                        </button>
+                        {!isFPManager && vendor.status !== 'deleted' && (
+                          <>
+                            <button
+                              onClick={() => setEditVendor(vendor)}
+                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="Modify Vendor"
+                            >
+                              <Edit2 className="w-4 h-4 text-gray-500" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(vendor)}
+                              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

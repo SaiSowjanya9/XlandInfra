@@ -16,11 +16,9 @@ import {
   Camera,
   FileText,
   Trash2,
-  MoreVertical,
   Truck,
   UserPlus,
-  RotateCcw,
-  ChevronRight
+  RotateCcw
 } from 'lucide-react';
 
 const FPWorkOrders = ({ user }) => {
@@ -38,8 +36,6 @@ const FPWorkOrders = ({ user }) => {
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [propertySearch, setPropertySearch] = useState('');
-  const [actionDropdown, setActionDropdown] = useState(null);
-  const [statusDropdown, setStatusDropdown] = useState(null);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newSubcategoryName, setNewSubcategoryName] = useState('');
@@ -408,8 +404,6 @@ const FPWorkOrders = ({ user }) => {
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to update status' });
     }
-    setActionDropdown(null);
-    setStatusDropdown(null);
   };
 
   const handleDeleteWorkOrder = async (workOrderId) => {
@@ -430,7 +424,6 @@ const FPWorkOrders = ({ user }) => {
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to delete work order' });
     }
-    setActionDropdown(null);
   };
 
   const handleMarkAsClosed = async (workOrderId) => {
@@ -1001,109 +994,59 @@ const FPWorkOrders = ({ user }) => {
                         <td className="py-4 px-4">
                           <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
                         </td>
-                        <td className="py-4 px-4 relative">
-                          <button
-                            onClick={() => setActionDropdown(actionDropdown === wo.id ? null : wo.id)}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                          >
-                            <MoreVertical className="w-4 h-4 text-gray-500" />
-                          </button>
-                          
-                          {actionDropdown === wo.id && (
-                            <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                              {/* Pending Tab Actions */}
-                              {activeTab === 'pending' && (
-                                <>
-                                  <button
-                                    onClick={() => handleViewDetail(wo)}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                    View Details
-                                  </button>
-                                  {!isFPManager && (
-                                    <>
-                                      <button
-                                        onClick={() => {
-                                          setMessage({ type: 'info', text: 'Assign Vendor feature coming soon' });
-                                          setActionDropdown(null);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                                      >
-                                        <Truck className="w-4 h-4" />
-                                        Assign Vendor
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          setMessage({ type: 'info', text: 'Assign Employee feature coming soon' });
-                                          setActionDropdown(null);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                                      >
-                                        <UserPlus className="w-4 h-4" />
-                                        Assign Employee
-                                      </button>
-                                      <div className="border-t border-gray-100 my-1"></div>
-                                      <button
-                                        onClick={() => handleDeleteWorkOrder(wo.id)}
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete
-                                      </button>
-                                    </>
-                                  )}
-                                </>
-                              )}
-                              
-                              {/* Completed Tab Actions */}
-                              {activeTab === 'completed' && (
-                                <>
-                                  <div className="relative">
-                                    <button
-                                      onClick={() => setStatusDropdown(statusDropdown === wo.id ? null : wo.id)}
-                                      className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                                    >
-                                      <span className="flex items-center gap-2">
-                                        <Clock className="w-4 h-4" />
-                                        Change Status
-                                      </span>
-                                      <ChevronRight className="w-4 h-4" />
-                                    </button>
-                                    {statusDropdown === wo.id && (
-                                      <div className="absolute left-full top-0 ml-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-30">
-                                        {['pending', 'assigned', 'in_progress', 'completed', 'closed', 'cancelled'].map(status => (
-                                          <button
-                                            key={status}
-                                            onClick={() => handleStatusChange(wo.id, status)}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                                              wo.status === status ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                                            }`}
-                                          >
-                                            {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <button
-                                    onClick={() => handleMarkAsClosed(wo.id)}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                                  >
-                                    <CheckCircle className="w-4 h-4" />
-                                    Mark As Closed
-                                  </button>
-                                  <button
-                                    onClick={() => handleRevertToPending(wo.id)}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                                  >
-                                    <RotateCcw className="w-4 h-4" />
-                                    Revert to Pending
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          )}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleViewDetail(wo)}
+                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4 text-gray-500" />
+                            </button>
+                            {activeTab === 'pending' && !isFPManager && (
+                              <>
+                                <button
+                                  onClick={() => setMessage({ type: 'info', text: 'Assign Vendor feature coming soon' })}
+                                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                  title="Assign Vendor"
+                                >
+                                  <Truck className="w-4 h-4 text-gray-500" />
+                                </button>
+                                <button
+                                  onClick={() => setMessage({ type: 'info', text: 'Assign Employee feature coming soon' })}
+                                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                  title="Assign Employee"
+                                >
+                                  <UserPlus className="w-4 h-4 text-gray-500" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteWorkOrder(wo.id)}
+                                  className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </button>
+                              </>
+                            )}
+                            {activeTab === 'completed' && (
+                              <>
+                                <button
+                                  onClick={() => handleMarkAsClosed(wo.id)}
+                                  className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                                  title="Mark As Closed"
+                                >
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                </button>
+                                <button
+                                  onClick={() => handleRevertToPending(wo.id)}
+                                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                  title="Revert to Pending"
+                                >
+                                  <RotateCcw className="w-4 h-4 text-gray-500" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
