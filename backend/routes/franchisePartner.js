@@ -257,10 +257,8 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
 router.get('/properties', requireFPScope, async (req, res) => {
   try {
     const [properties] = await pool.execute(
-      `SELECT p.*, z.name as zone_name, d.name as division_name
+      `SELECT p.*, p.zone_id as zone_name, p.division_id as division_name
        FROM properties p
-       LEFT JOIN zones z ON p.zone_id = z.id
-       LEFT JOIN divisions d ON p.division_id = d.id
        WHERE p.franchise_partner_id = ?
        ORDER BY p.created_at DESC`,
       [req.fpId]
@@ -712,7 +710,7 @@ router.post('/customers', requireFPScope, async (req, res) => {
       const contactPhone = contact.phone || '';
       const contactCountryCode = contact.countryCode || '+91';
 
-      // Create property first
+      // Create property first (zone_id and division_id store names as VARCHAR)
       const [propertyResult] = await pool.execute(
         `INSERT INTO properties (
           property_id, name, property_type, address, city, state, zip_code,
