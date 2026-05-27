@@ -167,10 +167,10 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
 
     // Get recent work orders
     const [recentWorkOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, sc.name as category_name
+      `SELECT wo.*, p.name as property_name, c.name as category_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN service_categories sc ON wo.category_id = sc.id
+       LEFT JOIN categories c ON wo.category_id = c.id
        WHERE wo.${scopeColumn} = ?
        ORDER BY wo.created_at DESC
        LIMIT 5`,
@@ -306,10 +306,10 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
     const { status } = req.query;
 
     let query = `
-      SELECT wo.*, p.name as property_name, sc.name as category_name, v.company_name as vendor_name
+      SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
-      LEFT JOIN service_categories sc ON wo.category_id = sc.id
+      LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
       WHERE wo.${scopeColumn} = ?
     `;
@@ -336,10 +336,10 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
     const scopeColumn = getScopeColumn(req);
 
     const [workOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, sc.name as category_name, v.company_name as vendor_name
+      `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN service_categories sc ON wo.category_id = sc.id
+       LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        WHERE wo.${scopeColumn} = ? AND wo.status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')
        ORDER BY wo.created_at DESC`,
@@ -359,10 +359,10 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
     const scopeColumn = getScopeColumn(req);
 
     const [workOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, sc.name as category_name, v.company_name as vendor_name
+      `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN service_categories sc ON wo.category_id = sc.id
+       LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        WHERE wo.${scopeColumn} = ? AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`,
@@ -999,10 +999,10 @@ router.get('/export/work-orders', requireCoordinatorScope, async (req, res) => {
     const coordinatorId = req.coordinatorId;
 
     const [workOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, sc.name as category_name
+      `SELECT wo.*, p.name as property_name, c.name as category_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN service_categories sc ON wo.category_id = sc.id
+       LEFT JOIN categories c ON wo.category_id = c.id
        WHERE wo.coordinator_id = ?`,
       [coordinatorId]
     );

@@ -217,10 +217,10 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
 
     // Get recent work orders
     const [recentWorkOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, sc.name as category_name
+      `SELECT wo.*, p.name as property_name, c.name as category_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN service_categories sc ON wo.category_id = sc.id
+       LEFT JOIN categories c ON wo.category_id = c.id
        WHERE wo.supervisor_id = ?
        ORDER BY wo.created_at DESC
        LIMIT 5`,
@@ -425,10 +425,10 @@ router.get('/work-orders', requireSupervisorScope, async (req, res) => {
     const { status } = req.query;
 
     let query = `
-      SELECT wo.*, p.name as property_name, sc.name as category_name, v.company_name as vendor_name
+      SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
-      LEFT JOIN service_categories sc ON wo.category_id = sc.id
+      LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
       WHERE wo.supervisor_id = ?
     `;
@@ -454,10 +454,10 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
 
     const [workOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, sc.name as category_name, v.company_name as vendor_name
+      `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN service_categories sc ON wo.category_id = sc.id
+       LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        WHERE wo.supervisor_id = ? AND wo.status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')
        ORDER BY wo.created_at DESC`,
@@ -476,10 +476,10 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
     const supervisorId = req.supervisorId;
 
     const [workOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, sc.name as category_name, v.company_name as vendor_name
+      `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN service_categories sc ON wo.category_id = sc.id
+       LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        WHERE wo.supervisor_id = ? AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`,
@@ -1031,9 +1031,9 @@ router.get('/addons', requireSupervisorScope, async (req, res) => {
     const canView = await canViewPricing(supervisorId, 'addons');
 
     const [addons] = await pool.query(
-      `SELECT sa.*, sc.name as category_name
+      `SELECT sa.*, c.name as category_name
        FROM supervisor_addons sa
-       LEFT JOIN service_categories sc ON sa.category_id = sc.id
+       LEFT JOIN categories c ON sa.category_id = c.id
        WHERE sa.supervisor_id = ?
        ORDER BY sa.created_at DESC`,
       [supervisorId]
@@ -1202,10 +1202,10 @@ router.get('/export/work-orders', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
 
     const [workOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, sc.name as category_name
+      `SELECT wo.*, p.name as property_name, c.name as category_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN service_categories sc ON wo.category_id = sc.id
+       LEFT JOIN categories c ON wo.category_id = c.id
        WHERE wo.supervisor_id = ?`,
       [supervisorId]
     );
