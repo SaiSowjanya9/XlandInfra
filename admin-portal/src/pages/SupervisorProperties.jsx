@@ -429,9 +429,9 @@ const SupervisorProperties = ({ user }) => {
                 <div><p className="text-sm text-gray-500">Units</p><p className="text-gray-900">{selectedProperty.units || selectedProperty.total_units || 1}</p></div>
                 <div><p className="text-sm text-gray-500">Status</p><span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${selectedProperty.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{selectedProperty.status || 'active'}</span></div>
                 <div className="col-span-2 md:col-span-3"><p className="text-sm text-gray-500">Address</p><p className="text-gray-900">{selectedProperty.address || `${selectedProperty.city}, ${selectedProperty.state}`}</p></div>
-                <div><p className="text-sm text-gray-500">Contact Person</p><p className="text-gray-900">{selectedProperty.contact_person || '-'}</p></div>
-                <div><p className="text-sm text-gray-500">Contact Phone</p><p className="text-gray-900">{selectedProperty.contact_phone || '-'}</p></div>
-                <div><p className="text-sm text-gray-500">Contact Email</p><p className="text-gray-900">{selectedProperty.contact_email || '-'}</p></div>
+                <div className="min-w-0"><p className="text-sm text-gray-500">Contact Person</p><p className="text-gray-900">{selectedProperty.contact_person || '-'}</p></div>
+                <div className="min-w-0"><p className="text-sm text-gray-500">Contact Phone</p><p className="text-gray-900 whitespace-nowrap">{selectedProperty.contact_phone || '-'}</p></div>
+                <div className="min-w-0 col-span-2 md:col-span-1"><p className="text-sm text-gray-500">Contact Email</p><p className="text-gray-900 break-all">{selectedProperty.contact_email || '-'}</p></div>
               </div>
             </div>
             <div className="p-6 border-t border-gray-100 flex justify-end">

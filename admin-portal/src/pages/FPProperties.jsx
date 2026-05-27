@@ -858,18 +858,18 @@ const FPProperties = ({ user }) => {
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Contact Information</h3>
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                      <div className="min-w-0">
                         <p className="text-xs text-gray-500 mb-1">Name</p>
                         <p className="text-sm font-medium text-gray-900">{selectedProperty.contact_person || '-'}</p>
                       </div>
-                      <div>
+                      <div className="min-w-0 sm:col-span-2">
                         <p className="text-xs text-gray-500 mb-1">Email</p>
-                        <p className="text-sm font-medium text-gray-900">{selectedProperty.contact_email || '-'}</p>
+                        <p className="text-sm font-medium text-gray-900 break-all">{selectedProperty.contact_email || '-'}</p>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs text-gray-500 mb-1">Phone</p>
-                        <p className="text-sm font-medium text-gray-900">{selectedProperty.contact_phone || '-'}</p>
+                        <p className="text-sm font-medium text-gray-900 whitespace-nowrap">{selectedProperty.contact_phone || '-'}</p>
                       </div>
                     </div>
                   </div>
