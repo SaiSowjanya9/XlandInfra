@@ -3,10 +3,13 @@ const nodemailer = require('nodemailer');
 // Email configuration - uses environment variables
 // Supports both Gmail and custom SMTP servers (Hostinger, GoDaddy, cPanel, etc.)
 const createTransporter = () => {
+  const host = process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.hostinger.com';
+  const port = parseInt(process.env.EMAIL_PORT || process.env.SMTP_PORT) || 465;
+  
   const config = {
-    host: process.env.SMTP_HOST || 'smtp.hostinger.com',
-    port: parseInt(process.env.SMTP_PORT) || 465,
-    secure: process.env.SMTP_SECURE !== 'false', // true for 465, false for other ports
+    host: host,
+    port: port,
+    secure: port === 465, // true for 465, false for 587
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
@@ -19,6 +22,7 @@ const createTransporter = () => {
     rateLimit: 5
   };
 
+  console.log(`📧 Email configured: ${host}:${port} as ${process.env.EMAIL_USER}`);
   return nodemailer.createTransport(config);
 };
 

@@ -866,9 +866,14 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
     
     let query = `
       SELECT u.*, 
-             CONCAT(c.first_name, ' ', c.last_name) as created_by_name
+             CONCAT(c.first_name, ' ', c.last_name) as created_by_name,
+             fp.company_name as franchise_name,
+             fp.owner_name,
+             fp.gst_number,
+             fp.pan_number
       FROM users u
       LEFT JOIN users c ON u.created_by = c.id
+      LEFT JOIN franchise_partners fp ON u.email = fp.email
       WHERE 1=1
     `;
     const params = [];
@@ -900,6 +905,11 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
         role: s.role,
         roleName: ROLE_NAMES[s.role],
         visiblePassword: s.visible_password,
+        franchiseName: s.franchise_name || '',
+        ownerName: s.owner_name || '',
+        companyName: s.franchise_name || '',
+        gstNumber: s.gst_number || '',
+        panNumber: s.pan_number || '',
         permissions: {
           canView: s.can_view,
           canCreate: s.can_create,
@@ -933,9 +943,14 @@ router.get('/:id', authenticate, adminOnly, async (req, res) => {
 
     const [staff] = await pool.execute(
       `SELECT u.*, 
-              CONCAT(c.first_name, ' ', c.last_name) as created_by_name
+              CONCAT(c.first_name, ' ', c.last_name) as created_by_name,
+              fp.company_name as franchise_name,
+              fp.owner_name,
+              fp.gst_number,
+              fp.pan_number
        FROM users u
        LEFT JOIN users c ON u.created_by = c.id
+       LEFT JOIN franchise_partners fp ON u.email = fp.email
        WHERE u.id = ?`,
       [id]
     );
@@ -952,6 +967,7 @@ router.get('/:id', authenticate, adminOnly, async (req, res) => {
       success: true,
       data: {
         id: s.id,
+        userId: s.user_id,
         username: s.username,
         email: s.email,
         firstName: s.first_name,
@@ -959,6 +975,11 @@ router.get('/:id', authenticate, adminOnly, async (req, res) => {
         phone: s.phone,
         role: s.role,
         roleName: ROLE_NAMES[s.role],
+        franchiseName: s.franchise_name || '',
+        ownerName: s.owner_name || '',
+        companyName: s.franchise_name || '',
+        gstNumber: s.gst_number || '',
+        panNumber: s.pan_number || '',
         permissions: {
           canView: s.can_view,
           canCreate: s.can_create,
