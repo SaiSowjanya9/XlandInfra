@@ -268,7 +268,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
         p.landmark,
         p.latitude,
         p.longitude,
-        COALESCE(e.name, CONCAT(e.first_name, ' ', e.last_name), e.role, 'System') as created_by_name,
+        COALESCE(e.name, CONCAT(e.first_name, ' ', e.last_name), p.created_by, 'System') as created_by_name,
         e.role as created_by_role
        FROM properties p
        LEFT JOIN fp_employees e ON p.created_by = e.id

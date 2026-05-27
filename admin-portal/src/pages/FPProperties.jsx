@@ -28,8 +28,7 @@ import {
   FileText,
   MapPin,
   Calendar,
-  Download,
-  FileSpreadsheet
+  Download
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -556,15 +555,6 @@ const FPProperties = ({ user }) => {
         >
           <RefreshCw className="w-5 h-5" />
         </button>
-
-        <button
-          onClick={exportAllProperties}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
-          title="Export All Properties"
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          Export All
-        </button>
       </div>
 
       {/* Properties Table */}
@@ -708,10 +698,17 @@ const FPProperties = ({ user }) => {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-3 border-t border-gray-100">
+            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
               <p className="text-sm text-gray-500">
                 Showing {filteredProperties.length} of {properties.length} properties
               </p>
+              <button
+                onClick={exportAllProperties}
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+              >
+                <Download className="w-4 h-4" />
+                Export All Properties
+              </button>
             </div>
           </>
         )}

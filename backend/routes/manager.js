@@ -228,6 +228,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
           CONCAT(e.first_name, ' ', e.last_name),
           fpe.name,
           CONCAT(fpe.first_name, ' ', fpe.last_name),
+          p.created_by,
           'System'
         ) as created_by_name
        FROM properties p 

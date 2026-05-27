@@ -220,6 +220,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
           CONCAT(e.first_name, ' ', e.last_name),
           fpe.name,
           CONCAT(fpe.first_name, ' ', fpe.last_name),
+          p.created_by,
           'System'
         ) as created_by_name,
         CONCAT(COALESCE(p.contact_person, ''), CASE WHEN p.contact_phone IS NOT NULL THEN CONCAT(' | ', p.contact_phone) ELSE '' END) as contacts
