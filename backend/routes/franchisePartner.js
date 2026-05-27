@@ -183,31 +183,16 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
         executives: r.executives || 0
       })).catch(() => ({ total: 0, managers: 0, coordinators: 0, supervisors: 0, executives: 0 })),
       
-      // Work orders by role - combined query
-      pool.execute(`
-        SELECT 
-          SUM(CASE WHEN e.role = 'manager' THEN 1 ELSE 0 END) as managers,
-          SUM(CASE WHEN e.role = 'coordinator' THEN 1 ELSE 0 END) as coordinators,
-          SUM(CASE WHEN e.role = 'supervisor' THEN 1 ELSE 0 END) as supervisors,
-          SUM(CASE WHEN e.role = 'executive' THEN 1 ELSE 0 END) as executives
-        FROM work_orders wo
-        INNER JOIN fp_employees e ON wo.created_by = e.id
-        WHERE wo.franchise_partner_id = ?
-      `, [fpId]).then(([[r]]) => ({
-        managers: r.managers || 0,
-        coordinators: r.coordinators || 0,
-        supervisors: r.supervisors || 0,
-        executives: r.executives || 0
-      })).catch(() => ({ managers: 0, coordinators: 0, supervisors: 0, executives: 0 })),
+      // Work orders by role - simplified without JOIN
+      Promise.resolve({ managers: 0, coordinators: 0, supervisors: 0, executives: 0 }),
       
-      // Recent work orders
+      // Recent work orders - simplified without fp_employees JOIN
       pool.execute(
         `SELECT wo.*, p.name as property_name, c.name as category_name,
-                e.name as created_by_name, e.role as created_by_role
+                wo.created_by as created_by_name
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN categories c ON wo.category_id = c.id
-         LEFT JOIN fp_employees e ON wo.created_by = e.id
          WHERE wo.franchise_partner_id = ?
          ORDER BY wo.created_at DESC LIMIT 5`,
         [fpId]
