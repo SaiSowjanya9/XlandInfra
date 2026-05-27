@@ -92,7 +92,13 @@ const UserManagement = () => {
             isActive: u.isActive,
             lastLogin: u.lastLogin,
             createdAt: u.createdAt,
-            createdBy: u.createdBy
+            createdBy: u.createdBy,
+            // Franchise Partner fields
+            franchiseName: u.franchiseName || '',
+            ownerName: u.ownerName || '',
+            companyName: u.companyName || '',
+            gstNumber: u.gstNumber || '',
+            panNumber: u.panNumber || ''
           }));
         setUsers(loadedUsers);
         
