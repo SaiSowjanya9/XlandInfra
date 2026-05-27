@@ -49,9 +49,24 @@ router.post('/', authenticate, async (req, res) => {
     } = req.body;
 
     // Get actual user name from authenticated user
-    const creatorName = req.user?.firstName && req.user?.lastName 
-      ? `${req.user.firstName} ${req.user.lastName}`.trim()
-      : req.user?.name || req.user?.username || 'System';
+    let creatorName = 'System';
+    if (req.user) {
+      // Try to get full name from firstName + lastName
+      if (req.user.firstName && req.user.lastName) {
+        creatorName = `${req.user.firstName} ${req.user.lastName}`.trim();
+      } else if (req.user.firstName) {
+        creatorName = req.user.firstName;
+      } else if (req.user.name) {
+        creatorName = req.user.name;
+      } else if (req.user.email) {
+        // Use email prefix as name if nothing else available
+        creatorName = req.user.email.split('@')[0];
+      } else if (req.user.username && req.user.username !== req.user.role) {
+        // Only use username if it's not the same as role
+        creatorName = req.user.username;
+      }
+    }
+    console.log('Onboarding createdBy:', creatorName, 'User:', JSON.stringify(req.user));
 
     // Calculate total units
     let totalUnits = 0;
