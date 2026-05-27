@@ -1285,6 +1285,21 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
       });
     }
 
+    const userToDelete = existing[0];
+    
+    // If franchise partner, also delete from franchise_partners table
+    if (userToDelete.role === 'franchise_partner' || userToDelete.role === 'franchise') {
+      try {
+        await pool.execute(
+          `DELETE FROM franchise_partners WHERE email = ?`,
+          [userToDelete.email]
+        );
+        console.log(`🗑️ Franchise partner record deleted for email: ${userToDelete.email}`);
+      } catch (fpError) {
+        console.log(`Note: No franchise_partners record found for ${userToDelete.email}`);
+      }
+    }
+    
     // Permanently delete the user from database
     const [result] = await pool.execute(
       `DELETE FROM users WHERE id = ?`,
@@ -1298,7 +1313,7 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
       });
     }
 
-    console.log(`🗑️ User permanently deleted: ID ${id}, Email: ${existing[0].email}`);
+    console.log(`🗑️ User permanently deleted: ID ${id}, Email: ${userToDelete.email}`);
 
     res.json({
       success: true,
