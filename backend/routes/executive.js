@@ -205,29 +205,33 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
 
-    // Get both own and assigned properties
+    // Get both own and assigned properties with creator name
     const [regularProperties] = await pool.query(
       `SELECT p.*, z.name as zone_name, 
+              COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'own' as access_type, TRUE as can_modify, FALSE as can_delete,
               FALSE as can_assign_vendor, FALSE as can_assign_employee,
               'properties' as source_table
        FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id
+       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE p.executive_id = ?
        UNION
        SELECT p.*, z.name as zone_name,
+              COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'assigned' as access_type, eap.can_modify, eap.can_delete,
               eap.can_assign_vendor, eap.can_assign_employee,
               'properties' as source_table
        FROM properties p
        INNER JOIN executive_assigned_properties eap ON p.id = eap.property_id
        LEFT JOIN zones z ON p.zone_id = z.id
+       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE eap.executive_id = ?
        ORDER BY created_at DESC`,
       [executiveId, executiveId]
     );
 
-    // Also fetch from onboarded_properties
+    // Also fetch from onboarded_properties with creator name
     let onboardedProperties = [];
     try {
       const scopeColumn = franchisePartnerId ? 'franchise_partner_id' : 'executive_id';
@@ -237,11 +241,13 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
                 op.zone_id as zone_name, op.division, op.total_units as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
-                op.created_by as created_by_name, op.created_at, op.status,
+                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
+                op.created_at, op.status,
                 'own' as access_type, TRUE as can_modify, FALSE as can_delete,
                 FALSE as can_assign_vendor, FALSE as can_assign_employee,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
+         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
          WHERE op.${scopeColumn} = ? AND op.status = 'active'
          ORDER BY op.created_at DESC`,
         [scopeId]
