@@ -357,6 +357,8 @@ const SupervisorProperties = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Address</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">City</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contacts</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -397,6 +399,22 @@ const SupervisorProperties = ({ user }) => {
                     </td>
                     <td className="py-4 px-4">
                       <p className="text-sm text-gray-600">{property.contact_phone || property.contact_person || '-'}</p>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                        property.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {property.status || 'Active'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSelectedProperty(property); setShowAssignModal(true); setAssignType('view'); }}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>View Details</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
