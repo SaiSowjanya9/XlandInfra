@@ -183,11 +183,17 @@ const FPWorkOrders = ({ user }) => {
     setMessage({ type: '', text: '' });
 
     try {
+      // Get category and subcategory names for the selected IDs
+      const selectedCategory = categories.find(c => c.id === parseInt(formData.categoryId));
+      const selectedSubcategory = subcategories.find(s => s.id === parseInt(formData.subcategoryId));
+      
       // Use FormData for file uploads
       const submitData = new FormData();
       submitData.append('propertyId', formData.propertyId);
       submitData.append('categoryId', formData.categoryId);
       submitData.append('subcategoryId', formData.subcategoryId);
+      submitData.append('categoryName', selectedCategory?.name || '');
+      submitData.append('subcategoryName', selectedSubcategory?.name || '');
       submitData.append('customerName', formData.customerName);
       submitData.append('customerEmail', formData.customerEmail);
       submitData.append('customerPhone', formData.customerPhone);
