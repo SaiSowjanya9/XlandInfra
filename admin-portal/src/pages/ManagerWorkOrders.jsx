@@ -99,7 +99,7 @@ const ManagerWorkOrders = ({ user }) => {
 
   // Count work orders by status
   const pendingCount = workOrders.filter(wo => 
-    ['draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)
+    ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)
   ).length;
   const completedCount = workOrders.filter(wo => 
     ['completed', 'verified', 'closed'].includes(wo.status)
@@ -107,7 +107,7 @@ const ManagerWorkOrders = ({ user }) => {
 
   // Filter work orders by active tab and search term
   const filteredWorkOrders = workOrders.filter(wo => {
-    const isPending = ['draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status);
+    const isPending = ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status);
     const isCompleted = ['completed', 'verified', 'closed'].includes(wo.status);
     
     if (activeTab === 'pending' && !isPending) return false;
