@@ -425,25 +425,18 @@ const generatePDF = (data, type, filename) => {
 
 // Export estimate to PDF
 export const exportEstimateToPDF = (estimate) => {
-  console.log('[PDF] exportEstimateToPDF called with:', JSON.stringify(estimate, null, 2));
-  if (isExporting) {
-    console.log('[PDF] Already exporting, skipping');
-    return false;
-  }
-  isExporting = true;
+  console.log('[PDF] exportEstimateToPDF called for:', estimate?.estimateId || estimate?.estimate_id);
 
   try {
     if (!estimate) {
       console.error('[PDF] No estimate data provided');
-      throw new Error('No estimate data provided');
+      return false;
     }
 
     // Prepare services from various possible formats
     let services = [];
     
     console.log('[PDF] Estimate type:', estimate.estimateType || estimate.estimate_type);
-    console.log('[PDF] Raw services:', estimate.services);
-    console.log('[PDF] Raw serviceRows:', estimate.serviceRows);
     
     // Check serviceRows first (package service rows from form)
     if (estimate.serviceRows && Array.isArray(estimate.serviceRows) && estimate.serviceRows.length > 0) {
@@ -536,14 +529,12 @@ export const exportEstimateToPDF = (estimate) => {
       createdAt: estimate.createdAt || estimate.created_at || new Date().toISOString()
     };
 
-    console.log('[PDF] exportData prepared:', exportData);
+    console.log('[PDF] Generating PDF for:', exportData.estimateId);
     const result = generatePDF(exportData, 'estimate', `Estimate-${exportData.estimateId}.pdf`);
     console.log('[PDF] generatePDF result:', result);
-    isExporting = false;
     return result;
   } catch (error) {
     console.error('PDF Export Error:', error);
-    isExporting = false;
     return false;
   }
 };
