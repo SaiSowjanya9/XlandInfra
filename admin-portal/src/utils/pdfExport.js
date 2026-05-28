@@ -225,7 +225,7 @@ const generatePDF = (data, type, filename) => {
       y += 14;
     }
 
-    // ===== SERVICES TABLE (No Amount column) =====
+    // ===== SERVICES TABLE =====
     doc.setTextColor(...primaryColor);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
@@ -235,7 +235,10 @@ const generatePDF = (data, type, filename) => {
     doc.line(margin, y + 2, margin + 40, y + 2);
     y += 8;
 
-    // Prepare services data - No Amount column, No [Add-on] prefix
+    // Get No. of Visits
+    const noOfVisits = data.noOfVisits || '-';
+
+    // Prepare services data with No. of Visits column
     const services = data.services || [];
     const tableBody = [];
     
@@ -244,39 +247,41 @@ const generatePDF = (data, type, filename) => {
         const row = [
           String(idx + 1),
           String(s.name || s.service || 'Service'),
-          String(s.frequencyType || 'Monthly')
+          String(s.frequencyType || 'Monthly'),
+          idx === 0 ? String(noOfVisits) : '' // Show visits only in first row
         ];
         tableBody.push(row);
         
         // Add description if exists
         if (s.description) {
-          tableBody.push(['', { content: s.description, styles: { fontStyle: 'italic', textColor: grayText, fontSize: 7 } }, '']);
+          tableBody.push(['', { content: s.description, styles: { fontStyle: 'italic', textColor: grayText, fontSize: 7 } }, '', '']);
         }
       });
     } else {
-      tableBody.push(['1', 'No services listed', '-']);
+      tableBody.push(['1', 'No services listed', '-', String(noOfVisits)]);
     }
 
-    // Add addons to table (without [Add-on] prefix)
+    // Add addons to table
     if (data.addons && data.addons.length > 0) {
       data.addons.forEach((addon, idx) => {
         const addonName = addon.name || addon.serviceName || addon.services?.[0]?.name || 'Additional Service';
         tableBody.push([
           String(services.length + idx + 1),
           addonName,
-          '-'
+          '-',
+          ''
         ]);
         
         // Add description if exists
         if (addon.description) {
-          tableBody.push(['', { content: addon.description, styles: { fontStyle: 'italic', textColor: grayText, fontSize: 7 } }, '']);
+          tableBody.push(['', { content: addon.description, styles: { fontStyle: 'italic', textColor: grayText, fontSize: 7 } }, '', '']);
         }
       });
     }
 
     autoTable(doc, {
       startY: y,
-      head: [['#', 'Service Description', 'Frequency']],
+      head: [['#', 'Service Description', 'Frequency', 'No. of Visits']],
       body: tableBody,
       margin: { left: margin, right: margin },
       styles: {
@@ -297,7 +302,8 @@ const generatePDF = (data, type, filename) => {
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },
         1: { cellWidth: 'auto' },
-        2: { cellWidth: 30, halign: 'center' }
+        2: { cellWidth: 28, halign: 'center' },
+        3: { cellWidth: 28, halign: 'center' }
       },
       alternateRowStyles: { fillColor: [250, 251, 252] }
     });
@@ -306,31 +312,64 @@ const generatePDF = (data, type, filename) => {
 
     // ===== DESCRIPTION SECTION =====
     if (data.description) {
+      const maxDescLines = 50; // Maximum 50 lines
+      const lineHeight = 5; // Good spacing between lines
+      const descWidth = pageWidth - margin * 2;
+      const textWidth = descWidth - 20; // Padding inside box
+      
       doc.setFontSize(8);
-      const descLines = doc.splitTextToSize(data.description, pageWidth - margin * 2 - 15);
-      const maxLines = Math.min(descLines.length, 8); // Allow up to 8 lines
-      const descBoxHeight = 12 + (maxLines * 4.5);
+      let descLines = doc.splitTextToSize(data.description, textWidth);
       
-      // Check if description needs a new page
-      checkPageOverflow(descBoxHeight + 10);
+      // Limit to 50 lines
+      if (descLines.length > maxDescLines) {
+        descLines = descLines.slice(0, maxDescLines);
+        descLines[maxDescLines - 1] = descLines[maxDescLines - 1] + '...';
+      }
       
-      doc.setFillColor(...lightGray);
-      doc.roundedRect(margin, y, pageWidth - margin * 2, descBoxHeight, 2, 2, 'F');
-      doc.setTextColor(...darkText);
+      const headerHeight = 18;
+      const contentHeight = descLines.length * lineHeight;
+      const descBoxHeight = headerHeight + contentHeight + 10; // Extra padding at bottom
+      
+      // Check if description fits on current page, otherwise add new page
+      if (y + descBoxHeight > pageHeight - 40) {
+        doc.addPage();
+        y = 20;
+      }
+      
+      // Description box with clean styling
+      doc.setFillColor(250, 251, 252); // Very light gray background
+      doc.setDrawColor(220, 225, 230);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, y, descWidth, descBoxHeight, 4, 4, 'FD');
+      
+      // Header bar
+      doc.setFillColor(...primaryColor);
+      doc.roundedRect(margin, y, descWidth, 14, 4, 4, 'F');
+      doc.rect(margin, y + 10, descWidth, 4, 'F');
+      doc.setTextColor(255, 255, 255);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Description:', margin + 5, y + 8);
+      doc.text('DESCRIPTION / NOTES', margin + 10, y + 9);
+      
+      // Description content with proper alignment
+      doc.setTextColor(60, 60, 60);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      doc.text(descLines.slice(0, maxLines), margin + 5, y + 15);
-      y += descBoxHeight + 6;
+      
+      let textY = y + headerHeight + 4;
+      descLines.forEach((line) => {
+        doc.text(line, margin + 10, textY);
+        textY += lineHeight;
+      });
+      
+      y += descBoxHeight + 8;
     }
 
     // Check if summary needs a new page
-    checkPageOverflow(80);
+    checkPageOverflow(95);
 
     // ===== TOTAL PRICE SUMMARY =====
-    const summaryWidth = 90;
+    const summaryWidth = 100;
     const summaryX = pageWidth - margin - summaryWidth;
     
     const subtotal = parseFloat(data.subtotal) || parseFloat(data.totalPrice) || 0;
@@ -338,66 +377,70 @@ const generatePDF = (data, type, filename) => {
     const afterDiscount = subtotal - discount;
     const gst = Math.round(afterDiscount * GST_RATE);
     const total = parseFloat(data.totalPrice) || (afterDiscount + gst);
-
-    // Summary box
-    doc.setDrawColor(...borderColor);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(summaryX, y, summaryWidth, discount > 0 ? 80 : 70, 3, 3, 'S');
     
-    // Header
-    doc.setFillColor(...lightGray);
-    doc.roundedRect(summaryX, y, summaryWidth, 12, 3, 3, 'F');
-    doc.rect(summaryX, y + 8, summaryWidth, 4, 'F');
-    doc.setTextColor(...primaryColor);
+    const summaryBoxHeight = discount > 0 ? 90 : 78;
+
+    // Outer box with subtle shadow effect
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(summaryX, y, summaryWidth, summaryBoxHeight, 4, 4, 'FD');
+    
+    // Header bar with primary color
+    doc.setFillColor(...primaryColor);
+    doc.roundedRect(summaryX, y, summaryWidth, 14, 4, 4, 'F');
+    doc.rect(summaryX, y + 10, summaryWidth, 4, 'F');
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL PRICE SUMMARY', summaryX + summaryWidth / 2, y + 8, { align: 'center' });
+    doc.text('PRICE SUMMARY', summaryX + summaryWidth / 2, y + 9, { align: 'center' });
     
-    let sumY = y + 20;
+    let sumY = y + 24;
     
-    // Subtotal
-    doc.setTextColor(...grayText);
+    // Subtotal row
+    doc.setTextColor(100, 100, 100);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text('Subtotal', summaryX + 8, sumY);
+    doc.text('Subtotal', summaryX + 10, sumY);
     doc.setTextColor(...darkText);
     doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(subtotal), summaryX + summaryWidth - 8, sumY, { align: 'right' });
-    sumY += 8;
+    doc.text(formatCurrency(subtotal), summaryX + summaryWidth - 10, sumY, { align: 'right' });
+    sumY += 12;
     
-    // Discount
+    // Discount row (if applicable)
     if (discount > 0) {
-      doc.setTextColor([120, 113, 108]); // Soft brown/gray for discount
+      doc.setTextColor(34, 139, 34); // Green for discount
       doc.setFont('helvetica', 'normal');
-      doc.text('Discount', summaryX + 8, sumY);
+      doc.text('Discount', summaryX + 10, sumY);
       doc.setFont('helvetica', 'bold');
-      doc.text('- ' + formatCurrency(discount), summaryX + summaryWidth - 8, sumY, { align: 'right' });
-      sumY += 8;
+      doc.text('- ' + formatCurrency(discount), summaryX + summaryWidth - 10, sumY, { align: 'right' });
+      sumY += 12;
     }
     
-    // GST
-    doc.setTextColor(...grayText);
+    // GST row
+    doc.setTextColor(100, 100, 100);
     doc.setFont('helvetica', 'normal');
-    doc.text('GST (18%)', summaryX + 8, sumY);
+    doc.text('GST (18%)', summaryX + 10, sumY);
     doc.setTextColor(...darkText);
     doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(gst), summaryX + summaryWidth - 8, sumY, { align: 'right' });
-    sumY += 5;
+    doc.text(formatCurrency(gst), summaryX + summaryWidth - 10, sumY, { align: 'right' });
+    sumY += 8;
     
     // Separator line
-    doc.setDrawColor(...borderColor);
+    doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.5);
-    doc.line(summaryX + 5, sumY, summaryX + summaryWidth - 5, sumY);
+    doc.line(summaryX + 8, sumY, summaryX + summaryWidth - 8, sumY);
     sumY += 10;
     
-    // Total - Clean rounded bar
-    doc.setFillColor(...primaryColor);
-    doc.roundedRect(summaryX, sumY - 2, summaryWidth, 16, 3, 3, 'F');
+    // Total bar with accent color
+    doc.setFillColor(...accentColor);
+    doc.roundedRect(summaryX + 5, sumY - 3, summaryWidth - 10, 18, 3, 3, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('TOTAL', summaryX + 12, sumY + 8);
     doc.setFontSize(11);
-    doc.text('TOTAL', summaryX + 10, sumY + 8);
-    doc.text(formatCurrency(total), summaryX + summaryWidth - 10, sumY + 8, { align: 'right' });
+    doc.text(formatCurrency(total), summaryX + summaryWidth - 12, sumY + 8, { align: 'right' });
 
     // ===== FOOTER =====
     doc.setFillColor(...lightGray);
@@ -437,6 +480,7 @@ export const exportEstimateToPDF = (estimate) => {
     let services = [];
     
     console.log('[PDF] Estimate type:', estimate.estimateType || estimate.estimate_type);
+    console.log('[PDF] Phone fields:', { customerPhone: estimate.customerPhone, phone: estimate.phone, customer_phone: estimate.customer_phone, contactPhone: estimate.contactPhone });
     
     // Check serviceRows first (package service rows from form)
     if (estimate.serviceRows && Array.isArray(estimate.serviceRows) && estimate.serviceRows.length > 0) {
@@ -516,7 +560,7 @@ export const exportEstimateToPDF = (estimate) => {
       division: estimate.division || estimate.divisionName || estimate.division_name,
       address: estimate.address || estimate.propertyAddress || estimate.property_address || estimate.fullAddress,
       customerName: estimate.customerName || estimate.clientName || estimate.customer_name || estimate.client_name,
-      customerPhone: estimate.customerPhone || estimate.phone || estimate.customer_phone || estimate.contactPhone || estimate.contact_phone,
+      customerPhone: estimate.customerPhone || estimate.phone || estimate.customer_phone || estimate.contactPhone || estimate.contact_phone || estimate.mobile || estimate.contactNumber || estimate.phoneNumber || estimate.clientPhone,
       customerEmail: estimate.customerEmail || estimate.email || estimate.customer_email || estimate.contactEmail || estimate.contact_email,
       noOfVisits: estimate.noOfVisits || estimate.no_of_visits || estimate.visits || estimate.numberOfVisits,
       description: estimate.description || estimate.notes || estimate.remarks,
