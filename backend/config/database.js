@@ -16,7 +16,7 @@ const dbConfig = isProduction ? {
   connectionLimit: 10,
   queueLimit: 0,
   ssl: {
-    rejectUnauthorized: true
+    rejectUnauthorized: false
   }
 } : {
   // Local Development Database
