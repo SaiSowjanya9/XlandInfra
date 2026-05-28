@@ -260,6 +260,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
 
     res.json({ success: true, data: allProperties });
   } catch (error) {
+    console.error('[Manager Properties ERROR]', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 });
