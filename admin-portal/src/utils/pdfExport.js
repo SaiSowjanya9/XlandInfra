@@ -33,6 +33,16 @@ const generatePDF = (data, type, filename) => {
     const lightGray = [248, 250, 252];       // Slate-50
     const borderColor = [203, 213, 225];     // Slate-300
     const accentColor = [148, 163, 184];     // Slate-400
+    
+    // Helper function to check page overflow and add new page if needed
+    const checkPageOverflow = (neededHeight) => {
+      if (y + neededHeight > pageHeight - 25) {
+        doc.addPage();
+        y = 20;
+        return true;
+      }
+      return false;
+    };
 
     // ===== HEADER =====
     doc.setFillColor(...primaryColor);
@@ -95,7 +105,7 @@ const generatePDF = (data, type, filename) => {
 
     // ===== TWO COLUMN INFO SECTION =====
     const colWidth = (pageWidth - margin * 2 - 10) / 2;
-    const boxHeight = 52;
+    const boxHeight = 60;
     
     // Property Details Box
     doc.setDrawColor(...borderColor);
@@ -114,12 +124,16 @@ const generatePDF = (data, type, filename) => {
     doc.setTextColor(...darkText);
     doc.setFontSize(8);
     
-    // Always show all property fields
-    doc.setFont('helvetica', 'bold');
-    doc.text('Property ID:', margin + 5, infoY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(String(data.propertyId || '-'), margin + 32, infoY);
-    infoY += 7;
+    const isDirectEstimate = data.estimateType === 'direct' || (!data.propertyId && !data.division);
+    
+    // Property ID - only for property-based estimates
+    if (!isDirectEstimate) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Property ID:', margin + 5, infoY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.propertyId || '-'), margin + 32, infoY);
+      infoY += 7;
+    }
     
     doc.setFont('helvetica', 'bold');
     doc.text('Property Type:', margin + 5, infoY);
@@ -133,10 +147,13 @@ const generatePDF = (data, type, filename) => {
     doc.text(String(data.zone || '-'), margin + 32, infoY);
     infoY += 7;
     
-    doc.setFont('helvetica', 'bold');
-    doc.text('Division:', margin + 5, infoY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(String(data.division || '-'), margin + 32, infoY);
+    // Division - only for property-based estimates
+    if (!isDirectEstimate) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Division:', margin + 5, infoY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.division || '-'), margin + 32, infoY);
+    }
     
     // Customer Details Box
     doc.setDrawColor(...borderColor);
@@ -183,21 +200,17 @@ const generatePDF = (data, type, filename) => {
     doc.setFontSize(7);
     doc.text(email, custValX, infoY);
     doc.setFontSize(8);
+    infoY += 7;
+    
+    // Address inside Customer Details box
+    doc.setFont('helvetica', 'bold');
+    doc.text('Address:', custX, infoY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.text(String(data.address || '-').substring(0, 25), custValX, infoY);
+    doc.setFontSize(8);
     
     y += boxHeight + 8;
-    
-    // Address row (full width)
-    if (data.address) {
-      doc.setFillColor(...lightGray);
-      doc.roundedRect(margin, y, pageWidth - margin * 2, 10, 2, 2, 'F');
-      doc.setTextColor(...darkText);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Address:', margin + 5, y + 7);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.address).substring(0, 80), margin + 25, y + 7);
-      y += 14;
-    }
 
     // ===== NO OF VISITS =====
     if (data.noOfVisits) {
@@ -293,18 +306,28 @@ const generatePDF = (data, type, filename) => {
 
     // ===== DESCRIPTION SECTION =====
     if (data.description) {
+      doc.setFontSize(8);
+      const descLines = doc.splitTextToSize(data.description, pageWidth - margin * 2 - 15);
+      const maxLines = Math.min(descLines.length, 8); // Allow up to 8 lines
+      const descBoxHeight = 12 + (maxLines * 4.5);
+      
+      // Check if description needs a new page
+      checkPageOverflow(descBoxHeight + 10);
+      
       doc.setFillColor(...lightGray);
-      doc.roundedRect(margin, y, pageWidth - margin * 2, 20, 2, 2, 'F');
+      doc.roundedRect(margin, y, pageWidth - margin * 2, descBoxHeight, 2, 2, 'F');
       doc.setTextColor(...darkText);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Description:', margin + 5, y + 7);
+      doc.text('Description:', margin + 5, y + 8);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      const descLines = doc.splitTextToSize(data.description, pageWidth - margin * 2 - 10);
-      doc.text(descLines.slice(0, 2), margin + 5, y + 14);
-      y += 24;
+      doc.text(descLines.slice(0, maxLines), margin + 5, y + 15);
+      y += descBoxHeight + 6;
     }
+
+    // Check if summary needs a new page
+    checkPageOverflow(80);
 
     // ===== TOTAL PRICE SUMMARY =====
     const summaryWidth = 90;
@@ -319,7 +342,7 @@ const generatePDF = (data, type, filename) => {
     // Summary box
     doc.setDrawColor(...borderColor);
     doc.setLineWidth(0.5);
-    doc.roundedRect(summaryX, y, summaryWidth, discount > 0 ? 65 : 55, 3, 3, 'S');
+    doc.roundedRect(summaryX, y, summaryWidth, discount > 0 ? 80 : 70, 3, 3, 'S');
     
     // Header
     doc.setFillColor(...lightGray);
@@ -361,21 +384,20 @@ const generatePDF = (data, type, filename) => {
     doc.text(formatCurrency(gst), summaryX + summaryWidth - 8, sumY, { align: 'right' });
     sumY += 5;
     
-    // Separator
-    doc.setDrawColor(...accentColor);
+    // Separator line
+    doc.setDrawColor(...borderColor);
     doc.setLineWidth(0.5);
     doc.line(summaryX + 5, sumY, summaryX + summaryWidth - 5, sumY);
-    sumY += 8;
+    sumY += 10;
     
-    // Total
+    // Total - Clean rounded bar
     doc.setFillColor(...primaryColor);
-    doc.roundedRect(summaryX, sumY - 3, summaryWidth, 14, 0, 0, 'F');
-    doc.roundedRect(summaryX, sumY, summaryWidth, 11, 3, 3, 'F');
+    doc.roundedRect(summaryX, sumY - 2, summaryWidth, 16, 3, 3, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('TOTAL', summaryX + 8, sumY + 7);
-    doc.text(formatCurrency(total), summaryX + summaryWidth - 8, sumY + 7, { align: 'right' });
+    doc.setFontSize(11);
+    doc.text('TOTAL', summaryX + 10, sumY + 8);
+    doc.text(formatCurrency(total), summaryX + summaryWidth - 10, sumY + 8, { align: 'right' });
 
     // ===== FOOTER =====
     doc.setFillColor(...lightGray);
@@ -464,6 +486,7 @@ export const exportEstimateToPDF = (estimate) => {
 
     const exportData = {
       estimateId: estimate.estimateId || estimate.estimate_id || estimate.id || 'EST-' + Date.now(),
+      estimateType: estimate.estimateType || estimate.estimate_type || (estimate.propertyId || estimate.property_id ? 'property-based' : 'direct'),
       packageName: estimate.packageName || estimate.package_name,
       propertyId: estimate.propertyId || estimate.property_id,
       propertyType: estimate.propertyType || estimate.property_type || estimate.entryType || 'N/A',
