@@ -658,6 +658,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     } else {
       estimateData.customerName = estimateForm.customerName;
       estimateData.phone = estimateForm.phone;
+      estimateData.customerPhone = `${estimateForm.countryCode} ${estimateForm.phone}`;
       estimateData.countryCode = estimateForm.countryCode;
       estimateData.email = estimateForm.email;
       estimateData.customerEmail = estimateForm.email;
