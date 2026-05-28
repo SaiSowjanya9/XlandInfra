@@ -509,7 +509,7 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
     // For FP-created managers: store BOTH franchise_partner_id AND manager_id
     // So work order shows in both FP dashboard and Manager dashboard
     const managerId = req.managerId;
-    const franchisePartnerId = req.isFPManager ? req.franchisePartnerId : null;
+    const franchisePartnerId = req.franchisePartnerId || null;
     
     const [result] = await pool.execute(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 

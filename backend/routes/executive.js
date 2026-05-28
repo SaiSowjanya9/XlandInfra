@@ -142,20 +142,20 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
     );
 
     const [workOrdersCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM work_orders WHERE executive_id = ?`,
-      [executiveId]
+      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ?`,
+      [franchisePartnerId]
     );
 
     const [pendingWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
-       WHERE executive_id = ? AND status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
-      [executiveId]
+       WHERE franchise_partner_id = ? AND status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
+      [franchisePartnerId]
     );
 
     const [completedWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
-       WHERE executive_id = ? AND status IN ('completed', 'closed')`,
-      [executiveId]
+       WHERE franchise_partner_id = ? AND status IN ('completed', 'closed')`,
+      [franchisePartnerId]
     );
 
     const [estimatesCount] = await pool.query(
@@ -205,9 +205,8 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
 
-    // Get both own and assigned properties with creator name
-    const [regularProperties] = await pool.query(
-      `SELECT p.*, z.name as zone_name, 
+    // Get own, assigned, and FP properties with creator name
+    const query = `SELECT p.*, z.name as zone_name, 
               COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'own' as access_type, TRUE as can_modify, FALSE as can_delete,
               FALSE as can_assign_vendor, FALSE as can_assign_employee,
@@ -215,7 +214,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
        FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
-       WHERE p.executive_id = ?
+       WHERE (p.executive_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})
        UNION
        SELECT p.*, z.name as zone_name,
               COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
@@ -227,9 +226,9 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
        LEFT JOIN zones z ON p.zone_id = z.id
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE eap.executive_id = ?
-       ORDER BY created_at DESC`,
-      [executiveId, executiveId]
-    );
+       ORDER BY created_at DESC`;
+    const params = franchisePartnerId ? [executiveId, franchisePartnerId, executiveId] : [executiveId, executiveId];
+    const [regularProperties] = await pool.query(query, params);
 
     // Also fetch from onboarded_properties with creator name
     let onboardedProperties = [];
