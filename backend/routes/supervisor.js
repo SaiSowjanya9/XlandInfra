@@ -613,6 +613,7 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
+    console.log('[Supervisor Customer Create] supervisorId:', supervisorId, 'franchisePartnerId:', franchisePartnerId, 'user:', req.user?.id);
     const {
       // Property form data
       zone, areaName, division, propertyType, communityName,
