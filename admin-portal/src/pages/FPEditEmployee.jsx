@@ -220,15 +220,9 @@ const FPEditEmployee = ({ user }) => {
             Phone <span className="text-red-500">*</span>
           </label>
           <div className="flex gap-2">
-            <select
-              value={formData.countryCode}
-              onChange={(e) => updateField('countryCode', e.target.value)}
-              className="w-24 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="+91">+91</option>
-              <option value="+1">+1</option>
-              <option value="+44">+44</option>
-            </select>
+            <div className="w-16 px-3 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 text-sm">
+              +91
+            </div>
             <input
               type="tel"
               value={formData.phone}
