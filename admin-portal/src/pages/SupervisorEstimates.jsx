@@ -39,7 +39,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const [toDate, setToDate] = useState('');
   const clearAllFilters = () => { setEstimateTypeFilter('all'); setStatusFilter('all'); setCategoryFilter('all'); setFromDate(''); setToDate(''); setSearchTerm(''); };
 
-  const [estimateForm, setEstimateForm] = useState({ clientId: '', propertyId: '', title: '', description: '', estimateType: 'property_based', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
+  const [estimateForm, setEstimateForm] = useState({ clientId: '', propertyId: '', title: '', description: '', estimateType: '', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
   const [amcForm, setAmcForm] = useState({ name: '', description: '', durationMonths: 12, basePrice: 0, services: '', termsConditions: '', hidePricing: true });
   const [addonForm, setAddonForm] = useState({ name: '', description: '', price: 0, unit: 'per_service', categoryId: '', hidePricing: true });
 
@@ -123,7 +123,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
     } catch (error) { setMessage({ type: 'error', text: 'Failed to create add-on' }); }
   };
 
-  const resetEstimateForm = () => { setEstimateForm({ clientId: '', propertyId: '', title: '', description: '', estimateType: 'property_based', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] }); };
+  const resetEstimateForm = () => { setEstimateForm({ clientId: '', propertyId: '', title: '', description: '', estimateType: '', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] }); };
   const resetAmcForm = () => { setAmcForm({ name: '', description: '', durationMonths: 12, basePrice: 0, services: '', termsConditions: '', hidePricing: true }); };
   const resetAddonForm = () => { setAddonForm({ name: '', description: '', price: 0, unit: 'per_service', categoryId: '', hidePricing: true }); };
 
@@ -139,8 +139,22 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div><h1 className="text-2xl font-bold text-gray-900">Estimates / AMC Management</h1><p className="text-gray-500 mt-1">Create estimates and view AMC packages</p></div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+            <FileText className="w-6 h-6 text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Create Estimate</h1>
+            <p className="text-gray-500">Create and manage estimates, AMC packages, and add-ons</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="text-center"><p className="text-2xl font-bold text-gray-900">{estimates.filter(e => e.status !== 'archived').length}</p><p className="text-xs text-gray-500">Active Estimates</p></div>
+          <div className="text-center"><p className="text-2xl font-bold text-gray-900">{amcPackages.length}</p><p className="text-xs text-gray-500">AMC Packages</p></div>
+          <div className="text-center"><p className="text-2xl font-bold text-gray-900">{addons.length}</p><p className="text-xs text-gray-500">Add-ons</p></div>
+          <div className="text-center"><p className="text-2xl font-bold text-gray-900">{estimates.filter(e => e.status === 'archived').length}</p><p className="text-xs text-gray-500">Archived</p></div>
+        </div>
       </div>
 
       {message.text && (
@@ -217,18 +231,24 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
           {activeTab === 'create' && (
             <div className="space-y-6">
               {!estimateForm.estimateType || estimateForm.estimateType === 'select' ? (
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="bg-white rounded-xl border border-gray-200 p-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-6">Select Estimate Type</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'property_based' })} className="p-6 border-2 border-gray-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition-all text-center">
-                      <FileText className="w-8 h-8 mx-auto mb-3 text-gray-400" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'property_based' })} className="p-8 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-center group">
+                      <div className="w-12 h-12 mx-auto mb-4 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-blue-100">
+                        <FileText className="w-6 h-6 text-gray-400 group-hover:text-blue-600" />
+                      </div>
                       <p className="font-semibold text-gray-900">Property-Based Estimate</p>
-                      <p className="text-sm text-amber-600 mt-1">Enter Property ID to auto-fill details</p>
+                      <p className="text-sm text-gray-500 mt-2">Enter Property ID to auto-fill details</p>
                     </button>
-                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'direct' })} className="p-6 border-2 border-gray-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition-all text-center">
-                      <Eye className="w-8 h-8 mx-auto mb-3 text-gray-400" />
+                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'direct' })} className="p-8 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-center group">
+                      <div className="w-12 h-12 mx-auto mb-4 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-blue-100">
+                        <svg className="w-6 h-6 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
                       <p className="font-semibold text-gray-900">Direct-Based Estimate</p>
-                      <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
+                      <p className="text-sm text-gray-500 mt-2">Enter customer details manually</p>
                     </button>
                   </div>
                 </div>
