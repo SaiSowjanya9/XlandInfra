@@ -13,16 +13,34 @@ const JWT_SECRET = process.env.JWT_SECRET || 'xland-infra-secret-key-2024';
 
 // Generate JWT token
 const generateToken = (user) => {
-  return jwt.sign(
-    { 
-      id: user.id, 
-      username: user.username, 
-      email: user.email, 
-      role: user.role
-    },
-    JWT_SECRET,
-    { expiresIn: '24h' }
-  );
+  const payload = { 
+    id: user.id, 
+    username: user.username, 
+    email: user.email, 
+    role: user.role
+  };
+  
+  // Include franchise_partner_id if present
+  if (user.franchise_partner_id) {
+    payload.franchisePartnerId = user.franchise_partner_id;
+    payload.fpId = user.franchise_partner_id;
+  }
+  
+  // Include role-specific IDs
+  if (user.role === 'supervisor' || user.role === 'fp_supervisor') {
+    payload.supervisorId = user.id;
+  }
+  if (user.role === 'manager' || user.role === 'fp_manager') {
+    payload.managerId = user.id;
+  }
+  if (user.role === 'coordinator') {
+    payload.coordinatorId = user.id;
+  }
+  if (user.role === 'executive' || user.role === 'fp_executive') {
+    payload.executiveId = user.id;
+  }
+  
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
 };
 
 // Unified Employee Login - Auto detects role

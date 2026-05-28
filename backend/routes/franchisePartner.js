@@ -539,7 +539,8 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
   try {
     const {
       propertyId, categoryId, subcategoryId, description, priority,
-      permissionToEnter, hasPet, entryNotes, customerName, customerEmail, customerPhone
+      permissionToEnter, hasPet, entryNotes, customerName, customerEmail, customerPhone,
+      categoryName: reqCategoryName, subcategoryName: reqSubcategoryName
     } = req.body;
 
     // Validate property belongs to FP - check both tables
@@ -572,16 +573,16 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
     const workOrderId = `FP${req.fpId}-WO-${Date.now()}`;
     const title = `Service Request - ${property[0].name || 'Property'}`;
 
-    // Get category and subcategory names
-    let categoryName = null;
-    let subcategoryName = null;
+    // Get category and subcategory names - use request body values or fetch from DB
+    let categoryName = reqCategoryName || null;
+    let subcategoryName = reqSubcategoryName || null;
     
-    if (categoryId) {
+    if (categoryId && !categoryName) {
       const [catResult] = await pool.execute('SELECT name FROM categories WHERE id = ?', [categoryId]);
       if (catResult.length > 0) categoryName = catResult[0].name;
     }
     
-    if (subcategoryId) {
+    if (subcategoryId && !subcategoryName) {
       const [subResult] = await pool.execute('SELECT name FROM subcategories WHERE id = ?', [subcategoryId]);
       if (subResult.length > 0) subcategoryName = subResult[0].name;
     }

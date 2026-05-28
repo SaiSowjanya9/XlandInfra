@@ -212,15 +212,14 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
 // PROPERTY MANAGEMENT
 // ============================================
 
-// Get all manager properties (FP-scoped or Manager-scoped)
+// Get all manager properties - Manager sees their own + linked FP properties
 router.get('/properties', requireManagerScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const managerId = req.managerId;
+    const franchisePartnerId = req.franchisePartnerId;
     
     // Fetch from properties table with creator name
-    const [regularProperties] = await pool.execute(
-      `SELECT p.*, z.name as zone_name,
+    const propQuery = `SELECT p.*, z.name as zone_name,
         COALESCE(p.area_name, p.city) as area,
         COALESCE(p.division_id, p.division, 'General') as division,
         COALESCE(p.number_of_units, p.total_units, 1) as units,
@@ -229,16 +228,15 @@ router.get('/properties', requireManagerScope, async (req, res) => {
        FROM properties p 
        LEFT JOIN zones z ON p.zone_id = z.id
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
-       WHERE p.${scopeColumn} = ?
-       ORDER BY p.created_at DESC`,
-      [scopeId]
-    );
+       WHERE (p.manager_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})
+       ORDER BY p.created_at DESC`;
+    const propParams = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
+    const [regularProperties] = await pool.execute(propQuery, propParams);
 
     // Also fetch from onboarded_properties with creator name
     let onboardedProperties = [];
     try {
-      const [rows] = await pool.execute(
-        `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
+      const onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
                 op.zone_id as zone_name, op.division, op.total_units as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
@@ -247,10 +245,10 @@ router.get('/properties', requireManagerScope, async (req, res) => {
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
-         WHERE op.${scopeColumn} = ? AND op.status = 'active'
-         ORDER BY op.created_at DESC`,
-        [scopeId]
-      );
+         WHERE (op.manager_id = ?${franchisePartnerId ? ' OR op.franchise_partner_id = ?' : ''}) AND op.status = 'active'
+         ORDER BY op.created_at DESC`;
+      const onbParams = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
+      const [rows] = await pool.execute(onbQuery, onbParams);
       onboardedProperties = rows;
     } catch (e) {
       console.log('onboarded_properties fetch error:', e.message);
@@ -413,14 +411,14 @@ router.post('/properties/:id/assign-employee', requireManagerScope, validateOwne
 // WORK ORDERS
 // ============================================
 
-// Get all manager work orders - Manager sees ONLY their own work orders (by manager_id)
+// Get all manager work orders - Manager sees their own + linked FP work orders
 router.get('/work-orders', requireManagerScope, async (req, res) => {
   try {
     const { status } = req.query;
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId;
     
-    // Manager sees: their own work orders OR all FP work orders if linked to FP
+    // Manager sees: their own work orders OR their linked FP's work orders
     let query = `SELECT wo.*, p.name as property_name, c.name as category_name, 
                         v.company_name as vendor_name, cl.name as client_name
                  FROM work_orders wo
@@ -428,9 +426,9 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
                  LEFT JOIN categories c ON wo.category_id = c.id
                  LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
                  LEFT JOIN clients cl ON wo.client_id = cl.id
-                 WHERE (wo.manager_id = ? OR wo.franchise_partner_id = ?)`;
+                 WHERE (wo.manager_id = ?${franchisePartnerId ? ' OR wo.franchise_partner_id = ?' : ''})`;
     
-    const params = [managerId, franchisePartnerId];
+    const params = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
     
     if (status) {
       query += ' AND wo.status = ?';
@@ -446,48 +444,48 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
   }
 });
 
-// Get pending work orders - Manager sees their own + FP work orders
+// Get pending work orders - Manager sees their own + linked FP work orders
 router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
   try {
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId;
     
-    const [workOrders] = await pool.execute(
-      `SELECT wo.*, p.name as property_name, c.name as category_name, 
+    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, 
               v.company_name as vendor_name, cl.name as client_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE (wo.manager_id = ? OR wo.franchise_partner_id = ?) AND wo.status NOT IN ('completed', 'closed', 'cancelled')
-       ORDER BY wo.created_at DESC`,
-      [managerId, franchisePartnerId]
-    );
+       WHERE (wo.manager_id = ?${franchisePartnerId ? ' OR wo.franchise_partner_id = ?' : ''}) AND wo.status NOT IN ('completed', 'closed', 'cancelled')
+       ORDER BY wo.created_at DESC`;
+    const params = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
+    
+    const [workOrders] = await pool.execute(query, params);
     res.json({ success: true, data: workOrders });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Get completed work orders - Manager sees their own + FP work orders
+// Get completed work orders - Manager sees their own + linked FP work orders
 router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
   try {
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId;
     
-    const [workOrders] = await pool.execute(
-      `SELECT wo.*, p.name as property_name, c.name as category_name, 
+    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, 
               v.company_name as vendor_name, cl.name as client_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE (wo.manager_id = ? OR wo.franchise_partner_id = ?) AND wo.status IN ('completed', 'closed')
-       ORDER BY wo.created_at DESC`,
-      [managerId, franchisePartnerId]
-    );
+       WHERE (wo.manager_id = ?${franchisePartnerId ? ' OR wo.franchise_partner_id = ?' : ''}) AND wo.status IN ('completed', 'closed')
+       ORDER BY wo.created_at DESC`;
+    const params = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
+    
+    const [workOrders] = await pool.execute(query, params);
     res.json({ success: true, data: workOrders });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -570,20 +568,20 @@ router.patch('/work-orders/:id/assign-vendor', requireManagerScope, validateOwne
 // CUSTOMER MANAGEMENT
 // ============================================
 
-// Get all manager customers (FP-scoped or Manager-scoped)
+// Get all manager customers - Manager sees their own + linked FP customers
 router.get('/customers', requireManagerScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const managerId = req.managerId;
+    const franchisePartnerId = req.franchisePartnerId;
     
-    const [customers] = await pool.execute(
-      `SELECT c.*, p.name as property_name 
+    const query = `SELECT c.*, p.name as property_name 
        FROM clients c 
        LEFT JOIN properties p ON c.property_id = p.id
-       WHERE c.${scopeColumn} = ?
-       ORDER BY c.created_at DESC`,
-      [scopeId]
-    );
+       WHERE (c.manager_id = ?${franchisePartnerId ? ' OR c.franchise_partner_id = ?' : ''})
+       ORDER BY c.created_at DESC`;
+    const params = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
+    
+    const [customers] = await pool.execute(query, params);
     res.json({ success: true, data: customers });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -785,23 +783,23 @@ router.delete('/employees/:id', requireManagerScope, async (req, res) => {
 // ESTIMATES MANAGEMENT
 // ============================================
 
-// Get all manager estimates (FP-scoped or Manager-scoped)
+// Get all manager estimates - Manager sees their own + linked FP estimates
 router.get('/estimates', requireManagerScope, async (req, res) => {
   try {
     const { archived } = req.query;
     const isArchived = archived === 'true';
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const managerId = req.managerId;
+    const franchisePartnerId = req.franchisePartnerId;
     
-    const [estimates] = await pool.execute(
-      `SELECT e.*, p.name as property_name, c.name as client_name
+    const query = `SELECT e.*, p.name as property_name, c.name as client_name
        FROM estimates e
        LEFT JOIN properties p ON e.property_id = p.id
        LEFT JOIN clients c ON e.client_id = c.id
-       WHERE e.${scopeColumn} = ? AND e.is_archived = ?
-       ORDER BY e.created_at DESC`,
-      [scopeId, isArchived]
-    );
+       WHERE (e.manager_id = ?${franchisePartnerId ? ' OR e.franchise_partner_id = ?' : ''}) AND e.is_archived = ?
+       ORDER BY e.created_at DESC`;
+    const params = franchisePartnerId ? [managerId, franchisePartnerId, isArchived] : [managerId, isArchived];
+    
+    const [estimates] = await pool.execute(query, params);
     res.json({ success: true, data: estimates });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
