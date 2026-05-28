@@ -469,17 +469,19 @@ router.post('/properties/:id/assign-employee', requireSupervisorScope, async (re
 router.get('/work-orders', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { status } = req.query;
 
+    // Supervisor sees: their own work orders OR all FP work orders if linked to FP
     let query = `
       SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-      WHERE wo.supervisor_id = ?
+      WHERE (wo.supervisor_id = ? OR wo.franchise_partner_id = ?)
     `;
-    const params = [supervisorId];
+    const params = [supervisorId, franchisePartnerId];
 
     if (status) {
       query += ' AND wo.status = ?';
@@ -499,6 +501,7 @@ router.get('/work-orders', requireSupervisorScope, async (req, res) => {
 router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
 
     const [workOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
@@ -506,9 +509,9 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       WHERE wo.supervisor_id = ? AND wo.status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')
+       WHERE (wo.supervisor_id = ? OR wo.franchise_partner_id = ?) AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')
        ORDER BY wo.created_at DESC`,
-      [supervisorId]
+      [supervisorId, franchisePartnerId]
     );
 
     res.json({ success: true, data: workOrders });
@@ -521,6 +524,7 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
 router.get('/work-orders/completed', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
 
     const [workOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
@@ -528,9 +532,9 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       WHERE wo.supervisor_id = ? AND wo.status IN ('completed', 'closed')
+       WHERE (wo.supervisor_id = ? OR wo.franchise_partner_id = ?) AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`,
-      [supervisorId]
+      [supervisorId, franchisePartnerId]
     );
 
     res.json({ success: true, data: workOrders });
@@ -592,14 +596,15 @@ router.patch('/work-orders/:id/status', requireSupervisorScope, validateOwnershi
 router.get('/customers', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
 
     const [customers] = await pool.query(
       `SELECT c.*, p.name as property_name
        FROM clients c
        LEFT JOIN properties p ON c.property_id = p.id
-       WHERE c.supervisor_id = ?
+       WHERE (c.supervisor_id = ? OR c.franchise_partner_id = ?)
        ORDER BY c.created_at DESC`,
-      [supervisorId]
+      [supervisorId, franchisePartnerId]
     );
 
     res.json({ success: true, data: customers });
@@ -953,6 +958,7 @@ router.delete('/employees/:id', requireSupervisorScope, async (req, res) => {
 router.get('/estimates', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { archived } = req.query;
 
     let query = `
@@ -960,7 +966,7 @@ router.get('/estimates', requireSupervisorScope, async (req, res) => {
       FROM estimates e
       LEFT JOIN clients c ON e.client_id = c.id
       LEFT JOIN properties p ON e.property_id = p.id
-      WHERE e.supervisor_id = ?
+      WHERE (e.supervisor_id = ? OR e.franchise_partner_id = ?)
     `;
 
     if (archived === 'true') {
@@ -971,7 +977,7 @@ router.get('/estimates', requireSupervisorScope, async (req, res) => {
 
     query += ' ORDER BY e.created_at DESC';
 
-    const [estimates] = await pool.query(query, [supervisorId]);
+    const [estimates] = await pool.query(query, [supervisorId, franchisePartnerId]);
     res.json({ success: true, data: estimates });
   } catch (error) {
     console.error('Estimates fetch error:', error);
@@ -1032,12 +1038,24 @@ router.post('/estimates', requireSupervisorScope, async (req, res) => {
 router.get('/amc-packages', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const canView = await canViewPricing(supervisorId, 'amc_packages');
 
-    const [packages] = await pool.query(
-      `SELECT * FROM supervisor_amc_packages WHERE supervisor_id = ? ORDER BY created_at DESC`,
+    // Get supervisor's own packages + FP packages if linked to FP
+    let packages = [];
+    const [ownPackages] = await pool.query(
+      `SELECT *, 'supervisor' as source FROM supervisor_amc_packages WHERE supervisor_id = ? ORDER BY created_at DESC`,
       [supervisorId]
     );
+    packages = [...ownPackages];
+    
+    if (franchisePartnerId) {
+      const [fpPackages] = await pool.query(
+        `SELECT *, 'fp' as source FROM fp_amc_packages WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY created_at DESC`,
+        [franchisePartnerId]
+      );
+      packages = [...packages, ...fpPackages];
+    }
 
     res.json({ success: true, data: filterPricing(packages, canView) });
   } catch (error) {
@@ -1076,16 +1094,32 @@ router.post('/amc-packages', requireSupervisorScope, async (req, res) => {
 router.get('/addons', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const canView = await canViewPricing(supervisorId, 'addons');
 
-    const [addons] = await pool.query(
-      `SELECT sa.*, c.name as category_name
+    // Get supervisor's own addons + FP addons if linked to FP
+    let addons = [];
+    const [ownAddons] = await pool.query(
+      `SELECT sa.*, c.name as category_name, 'supervisor' as source
        FROM supervisor_addons sa
        LEFT JOIN categories c ON sa.category_id = c.id
        WHERE sa.supervisor_id = ?
        ORDER BY sa.created_at DESC`,
       [supervisorId]
     );
+    addons = [...ownAddons];
+    
+    if (franchisePartnerId) {
+      const [fpAddons] = await pool.query(
+        `SELECT fa.*, c.name as category_name, 'fp' as source
+         FROM fp_addons fa
+         LEFT JOIN categories c ON fa.category_id = c.id
+         WHERE fa.franchise_partner_id = ? AND fa.is_active = 1
+         ORDER BY fa.created_at DESC`,
+        [franchisePartnerId]
+      );
+      addons = [...addons, ...fpAddons];
+    }
 
     res.json({ success: true, data: filterPricing(addons, canView) });
   } catch (error) {

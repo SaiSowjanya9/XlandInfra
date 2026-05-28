@@ -417,10 +417,10 @@ router.post('/properties/:id/assign-employee', requireManagerScope, validateOwne
 router.get('/work-orders', requireManagerScope, async (req, res) => {
   try {
     const { status } = req.query;
-    // Always filter by manager_id so manager sees only their own work orders
-    // FP dashboard uses a different route to see all FP work orders
     const managerId = req.managerId;
+    const franchisePartnerId = req.franchisePartnerId;
     
+    // Manager sees: their own work orders OR all FP work orders if linked to FP
     let query = `SELECT wo.*, p.name as property_name, c.name as category_name, 
                         v.company_name as vendor_name, cl.name as client_name
                  FROM work_orders wo
@@ -428,9 +428,9 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
                  LEFT JOIN categories c ON wo.category_id = c.id
                  LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
                  LEFT JOIN clients cl ON wo.client_id = cl.id
-                 WHERE wo.manager_id = ?`;
+                 WHERE (wo.manager_id = ? OR wo.franchise_partner_id = ?)`;
     
-    const params = [managerId];
+    const params = [managerId, franchisePartnerId];
     
     if (status) {
       query += ' AND wo.status = ?';
@@ -446,10 +446,11 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
   }
 });
 
-// Get pending work orders - Manager sees only their own
+// Get pending work orders - Manager sees their own + FP work orders
 router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
   try {
     const managerId = req.managerId;
+    const franchisePartnerId = req.franchisePartnerId;
     
     const [workOrders] = await pool.execute(
       `SELECT wo.*, p.name as property_name, c.name as category_name, 
@@ -459,9 +460,9 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE wo.manager_id = ? AND wo.status NOT IN ('completed', 'closed', 'cancelled')
+       WHERE (wo.manager_id = ? OR wo.franchise_partner_id = ?) AND wo.status NOT IN ('completed', 'closed', 'cancelled')
        ORDER BY wo.created_at DESC`,
-      [managerId]
+      [managerId, franchisePartnerId]
     );
     res.json({ success: true, data: workOrders });
   } catch (error) {
@@ -469,10 +470,11 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
   }
 });
 
-// Get completed work orders - Manager sees only their own
+// Get completed work orders - Manager sees their own + FP work orders
 router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
   try {
     const managerId = req.managerId;
+    const franchisePartnerId = req.franchisePartnerId;
     
     const [workOrders] = await pool.execute(
       `SELECT wo.*, p.name as property_name, c.name as category_name, 
@@ -482,9 +484,9 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE wo.manager_id = ? AND wo.status IN ('completed', 'closed')
+       WHERE (wo.manager_id = ? OR wo.franchise_partner_id = ?) AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`,
-      [managerId]
+      [managerId, franchisePartnerId]
     );
     res.json({ success: true, data: workOrders });
   } catch (error) {
