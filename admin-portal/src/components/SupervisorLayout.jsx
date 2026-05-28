@@ -32,52 +32,37 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({});
 
-  // Check if this is an FP Supervisor
-  const isFPSupervisor = !!admin?.franchisePartnerId;
 
+  // Main nav items (flat navigation like Admin portal)
   const navItems = [
     { path: '/supervisor', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/supervisor/properties', icon: Building2, label: 'Property Management' },
     { path: '/supervisor/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/supervisor/customers/add', icon: UserPlus, label: 'Add Customer' },
-    { path: '/supervisor/employees/zones', icon: MapPin, label: 'Employee Zone Management' },
   ];
 
-  // FP Supervisor nav items - simplified flow
-  const fpNavItems = [
-    { path: '/supervisor', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/supervisor/customers/add', icon: UserPlus, label: 'Add Customer' },
-  ];
-
-  // FP Supervisor vendor sub-items (only Add New Vendor and Vendor Details)
-  const fpVendorSubItems = [
+  // Vendor Management sub-items
+  const vendorSubItems = [
     { path: '/supervisor/vendors/add', icon: UserPlus, label: 'Add New Vendor' },
     { path: '/supervisor/vendors', icon: Hammer, label: 'Vendor Details' },
   ];
 
-  const vendorSubItems = [
-    { path: '/supervisor/vendors/add', icon: UserPlus, label: 'Add Vendor' },
-    { path: '/supervisor/vendors', icon: Hammer, label: 'Vendor Details' },
-    { path: '/supervisor/vendors/assigned', icon: ClipboardCheck, label: 'Assigned Vendors' }
-  ];
-
+  // Estimates sub-items (without Hide Pricing, Create Packages, Create Add-On)
   const estimatesSubItems = [
     { path: '/supervisor/estimates/create', icon: Plus, label: 'Create Estimate' },
     { path: '/supervisor/estimates', icon: List, label: 'All Estimates' },
     { path: '/supervisor/estimates/amc', icon: Package, label: 'AMC Packages' },
     { path: '/supervisor/estimates/addons', icon: PlusCircle, label: 'Add-ons' },
-    { path: '/supervisor/estimates/archived', icon: Archive, label: 'Archived' }
+    { path: '/supervisor/estimates/archived', icon: Archive, label: 'Archived Estimates' }
   ];
 
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/supervisor/estimates';
 
   useEffect(() => {
-    if (!isFPSupervisor) {
-      if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
-      if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
-    }
-  }, [location.pathname, isFPSupervisor]);
+    if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
+    if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
+  }, [location.pathname]);
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
@@ -148,106 +133,58 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
             </span>
           </div>
 
-          {/* Navigation */}
+          {/* Navigation - Same for all Supervisors */}
           <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-            {/* FP Supervisor - Simple flat navigation */}
-            {isFPSupervisor ? (
-              <>
-                {fpNavItems.map((item) => (
-                  <NavLink key={item.path} item={item} mobile />
-                ))}
+            {/* Main nav items */}
+            {navItems.map((item) => (
+              <NavLink key={item.path} item={item} mobile />
+            ))}
 
-                {/* Vendor Management Section for FP Supervisor */}
-                <div className="mt-2">
-                  <button
-                    onClick={() => setExpandedMenus(prev => ({ ...prev, vendors: !prev.vendors }))}
-                    className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
-                      fpVendorSubItems.some(item => location.pathname === item.path) && !expandedMenus.vendors
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Store className="w-5 h-5" />
-                      <span className="font-medium">Vendor Management</span>
-                    </div>
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.vendors ? 'rotate-180' : ''}`} />
-                  </button>
-                  {expandedMenus.vendors && (
-                    <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
-                      {fpVendorSubItems.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <Link
-                            key={item.path}
-                            to={item.path}
-                            onClick={() => setSidebarOpen(false)}
-                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-                              location.pathname === item.path
-                                ? 'bg-primary-600 text-white'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            }`}
-                          >
-                            <Icon className="w-4 h-4" />
-                            <span>{item.label}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
+            {/* Vendor Management Section */}
+            <div className="mt-2">
+              <button
+                onClick={() => setExpandedMenus(prev => ({ ...prev, vendors: !prev.vendors }))}
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isVendorActive && !expandedMenus.vendors
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Store className="w-5 h-5" />
+                  <span className="font-medium">Vendor Management</span>
                 </div>
-              </>
-            ) : (
-              <>
-                {navItems.map((item) => (
-                  <NavLink key={item.path} item={item} mobile />
-                ))}
-
-                {/* Vendor Management Section - Only for regular supervisors */}
-                <div className="mt-2">
-                  <button
-                    onClick={() => setExpandedMenus(prev => ({ ...prev, vendors: !prev.vendors }))}
-                    className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
-                      isVendorActive && !expandedMenus.vendors
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Store className="w-5 h-5" />
-                      <span className="font-medium">Vendor Management</span>
-                    </div>
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.vendors ? 'rotate-180' : ''}`} />
-                  </button>
-                  {expandedMenus.vendors && (
-                    <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
-                      {vendorSubItems.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <Link
-                            key={item.path}
-                            to={item.path}
-                            onClick={() => setSidebarOpen(false)}
-                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-                              location.pathname === item.path
-                                ? 'bg-primary-600 text-white'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            }`}
-                          >
-                            <Icon className="w-4 h-4" />
-                            <span>{item.label}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.vendors ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedMenus.vendors && (
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                  {vendorSubItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                          location.pathname === item.path
+                            ? 'bg-primary-600 text-white'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
+              )}
+            </div>
 
-                {/* Estimates Section - Only for regular supervisors */}
-                <div className="mt-2">
-                  <button
-                    onClick={() => setExpandedMenus(prev => ({ ...prev, estimates: !prev.estimates }))}
-                    className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
+            {/* Estimates Section */}
+            <div className="mt-2">
+              <button
+                onClick={() => setExpandedMenus(prev => ({ ...prev, estimates: !prev.estimates }))}
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
                       isEstimatesActive && !expandedMenus.estimates
                         ? 'bg-gray-100 text-gray-900'
                         : 'text-gray-600 hover:bg-gray-100'
@@ -279,11 +216,9 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
                           </Link>
                         );
                       })}
-                    </div>
-                  )}
                 </div>
-              </>
-            )}
+              )}
+            </div>
           </nav>
 
           {/* Logout */}

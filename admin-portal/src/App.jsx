@@ -409,10 +409,10 @@ function App() {
             <Route path="/supervisor/customers/add" element={<SupervisorCustomers user={user} defaultTab="add" />} />
             <Route path="/supervisor/vendors" element={<SupervisorVendors user={user} />} />
             <Route path="/supervisor/vendors/add" element={<SupervisorAddVendor user={user} />} />
-            <Route path="/supervisor/vendors/assigned" element={<AssignedVendors />} />
-            <Route path="/supervisor/employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
             <Route path="/supervisor/estimates" element={<SupervisorEstimates user={user} defaultTab="list" />} />
             <Route path="/supervisor/estimates/create" element={<SupervisorEstimates user={user} defaultTab="create" />} />
+            <Route path="/supervisor/estimates/amc" element={<SupervisorEstimates user={user} defaultTab="amc" />} />
+            <Route path="/supervisor/estimates/addons" element={<SupervisorEstimates user={user} defaultTab="addons" />} />
             <Route path="/supervisor/estimates/archived" element={<SupervisorEstimates user={user} defaultTab="archived" />} />
             <Route path="*" element={<Navigate to="/supervisor" replace />} />
           </Routes>
