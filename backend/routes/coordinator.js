@@ -200,16 +200,15 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
 });
 
 // =====================================================
-// PROPERTIES (FP-scoped or Coordinator-scoped)
+// PROPERTIES - Coordinator sees their own + linked FP properties
 // =====================================================
 router.get('/properties', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
 
-    // Get properties scoped to FP or Coordinator with creator name
-    const [regularProperties] = await pool.query(
-      `SELECT p.*, 
+    // Get properties scoped to Coordinator or FP with creator name
+    const propQuery = `SELECT p.*, 
         z.name as zone_name,
         COALESCE(p.area_name, p.city) as area,
         COALESCE(p.division, 'General') as division,
@@ -221,16 +220,15 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
        FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
-       WHERE p.${scopeColumn} = ?
-       ORDER BY p.created_at DESC`,
-      [scopeId]
-    );
+       WHERE (p.coordinator_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})
+       ORDER BY p.created_at DESC`;
+    const propParams = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+    const [regularProperties] = await pool.query(propQuery, propParams);
 
     // Also fetch from onboarded_properties with creator name
     let onboardedProperties = [];
     try {
-      const [rows] = await pool.execute(
-        `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
+      const onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
                 op.zone_id as zone_name, op.division, op.total_units as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
@@ -239,10 +237,10 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
-         WHERE op.${scopeColumn} = ? AND op.status = 'active'
-         ORDER BY op.created_at DESC`,
-        [scopeId]
-      );
+         WHERE (op.coordinator_id = ?${franchisePartnerId ? ' OR op.franchise_partner_id = ?' : ''}) AND op.status = 'active'
+         ORDER BY op.created_at DESC`;
+      const onbParams = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+      const [rows] = await pool.execute(onbQuery, onbParams);
       onboardedProperties = rows;
     } catch (e) {
       console.log('onboarded_properties fetch error:', e.message);
@@ -337,12 +335,12 @@ router.post('/properties/:id/assign-employee', requireCoordinatorScope, async (r
 });
 
 // =====================================================
-// WORK ORDERS (FP-scoped or Coordinator-scoped)
+// WORK ORDERS - Coordinator sees their own + linked FP work orders
 // =====================================================
 router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { status } = req.query;
 
     let query = `
@@ -351,9 +349,9 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-      WHERE wo.${scopeColumn} = ?
+      WHERE (wo.coordinator_id = ?${franchisePartnerId ? ' OR wo.franchise_partner_id = ?' : ''})
     `;
-    const params = [scopeId];
+    const params = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
 
     if (status) {
       query += ' AND wo.status = ?';
@@ -372,19 +370,19 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
 
 router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
 
-    const [workOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
+    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       WHERE wo.${scopeColumn} = ? AND wo.status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')
-       ORDER BY wo.created_at DESC`,
-      [scopeId]
-    );
+       WHERE (wo.coordinator_id = ?${franchisePartnerId ? ' OR wo.franchise_partner_id = ?' : ''}) AND wo.status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')
+       ORDER BY wo.created_at DESC`;
+    const params = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+
+    const [workOrders] = await pool.query(query, params);
 
     res.json({ success: true, data: workOrders });
   } catch (error) {
@@ -395,19 +393,19 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
 
 router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
 
-    const [workOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
+    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       WHERE wo.${scopeColumn} = ? AND wo.status IN ('completed', 'closed')
-       ORDER BY wo.created_at DESC`,
-      [scopeId]
-    );
+       WHERE (wo.coordinator_id = ?${franchisePartnerId ? ' OR wo.franchise_partner_id = ?' : ''}) AND wo.status IN ('completed', 'closed')
+       ORDER BY wo.created_at DESC`;
+    const params = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+
+    const [workOrders] = await pool.query(query, params);
 
     res.json({ success: true, data: workOrders });
   } catch (error) {
@@ -517,21 +515,21 @@ router.delete('/work-orders/:id', requireCoordinatorScope, validateOwnership('wo
 });
 
 // =====================================================
-// CUSTOMERS (FP-scoped or Coordinator-scoped)
+// CUSTOMERS - Coordinator sees their own + linked FP customers
 // =====================================================
 router.get('/customers', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
 
-    const [customers] = await pool.query(
-      `SELECT c.*, p.name as property_name
+    const query = `SELECT c.*, p.name as property_name
        FROM clients c
        LEFT JOIN properties p ON c.property_id = p.id
-       WHERE c.${scopeColumn} = ?
-       ORDER BY c.created_at DESC`,
-      [scopeId]
-    );
+       WHERE (c.coordinator_id = ?${franchisePartnerId ? ' OR c.franchise_partner_id = ?' : ''})
+       ORDER BY c.created_at DESC`;
+    const params = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+
+    const [customers] = await pool.query(query, params);
 
     res.json({ success: true, data: customers });
   } catch (error) {
@@ -746,12 +744,12 @@ router.delete('/employees/:id', requireCoordinatorScope, async (req, res) => {
 });
 
 // =====================================================
-// ESTIMATES (FP-scoped or Coordinator-scoped)
+// ESTIMATES - Coordinator sees their own + linked FP estimates
 // =====================================================
 router.get('/estimates', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { archived } = req.query;
 
     let query = `
@@ -759,8 +757,9 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
       FROM estimates e
       LEFT JOIN clients c ON e.client_id = c.id
       LEFT JOIN properties p ON e.property_id = p.id
-      WHERE e.${scopeColumn} = ?
+      WHERE (e.coordinator_id = ?${franchisePartnerId ? ' OR e.franchise_partner_id = ?' : ''})
     `;
+    const params = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
 
     if (archived === 'true') {
       query += ` AND e.status = 'archived'`;
@@ -770,7 +769,7 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
 
     query += ' ORDER BY e.created_at DESC';
 
-    const [estimates] = await pool.query(query, [scopeId]);
+    const [estimates] = await pool.query(query, params);
     res.json({ success: true, data: estimates });
   } catch (error) {
     console.error('Estimates fetch error:', error);
