@@ -260,8 +260,9 @@ router.delete('/archived/delete-all', async (req, res) => {
     }
     
     const pool = db.pool;
+    // Delete all estimates that are archived (is_archived = 1 OR status = 'Archived')
     const [result] = await pool.execute(
-      `DELETE FROM estimates WHERE status = 'Archived'`
+      `DELETE FROM estimates WHERE is_archived = 1 OR status = 'Archived'`
     );
     
     res.json({ 
