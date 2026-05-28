@@ -297,6 +297,7 @@ const FPEmployees = ({ user }) => {
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Employee</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Employee ID</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Role</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Phone</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Email</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Aadhaar</th>
@@ -319,8 +320,19 @@ const FPEmployees = ({ user }) => {
                       <td className="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
                         {employee.employee_code || employee.employeeId || employee.employee_id}
                       </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize ${
+                          employee.role === 'manager' ? 'bg-blue-100 text-blue-700' :
+                          employee.role === 'supervisor' ? 'bg-purple-100 text-purple-700' :
+                          employee.role === 'coordinator' ? 'bg-indigo-100 text-indigo-700' :
+                          employee.role === 'executive' ? 'bg-teal-100 text-teal-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {employee.role || 'Field Staff'}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {employee.countryCode || employee.country_code || '+91'} {employee.phone}
+                        +91 {employee.phone}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         {employee.email}

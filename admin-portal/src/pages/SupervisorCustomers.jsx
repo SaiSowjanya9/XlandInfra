@@ -846,17 +846,9 @@ const SupervisorCustomers = ({ user, defaultTab = 'list' }) => {
                           Phone Number <span className="text-red-500">*</span>
                         </label>
                         <div className="flex gap-2 max-w-md">
-                          <select
-                            value={contact.countryCode || '+91'}
-                            onChange={(e) => updateAssociationContact(index, 'countryCode', e.target.value)}
-                            className="w-24 flex-shrink-0 px-2 py-2.5 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-200 focus:border-blue-400 focus:outline-none bg-white"
-                          >
-                            {COUNTRY_CODES.map(cc => (
-                              <option key={cc.code} value={cc.code}>
-                                {cc.flag} {cc.code}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="w-16 flex-shrink-0 px-3 py-2.5 border border-gray-300 rounded-md text-sm bg-gray-50 text-gray-600">
+                            +91
+                          </div>
                           <input
                             type="tel"
                             inputMode="numeric"
