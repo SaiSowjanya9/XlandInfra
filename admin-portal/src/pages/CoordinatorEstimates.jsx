@@ -26,6 +26,7 @@ import {
   Home,
   Building2
 } from 'lucide-react';
+import { exportEstimateToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
@@ -516,9 +517,12 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                                 </span>
                               </td>
                               <td className="py-4 px-4">
-                                <div className="flex items-center justify-center">
+                                <div className="flex items-center justify-center gap-1">
                                   <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View">
                                     <Eye className="w-4 h-4" />
+                                  </button>
+                                  <button onClick={() => exportEstimateToPDF(estimate)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Download PDF">
+                                    <Download className="w-4 h-4" />
                                   </button>
                                 </div>
                               </td>

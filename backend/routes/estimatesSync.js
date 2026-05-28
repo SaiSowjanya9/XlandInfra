@@ -40,6 +40,15 @@ router.get('/', async (req, res) => {
         propertyType: est.property_type,
         propertyName: est.property_name,
         propertyAddress: est.property_address,
+        propertyId: est.property_id,
+        communityName: est.community_name,
+        zone: est.zone,
+        division: est.division,
+        address: est.property_address,
+        noOfVisits: est.no_of_visits,
+        description: est.description,
+        packageName: est.package_name,
+        packageId: est.package_id,
         services: services,
         addons: addons,
         subtotal: parseFloat(est.subtotal || 0),
@@ -75,7 +84,10 @@ router.post('/', async (req, res) => {
       propertyType, propertyName, propertyAddress,
       services, addons, subtotal, discount, tax, total,
       notes, status, validUntil,
-      subTotal, gst, totalPrice
+      subTotal, gst, totalPrice,
+      // Additional fields
+      propertyId, communityName, zone, division, address,
+      noOfVisits, description, packageName, packageId
     } = req.body;
     
     const estimateId = `EST-${Date.now()}`;
@@ -84,6 +96,8 @@ router.post('/', async (req, res) => {
     const finalSubtotal = subtotal || subTotal || 0;
     const finalTax = tax || gst || 0;
     const finalTotal = total || totalPrice || 0;
+    const finalAddress = propertyAddress || address || null;
+    const finalDescription = description || notes || null;
     
     const pool = db.pool;
     await pool.execute(
@@ -91,16 +105,17 @@ router.post('/', async (req, res) => {
         estimate_id, customer_name, customer_email, customer_phone,
         property_type, property_name, property_address,
         services, addons, subtotal, discount, tax, total,
-        notes, status, valid_until
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        notes, status, valid_until,
+        property_id, community_name, zone, division, no_of_visits, description, package_name, package_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         estimateId,
         customerName || null,
         customerEmail || null,
         customerPhone || null,
         propertyType || null,
-        propertyName || null,
-        propertyAddress || null,
+        propertyName || communityName || null,
+        finalAddress,
         services ? JSON.stringify(services) : null,
         addons ? JSON.stringify(addons) : null,
         finalSubtotal,
@@ -109,7 +124,15 @@ router.post('/', async (req, res) => {
         finalTotal,
         notes || null,
         status || 'Draft',
-        validUntil || null
+        validUntil || null,
+        propertyId || null,
+        communityName || null,
+        zone || null,
+        division || null,
+        noOfVisits || null,
+        finalDescription,
+        packageName || null,
+        packageId || null
       ]
     );
     
