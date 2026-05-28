@@ -1,0 +1,22 @@
+-- Migration: Add additional fields to estimates table
+-- Run this on the production database
+
+-- Add new columns for property details
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS property_id VARCHAR(100) DEFAULT NULL;
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS community_name VARCHAR(255) DEFAULT NULL;
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS zone VARCHAR(100) DEFAULT NULL;
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS division VARCHAR(100) DEFAULT NULL;
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS no_of_visits INT DEFAULT NULL;
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS description TEXT DEFAULT NULL;
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS package_name VARCHAR(255) DEFAULT NULL;
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS package_id VARCHAR(100) DEFAULT NULL;
+
+-- If your MySQL doesn't support IF NOT EXISTS for ALTER TABLE, use these instead:
+-- ALTER TABLE estimates ADD COLUMN property_id VARCHAR(100) DEFAULT NULL;
+-- ALTER TABLE estimates ADD COLUMN community_name VARCHAR(255) DEFAULT NULL;
+-- ALTER TABLE estimates ADD COLUMN zone VARCHAR(100) DEFAULT NULL;
+-- ALTER TABLE estimates ADD COLUMN division VARCHAR(100) DEFAULT NULL;
+-- ALTER TABLE estimates ADD COLUMN no_of_visits INT DEFAULT NULL;
+-- ALTER TABLE estimates ADD COLUMN description TEXT DEFAULT NULL;
+-- ALTER TABLE estimates ADD COLUMN package_name VARCHAR(255) DEFAULT NULL;
+-- ALTER TABLE estimates ADD COLUMN package_id VARCHAR(100) DEFAULT NULL;

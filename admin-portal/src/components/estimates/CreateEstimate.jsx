@@ -96,7 +96,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     email: '',
     // Services (new/additional only)
     services: [],
-    notes: ''
+    notes: '',
+    noOfVisits: '',
+    description: ''
   });
 
   useEffect(() => {
@@ -613,6 +615,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       estimateType: estimateType === 'property' ? 'property-based' : 'direct',
       services: allServices,
       notes: estimateForm.notes,
+      description: estimateForm.description || estimateForm.notes,
+      noOfVisits: estimateForm.noOfVisits,
       subTotal: estimateType === 'direct' ? calculateDirectSubTotal() : calculateSubTotal(),
       gst: estimateType === 'direct' ? calculateDirectGST() : calculateGST(),
       discount: estimateType === 'direct' ? getDirectDiscountAmount() : getDiscountAmount(),
@@ -631,6 +635,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       estimateData.customerName = estimateForm.customerName;
       estimateData.customerEmail = estimateForm.customerEmail;
       estimateData.customerPhone = estimateForm.customerPhone;
+      estimateData.zone = selectedProperty.zone || selectedProperty.areaName;
+      estimateData.division = selectedProperty.division;
+      estimateData.address = selectedProperty.address || `${selectedProperty.city || ''} ${selectedProperty.state || ''}`.trim();
       
       // Package info
       if (selectedPackage) {
@@ -765,7 +772,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       countryCode: '+91',
       email: '',
       services: [],
-      notes: ''
+      notes: '',
+      noOfVisits: '',
+      description: ''
     });
   };
 
@@ -1564,6 +1573,37 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 )}
               </div>
 
+              {/* No of Visits & Description Section */}
+              <div className="px-6 py-4 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      No. of Visits
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={estimateForm.noOfVisits}
+                      onChange={(e) => setEstimateForm({ ...estimateForm, noOfVisits: e.target.value })}
+                      placeholder="Enter number of visits"
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description / Notes
+                  </label>
+                  <textarea
+                    value={estimateForm.description}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, description: e.target.value })}
+                    placeholder="Add any additional notes or description for this estimate..."
+                    rows={3}
+                    className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 resize-none"
+                  />
+                </div>
+              </div>
+
               {/* Dynamic Summary Section */}
               <div className="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
                 <h3 className="text-sm font-semibold text-gray-800 mb-4">Price Summary</h3>
@@ -2253,6 +2293,37 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   <p className="text-sm">No add-ons selected. Use the dropdown above to add services.</p>
                 </div>
               )}
+            </div>
+
+            {/* No of Visits & Description Section for Direct */}
+            <div className="px-6 py-4 border-t border-gray-100">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    No. of Visits
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={estimateForm.noOfVisits}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, noOfVisits: e.target.value })}
+                    placeholder="Enter number of visits"
+                    className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description / Notes
+                </label>
+                <textarea
+                  value={estimateForm.description}
+                  onChange={(e) => setEstimateForm({ ...estimateForm, description: e.target.value })}
+                  placeholder="Add any additional notes or description for this estimate..."
+                  rows={3}
+                  className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 resize-none"
+                />
+              </div>
             </div>
 
             {/* Dynamic Summary Section */}
