@@ -1,77 +1,21 @@
 /**
  * Field Options Store
  * Manages custom options for Categories, Sub-categories, Divisions, and Service Types
- * Uses localStorage for persistence
+ * Uses database API for persistence (with localStorage fallback)
  */
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://xlandinfra.com/api';
 const STORAGE_KEY = 'xland_field_options';
 
-// Default options
+// Default options (fallback)
 const DEFAULT_OPTIONS = {
-  categories: [
-    'Plumbing',
-    'Electrical',
-    'HVAC',
-    'Cleaning',
-    'Security',
-    'Landscaping',
-    'Pest Control',
-    'Painting',
-    'Carpentry',
-    'General Maintenance',
-    'Fire Safety',
-    'Elevator Maintenance',
-    'Water Tank Cleaning',
-    'Garbage Collection',
-    'Swimming Pool Maintenance'
-  ],
-  subcategories: {
-    'Plumbing': ['Pipe Repair', 'Drain Cleaning', 'Fixture Installation', 'Water Heater', 'Leak Detection'],
-    'Electrical': ['Wiring', 'Lighting', 'Panel Upgrade', 'Outlet Installation', 'Generator'],
-    'HVAC': ['AC Repair', 'Heating', 'Duct Cleaning', 'Thermostat', 'Ventilation'],
-    'Cleaning': ['Deep Cleaning', 'Regular Cleaning', 'Window Cleaning', 'Carpet Cleaning', 'Sanitization'],
-    'Security': ['CCTV Installation', 'Access Control', 'Guard Services', 'Alarm Systems', 'Monitoring'],
-    'Landscaping': ['Lawn Care', 'Tree Trimming', 'Garden Design', 'Irrigation', 'Plant Maintenance'],
-    'Pest Control': ['Termite Control', 'Rodent Control', 'Insect Control', 'Fumigation', 'Prevention'],
-    'Painting': ['Interior Painting', 'Exterior Painting', 'Texture Work', 'Waterproofing', 'Touch-ups'],
-    'Carpentry': ['Furniture Repair', 'Door Installation', 'Cabinet Work', 'Wood Flooring', 'Custom Work'],
-    'General Maintenance': ['Handyman Services', 'Minor Repairs', 'Inspections', 'Preventive Maintenance'],
-    'Fire Safety': ['Fire Alarm Installation', 'Extinguisher Service', 'Sprinkler System', 'Safety Audit'],
-    'Elevator Maintenance': ['Routine Service', 'Emergency Repair', 'Modernization', 'Inspection'],
-    'Water Tank Cleaning': ['Tank Cleaning', 'Disinfection', 'Inspection', 'Repair'],
-    'Garbage Collection': ['Daily Collection', 'Waste Segregation', 'Recycling', 'Bulk Pickup'],
-    'Swimming Pool Maintenance': ['Cleaning', 'Chemical Balance', 'Filter Maintenance', 'Equipment Repair']
-  },
+  categories: [],
+  subcategories: {},
   divisions: [
-    'Division A',
-    'Division B',
-    'Division C',
-    'Division D',
-    'Division E',
-    'Division F',
-    'Division G',
-    'Division H',
-    'Division I',
-    'Division J',
-    'Division K'
+    'Division A', 'Division B', 'Division C', 'Division D', 'Division E',
+    'Division F', 'Division G', 'Division H', 'Division I', 'Division J', 'Division K'
   ],
-  serviceTypes: [
-    'Plumbing',
-    'Electrical',
-    'HVAC',
-    'Cleaning',
-    'Security',
-    'Landscaping',
-    'Pest Control',
-    'Painting',
-    'Carpentry',
-    'General Maintenance',
-    'Fire Safety',
-    'Elevator Maintenance',
-    'Water Tank Cleaning',
-    'Garbage Collection',
-    'Swimming Pool Maintenance'
-  ]
+  serviceTypes: []
 };
 
 // Get all field options
@@ -100,30 +44,82 @@ const saveFieldOptions = (options) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(options));
 };
 
-// Add a new category
-export const addCategory = (category) => {
-  const options = getFieldOptions();
-  if (!options.categories.includes(category)) {
-    options.categories.push(category);
-    options.subcategories[category] = []; // Initialize empty subcategories
-    saveFieldOptions(options);
-    return { success: true };
+// Add a new category (saves to database)
+export const addCategory = async (category) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/categories`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ name: category, description: `${category} services` })
+    });
+    const data = await response.json();
+    if (data.success) {
+      // Also update localStorage cache
+      const options = getFieldOptions();
+      if (!options.categories.includes(category)) {
+        options.categories.push(category);
+        options.subcategories[category] = [];
+        saveFieldOptions(options);
+      }
+      return { success: true };
+    }
+    return { success: false, message: data.message || 'Category already exists' };
+  } catch (error) {
+    // Fallback to localStorage if API fails
+    const options = getFieldOptions();
+    if (!options.categories.includes(category)) {
+      options.categories.push(category);
+      options.subcategories[category] = [];
+      saveFieldOptions(options);
+      return { success: true };
+    }
+    return { success: false, message: 'Category already exists' };
   }
-  return { success: false, message: 'Category already exists' };
 };
 
-// Add a new subcategory
-export const addSubcategory = (category, subcategory) => {
-  const options = getFieldOptions();
-  if (!options.subcategories[category]) {
-    options.subcategories[category] = [];
+// Add a new subcategory (saves to database)
+export const addSubcategory = async (category, subcategory, categoryId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/categories/${categoryId}/subcategories`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ name: subcategory })
+    });
+    const data = await response.json();
+    if (data.success) {
+      // Also update localStorage cache
+      const options = getFieldOptions();
+      if (!options.subcategories[category]) {
+        options.subcategories[category] = [];
+      }
+      if (!options.subcategories[category].includes(subcategory)) {
+        options.subcategories[category].push(subcategory);
+        saveFieldOptions(options);
+      }
+      return { success: true };
+    }
+    return { success: false, message: data.message || 'Subcategory already exists' };
+  } catch (error) {
+    // Fallback to localStorage if API fails
+    const options = getFieldOptions();
+    if (!options.subcategories[category]) {
+      options.subcategories[category] = [];
+    }
+    if (!options.subcategories[category].includes(subcategory)) {
+      options.subcategories[category].push(subcategory);
+      saveFieldOptions(options);
+      return { success: true };
+    }
+    return { success: false, message: 'Subcategory already exists' };
   }
-  if (!options.subcategories[category].includes(subcategory)) {
-    options.subcategories[category].push(subcategory);
-    saveFieldOptions(options);
-    return { success: true };
-  }
-  return { success: false, message: 'Subcategory already exists' };
 };
 
 // Add a new division
