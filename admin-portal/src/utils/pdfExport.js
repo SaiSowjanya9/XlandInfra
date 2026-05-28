@@ -105,7 +105,14 @@ const generatePDF = (data, type, filename) => {
 
     // ===== TWO COLUMN INFO SECTION =====
     const colWidth = (pageWidth - margin * 2 - 10) / 2;
-    const boxHeight = 60;
+    // Dynamic box height based on property fields available
+    let extraFields = 0;
+    if (data.areaName) extraFields++;
+    if (data.numberOfBlocks) extraFields++;
+    if (data.unitsPerBlock) extraFields++;
+    if (data.totalUnits || data.numberOfUnits) extraFields++;
+    if (data.villaPlotNumber) extraFields++;
+    const boxHeight = 60 + (extraFields * 7);
     
     // Property Details Box
     doc.setDrawColor(...borderColor);
@@ -148,11 +155,57 @@ const generatePDF = (data, type, filename) => {
     infoY += 7;
     
     // Division - only for property-based estimates
-    if (!isDirectEstimate) {
+    if (!isDirectEstimate && data.division) {
       doc.setFont('helvetica', 'bold');
       doc.text('Division:', margin + 5, infoY);
       doc.setFont('helvetica', 'normal');
       doc.text(String(data.division || '-'), margin + 32, infoY);
+      infoY += 7;
+    }
+    
+    // Area Name
+    if (data.areaName) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Area:', margin + 5, infoY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.areaName).substring(0, 15), margin + 32, infoY);
+      infoY += 7;
+    }
+    
+    // GC/APT specific: Number of Blocks
+    if (data.numberOfBlocks) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('No. of Blocks:', margin + 5, infoY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.numberOfBlocks), margin + 32, infoY);
+      infoY += 7;
+    }
+    
+    // Units per Block
+    if (data.unitsPerBlock) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Units/Block:', margin + 5, infoY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.unitsPerBlock), margin + 32, infoY);
+      infoY += 7;
+    }
+    
+    // Total Units
+    if (data.totalUnits || data.numberOfUnits) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Total Units:', margin + 5, infoY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.totalUnits || data.numberOfUnits), margin + 32, infoY);
+      infoY += 7;
+    }
+    
+    // PLOT/VILLA specific: Plot Number
+    if (data.villaPlotNumber) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Plot/Villa No:', margin + 5, infoY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.villaPlotNumber), margin + 32, infoY);
+      infoY += 7;
     }
     
     // Customer Details Box
@@ -235,20 +288,19 @@ const generatePDF = (data, type, filename) => {
     doc.line(margin, y + 2, margin + 40, y + 2);
     y += 8;
 
-    // Get No. of Visits
-    const noOfVisits = data.noOfVisits || '-';
-
     // Prepare services data with No. of Visits column
     const services = data.services || [];
     const tableBody = [];
     
     if (services.length > 0) {
       services.forEach((s, idx) => {
+        // Get frequency count for each service
+        const serviceVisits = s.frequencyCount || s.frequency || s.visits || s.noOfVisits || '-';
         const row = [
           String(idx + 1),
           String(s.name || s.service || 'Service'),
           String(s.frequencyType || 'Monthly'),
-          idx === 0 ? String(noOfVisits) : '' // Show visits only in first row
+          String(serviceVisits) // Show visits for each service
         ];
         tableBody.push(row);
         
@@ -258,7 +310,8 @@ const generatePDF = (data, type, filename) => {
         }
       });
     } else {
-      tableBody.push(['1', 'No services listed', '-', String(noOfVisits)]);
+      const fallbackVisits = data.noOfVisits || '-';
+      tableBody.push(['1', 'No services listed', '-', String(fallbackVisits)]);
     }
 
     // Add addons to table
@@ -432,10 +485,10 @@ const generatePDF = (data, type, filename) => {
     doc.line(summaryX + 8, sumY, summaryX + summaryWidth - 8, sumY);
     sumY += 10;
     
-    // Total bar with accent color
+    // Total bar with accent color - black text for readability
     doc.setFillColor(...accentColor);
     doc.roundedRect(summaryX + 5, sumY - 3, summaryWidth - 10, 18, 3, 3, 'F');
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(0, 0, 0); // Black text
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.text('TOTAL', summaryX + 12, sumY + 8);
@@ -556,9 +609,20 @@ export const exportEstimateToPDF = (estimate) => {
       propertyType: estimate.propertyType || estimate.property_type || estimate.entryType || 'N/A',
       propertyName: estimate.propertyName || estimate.property_name,
       communityName: estimate.communityName || estimate.community_name || estimate.propertyName || estimate.property_name,
-      zone: estimate.zone || estimate.zoneName || estimate.zone_name || estimate.areaName || estimate.area_name,
+      zone: estimate.zone || estimate.zoneName || estimate.zone_name,
+      areaName: estimate.areaName || estimate.area_name || estimate.area,
       division: estimate.division || estimate.divisionName || estimate.division_name,
+      // GC/APT specific fields
+      numberOfBlocks: estimate.numberOfBlocks || estimate.number_of_blocks || estimate.blocks,
+      unitsPerBlock: estimate.unitsPerBlock || estimate.units_per_block,
+      totalUnits: estimate.totalUnits || estimate.total_units || estimate.numberOfUnits || estimate.number_of_units,
+      blockNames: estimate.blockNames || estimate.block_names,
+      // PLOT/VILLA specific fields
+      villaPlotNumber: estimate.villaPlotNumber || estimate.villa_plot_number || estimate.plotNumber || estimate.plot_number,
       address: estimate.address || estimate.propertyAddress || estimate.property_address || estimate.fullAddress,
+      city: estimate.city,
+      state: estimate.state,
+      pincode: estimate.pincode || estimate.postalCode || estimate.postal_code,
       customerName: estimate.customerName || estimate.clientName || estimate.customer_name || estimate.client_name,
       customerPhone: estimate.customerPhone || estimate.phone || estimate.customer_phone || estimate.contactPhone || estimate.contact_phone || estimate.mobile || estimate.contactNumber || estimate.phoneNumber || estimate.clientPhone,
       customerEmail: estimate.customerEmail || estimate.email || estimate.customer_email || estimate.contactEmail || estimate.contact_email,
