@@ -1534,8 +1534,8 @@ router.put('/employees/:id', requireFPScope, async (req, res) => {
     // Also update linked user account if exists
     if (existing[0].user_id) {
       await pool.execute(
-        `UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?`,
-        [`${firstName} ${lastName}`, email, phone, existing[0].user_id]
+        `UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ? WHERE id = ?`,
+        [firstName, lastName, email, phone, existing[0].user_id]
       );
     }
     
