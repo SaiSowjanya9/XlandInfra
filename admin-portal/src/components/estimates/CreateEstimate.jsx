@@ -1573,24 +1573,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 )}
               </div>
 
-              {/* No of Visits & Description Section */}
+              {/* Description Section */}
               <div className="px-6 py-4 border-t border-gray-100">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      No. of Visits
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={estimateForm.noOfVisits}
-                      onChange={(e) => setEstimateForm({ ...estimateForm, noOfVisits: e.target.value })}
-                      placeholder="Enter number of visits"
-                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-                <div className="mt-4">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Description / Notes
                   </label>
