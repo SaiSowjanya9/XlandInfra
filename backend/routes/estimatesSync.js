@@ -252,6 +252,29 @@ router.put('/:estimateId/restore', async (req, res) => {
   }
 });
 
+// DELETE ALL archived estimates
+router.delete('/archived/delete-all', async (req, res) => {
+  try {
+    if (!db.isDbConnected) {
+      return res.status(503).json({ success: false, message: 'Database not connected' });
+    }
+    
+    const pool = db.pool;
+    const [result] = await pool.execute(
+      `DELETE FROM estimates WHERE status = 'Archived'`
+    );
+    
+    res.json({ 
+      success: true, 
+      message: `${result.affectedRows} archived estimates deleted`,
+      deletedCount: result.affectedRows
+    });
+  } catch (error) {
+    console.error('Delete all archived estimates error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // DELETE estimate (soft delete)
 router.delete('/:estimateId', async (req, res) => {
   try {

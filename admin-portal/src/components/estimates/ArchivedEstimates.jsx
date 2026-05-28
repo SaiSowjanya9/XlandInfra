@@ -30,6 +30,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast }) => {
   const [archivedEstimates, setArchivedEstimates] = useState([]);
   const [viewEstimate, setViewEstimate] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -75,8 +76,38 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast }) => {
     }
   };
 
+  const handleDeleteAllArchived = async () => {
+    try {
+      const response = await fetch('/api/estimates-sync/archived/delete-all', { method: 'DELETE' });
+      const result = await response.json();
+      if (result.success) {
+        showToast(`${result.deletedCount || archivedEstimates.length} archived estimates deleted`);
+        loadData();
+        setShowDeleteAllConfirm(false);
+        if (onRefresh) onRefresh();
+      } else {
+        showToast(result.message || 'Failed to delete', 'error');
+      }
+    } catch (error) {
+      showToast('Failed to delete all archived estimates', 'error');
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* Header with Delete All button */}
+      {archivedEstimates.length > 0 && !isOpsManager && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowDeleteAllConfirm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete All ({archivedEstimates.length})
+          </button>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {archivedEstimates.length === 0 ? (
           <div className="p-12 text-center">
@@ -350,6 +381,33 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast }) => {
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 Delete Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Confirmation Modal */}
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md m-4">
+            <h3 className="text-lg font-semibold text-red-600 mb-2">⚠️ Delete All Archived Estimates?</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to permanently delete <strong>all {archivedEstimates.length} archived estimates</strong>? 
+              This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteAllConfirm(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAllArchived}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Delete All Permanently
               </button>
             </div>
           </div>

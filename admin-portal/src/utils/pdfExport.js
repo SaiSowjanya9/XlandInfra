@@ -425,18 +425,28 @@ const generatePDF = (data, type, filename) => {
 
 // Export estimate to PDF
 export const exportEstimateToPDF = (estimate) => {
-  console.log('[PDF] exportEstimateToPDF called with:', estimate);
-  if (isExporting) return false;
+  console.log('[PDF] exportEstimateToPDF called with:', JSON.stringify(estimate, null, 2));
+  if (isExporting) {
+    console.log('[PDF] Already exporting, skipping');
+    return false;
+  }
   isExporting = true;
 
   try {
-    if (!estimate) throw new Error('No estimate data provided');
+    if (!estimate) {
+      console.error('[PDF] No estimate data provided');
+      throw new Error('No estimate data provided');
+    }
 
     // Prepare services from various possible formats
     let services = [];
     
-    // Check serviceRows first (package service rows)
-    if (estimate.serviceRows && Array.isArray(estimate.serviceRows)) {
+    console.log('[PDF] Estimate type:', estimate.estimateType || estimate.estimate_type);
+    console.log('[PDF] Raw services:', estimate.services);
+    console.log('[PDF] Raw serviceRows:', estimate.serviceRows);
+    
+    // Check serviceRows first (package service rows from form)
+    if (estimate.serviceRows && Array.isArray(estimate.serviceRows) && estimate.serviceRows.length > 0) {
       services = estimate.serviceRows.filter(sr => sr.service || sr.name).map(sr => ({
         name: sr.service || sr.name || 'Service',
         frequencyCount: sr.frequencyCount || sr.frequency || 1,
@@ -444,8 +454,9 @@ export const exportEstimateToPDF = (estimate) => {
         price: parseFloat(sr.price || sr.rate || 0)
       }));
     }
-    // Check services array
-    else if (estimate.services && Array.isArray(estimate.services)) {
+    // Check services array (from database or form)
+    else if (estimate.services && Array.isArray(estimate.services) && estimate.services.length > 0) {
+      console.log('[PDF] Processing services array:', estimate.services);
       services = estimate.services.map(s => {
         // Handle nested package structure
         if (s.type === 'package' && s.services) {
@@ -456,24 +467,40 @@ export const exportEstimateToPDF = (estimate) => {
             price: parseFloat(s.price || 0)
           };
         }
+        // Handle addon/service structure
         return {
-          name: s.name || s.service || 'Service',
-          frequencyCount: s.frequencyCount || s.frequency || 1,
-          frequencyType: s.frequencyType || 'Monthly',
-          price: parseFloat(s.price || s.rate || 0)
+          name: s.name || s.service || s.serviceName || s.description || 'Service',
+          frequencyCount: s.frequencyCount || s.frequency || s.visits || 1,
+          frequencyType: s.frequencyType || s.billingType || s.billing || 'Monthly',
+          price: parseFloat(s.price || s.rate || s.amount || s.total || 0)
         };
       });
     }
     
-    // If package name exists, add it as a service
-    if (services.length === 0 && estimate.packageName) {
+    // If package name exists and no services, add package as main service
+    if (services.length === 0 && (estimate.packageName || estimate.package_name)) {
+      const pkgName = estimate.packageName || estimate.package_name;
+      console.log('[PDF] Adding package as service:', pkgName);
       services.push({
-        name: estimate.packageName,
+        name: pkgName,
         frequencyCount: 1,
-        frequencyType: estimate.billingDuration || 'Yearly',
-        price: parseFloat(estimate.packageRate || estimate.subtotal || 0)
+        frequencyType: estimate.billingDuration || estimate.billing_duration || 'Yearly',
+        price: parseFloat(estimate.packageRate || estimate.subtotal || estimate.total || 0)
       });
     }
+    
+    // Final fallback - if still no services but has a total, add a placeholder
+    if (services.length === 0 && (estimate.total || estimate.totalPrice || estimate.subtotal)) {
+      console.log('[PDF] No services found, adding placeholder');
+      services.push({
+        name: estimate.propertyType ? `${estimate.propertyType} Service` : 'Estimate Services',
+        frequencyCount: 1,
+        frequencyType: estimate.billingDuration || 'Yearly',
+        price: parseFloat(estimate.subtotal || estimate.total || estimate.totalPrice || 0)
+      });
+    }
+    
+    console.log('[PDF] Final services:', services);
 
     // Parse addons from various formats
     let addons = [];
@@ -509,9 +536,11 @@ export const exportEstimateToPDF = (estimate) => {
       createdAt: estimate.createdAt || estimate.created_at || new Date().toISOString()
     };
 
-    generatePDF(exportData, 'estimate', `Estimate-${exportData.estimateId}.pdf`);
+    console.log('[PDF] exportData prepared:', exportData);
+    const result = generatePDF(exportData, 'estimate', `Estimate-${exportData.estimateId}.pdf`);
+    console.log('[PDF] generatePDF result:', result);
     isExporting = false;
-    return true;
+    return result;
   } catch (error) {
     console.error('PDF Export Error:', error);
     isExporting = false;
