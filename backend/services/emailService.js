@@ -765,24 +765,29 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             
             <!-- Totals -->
             <div style="background: #f9fafb; border-radius: 8px; padding: 15px; margin-bottom: 25px;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #6b7280;">Subtotal</span>
-                <span style="color: #1f2937;">₹${Number(subtotal || 0).toLocaleString()}</span>
-              </div>
-              ${discount > 0 ? `
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #6b7280;">Discount</span>
-                <span style="color: #059669;">-₹${Number(discount).toLocaleString()}</span>
-              </div>
-              ` : ''}
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #6b7280;">Tax (GST)</span>
-                <span style="color: #1f2937;">₹${Number(tax || 0).toLocaleString()}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 2px solid #e5e7eb; margin-top: 8px;">
-                <span style="color: #1f2937; font-weight: 700; font-size: 16px;">Total</span>
-                <span style="color: #1e40af; font-weight: 700; font-size: 18px;">₹${Number(total || 0).toLocaleString()}</span>
-              </div>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; text-align: left;">Subtotal</td>
+                  <td style="padding: 8px 0; color: #1f2937; text-align: right;">₹ ${Number(subtotal || 0).toLocaleString()}</td>
+                </tr>
+                ${discount > 0 ? `
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; text-align: left;">Discount</td>
+                  <td style="padding: 8px 0; color: #059669; text-align: right;">- ₹ ${Number(discount).toLocaleString()}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; text-align: left;">Tax (GST)</td>
+                  <td style="padding: 8px 0; color: #1f2937; text-align: right;">₹ ${Number(tax || 0).toLocaleString()}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="padding-top: 12px; border-top: 2px solid #e5e7eb;"></td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #1f2937; font-weight: 700; font-size: 16px; text-align: left;">Total</td>
+                  <td style="padding: 8px 0; color: #1e40af; font-weight: 700; font-size: 18px; text-align: right;">₹ ${Number(total || 0).toLocaleString()}</td>
+                </tr>
+              </table>
             </div>
             
             <!-- Action Buttons -->

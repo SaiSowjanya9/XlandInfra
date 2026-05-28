@@ -95,7 +95,7 @@ const generatePDF = (data, type, filename) => {
 
     // ===== TWO COLUMN INFO SECTION =====
     const colWidth = (pageWidth - margin * 2 - 10) / 2;
-    const boxHeight = 58;
+    const boxHeight = 52;
     
     // Property Details Box
     doc.setDrawColor(...borderColor);
@@ -114,33 +114,29 @@ const generatePDF = (data, type, filename) => {
     doc.setTextColor(...darkText);
     doc.setFontSize(8);
     
-    if (data.propertyId) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Property ID:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.propertyId), margin + 30, infoY);
-      infoY += 6;
-    }
-    if (data.propertyType) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Property Type:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.propertyType), margin + 30, infoY);
-      infoY += 6;
-    }
-    if (data.zone) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Zone:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.zone), margin + 30, infoY);
-      infoY += 6;
-    }
-    if (data.division) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Division:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.division), margin + 30, infoY);
-    }
+    // Always show all property fields
+    doc.setFont('helvetica', 'bold');
+    doc.text('Property ID:', margin + 5, infoY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.propertyId || '-'), margin + 32, infoY);
+    infoY += 7;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Property Type:', margin + 5, infoY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.propertyType || '-'), margin + 32, infoY);
+    infoY += 7;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Zone:', margin + 5, infoY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.zone || '-'), margin + 32, infoY);
+    infoY += 7;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Division:', margin + 5, infoY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.division || '-'), margin + 32, infoY);
     
     // Customer Details Box
     doc.setDrawColor(...borderColor);
@@ -158,43 +154,50 @@ const generatePDF = (data, type, filename) => {
     doc.setTextColor(...darkText);
     doc.setFontSize(8);
     
-    if (data.customerName) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Contact Name:', margin + colWidth + 15, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.customerName).substring(0, 18), margin + colWidth + 40, infoY);
-      infoY += 6;
-    }
-    if (data.communityName || data.propertyName) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Community:', margin + colWidth + 15, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.communityName || data.propertyName || '').substring(0, 18), margin + colWidth + 40, infoY);
-      infoY += 6;
-    }
-    if (data.address) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Address:', margin + colWidth + 15, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.address).substring(0, 18), margin + colWidth + 40, infoY);
-      infoY += 6;
-    }
-    if (data.customerPhone || data.phone) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Phone:', margin + colWidth + 15, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.customerPhone || data.phone || ''), margin + colWidth + 40, infoY);
-      infoY += 6;
-    }
-    if (data.customerEmail || data.email) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Email:', margin + colWidth + 15, infoY);
-      doc.setFont('helvetica', 'normal');
-      const email = String(data.customerEmail || data.email || '');
-      doc.text(email.substring(0, 22), margin + colWidth + 40, infoY);
-    }
+    // Always show all customer fields
+    const custX = margin + colWidth + 15;
+    const custValX = margin + colWidth + 42;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Contact Name:', custX, infoY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.customerName || '-').substring(0, 20), custValX, infoY);
+    infoY += 7;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Community:', custX, infoY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.communityName || data.propertyName || '-').substring(0, 20), custValX, infoY);
+    infoY += 7;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Phone:', custX, infoY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.customerPhone || data.phone || '-'), custValX, infoY);
+    infoY += 7;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Email:', custX, infoY);
+    doc.setFont('helvetica', 'normal');
+    const email = String(data.customerEmail || data.email || '-');
+    doc.setFontSize(7);
+    doc.text(email, custValX, infoY);
+    doc.setFontSize(8);
     
     y += boxHeight + 8;
+    
+    // Address row (full width)
+    if (data.address) {
+      doc.setFillColor(...lightGray);
+      doc.roundedRect(margin, y, pageWidth - margin * 2, 10, 2, 2, 'F');
+      doc.setTextColor(...darkText);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Address:', margin + 5, y + 7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(data.address).substring(0, 80), margin + 25, y + 7);
+      y += 14;
+    }
 
     // ===== NO OF VISITS =====
     if (data.noOfVisits) {
