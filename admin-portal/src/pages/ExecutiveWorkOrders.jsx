@@ -101,6 +101,25 @@ const ExecutiveWorkOrders = ({ user }) => {
     setFormData({ propertyId: '', categoryId: '', clientId: '', title: '', description: '', priority: 'medium', permissionToEnter: 'no', hasPet: 'no', scheduledDate: '' });
   };
 
+  const handleStatusChange = async (workOrderId, newStatus) => {
+    try {
+      const response = await fetch(`/api/executive/work-orders/${workOrderId}/status`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Status updated successfully!' });
+        fetchWorkOrders();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Failed to update status' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to update status' });
+    }
+  };
+
   const getStatusColor = (status) => {
     const colors = { draft: 'bg-gray-100 text-gray-700', requested: 'bg-blue-100 text-blue-700', under_review: 'bg-yellow-100 text-yellow-700', assigned: 'bg-purple-100 text-purple-700', accepted: 'bg-indigo-100 text-indigo-700', in_progress: 'bg-orange-100 text-orange-700', completed: 'bg-green-100 text-green-700', closed: 'bg-gray-100 text-gray-700' };
     return colors[status] || 'bg-gray-100 text-gray-700';
@@ -188,9 +207,18 @@ const ExecutiveWorkOrders = ({ user }) => {
                     <td className="py-4 px-4 text-sm text-gray-600">{wo.client_name || wo.property_name || '-'}</td>
                     <td className="py-4 px-4 text-sm text-gray-600">{wo.category_name || '-'}</td>
                     <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
-                        {wo.status?.replace(/_/g, ' ').toUpperCase()}
-                      </span>
+                      <select
+                        value={wo.status}
+                        onChange={(e) => handleStatusChange(wo.id, e.target.value)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="closed">Closed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-500">{formatDate(wo.created_at)}</td>
                     <td className="py-4 px-4">

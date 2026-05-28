@@ -572,16 +572,30 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
     const workOrderId = `FP${req.fpId}-WO-${Date.now()}`;
     const title = `Service Request - ${property[0].name || 'Property'}`;
 
+    // Get category and subcategory names
+    let categoryName = null;
+    let subcategoryName = null;
+    
+    if (categoryId) {
+      const [catResult] = await pool.execute('SELECT name FROM categories WHERE id = ?', [categoryId]);
+      if (catResult.length > 0) categoryName = catResult[0].name;
+    }
+    
+    if (subcategoryId) {
+      const [subResult] = await pool.execute('SELECT name FROM subcategories WHERE id = ?', [subcategoryId]);
+      if (subResult.length > 0) subcategoryName = subResult[0].name;
+    }
+
     const [result] = await pool.execute(
       `INSERT INTO work_orders (
-        work_order_id, property_id, category_id, subcategory_id, title, description, priority,
-        permission_to_enter, has_pet, entry_notes, customer_name, customer_email, customer_phone,
-        status, franchise_partner_id, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+        work_order_id, property_id, category_id, subcategory_id, category_name, subcategory_name, 
+        title, description, priority, permission_to_enter, has_pet, entry_notes, 
+        customer_name, customer_email, customer_phone, status, franchise_partner_id, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
       [
-        workOrderId, propertyId, categoryId || null, subcategoryId || null, title, description || '',
-        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', entryNotes || null,
-        customerName || null, customerEmail || null, customerPhone || null,
+        workOrderId, propertyId, categoryId || null, subcategoryId || null, categoryName, subcategoryName,
+        title, description || '', priority || 'medium', permissionToEnter || 'no', hasPet || 'no', 
+        entryNotes || null, customerName || null, customerEmail || null, customerPhone || null,
         req.fpId, req.user?.id || null
       ]
     );
