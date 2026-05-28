@@ -1587,6 +1587,64 @@ router.put('/employees/:id/status', requireFPScope, async (req, res) => {
   }
 });
 
+// Delete employee
+router.delete('/employees/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get employee to find linked user_id
+    const [employees] = await pool.execute(
+      `SELECT user_id, first_name, last_name FROM fp_employees WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+
+    if (employees.length === 0) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+
+    const employee = employees[0];
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      // Delete zone assignments first
+      await connection.execute(
+        `DELETE FROM fp_employee_zones WHERE fp_employee_id = ? AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+
+      // Delete from fp_employees table
+      await connection.execute(
+        `DELETE FROM fp_employees WHERE id = ? AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+
+      // Also delete linked user account if exists
+      if (employee.user_id) {
+        await connection.execute(
+          `DELETE FROM users WHERE id = ?`,
+          [employee.user_id]
+        );
+      }
+
+      await connection.commit();
+      connection.release();
+
+      res.json({ 
+        success: true, 
+        message: `Employee ${employee.first_name} ${employee.last_name} has been permanently deleted`
+      });
+    } catch (dbError) {
+      await connection.rollback();
+      connection.release();
+      throw dbError;
+    }
+  } catch (error) {
+    console.error('Delete employee error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Update employee zones
 router.put('/employees/:id/zones', requireFPScope, async (req, res) => {
   try {
