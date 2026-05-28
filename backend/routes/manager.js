@@ -440,7 +440,11 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
     
     query += ' ORDER BY wo.created_at DESC';
     
+    console.log('[Manager Work Orders] Query:', query);
+    console.log('[Manager Work Orders] Params:', params);
+    
     const [workOrders] = await pool.execute(query, params);
+    console.log('[Manager Work Orders] Results count:', workOrders.length);
     res.json({ success: true, data: workOrders });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
