@@ -262,12 +262,12 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                       <div className="flex items-center gap-2">
                         <Icon className="w-4 h-4 text-gray-400" />
                         <span className={`text-sm whitespace-nowrap px-2 py-0.5 rounded ${
-                          estimate.estimateType === 'property-based' || estimate.propertyId 
+                          estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId 
                             ? 'bg-blue-100 text-blue-700' 
                             : 'bg-purple-100 text-purple-700'
                         }`}>
-                          {estimate.estimateType === 'property-based' || estimate.propertyId 
-                            ? (estimate.propertyType || 'Property') 
+                          {estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId 
+                            ? 'Property' 
                             : 'Direct'}
                         </span>
                       </div>

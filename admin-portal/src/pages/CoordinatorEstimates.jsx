@@ -499,7 +499,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="py-4 px-4">
                                 <div className="flex items-center gap-2">
                                   <TypeIcon className="w-4 h-4 text-gray-400" />
-                                  <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">{estimate.property_type || 'GC'}</span>
+                                  <span className={`px-2 py-0.5 text-xs font-medium rounded ${estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span>
                                 </div>
                               </td>
                               <td className="py-4 px-4">
