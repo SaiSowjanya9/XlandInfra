@@ -479,6 +479,7 @@ router.delete('/properties/:id', requireFPScope, validateOwnership('properties')
 router.get('/work-orders', requireFPScope, async (req, res) => {
   try {
     const { status, priority } = req.query;
+    console.log('[FP Work Orders GET] fpId:', req.fpId, 'status filter:', status);
 
     let query = `
       SELECT wo.*, 
@@ -517,6 +518,7 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
     query += ' ORDER BY wo.created_at DESC LIMIT 500';
 
     const [workOrders] = await pool.execute(query, params);
+    console.log('[FP Work Orders GET] Found:', workOrders.length, 'work orders');
 
     res.json({
       success: true,

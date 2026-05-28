@@ -351,17 +351,19 @@ router.delete('/properties/:id', requireExecutiveScope, validateOwnership('prope
 router.get('/work-orders', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { status } = req.query;
 
+    // Executive sees: their own work orders OR all FP work orders if linked to FP
     let query = `
       SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-      WHERE wo.executive_id = ?
+      WHERE (wo.executive_id = ? OR wo.franchise_partner_id = ?)
     `;
-    const params = [executiveId];
+    const params = [executiveId, franchisePartnerId];
 
     if (status) {
       query += ' AND wo.status = ?';
@@ -381,6 +383,7 @@ router.get('/work-orders', requireExecutiveScope, async (req, res) => {
 router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
 
     const [workOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
@@ -388,9 +391,9 @@ router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       WHERE wo.executive_id = ? AND wo.status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')
+       WHERE (wo.executive_id = ? OR wo.franchise_partner_id = ?) AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')
        ORDER BY wo.created_at DESC`,
-      [executiveId]
+      [executiveId, franchisePartnerId]
     );
 
     res.json({ success: true, data: workOrders });
@@ -403,6 +406,7 @@ router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
 router.get('/work-orders/completed', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
 
     const [workOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
@@ -410,9 +414,9 @@ router.get('/work-orders/completed', requireExecutiveScope, async (req, res) => 
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       WHERE wo.executive_id = ? AND wo.status IN ('completed', 'closed')
+       WHERE (wo.executive_id = ? OR wo.franchise_partner_id = ?) AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`,
-      [executiveId]
+      [executiveId, franchisePartnerId]
     );
 
     res.json({ success: true, data: workOrders });
@@ -455,14 +459,15 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
 router.get('/customers', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
 
     const [customers] = await pool.query(
       `SELECT c.*, p.name as property_name
        FROM clients c
        LEFT JOIN properties p ON c.property_id = p.id
-       WHERE c.executive_id = ?
+       WHERE (c.executive_id = ? OR c.franchise_partner_id = ?)
        ORDER BY c.created_at DESC`,
-      [executiveId]
+      [executiveId, franchisePartnerId]
     );
 
     res.json({ success: true, data: customers });
@@ -845,6 +850,7 @@ router.delete('/employees/:id', requireExecutiveScope, async (req, res) => {
 router.get('/estimates', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
     const { archived } = req.query;
 
     let query = `
@@ -852,7 +858,7 @@ router.get('/estimates', requireExecutiveScope, async (req, res) => {
       FROM estimates e
       LEFT JOIN clients c ON e.client_id = c.id
       LEFT JOIN properties p ON e.property_id = p.id
-      WHERE e.executive_id = ?
+      WHERE (e.executive_id = ? OR e.franchise_partner_id = ?)
     `;
 
     if (archived === 'true') {
@@ -863,7 +869,7 @@ router.get('/estimates', requireExecutiveScope, async (req, res) => {
 
     query += ' ORDER BY e.created_at DESC';
 
-    const [estimates] = await pool.query(query, [executiveId]);
+    const [estimates] = await pool.query(query, [executiveId, franchisePartnerId]);
     res.json({ success: true, data: estimates });
   } catch (error) {
     console.error('Estimates fetch error:', error);
@@ -924,12 +930,24 @@ router.post('/estimates', requireExecutiveScope, async (req, res) => {
 router.get('/amc-packages', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
     const canView = await canViewPricing(executiveId, 'amc_packages');
 
-    const [packages] = await pool.query(
-      `SELECT * FROM executive_amc_packages WHERE executive_id = ? ORDER BY created_at DESC`,
+    // Get executive's own packages + FP packages if linked to FP
+    let packages = [];
+    const [ownPackages] = await pool.query(
+      `SELECT *, 'executive' as source FROM executive_amc_packages WHERE executive_id = ? ORDER BY created_at DESC`,
       [executiveId]
     );
+    packages = [...ownPackages];
+    
+    if (franchisePartnerId) {
+      const [fpPackages] = await pool.query(
+        `SELECT *, 'fp' as source FROM fp_amc_packages WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY created_at DESC`,
+        [franchisePartnerId]
+      );
+      packages = [...packages, ...fpPackages];
+    }
 
     res.json({ success: true, data: filterPricing(packages, canView) });
   } catch (error) {
@@ -968,16 +986,32 @@ router.post('/amc-packages', requireExecutiveScope, async (req, res) => {
 router.get('/addons', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
     const canView = await canViewPricing(executiveId, 'addons');
 
-    const [addons] = await pool.query(
-      `SELECT ea.*, c.name as category_name
+    // Get executive's own addons + FP addons if linked to FP
+    let addons = [];
+    const [ownAddons] = await pool.query(
+      `SELECT ea.*, c.name as category_name, 'executive' as source
        FROM executive_addons ea
        LEFT JOIN categories c ON ea.category_id = c.id
        WHERE ea.executive_id = ?
        ORDER BY ea.created_at DESC`,
       [executiveId]
     );
+    addons = [...ownAddons];
+    
+    if (franchisePartnerId) {
+      const [fpAddons] = await pool.query(
+        `SELECT fa.*, c.name as category_name, 'fp' as source
+         FROM fp_addons fa
+         LEFT JOIN categories c ON fa.category_id = c.id
+         WHERE fa.franchise_partner_id = ? AND fa.is_active = 1
+         ORDER BY fa.created_at DESC`,
+        [franchisePartnerId]
+      );
+      addons = [...addons, ...fpAddons];
+    }
 
     res.json({ success: true, data: filterPricing(addons, canView) });
   } catch (error) {
