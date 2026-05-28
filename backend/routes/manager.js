@@ -149,14 +149,14 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       pool.execute(`SELECT COUNT(*) as count FROM ${employeeTable} WHERE ${employeeScopeCol} = ? AND is_active = 1`, [scopeId])
         .then(([r]) => r[0].count).catch(() => 0),
       
-      // Work orders - combined query
+      // Work orders - combined query (FP managers see FP work orders)
       pool.execute(`
         SELECT 
           COUNT(*) as total,
           SUM(CASE WHEN status NOT IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) as pending,
           SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed
-        FROM work_orders WHERE manager_id = ?
-      `, [managerId]).then(([[r]]) => ({ 
+        FROM work_orders WHERE ${franchisePartnerId ? 'franchise_partner_id = ?' : '1=0'}
+      `, franchisePartnerId ? [franchisePartnerId] : []).then(([[r]]) => ({ 
         total: r.total || 0, 
         pending: r.pending || 0, 
         completed: r.completed || 0 
@@ -417,6 +417,8 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
     const { status } = req.query;
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId;
+    
+    console.log('[Manager Work Orders] managerId:', managerId, 'franchisePartnerId:', franchisePartnerId);
     
     // FP employees see FP work orders, standalone managers see their created work orders
     let query = `SELECT wo.*, p.name as property_name, c.name as category_name, 
