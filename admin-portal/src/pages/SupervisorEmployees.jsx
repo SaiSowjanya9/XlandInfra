@@ -129,17 +129,6 @@ const SupervisorEmployees = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* View Only Access Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
-        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-          <Eye className="w-6 h-6 text-amber-600" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-amber-800">View Only Access</h3>
-          <p className="text-sm text-amber-700">You have view-only access to employees.</p>
-        </div>
-      </div>
-
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div><h1 className="text-2xl font-bold text-gray-900">Employee Management</h1><p className="text-gray-500 mt-1">View your team members</p></div>
       </div>

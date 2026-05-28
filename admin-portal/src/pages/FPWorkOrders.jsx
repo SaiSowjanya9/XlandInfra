@@ -383,7 +383,7 @@ const FPWorkOrders = ({ user }) => {
 
   // Count work orders by status
   const pendingCount = workOrders.filter(wo => 
-    ['draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)
+    ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)
   ).length;
   const completedCount = workOrders.filter(wo => 
     ['completed', 'verified', 'closed'].includes(wo.status)
@@ -392,7 +392,7 @@ const FPWorkOrders = ({ user }) => {
   // Filter work orders by active tab and search term
   const filteredWorkOrders = workOrders.filter(wo => {
     // Tab filter
-    const isPending = ['draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status);
+    const isPending = ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status);
     const isCompleted = ['completed', 'verified', 'closed'].includes(wo.status);
     
     if (activeTab === 'pending' && !isPending) return false;
@@ -1172,6 +1172,32 @@ const FPWorkOrders = ({ user }) => {
                 >
                   Close
                 </button>
+                {/* Mark as Closed - for pending work orders */}
+                {['pending', 'assigned', 'in_progress', 'requested'].includes(selectedWorkOrder.status) && (
+                  <button
+                    onClick={async () => {
+                      await handleStatusChange(selectedWorkOrder.id, 'closed');
+                      setShowDetailModal(false);
+                      setSelectedWorkOrder(null);
+                    }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  >
+                    Mark as Closed
+                  </button>
+                )}
+                {/* Revert to Pending - for completed/closed work orders */}
+                {['completed', 'closed', 'verified'].includes(selectedWorkOrder.status) && (
+                  <button
+                    onClick={async () => {
+                      await handleStatusChange(selectedWorkOrder.id, 'pending');
+                      setShowDetailModal(false);
+                      setSelectedWorkOrder(null);
+                    }}
+                    className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+                  >
+                    Revert to Pending
+                  </button>
+                )}
               </div>
             </div>
           </div>
