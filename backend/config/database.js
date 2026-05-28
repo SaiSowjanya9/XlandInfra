@@ -2,22 +2,36 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
+// Determine if using local or production database based on NODE_ENV
+const isProduction = process.env.NODE_ENV === 'production';
+
+const dbConfig = isProduction ? {
+  // Production (Railway) Database
+  host: process.env.DB_HOST || 'kodama.proxy.rlwy.net',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'customer_portal',
-  port: process.env.DB_PORT || 3306,
+  database: process.env.DB_NAME || 'railway',
+  port: process.env.DB_PORT || 30074,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  // SSL configuration for cloud databases (PlanetScale, Railway, etc.)
-  ...(process.env.DB_SSL === 'true' && {
-    ssl: {
-      rejectUnauthorized: true
-    }
-  })
+  ssl: {
+    rejectUnauthorized: true
+  }
+} : {
+  // Local Development Database
+  host: process.env.LOCAL_DB_HOST || 'localhost',
+  user: process.env.LOCAL_DB_USER || 'root',
+  password: process.env.LOCAL_DB_PASSWORD || '',
+  database: process.env.LOCAL_DB_NAME || 'customer_portal_local',
+  port: process.env.LOCAL_DB_PORT || 3306,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 };
+
+console.log(`📦 Database mode: ${isProduction ? 'PRODUCTION (Railway)' : 'DEVELOPMENT (Local)'}`);
+console.log(`📦 Database: ${dbConfig.database} @ ${dbConfig.host}:${dbConfig.port}`);
 
 let pool = null;
 let isDbConnected = false;

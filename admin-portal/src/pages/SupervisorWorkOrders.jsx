@@ -662,35 +662,29 @@ const SupervisorWorkOrders = ({ user }) => {
                         <td className="py-4 px-4 text-sm text-gray-600">{wo.customer_name || wo.client_name || '-'}</td>
                         <td className="py-4 px-4 text-sm text-gray-600">{wo.category_name || '-'}</td>
                         <td className="py-4 px-4">
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
-                            {wo.status?.replace(/_/g, ' ').toUpperCase()}
-                          </span>
+                          <select
+                            value={wo.status}
+                            onChange={(e) => handleStatusChange(wo, e.target.value)}
+                            className={`px-3 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="assigned">Assigned</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="closed">Closed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-500">{formatDate(wo.created_at)}</td>
                         <td className="py-4 px-4">
                           <div className="flex items-center justify-end gap-2">
-                            {activeTab === 'pending' && (
-                              <button
-                                onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                                title="View Details"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                            )}
-                            {activeTab === 'completed' && (
-                              <select
-                                value={wo.status}
-                                onChange={(e) => handleStatusChange(wo, e.target.value)}
-                                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="assigned">Assigned</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="completed">Completed</option>
-                                <option value="cancelled">Cancelled</option>
-                              </select>
-                            )}
+                            <button
+                              onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
                       </tr>

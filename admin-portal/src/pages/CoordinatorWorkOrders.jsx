@@ -919,9 +919,18 @@ const CoordinatorWorkOrders = ({ user }) => {
                       <span className="text-sm text-gray-600">{wo.category_name || '-'}</span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
-                        {wo.status?.replace(/_/g, ' ').toUpperCase()}
-                      </span>
+                      <select
+                        value={wo.status}
+                        onChange={(e) => handleStatusUpdate(wo.id, e.target.value)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="closed">Closed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
