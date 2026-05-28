@@ -120,6 +120,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
     const scopeId = getScopeId(req);
     const scopeColumn = getScopeColumn(req);
     const managerId = req.managerId;
+    const franchisePartnerId = req.franchisePartnerId;
     const employeeTable = req.isFPManager ? 'fp_employees' : 'manager_employees';
     const employeeScopeCol = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
 
