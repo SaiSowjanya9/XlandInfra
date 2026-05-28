@@ -166,7 +166,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       pool.execute(`SELECT COUNT(*) as count FROM estimates WHERE ${scopeColumn} = ?`, [scopeId])
         .then(([r]) => r[0].count).catch(() => 0),
       
-      // Recent work orders
+      // Recent work orders - FP managers see FP work orders
       pool.execute(
         `SELECT wo.*, p.name as property_name, c.name as category_name, 
                 v.company_name as vendor_name, cl.name as client_name
@@ -175,10 +175,10 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN clients cl ON wo.client_id = cl.id
-         WHERE wo.manager_id = ?
+         WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : '1=0'}
          ORDER BY wo.created_at DESC
          LIMIT 10`,
-        [managerId]
+        franchisePartnerId ? [franchisePartnerId] : []
       ).then(([rows]) => rows).catch(() => [])
     ]);
 
@@ -418,7 +418,7 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId;
     
-    // Manager sees: their own work orders OR their linked FP's work orders
+    // FP employees see FP work orders, standalone managers see their created work orders
     let query = `SELECT wo.*, p.name as property_name, c.name as category_name, 
                         v.company_name as vendor_name, cl.name as client_name
                  FROM work_orders wo
@@ -426,9 +426,9 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
                  LEFT JOIN categories c ON wo.category_id = c.id
                  LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
                  LEFT JOIN clients cl ON wo.client_id = cl.id
-                 WHERE (wo.manager_id = ?${franchisePartnerId ? ' OR wo.franchise_partner_id = ?' : ''})`;
+                 WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'}`;
     
-    const params = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
+    const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
     
     if (status) {
       query += ' AND wo.status = ?';
@@ -457,9 +457,9 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE (wo.manager_id = ?${franchisePartnerId ? ' OR wo.franchise_partner_id = ?' : ''}) AND wo.status NOT IN ('completed', 'closed', 'cancelled')
+       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status NOT IN ('completed', 'closed', 'cancelled')
        ORDER BY wo.created_at DESC`;
-    const params = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
+    const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
     
     const [workOrders] = await pool.execute(query, params);
     res.json({ success: true, data: workOrders });
@@ -481,9 +481,9 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE (wo.manager_id = ?${franchisePartnerId ? ' OR wo.franchise_partner_id = ?' : ''}) AND wo.status IN ('completed', 'closed')
+       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`;
-    const params = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
+    const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
     
     const [workOrders] = await pool.execute(query, params);
     res.json({ success: true, data: workOrders });

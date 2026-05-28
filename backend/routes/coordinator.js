@@ -343,15 +343,16 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
     const franchisePartnerId = req.franchisePartnerId;
     const { status } = req.query;
 
+    // FP employees see FP work orders, standalone coordinators see their created work orders
     let query = `
       SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-      WHERE (wo.coordinator_id = ?${franchisePartnerId ? ' OR wo.franchise_partner_id = ?' : ''})
+      WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'}
     `;
-    const params = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+    const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
 
     if (status) {
       query += ' AND wo.status = ?';
@@ -378,9 +379,9 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       WHERE (wo.coordinator_id = ?${franchisePartnerId ? ' OR wo.franchise_partner_id = ?' : ''}) AND wo.status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')
+       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')
        ORDER BY wo.created_at DESC`;
-    const params = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+    const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
 
     const [workOrders] = await pool.query(query, params);
 
@@ -401,9 +402,9 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       WHERE (wo.coordinator_id = ?${franchisePartnerId ? ' OR wo.franchise_partner_id = ?' : ''}) AND wo.status IN ('completed', 'closed')
+       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`;
-    const params = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+    const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
 
     const [workOrders] = await pool.query(query, params);
 
