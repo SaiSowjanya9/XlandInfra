@@ -734,11 +734,15 @@ router.delete('/work-orders/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Soft delete or hard delete
-    await pool.execute(
-      `DELETE FROM work_orders WHERE id = ? AND franchise_partner_id = ?`,
+    // Delete work orders that belong to this FP or have no FP assigned
+    const [result] = await pool.execute(
+      `DELETE FROM work_orders WHERE id = ? AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
       [id, req.fpId]
     );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Work order not found or access denied' });
+    }
 
     res.json({ success: true, message: 'Work order deleted' });
   } catch (error) {
@@ -2322,6 +2326,62 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       message: 'Failed to create estimate',
       error: error.message
     });
+  }
+});
+
+// Archive estimate
+router.put('/estimates/:id/archive', requireFPScope, async (req, res) => {
+  try {
+    await pool.execute(
+      `UPDATE fp_estimates SET is_archived = 1, archived_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+      [req.params.id, req.fpId]
+    );
+    res.json({ success: true, message: 'Estimate archived' });
+  } catch (error) {
+    console.error('Archive estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Restore estimate
+router.put('/estimates/:id/restore', requireFPScope, async (req, res) => {
+  try {
+    await pool.execute(
+      `UPDATE fp_estimates SET is_archived = 0, archived_at = NULL WHERE id = ? AND franchise_partner_id = ?`,
+      [req.params.id, req.fpId]
+    );
+    res.json({ success: true, message: 'Estimate restored' });
+  } catch (error) {
+    console.error('Restore estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete estimate permanently
+router.delete('/estimates/:id', requireFPScope, async (req, res) => {
+  try {
+    await pool.execute(
+      `DELETE FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?`,
+      [req.params.id, req.fpId]
+    );
+    res.json({ success: true, message: 'Estimate deleted' });
+  } catch (error) {
+    console.error('Delete estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete all archived estimates
+router.delete('/estimates/archived/delete-all', requireFPScope, async (req, res) => {
+  try {
+    const [result] = await pool.execute(
+      `DELETE FROM fp_estimates WHERE franchise_partner_id = ? AND is_archived = 1`,
+      [req.fpId]
+    );
+    res.json({ success: true, message: `${result.affectedRows} archived estimates deleted`, deletedCount: result.affectedRows });
+  } catch (error) {
+    console.error('Delete all archived error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
