@@ -219,6 +219,8 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId;
     
+    console.log('[Manager Properties] managerId:', managerId, 'franchisePartnerId:', franchisePartnerId);
+    
     // Fetch from properties table with creator name
     const propQuery = `SELECT p.*, z.name as zone_name,
         COALESCE(p.area_name, p.city) as area,
@@ -232,7 +234,9 @@ router.get('/properties', requireManagerScope, async (req, res) => {
        WHERE (p.manager_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})
        ORDER BY p.created_at DESC`;
     const propParams = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
+    console.log('[Manager Properties] Params:', propParams);
     const [regularProperties] = await pool.execute(propQuery, propParams);
+    console.log('[Manager Properties] Found:', regularProperties.length, 'properties');
 
     // Also fetch from onboarded_properties with creator name
     let onboardedProperties = [];
