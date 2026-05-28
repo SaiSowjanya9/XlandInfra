@@ -225,7 +225,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     const propQuery = `SELECT p.*, 
         COALESCE(p.area_name, p.city) as area,
         COALESCE(p.division, 'General') as division,
-        COALESCE(p.total_units, 1) as units,
+        COALESCE(p.number_of_units, 1) as units,
         'properties' as source_table
        FROM properties p 
        WHERE (p.manager_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})
