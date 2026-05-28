@@ -106,19 +106,6 @@ const SupervisorDashboard = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* View Only Access Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
-        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-          <Eye className="w-6 h-6 text-amber-600" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-amber-800">View Only Access</h3>
-          <p className="text-sm text-amber-700">
-            You have view-only access to data. Some features are restricted based on your role.
-          </p>
-        </div>
-      </div>
-
       {/* Welcome Header */}
       <div className="bg-gradient-to-r from-amber-600 to-orange-700 rounded-2xl p-6 text-white">
         <div className="flex items-center justify-between">

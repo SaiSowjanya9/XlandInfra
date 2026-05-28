@@ -47,14 +47,12 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
   const fpNavItems = [
     { path: '/supervisor', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/supervisor/customers/add', icon: UserPlus, label: 'Add Customer' },
-    { path: '/supervisor/estimates/property', icon: FileText, label: 'Property ID Based Estimate' },
-    { path: '/supervisor/estimates/direct', icon: FileText, label: 'Direct Estimate' },
-    { path: '/supervisor/properties/gc', icon: Home, label: 'Gated Community' },
-    { path: '/supervisor/properties/apt', icon: Building2, label: 'Apartment' },
-    { path: '/supervisor/properties/villa', icon: Home, label: 'Villa' },
-    { path: '/supervisor/properties/flat', icon: Building2, label: 'Flat' },
-    { path: '/supervisor/properties/plot', icon: MapPin, label: 'Plot' },
-    { path: '/supervisor/forums', icon: MessageSquare, label: 'Forums' },
+  ];
+
+  // FP Supervisor vendor sub-items (only Add New Vendor and Vendor Details)
+  const fpVendorSubItems = [
+    { path: '/supervisor/vendors/add', icon: UserPlus, label: 'Add New Vendor' },
+    { path: '/supervisor/vendors', icon: Hammer, label: 'Vendor Details' },
   ];
 
   const vendorSubItems = [
@@ -110,7 +108,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
           </button>
           <div className="flex items-center space-x-2">
             <Eye className="w-6 h-6 text-primary-600" />
-            <span className="font-bold text-gray-900">Site Supervisor</span>
+            <span className="font-bold text-gray-900">Supervisor</span>
           </div>
           <div className="w-10" />
         </div>
@@ -132,7 +130,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
           <div className="flex items-center justify-between px-6 h-16 border-b border-gray-200">
             <div className="flex items-center space-x-2">
               <Eye className="w-8 h-8 text-primary-600" />
-              <span className="font-bold text-lg text-gray-900">Site Supervisor</span>
+              <span className="font-bold text-lg text-gray-900">Supervisor</span>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
               <X className="w-5 h-5" />
@@ -146,7 +144,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
               {admin?.firstName} {admin?.lastName}
             </p>
             <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
-              Site Supervisor
+              Supervisor
             </span>
           </div>
 
@@ -158,6 +156,46 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
                 {fpNavItems.map((item) => (
                   <NavLink key={item.path} item={item} mobile />
                 ))}
+
+                {/* Vendor Management Section for FP Supervisor */}
+                <div className="mt-2">
+                  <button
+                    onClick={() => setExpandedMenus(prev => ({ ...prev, vendors: !prev.vendors }))}
+                    className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
+                      fpVendorSubItems.some(item => location.pathname === item.path) && !expandedMenus.vendors
+                        ? 'bg-gray-100 text-gray-900'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Store className="w-5 h-5" />
+                      <span className="font-medium">Vendor Management</span>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.vendors ? 'rotate-180' : ''}`} />
+                  </button>
+                  {expandedMenus.vendors && (
+                    <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                      {fpVendorSubItems.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => setSidebarOpen(false)}
+                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                              location.pathname === item.path
+                                ? 'bg-primary-600 text-white'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                            <span>{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <>

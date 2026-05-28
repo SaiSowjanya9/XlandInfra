@@ -223,32 +223,38 @@ const SupervisorProperties = ({ user }) => {
     );
   }
 
+  // Property type tabs
+  const propertyTabs = [
+    { key: 'all', label: 'All Customers', icon: Users },
+    { key: 'gated_community', label: 'Gated Communities', icon: Building2 },
+    { key: 'apartment', label: 'Apartments', icon: Building2 },
+    { key: 'villa', label: 'Villas', icon: Home },
+    { key: 'plot', label: 'Plots', icon: MapPin },
+    { key: 'flat', label: 'Flats', icon: Building2 }
+  ];
+
+  const getTabCount = (type) => {
+    if (type === 'all') return properties.length;
+    return properties.filter(p => p.property_type?.toLowerCase() === type).length;
+  };
+
+  const tabFilteredProperties = activeTab === 'all' 
+    ? filteredProperties 
+    : filteredProperties.filter(p => p.property_type?.toLowerCase() === activeTab);
+
   return (
     <div className="space-y-6">
-      {/* View Only Access Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
-        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-          <Eye className="w-6 h-6 text-amber-600" />
-        </div>
+      {/* Header with back button */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => setSelectedCategory(null)}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <X className="w-5 h-5 text-gray-500" />
+        </button>
         <div>
-          <h3 className="font-semibold text-amber-800">View Only Access</h3>
-          <p className="text-sm text-amber-700">
-            You have view-only access to properties.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-2"
-          >
-            <X className="w-4 h-4" />
-            <span className="text-sm">Back to Categories</span>
-          </button>
           <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-gray-500 mt-1">View your assigned properties</p>
+          <p className="text-gray-500">{properties.length} total customers</p>
         </div>
       </div>
 
@@ -260,18 +266,81 @@ const SupervisorProperties = ({ user }) => {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="relative">
+      {/* Property Type Tabs */}
+      <div className="flex items-center gap-1 border-b border-gray-200 overflow-x-auto">
+        {propertyTabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+              activeTab === tab.key
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            <span>{tab.label}</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs ${
+              activeTab === tab.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+            }`}>
+              {getTabCount(tab.key)}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input type="text" placeholder="Search properties..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" />
+          <input 
+            type="text" 
+            placeholder="Search by name, ID, zone, or address..." 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+          />
+        </div>
+        <div className="flex gap-2">
+          <select
+            value={divisionFilter}
+            onChange={(e) => setDivisionFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Divisions</option>
+            {[...new Set(properties.map(p => p.division).filter(Boolean))].map(div => (
+              <option key={div} value={div}>{div}</option>
+            ))}
+          </select>
+          <select
+            value={zoneFilter}
+            onChange={(e) => setZoneFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Zones</option>
+            {zones.map(zone => (
+              <option key={zone.id} value={zone.id}>{zone.name}</option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="active">Active Customers</option>
+            <option value="inactive">Inactive Customers</option>
+            <option value="all">All Customers</option>
+          </select>
+          <button onClick={fetchData} className="p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <RefreshCw className="w-5 h-5 text-gray-500" />
+          </button>
         </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12"><RefreshCw className="w-6 h-6 text-amber-600 animate-spin" /></div>
-        ) : filteredProperties.length === 0 ? (
+        ) : tabFilteredProperties.length === 0 ? (
           <div className="text-center py-12"><Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No properties found</p></div>
         ) : (
           <div className="overflow-x-auto">
@@ -288,13 +357,15 @@ const SupervisorProperties = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Address</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">City</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contacts</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredProperties.map((property) => (
-                  <tr key={property.id} className="border-b border-gray-50 hover:bg-gray-50">
+                {tabFilteredProperties.map((property) => (
+                  <tr 
+                    key={property.id} 
+                    className="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors"
+                    onClick={() => { setSelectedProperty(property); setShowAssignModal(true); setAssignType('view'); }}
+                  >
                     <td className="py-4 px-4">
                       <p className="font-medium text-gray-900">{property.name}</p>
                     </td>
@@ -325,36 +396,7 @@ const SupervisorProperties = ({ user }) => {
                       <p className="text-sm text-gray-600">{property.city || '-'}</p>
                     </td>
                     <td className="py-4 px-4">
-                      <p className="text-sm text-gray-600">{property.contact_person || property.contacts || '-'}</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                        property.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {property.status || 'active'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-1">
-                        {/* View Details */}
-                        <button 
-                          onClick={() => { setSelectedProperty(property); setShowAssignModal(true); setAssignType('view'); }}
-                          className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors" 
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        {/* Edit Property */}
-                        {property.can_modify && (
-                          <button 
-                            onClick={() => openEditModal(property)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" 
-                            title="Edit Property"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
+                      <p className="text-sm text-gray-600">{property.contact_phone || property.contact_person || '-'}</p>
                     </td>
                   </tr>
                 ))}

@@ -575,7 +575,7 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
         work_order_id, property_id, category_id, subcategory_id, title, description, priority,
         permission_to_enter, has_pet, entry_notes, customer_name, customer_email, customer_phone,
         status, franchise_partner_id, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
       [
         workOrderId, propertyId, categoryId || null, subcategoryId || null, title, description || '',
         priority || 'medium', permissionToEnter || 'no', hasPet || 'no', entryNotes || null,

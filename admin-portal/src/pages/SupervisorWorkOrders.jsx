@@ -232,30 +232,19 @@ const SupervisorWorkOrders = ({ user }) => {
                           </button>
                         )}
                         
-                        {/* Completed Tab Actions: Change Status, Revert to Pending */}
+                        {/* Completed Tab Actions: Change Status dropdown only */}
                         {viewType === 'completed' && (
-                          <>
-                            {/* Change of Status dropdown */}
-                            <select
-                              value={wo.status}
-                              onChange={(e) => handleStatusChange(wo, e.target.value)}
-                              className="px-2 py-1 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"
-                            >
-                              <option value="assigned">Assigned</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="completed">Completed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
-                            
-                            {/* Revert to Pending */}
-                            <button 
-                              onClick={() => handleRevertToPending(wo)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" 
-                              title="Revert to Pending"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </button>
-                          </>
+                          <select
+                            value={wo.status}
+                            onChange={(e) => handleStatusChange(wo, e.target.value)}
+                            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="assigned">Assigned</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
                         )}
                         
                         {/* All Tab: View Details */}

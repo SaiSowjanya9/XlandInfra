@@ -74,6 +74,20 @@ const AddVendor = ({ admin }) => {
   const [showZoneDropdown, setShowZoneDropdown] = useState(false);
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
 
+  // Service Types
+  const [serviceTypes, setServiceTypes] = useState([
+    'Plumbing', 'Electrical', 'Carpentry', 'Painting', 'HVAC', 'Cleaning', 
+    'Landscaping', 'Pest Control', 'Security', 'General Maintenance'
+  ]);
+
+  const getServiceTypes = () => serviceTypes;
+  
+  const addServiceType = (newType) => {
+    if (newType && !serviceTypes.includes(newType)) {
+      setServiceTypes(prev => [...prev, newType]);
+    }
+  };
+
   useEffect(() => {
     fetch('/api/onboarding/suggestions/zones')
       .then(r => r.json())
