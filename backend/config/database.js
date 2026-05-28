@@ -693,6 +693,24 @@ const initOnboardingTables = async () => {
     `);
     console.log('  ✅ FP users table initialized');
 
+    // Create fp_assigned_vendors table
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS fp_assigned_vendors (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        franchise_partner_id INT NOT NULL,
+        vendor_id INT NOT NULL,
+        assigned_by INT,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT TRUE,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_fp_vendor (franchise_partner_id, vendor_id),
+        INDEX idx_fp_assigned_vendors_fp (franchise_partner_id)
+      )
+    `);
+    console.log('  ✅ FP assigned vendors table initialized');
+
     // Add franchise_partner_id to related tables for FP data isolation
     const fpTables = ['properties', 'clients', 'vendors', 'work_orders', 'estimates', 'schedules'];
     for (const table of fpTables) {
