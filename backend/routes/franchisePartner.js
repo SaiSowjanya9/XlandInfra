@@ -6,6 +6,9 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
 const { authenticate, generateToken } = require('../middleware/auth');
 const { ROLES, ROLE_NAMES, isFranchisePartner } = require('../config/roles');
@@ -17,6 +20,20 @@ const {
   buildScopedQuery 
 } = require('../middleware/fpScope');
 const { sendFPEmployeeWelcomeEmail } = require('../services/emailService');
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`)
+});
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    cb(null, allowed.includes(file.mimetype));
+  }
+});
 
 // ============================================
 // FP AUTHENTICATION (Public - No Auth Required)
@@ -515,12 +532,12 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
   }
 });
 
-// Create work order
-router.post('/work-orders', requireFPScope, async (req, res) => {
+// Create work order (with file upload support)
+router.post('/work-orders', requireFPScope, upload.array('attachments', 5), async (req, res) => {
   try {
     const {
-      propertyId, categoryId, title, description, priority,
-      permissionToEnter, hasPet, scheduledDate
+      propertyId, categoryId, subcategoryId, description, priority,
+      permissionToEnter, hasPet, entryNotes, customerName, customerEmail, customerPhone
     } = req.body;
 
     // Validate property belongs to FP - check both tables
@@ -528,7 +545,7 @@ router.post('/work-orders', requireFPScope, async (req, res) => {
     
     // Check properties table first
     const [regularProp] = await pool.execute(
-      'SELECT id FROM properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
+      'SELECT id, name FROM properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
       [propertyId, propertyId, req.fpId]
     );
     
@@ -537,7 +554,7 @@ router.post('/work-orders', requireFPScope, async (req, res) => {
     } else {
       // Check onboarded_properties table
       const [onboardedProp] = await pool.execute(
-        'SELECT id FROM onboarded_properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
+        'SELECT id, name FROM onboarded_properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
         [propertyId, propertyId, req.fpId]
       );
       property = onboardedProp;
@@ -551,19 +568,32 @@ router.post('/work-orders', requireFPScope, async (req, res) => {
     }
 
     const workOrderId = `FP${req.fpId}-WO-${Date.now()}`;
+    const title = `Service Request - ${property[0].name || 'Property'}`;
 
     const [result] = await pool.execute(
       `INSERT INTO work_orders (
-        work_order_id, property_id, category_id, title, description, priority,
-        permission_to_enter, has_pet, scheduled_date, status,
-        franchise_partner_id, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?)`,
+        work_order_id, property_id, category_id, subcategory_id, title, description, priority,
+        permission_to_enter, has_pet, entry_notes, customer_name, customer_email, customer_phone,
+        status, franchise_partner_id, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?)`,
       [
-        workOrderId, propertyId, categoryId, title, description, priority || 'medium',
-        permissionToEnter || 'no', hasPet || 'no', scheduledDate || null,
-        req.fpId, req.user.id
+        workOrderId, propertyId, categoryId || null, subcategoryId || null, title, description || '',
+        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', entryNotes || null,
+        customerName || null, customerEmail || null, customerPhone || null,
+        req.fpId, req.user?.id || null
       ]
     );
+
+    // Save attachments if any
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        await pool.execute(
+          `INSERT INTO work_order_attachments (work_order_id, file_name, file_path, file_type, file_size)
+           VALUES (?, ?, ?, ?, ?)`,
+          [result.insertId, file.originalname, file.filename, file.mimetype, file.size]
+        );
+      }
+    }
 
     res.status(201).json({
       success: true,
