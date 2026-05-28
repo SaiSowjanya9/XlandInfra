@@ -460,26 +460,26 @@ export const exportEstimateToPDF = (estimate) => {
     }
 
     const exportData = {
-      estimateId: estimate.estimateId || estimate.id || 'EST-' + Date.now(),
-      packageName: estimate.packageName,
+      estimateId: estimate.estimateId || estimate.estimate_id || estimate.id || 'EST-' + Date.now(),
+      packageName: estimate.packageName || estimate.package_name,
       propertyId: estimate.propertyId || estimate.property_id,
-      propertyType: estimate.propertyType || estimate.entryType || estimate.property_type,
+      propertyType: estimate.propertyType || estimate.property_type || estimate.entryType || 'N/A',
       propertyName: estimate.propertyName || estimate.property_name,
       communityName: estimate.communityName || estimate.community_name || estimate.propertyName || estimate.property_name,
-      zone: estimate.zone || estimate.zoneName || estimate.areaName || estimate.area_name,
+      zone: estimate.zone || estimate.zoneName || estimate.zone_name || estimate.areaName || estimate.area_name,
       division: estimate.division || estimate.divisionName || estimate.division_name,
       address: estimate.address || estimate.propertyAddress || estimate.property_address || estimate.fullAddress,
       customerName: estimate.customerName || estimate.clientName || estimate.customer_name || estimate.client_name,
-      customerPhone: estimate.customerPhone || estimate.phone || estimate.customer_phone || estimate.contactPhone,
-      customerEmail: estimate.customerEmail || estimate.email || estimate.customer_email || estimate.contactEmail,
-      noOfVisits: estimate.noOfVisits || estimate.visits || estimate.numberOfVisits || estimate.no_of_visits,
+      customerPhone: estimate.customerPhone || estimate.phone || estimate.customer_phone || estimate.contactPhone || estimate.contact_phone,
+      customerEmail: estimate.customerEmail || estimate.email || estimate.customer_email || estimate.contactEmail || estimate.contact_email,
+      noOfVisits: estimate.noOfVisits || estimate.no_of_visits || estimate.visits || estimate.numberOfVisits,
       description: estimate.description || estimate.notes || estimate.remarks,
       services,
       addons,
       billingDuration: estimate.billingDuration || estimate.billing_duration || 'Yearly',
-      subtotal: parseFloat(estimate.subtotal || estimate.subTotal || estimate.sub_total || estimate.totalPrice || 0),
+      subtotal: parseFloat(estimate.subtotal || estimate.subTotal || estimate.sub_total || estimate.total_amount || estimate.totalPrice || 0),
       discount: parseFloat(estimate.discount || 0),
-      totalPrice: parseFloat(estimate.totalPrice || estimate.total || estimate.total_price || estimate.subtotal || 0),
+      totalPrice: parseFloat(estimate.totalPrice || estimate.total || estimate.total_price || estimate.total_amount || estimate.subtotal || 0),
       createdAt: estimate.createdAt || estimate.created_at || new Date().toISOString()
     };
 
