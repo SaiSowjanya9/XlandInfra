@@ -12,7 +12,8 @@ import {
   RotateCcw,
   XCircle,
   Store,
-  UserPlus
+  UserPlus,
+  Building2
 } from 'lucide-react';
 
 const ManagerWorkOrders = ({ user }) => {
