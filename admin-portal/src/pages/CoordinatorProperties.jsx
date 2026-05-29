@@ -572,16 +572,6 @@ const CoordinatorProperties = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Edit Property - Hidden for FP Coordinator */}
-                        {!isFPCoordinator && property.can_modify && (
-                          <button
-                            onClick={() => openEditModal(property)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                            title="Edit Property"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        )}
                         {/* Assign Vendor - Hidden for FP Coordinator */}
                         {!isFPCoordinator && (
                           <button

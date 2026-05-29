@@ -454,9 +454,33 @@ const ManagerWorkOrders = ({ user }) => {
                       <span className="text-sm text-gray-600">{wo.category_name || '-'}</span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
-                        {wo.status?.replace(/_/g, ' ').toUpperCase()}
-                      </span>
+                      {/* Status dropdown styled as badge */}
+                      <select
+                        value={wo.status}
+                        onChange={(e) => {
+                          if (e.target.value === 'cancelled') {
+                            setShowCancelModal(wo);
+                          } else {
+                            handleStatusUpdate(wo.id, e.target.value);
+                          }
+                        }}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-blue-500 appearance-none pr-6 bg-no-repeat bg-[length:12px] bg-[center_right_6px] ${
+                          wo.status === 'pending' ? 'bg-amber-50 text-amber-700' :
+                          wo.status === 'in_progress' ? 'bg-blue-50 text-blue-700' :
+                          wo.status === 'assigned' ? 'bg-purple-50 text-purple-700' :
+                          wo.status === 'completed' ? 'bg-green-50 text-green-700' :
+                          wo.status === 'closed' ? 'bg-gray-100 text-gray-600' :
+                          'bg-red-50 text-red-700'
+                        }`}
+                        style={{backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`}}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="closed">Closed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
@@ -466,54 +490,20 @@ const ManagerWorkOrders = ({ user }) => {
                         {/* View Details */}
                         <button
                           onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         
-                        {/* Change of Status - dropdown */}
-                        <select
-                          value={wo.status}
-                          onChange={(e) => {
-                            if (e.target.value === 'cancelled') {
-                              setShowCancelModal(wo);
-                            } else {
-                              handleStatusUpdate(wo.id, e.target.value);
-                            }
-                          }}
-                          className="px-2 py-1 text-xs border border-gray-200 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500"
-                          title="Change Status"
+                        {/* Delete/Cancel */}
+                        <button
+                          onClick={() => setShowCancelModal(wo)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Cancel Order"
                         >
-                          <option value="pending">Pending</option>
-                          <option value="assigned">Assigned</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                          <option value="closed">Closed</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                        
-                        {/* Mark As Closed */}
-                        {wo.status !== 'closed' && (
-                          <button
-                            onClick={() => handleStatusUpdate(wo.id, 'closed')}
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                            title="Mark As Closed"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                        )}
-                        
-                        {/* Revert to Pending */}
-                        {wo.status !== 'pending' && (
-                          <button
-                            onClick={() => handleStatusUpdate(wo.id, 'pending')}
-                            className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg"
-                            title="Revert to Pending"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </button>
-                        )}
+                          <XCircle className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>

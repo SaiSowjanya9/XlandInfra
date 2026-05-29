@@ -217,6 +217,19 @@ const ExecutiveCustomers = ({ user, defaultTab = 'list' }) => {
     }
   };
 
+  const autoSaveZone = async (zoneName) => {
+    if (!zoneName?.trim()) return;
+    const exists = zones.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
+    if (!exists) {
+      try { await fetch('/api/executive/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); } catch (e) {}
+    }
+  };
+
+  const handleDeleteZone = async (zoneId, e) => {
+    e.stopPropagation(); if (!window.confirm('Delete this zone?')) return;
+    try { const res = await fetch(`/api/executive/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchZones(); } catch (e) {}
+  };
+
   useEffect(() => {
     fetchCustomers();
     fetchProperties();
@@ -236,6 +249,9 @@ const ExecutiveCustomers = ({ user, defaultTab = 'list' }) => {
 
     setSubmitting(true);
     try {
+      // Auto-save zone if new
+      if (formData.zone) await autoSaveZone(formData.zone);
+      
       const response = await fetch('/api/executive/customers', {
         method: 'POST',
         headers: {
@@ -675,17 +691,13 @@ const ExecutiveCustomers = ({ user, defaultTab = 'list' }) => {
                     {showZoneDropdown && zones.length > 0 && (
                       <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                         {zones.filter(z => z.name?.toLowerCase().includes(formData.zone.toLowerCase())).map(z => (
-                          <button
-                            key={z.id}
-                            type="button"
-                            onMouseDown={() => {
-                              updateFormData('zone', z.name);
-                              setShowZoneDropdown(false);
-                            }}
-                            className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 transition-colors"
-                          >
-                            {z.name}
-                          </button>
+                          <div key={z.id || z.name} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.zone === z.name ? 'bg-blue-50' : ''}`}>
+                            <button type="button" onMouseDown={() => { updateFormData('zone', z.name); setShowZoneDropdown(false); }}
+                              className={`flex-1 text-left text-sm ${formData.zone === z.name ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{z.name}</button>
+                            {z.id && !String(z.id).startsWith('custom-') && (
+                              <button type="button" onMouseDown={(e) => handleDeleteZone(z.id, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><span className="text-xs">✕</span></button>
+                            )}
+                          </div>
                         ))}
                       </div>
                     )}

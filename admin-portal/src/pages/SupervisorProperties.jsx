@@ -22,6 +22,8 @@ const SupervisorProperties = ({ user }) => {
   const [assignType, setAssignType] = useState('vendor');
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [editingProperty, setEditingProperty] = useState(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewProperty, setViewProperty] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formData, setFormData] = useState({
     name: '', propertyType: 'residential', address: '', city: '', state: '',
@@ -409,7 +411,7 @@ const SupervisorProperties = ({ user }) => {
                     </td>
                     <td className="py-4 px-4">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setSelectedProperty(property); setShowAssignModal(true); setAssignType('view'); }}
+                        onClick={(e) => { e.stopPropagation(); setViewProperty(property); setShowViewModal(true); }}
                         className="flex items-center gap-1 px-3 py-1.5 text-sm text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                       >
                         <Eye className="w-4 h-4" />
@@ -496,6 +498,71 @@ const SupervisorProperties = ({ user }) => {
             </div>
             <div className="p-6 border-t border-gray-100 flex justify-end">
               <button onClick={() => { setShowAssignModal(false); setSelectedProperty(null); }} className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Property Modal */}
+      {showViewModal && viewProperty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Property Details</h2>
+                <button onClick={() => { setShowViewModal(false); setViewProperty(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <p className="text-sm text-gray-500 mb-1">Property Name</p>
+                  <p className="text-gray-900 font-medium">{viewProperty.name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Property Type</p>
+                  <p className="text-gray-900 capitalize">{viewProperty.property_type || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Zone</p>
+                  <p className="text-gray-900">{viewProperty.zone_name || '-'}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm text-gray-500 mb-1">Address</p>
+                  <p className="text-gray-900">{viewProperty.address || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">City</p>
+                  <p className="text-gray-900">{viewProperty.city || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">State</p>
+                  <p className="text-gray-900">{viewProperty.state || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Contact Person</p>
+                  <p className="text-gray-900">{viewProperty.contact_person || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Contact Phone</p>
+                  <p className="text-gray-900">{viewProperty.contact_phone || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Contact Email</p>
+                  <p className="text-gray-900">{viewProperty.contact_email || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Status</p>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${viewProperty.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {viewProperty.status || 'Active'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end">
+              <button onClick={() => { setShowViewModal(false); setViewProperty(null); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Close</button>
             </div>
           </div>
         </div>

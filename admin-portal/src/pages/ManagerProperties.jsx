@@ -45,6 +45,8 @@ const ManagerProperties = ({ user }) => {
   const [assignType, setAssignType] = useState('vendor');
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [editingProperty, setEditingProperty] = useState(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewingProperty, setViewingProperty] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Property type tabs config
@@ -503,22 +505,12 @@ const ManagerProperties = ({ user }) => {
                       <div className="flex items-center justify-end gap-1">
                         {/* View Details - always visible */}
                         <button
-                          onClick={() => openEditModal(property)}
+                          onClick={() => { setViewingProperty(property); setShowViewModal(true); }}
                           className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Edit Property - Hidden for FP Manager */}
-                        {!isFPManager && (
-                          <button
-                            onClick={() => openEditModal(property)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                            title="Edit Property"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        )}
                         {/* Assign Vendor - Hidden for FP Manager */}
                         {!isFPManager && (
                           <button
@@ -696,6 +688,97 @@ const ManagerProperties = ({ user }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Property Modal */}
+      {showViewModal && viewingProperty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Property Details</h2>
+                <button onClick={() => { setShowViewModal(false); setViewingProperty(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <p className="text-sm text-gray-500 mb-1">Property Name</p>
+                  <p className="text-gray-900 font-medium">{viewingProperty.name || '-'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Property Type</p>
+                  <p className="text-gray-900 capitalize">{viewingProperty.property_type || '-'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Zone</p>
+                  <p className="text-gray-900">{viewingProperty.zone_name || '-'}</p>
+                </div>
+
+                <div className="md:col-span-2">
+                  <p className="text-sm text-gray-500 mb-1">Address</p>
+                  <p className="text-gray-900">{viewingProperty.address || '-'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">City</p>
+                  <p className="text-gray-900">{viewingProperty.city || '-'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">State</p>
+                  <p className="text-gray-900">{viewingProperty.state || '-'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">ZIP Code</p>
+                  <p className="text-gray-900">{viewingProperty.zip_code || '-'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Contact Person</p>
+                  <p className="text-gray-900">{viewingProperty.contact_person || '-'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Contact Phone</p>
+                  <p className="text-gray-900">{viewingProperty.contact_phone || '-'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Contact Email</p>
+                  <p className="text-gray-900">{viewingProperty.contact_email || '-'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Created By</p>
+                  <p className="text-gray-900">{viewingProperty.created_by_name || '-'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Status</p>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${viewingProperty.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {viewingProperty.status || 'Active'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => { setShowViewModal(false); setViewingProperty(null); }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
