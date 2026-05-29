@@ -221,13 +221,19 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     
     console.log('[Manager Properties] managerId:', managerId, 'franchisePartnerId:', franchisePartnerId);
     
-    // Fetch from properties table - simplified query
+    // Fetch from properties table with creator name (FP company name for FP-created)
     const propQuery = `SELECT p.*, 
         COALESCE(p.area_name, p.city) as area,
         COALESCE(p.division, 'General') as division,
         COALESCE(p.number_of_units, 1) as units,
+        CASE 
+          WHEN p.franchise_partner_id IS NOT NULL THEN fp.owner_name
+          ELSE COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), 'System')
+        END as created_by_name,
         'properties' as source_table
        FROM properties p 
+       LEFT JOIN users u ON p.created_by = u.id
+       LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
        WHERE (p.manager_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})
        ORDER BY p.created_at DESC`;
     const propParams = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
