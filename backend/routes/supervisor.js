@@ -1243,6 +1243,20 @@ router.post('/zones', requireSupervisorScope, async (req, res) => {
   }
 });
 
+// Delete/disable zone
+router.delete('/zones/:id', requireSupervisorScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute(
+      'UPDATE fp_zones SET is_active = 0 WHERE id = ? AND (franchise_partner_id = ? OR supervisor_id = ?)',
+      [id, req.franchisePartnerId || 0, req.supervisorId]
+    );
+    res.json({ success: true, message: 'Zone deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.get('/categories', requireSupervisorScope, async (req, res) => {
   try {
     const categoriesConfig = require('../config/categories');
