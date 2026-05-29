@@ -278,7 +278,7 @@ router.post('/properties', requireManagerScope, async (req, res) => {
     
     const propertyId = `PROP-MGR-${Date.now()}`;
     const managerId = req.managerId;
-    const franchisePartnerId = req.isFPManager ? req.franchisePartnerId : null;
+    const franchisePartnerId = req.franchisePartnerId || null;
     
     // Get actual user name from database
     let creatorName = 'System';
@@ -619,7 +619,7 @@ router.post('/customers', requireManagerScope, async (req, res) => {
     } = req.body;
 
     const managerId = req.managerId;
-    const franchisePartnerId = req.isFPManager ? req.franchisePartnerId : null;
+    const franchisePartnerId = req.franchisePartnerId || null;
 
     // Check if this is a property form submission (has zone/communityName)
     if (zone && communityName) {
@@ -744,7 +744,7 @@ router.post('/vendors', requireManagerScope, async (req, res) => {
     
     const vendorId = `VND-MGR-${Date.now()}`;
     const managerId = req.managerId;
-    const franchisePartnerId = req.isFPManager ? req.franchisePartnerId : null;
+    const franchisePartnerId = req.franchisePartnerId || null;
     
     const [result] = await pool.execute(
       `INSERT INTO vendors (vendor_id, company_name, contact_person, email, phone, alternate_phone, 
@@ -831,7 +831,7 @@ router.post('/estimates', requireManagerScope, async (req, res) => {
     const discount = (subtotal * (discountPercentage || 0)) / 100;
     const total = subtotal + tax - discount;
     const managerId = req.managerId;
-    const franchisePartnerId = req.isFPManager ? req.franchisePartnerId : null;
+    const franchisePartnerId = req.franchisePartnerId || null;
     
     const [result] = await pool.execute(
       `INSERT INTO estimates (estimate_id, client_id, property_id, title, description, estimate_type,

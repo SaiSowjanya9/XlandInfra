@@ -40,6 +40,9 @@ const ManagerWorkOrders = ({ user }) => {
     description: '',
     priority: 'medium'
   });
+  const [propertySearch, setPropertySearch] = useState('');
+  const [subcategories, setSubcategories] = useState([]);
+  const [attachments, setAttachments] = useState([]);
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
