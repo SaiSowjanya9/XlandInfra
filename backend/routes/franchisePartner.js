@@ -2666,6 +2666,23 @@ router.post('/zones', requireFPScope, async (req, res) => {
   }
 });
 
+// Delete/disable zone - FP can delete their zones
+router.delete('/zones/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await pool.execute(
+      'UPDATE fp_zones SET is_active = 0 WHERE id = ? AND franchise_partner_id = ?',
+      [id, req.fpId]
+    );
+    
+    res.json({ success: true, message: 'Zone deleted' });
+  } catch (error) {
+    console.error('Delete zone error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ============================================
 // CATEGORIES (Read-only for FP)
 // ============================================
