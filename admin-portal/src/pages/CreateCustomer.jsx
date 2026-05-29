@@ -255,24 +255,33 @@ const CreateCustomer = ({ admin }) => {
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
   const [showAddressDetails, setShowAddressDetails] = useState(false);
 
+  const token = sessionStorage.getItem('pm_auth_token');
+
+  const fetchZones = async () => {
+    try {
+      const res = await fetch('/api/fp/zones', { headers: { 'Authorization': `Bearer ${token}` } });
+      const json = await res.json();
+      if (json.success) setZoneSuggestions(json.data || []);
+    } catch {
+      setZoneSuggestions([]);
+    }
+  };
+
+  const autoSaveZone = async (zoneName) => {
+    if (!zoneName?.trim()) return;
+    const exists = zoneSuggestions.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
+    if (!exists) {
+      try { await fetch('/api/fp/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); } catch (e) {}
+    }
+  };
+
+  const handleDeleteZone = async (zoneId, e) => {
+    e.stopPropagation(); if (!window.confirm('Delete this zone?')) return;
+    try { const res = await fetch(`/api/fp/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchZones(); } catch (e) {}
+  };
+
   useEffect(() => {
-    // Fetch zones from both backend API and local zoneStore, merge them
-    const loadZones = async () => {
-      try {
-        const res = await fetch('/api/onboarding/suggestions/zones');
-        const json = await res.json();
-        const apiZones = json.success ? (json.data || []) : [];
-        const localZones = getZoneNames(); // From zoneStore
-        // Merge and deduplicate
-        const mergedZones = [...new Set([...localZones, ...apiZones])];
-        setZoneSuggestions(mergedZones);
-      } catch {
-        // If API fails, use local zones only
-        setZoneSuggestions(getZoneNames());
-      }
-    };
-    loadZones();
-    
+    fetchZones();
     fetch('/api/onboarding/suggestions/areas')
       .then(r => r.json())
       .then(res => { if (res.success) setAreaSuggestions(res.data || []); })
@@ -280,7 +289,7 @@ const CreateCustomer = ({ admin }) => {
   }, []);
 
   const filteredZoneSuggestions = zoneSuggestions.filter(z =>
-    z.toLowerCase().includes((formData.zone || '').toLowerCase())
+    z.name?.toLowerCase().includes((formData.zone || '').toLowerCase())
   );
   const filteredAreaSuggestions = areaSuggestions.filter(a =>
     a.toLowerCase().includes((formData.areaName || '').toLowerCase())
@@ -358,14 +367,9 @@ const CreateCustomer = ({ admin }) => {
 
     setSubmitting(true);
     try {
-      // Auto-add new zone to zoneStore if it doesn't exist
-      // This ensures the zone is available in Zone Assignment (Add Employee)
+      // Auto-save zone to backend if it's new
       if (formData.zone && formData.zone.trim()) {
-        const existingZones = getZoneNames();
-        const zoneExists = existingZones.some(z => z.toLowerCase() === formData.zone.trim().toLowerCase());
-        if (!zoneExists) {
-          createZone(formData.zone.trim());
-        }
+        await autoSaveZone(formData.zone.trim());
       }
       
       const property = await saveProperty(formData, selectedEntryType, selectedCategory);
@@ -731,38 +735,21 @@ const CreateCustomer = ({ admin }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
             {/* Zone */}
             <div>
-              <label className="block text-sm text-gray-700 mb-1.5">
-                Zone <span className="text-red-500">*</span>
-              </label>
+              <label className="block text-sm text-gray-700 mb-1.5">Zone <span className="text-red-500">*</span></label>
               <div className="relative">
-                <input
-                  type="text"
-                  value={formData.zone}
-                  onChange={(e) => {
-                    updateFormData('zone', e.target.value);
-                    setShowZoneDropdown(true);
-                  }}
-                  onFocus={() => setShowZoneDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowZoneDropdown(false), 200)}
-                  className={inputClass(hasError && !formData.zone.trim())}
-                  placeholder="Type or select zone..."
-                />
+                <input type="text" value={formData.zone} onChange={(e) => { updateFormData('zone', e.target.value); setShowZoneDropdown(true); }}
+                  onFocus={() => setShowZoneDropdown(true)} onBlur={() => setTimeout(() => setShowZoneDropdown(false), 200)}
+                  className={inputClass(hasError && !formData.zone.trim())} placeholder="Type or select zone..." />
                 {showZoneDropdown && filteredZoneSuggestions.length > 0 && (
                   <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {filteredZoneSuggestions.map(z => (
-                      <button
-                        key={z}
-                        type="button"
-                        onMouseDown={() => {
-                          updateFormData('zone', z);
-                          setShowZoneDropdown(false);
-                        }}
-                        className={`w-full px-3 py-2 text-left text-sm hover:bg-primary-50 transition-colors ${
-                          formData.zone === z ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-700'
-                        }`}
-                      >
-                        {z}
-                      </button>
+                      <div key={z.id || z.name} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.zone === z.name ? 'bg-blue-50' : ''}`}>
+                        <button type="button" onMouseDown={() => { updateFormData('zone', z.name); setShowZoneDropdown(false); }}
+                          className={`flex-1 text-left text-sm ${formData.zone === z.name ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{z.name}</button>
+                        {z.id && !String(z.id).startsWith('custom-') && (
+                          <button type="button" onMouseDown={(e) => handleDeleteZone(z.id, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><span className="text-xs">✕</span></button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -1428,6 +1415,7 @@ const CreateCustomer = ({ admin }) => {
       <div className="max-w-3xl">
         {renderSingleForm()}
       </div>
+
     </div>
   );
 };
