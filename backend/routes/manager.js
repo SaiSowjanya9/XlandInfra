@@ -1065,6 +1065,25 @@ router.post('/zones', requireManagerScope, async (req, res) => {
   }
 });
 
+// Delete/disable zone
+router.delete('/zones/:id', requireManagerScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const franchisePartnerId = req.franchisePartnerId || null;
+    const managerId = req.managerId;
+    
+    // Only allow deleting zones created by this manager or their FP
+    await pool.execute(
+      'UPDATE fp_zones SET is_active = 0 WHERE id = ? AND (franchise_partner_id = ? OR manager_id = ?)',
+      [id, franchisePartnerId, managerId]
+    );
+    
+    res.json({ success: true, message: 'Zone deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.get('/categories', requireManagerScope, async (req, res) => {
   try {
     const categoriesConfig = require('../config/categories');
