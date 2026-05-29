@@ -1051,24 +1051,25 @@ router.get('/zones', requireExecutiveScope, async (req, res) => {
     // Get global zones
     const [globalZones] = await pool.query('SELECT id, name FROM zones WHERE is_active = TRUE');
     
-    // Get zones from executive's properties
+    // Get zones from executive's properties (including FP properties)
+    const scopeColumn = req.franchisePartnerId ? 'franchise_partner_id' : 'executive_id';
+    const scopeId = req.franchisePartnerId || req.executiveId;
     const [propertyZones] = await pool.query(
       `SELECT DISTINCT zone_id as name FROM properties 
-       WHERE executive_id = ? AND zone_id IS NOT NULL AND zone_id != ''`,
-      [req.executiveId]
+       WHERE ${scopeColumn} = ? AND zone_id IS NOT NULL AND zone_id != ''`,
+      [scopeId]
     );
 
-    // Get FP zones if executive belongs to FP
+    // Get FP zones (from FP or executive-created)
     let fpZones = [];
-    if (req.franchisePartnerId) {
-      try {
-        const [fz] = await pool.query(
-          'SELECT id, name FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1',
-          [req.franchisePartnerId]
-        );
-        fpZones = fz;
-      } catch (_) {}
-    }
+    try {
+      const [fz] = await pool.query(
+        `SELECT id, name FROM fp_zones WHERE 
+         (franchise_partner_id = ? OR executive_id = ?) AND is_active = 1`,
+        [req.franchisePartnerId || 0, req.executiveId]
+      );
+      fpZones = fz;
+    } catch (_) {}
 
     // Combine and deduplicate
     const allZoneNames = new Set();
@@ -1100,6 +1101,37 @@ router.get('/zones', requireExecutiveScope, async (req, res) => {
   } catch (error) {
     console.error('Zones fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch zones' });
+  }
+});
+
+// Create zone
+router.post('/zones', requireExecutiveScope, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Zone name is required' });
+    }
+    
+    const franchisePartnerId = req.franchisePartnerId || null;
+    const executiveId = req.executiveId;
+    
+    const [existing] = await pool.execute(
+      'SELECT id FROM fp_zones WHERE name = ? AND (franchise_partner_id = ? OR executive_id = ?)',
+      [name, franchisePartnerId, executiveId]
+    );
+    
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Zone already exists' });
+    }
+    
+    const [result] = await pool.execute(
+      'INSERT INTO fp_zones (name, franchise_partner_id, executive_id, created_by, is_active) VALUES (?, ?, ?, ?, 1)',
+      [name, franchisePartnerId, executiveId, req.user?.email || req.user?.id]
+    );
+    
+    res.json({ success: true, message: 'Zone created', data: { id: result.insertId, name } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
