@@ -2636,6 +2636,36 @@ router.get('/zones', requireFPScope, async (req, res) => {
   }
 });
 
+// Create zone - FP can create zones
+router.post('/zones', requireFPScope, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Zone name is required' });
+    }
+    
+    // Check if zone already exists for this FP
+    const [existing] = await pool.execute(
+      'SELECT id FROM fp_zones WHERE name = ? AND franchise_partner_id = ?',
+      [name, req.fpId]
+    );
+    
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Zone already exists' });
+    }
+    
+    const [result] = await pool.execute(
+      'INSERT INTO fp_zones (name, franchise_partner_id, created_by, is_active) VALUES (?, ?, ?, 1)',
+      [name, req.fpId, req.user?.email || req.user?.id]
+    );
+    
+    res.json({ success: true, message: 'Zone created', data: { id: result.insertId, name } });
+  } catch (error) {
+    console.error('Create zone error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ============================================
 // CATEGORIES (Read-only for FP)
 // ============================================
