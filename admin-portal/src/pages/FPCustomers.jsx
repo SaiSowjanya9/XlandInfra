@@ -168,6 +168,8 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
   const [divisions, setDivisions] = useState(INITIAL_DIVISIONS);
   const [showAddDivisionModal, setShowAddDivisionModal] = useState(false);
   const [newDivision, setNewDivision] = useState('');
+  const [showAddZoneModal, setShowAddZoneModal] = useState(false);
+  const [newZoneName, setNewZoneName] = useState('');
   const formRef = useRef(null);
 
   const token = sessionStorage.getItem('pm_auth_token');
@@ -215,6 +217,19 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
     } catch (error) {
       console.error('Fetch zones error:', error);
     }
+  };
+
+  const handleAddZone = async () => {
+    if (!newZoneName.trim()) return;
+    try {
+      const res = await fetch('/api/fp/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newZoneName.trim() }) });
+      if ((await res.json()).success) { fetchZones(); updateFormData('zone', newZoneName.trim()); setNewZoneName(''); setShowAddZoneModal(false); }
+    } catch (e) {}
+  };
+
+  const handleDeleteZone = async (zoneId, e) => {
+    e.stopPropagation(); if (!window.confirm('Delete this zone?')) return;
+    try { const res = await fetch(`/api/fp/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchZones(); } catch (e) {}
   };
 
   useEffect(() => {

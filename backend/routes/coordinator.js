@@ -941,25 +941,24 @@ router.get('/zones', requireCoordinatorScope, async (req, res) => {
     const [globalZones] = await pool.query('SELECT id, name FROM zones WHERE is_active = TRUE');
     
     // Get zones from properties (FP-scoped or coordinator-scoped)
-    const scopeColumn = req.isFPCoordinator ? 'franchise_partner_id' : 'coordinator_id';
-    const scopeId = req.isFPCoordinator ? req.franchisePartnerId : req.coordinatorId;
+    const scopeColumn = req.franchisePartnerId ? 'franchise_partner_id' : 'coordinator_id';
+    const scopeId = req.franchisePartnerId || req.coordinatorId;
     const [propertyZones] = await pool.query(
       `SELECT DISTINCT zone_id as name FROM properties 
        WHERE ${scopeColumn} = ? AND zone_id IS NOT NULL AND zone_id != ''`,
       [scopeId]
     );
 
-    // Get FP zones if FP Coordinator
+    // Get FP zones (from FP or coordinator-created)
     let fpZones = [];
-    if (req.isFPCoordinator && req.franchisePartnerId) {
-      try {
-        const [fz] = await pool.query(
-          'SELECT id, name FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1',
-          [req.franchisePartnerId]
-        );
-        fpZones = fz;
-      } catch (_) {}
-    }
+    try {
+      const [fz] = await pool.query(
+        `SELECT id, name FROM fp_zones WHERE 
+         franchise_partner_id = ? AND is_active = 1`,
+        [req.franchisePartnerId || 0]
+      );
+      fpZones = fz;
+    } catch (_) {}
 
     // Combine and deduplicate
     const allZoneNames = new Set();
@@ -991,6 +990,51 @@ router.get('/zones', requireCoordinatorScope, async (req, res) => {
   } catch (error) {
     console.error('Zones fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch zones' });
+  }
+});
+
+// Create zone
+router.post('/zones', requireCoordinatorScope, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Zone name is required' });
+    }
+    
+    const franchisePartnerId = req.franchisePartnerId || null;
+    const coordinatorId = req.coordinatorId;
+    
+    const [existing] = await pool.execute(
+      'SELECT id FROM fp_zones WHERE name = ? AND (franchise_partner_id = ? OR coordinator_id = ?)',
+      [name, franchisePartnerId, coordinatorId]
+    );
+    
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Zone already exists' });
+    }
+    
+    const [result] = await pool.execute(
+      'INSERT INTO fp_zones (name, franchise_partner_id, created_by, is_active) VALUES (?, ?, ?, 1)',
+      [name, franchisePartnerId, req.user?.email || req.user?.id]
+    );
+    
+    res.json({ success: true, message: 'Zone created', data: { id: result.insertId, name } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete/disable zone
+router.delete('/zones/:id', requireCoordinatorScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute(
+      'UPDATE fp_zones SET is_active = 0 WHERE id = ? AND franchise_partner_id = ?',
+      [id, req.franchisePartnerId || 0]
+    );
+    res.json({ success: true, message: 'Zone deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

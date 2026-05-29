@@ -1135,6 +1135,20 @@ router.post('/zones', requireExecutiveScope, async (req, res) => {
   }
 });
 
+// Delete/disable zone
+router.delete('/zones/:id', requireExecutiveScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute(
+      'UPDATE fp_zones SET is_active = 0 WHERE id = ? AND (franchise_partner_id = ? OR executive_id = ?)',
+      [id, req.franchisePartnerId || 0, req.executiveId]
+    );
+    res.json({ success: true, message: 'Zone deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.get('/categories', requireExecutiveScope, async (req, res) => {
   try {
     const categoriesConfig = require('../config/categories');
