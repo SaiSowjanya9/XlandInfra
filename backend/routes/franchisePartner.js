@@ -2522,6 +2522,38 @@ router.post('/addons', requireFPScope, async (req, res) => {
   }
 });
 
+// Update addon
+router.put('/addons/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { service_name, frequency_type, frequency_count, property_type, price, description } = req.body;
+
+    await pool.execute(
+      `UPDATE fp_addons SET 
+        service_name = ?, frequency_type = ?, frequency_count = ?, property_type = ?, price = ?, description = ?
+       WHERE id = ? AND franchise_partner_id = ?`,
+      [service_name, frequency_type, frequency_count || 1, property_type, price || 0, description || '', id, req.fpId]
+    );
+
+    res.json({ success: true, message: 'Add-on updated successfully' });
+  } catch (error) {
+    console.error('Update addon error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update add-on', error: error.message });
+  }
+});
+
+// Delete addon
+router.delete('/addons/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM fp_addons WHERE id = ? AND franchise_partner_id = ?', [id, req.fpId]);
+    res.json({ success: true, message: 'Add-on deleted successfully' });
+  } catch (error) {
+    console.error('Delete addon error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete add-on', error: error.message });
+  }
+});
+
 // ============================================
 // EXPORT DATA
 // ============================================
