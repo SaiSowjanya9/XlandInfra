@@ -495,15 +495,6 @@ const ManagerWorkOrders = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        
-                        {/* Delete/Cancel */}
-                        <button
-                          onClick={() => setShowCancelModal(wo)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Cancel Order"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>
