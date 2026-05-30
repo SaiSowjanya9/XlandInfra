@@ -719,7 +719,12 @@ const ManagerProperties = ({ user }) => {
 
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Zone</p>
-                  <p className="text-gray-900">{viewingProperty.zone_name || '-'}</p>
+                  <p className="text-gray-900">{viewingProperty.zone_name || viewingProperty.zone || '-'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Division</p>
+                  <p className="text-gray-900">{viewingProperty.division_name || viewingProperty.division || '-'}</p>
                 </div>
 
                 <div className="md:col-span-2">
