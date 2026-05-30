@@ -23,6 +23,10 @@ const ManagerEmployeeZones = ({ user, viewOnly = false }) => {
   const [showAssignModal, setShowAssignModal] = useState(false);
 
   const token = sessionStorage.getItem('pm_auth_token');
+  
+  // Check if manager is under FP - makes the view read-only
+  const isFPManager = !!user?.franchise_partner_id;
+  const isViewOnly = viewOnly || isFPManager;
 
   useEffect(() => {
     fetchData();
@@ -31,22 +35,42 @@ const ManagerEmployeeZones = ({ user, viewOnly = false }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [empRes, zoneRes] = await Promise.all([
-        fetch('/api/manager/employees', {
+      if (isFPManager) {
+        // FP Manager: Fetch FP employee zones (view-only)
+        const response = await fetch('/api/manager/fp-employee-zones', {
           headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('/api/manager/zones', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-      ]);
+        });
+        const result = await response.json();
+        if (result.success) {
+          // Transform data to match expected format
+          const transformedEmployees = result.data.employees.map(emp => ({
+            ...emp,
+            assigned_zones: emp.zone_names !== 'No zones assigned' 
+              ? emp.zone_names.split(',').map(z => z.trim()) 
+              : []
+          }));
+          setEmployees(transformedEmployees);
+          setZones(result.data.zones || []);
+        }
+      } else {
+        // Regular Manager: Fetch own employees
+        const [empRes, zoneRes] = await Promise.all([
+          fetch('/api/manager/employees', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          fetch('/api/manager/zones', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        ]);
 
-      const [empData, zoneData] = await Promise.all([
-        empRes.json(),
-        zoneRes.json()
-      ]);
+        const [empData, zoneData] = await Promise.all([
+          empRes.json(),
+          zoneRes.json()
+        ]);
 
-      if (empData.success) setEmployees(empData.data || []);
-      if (zoneData.success) setZones(zoneData.data || []);
+        if (empData.success) setEmployees(empData.data || []);
+        if (zoneData.success) setZones(zoneData.data || []);
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
       setMessage({ type: 'error', text: 'Failed to load data' });
@@ -114,8 +138,14 @@ const ManagerEmployeeZones = ({ user, viewOnly = false }) => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Employee Zone Management</h1>
         <p className="text-gray-500 mt-1">
-          Assign and manage zones for employees • <span className="text-blue-600">{totalEmployees} employees</span>
+          {isFPManager ? 'View team zone assignments' : 'Assign and manage zones for employees'} • <span className="text-blue-600">{totalEmployees} employees</span>
         </p>
+        {isFPManager && (
+          <p className="text-sm text-amber-600 mt-2 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            Zone assignments are managed by your Franchise Partner
+          </p>
+        )}
       </div>
 
       {/* Message */}
@@ -214,7 +244,7 @@ const ManagerEmployeeZones = ({ user, viewOnly = false }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Assigned Zones</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  {!viewOnly && <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>}
+                  {!isViewOnly && <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -222,8 +252,8 @@ const ManagerEmployeeZones = ({ user, viewOnly = false }) => {
                   <tr key={emp.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <div>
-                        <p className="font-medium text-gray-900">{emp.first_name} {emp.last_name}</p>
-                        <p className="text-sm text-gray-500">{emp.user_id}</p>
+                        <p className="font-medium text-gray-900">{emp.name || `${emp.first_name} ${emp.last_name}`}</p>
+                        <p className="text-sm text-gray-500">{emp.user_id || emp.id}</p>
                       </div>
                     </td>
                     <td className="py-4 px-4">
@@ -266,7 +296,7 @@ const ManagerEmployeeZones = ({ user, viewOnly = false }) => {
                         </span>
                       )}
                     </td>
-                    {!viewOnly && (
+                    {!isViewOnly && (
                     <td className="py-4 px-4">
                       <div className="flex justify-end">
                         <button
@@ -287,8 +317,8 @@ const ManagerEmployeeZones = ({ user, viewOnly = false }) => {
         )}
       </div>
 
-      {/* Assign Zones Modal - Only show when not in viewOnly mode */}
-      {!viewOnly && showAssignModal && selectedEmployee && (
+      {/* Assign Zones Modal - Only show when not in view-only mode */}
+      {!isViewOnly && showAssignModal && selectedEmployee && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-lg w-full max-h-[80vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
