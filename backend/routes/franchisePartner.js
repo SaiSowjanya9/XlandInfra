@@ -1237,27 +1237,39 @@ router.get('/employees', requireFPScope, async (req, res) => {
   try {
     console.log('Fetching FP employees for FP ID:', req.fpId);
     
-    // Get employees with their assigned zone names
+    // Get employees first
     const [employees] = await pool.execute(
-      `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name, 
-              GROUP_CONCAT(DISTINCT ez.zone_name) as zone_names
+      `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name
        FROM fp_employees e
-       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
        WHERE e.franchise_partner_id = ? AND e.is_active = 1
-       GROUP BY e.id
        ORDER BY e.created_at DESC`,
-      [req.fpId, req.fpId]
+      [req.fpId]
     );
 
-    console.log('Raw employees data:', JSON.stringify(employees.slice(0, 2)));
+    // Get zone assignments separately
+    const [zoneAssignments] = await pool.execute(
+      `SELECT fp_employee_id, zone_name FROM fp_employee_zones WHERE franchise_partner_id = ?`,
+      [req.fpId]
+    );
 
-    // Transform zone_names string into assigned_zones array
+    // Build a map of employee zones
+    const employeeZonesMap = {};
+    zoneAssignments.forEach(za => {
+      if (!employeeZonesMap[za.fp_employee_id]) {
+        employeeZonesMap[za.fp_employee_id] = [];
+      }
+      if (za.zone_name) {
+        employeeZonesMap[za.fp_employee_id].push(za.zone_name);
+      }
+    });
+
+    // Transform employees with their zones
     const transformedEmployees = employees.map(emp => ({
       ...emp,
-      assigned_zones: emp.zone_names ? emp.zone_names.split(',').map(z => z.trim()) : []
+      assigned_zones: employeeZonesMap[emp.id] || []
     }));
 
-    console.log('Transformed employees:', JSON.stringify(transformedEmployees.slice(0, 2)));
+    console.log('Employees found:', transformedEmployees.length);
 
     res.json({
       success: true,
