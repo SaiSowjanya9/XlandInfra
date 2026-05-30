@@ -983,44 +983,167 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   const renderAddons = () => (
     <div className="space-y-6">
-      <div className="flex items-center gap-3"><div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center"><PlusCircle className="w-5 h-5 text-stone-600" /></div><div><h2 className="text-xl font-bold text-gray-900">Add-ons</h2><p className="text-sm text-gray-500">Create optional services for AMC packages by property type</p></div></div>
-      {/* Tabs - Create Add-on hidden for FP Manager */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+      {/* Tabs */}
+      <div className="flex gap-2">
         {!isFPManager && (
-          <button onClick={() => setAddonActiveTab('create')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${addonActiveTab === 'create' ? 'bg-white text-stone-700 shadow-sm' : 'text-gray-600'}`}><Plus className="w-4 h-4" />Create Add-on</button>
+          <button onClick={() => setAddonActiveTab('create')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'create' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            <Plus className="w-4 h-4" />Create Add-on
+          </button>
         )}
-        <button onClick={() => setAddonActiveTab('all-addons')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white text-stone-700 shadow-sm' : 'text-gray-600'}`}><Layers className="w-4 h-4" />All Add-ons{addons.length > 0 && <span className="px-1.5 py-0.5 bg-stone-600 text-white rounded-full text-xs">{addons.length}</span>}</button>
+        <button onClick={() => setAddonActiveTab('all-addons')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+          <Layers className="w-4 h-4" />All Add-ons
+          {addons.length > 0 && <span className="px-1.5 py-0.5 bg-gray-700 text-white rounded-full text-xs">{addons.length}</span>}
+        </button>
       </div>
+
       {addonActiveTab === 'create' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-6"><h3 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h3><p className="text-sm text-gray-500 mb-4">Choose the property type this package will be configured for</p><div className="grid grid-cols-5 gap-4">{PROPERTY_TYPE_OPTIONS.map(t => <button key={t.id} onClick={() => setAddonSelectedPropertyType(t.id)} className={`px-4 py-3 rounded-lg border text-sm font-medium text-center ${addonSelectedPropertyType === t.id ? 'border-slate-400 bg-slate-100 text-slate-800' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}>{t.label}</button>)}</div></div>
+          {/* Select Property Type */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Select Property Type</h3>
+            <p className="text-sm text-gray-500 mb-4">Choose the property type this package will be configured for</p>
+            <div className="flex gap-3">
+              {PROPERTY_TYPE_OPTIONS.map(t => (
+                <button 
+                  key={t.id} 
+                  onClick={() => setAddonSelectedPropertyType(t.id)} 
+                  className={`px-6 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                    addonSelectedPropertyType === t.id 
+                      ? 'border-gray-400 bg-gray-100 text-gray-800' 
+                      : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Create Add-on Form */}
           {addonSelectedPropertyType && (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100"><h3 className="text-lg font-semibold text-gray-800">Create Add-on</h3><p className="text-sm text-gray-500">For: <span className="font-medium text-gray-700">{PROPERTY_TYPE_OPTIONS.find(t => t.id === addonSelectedPropertyType)?.label}</span></p></div>
-              <div className="p-6">
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-3"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Service Name</label><input type="text" value={addonForm.serviceName} onChange={(e) => setAddonForm({ ...addonForm, serviceName: e.target.value })} placeholder="Service name" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div>
-                  <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency</label><select value={addonForm.frequencyType} onChange={(e) => { const v = e.target.value; const auto = FREQUENCY_COUNT_MAP[v]; setAddonForm({ ...addonForm, frequencyType: v, frequencyCount: auto !== null ? auto : '' }); }} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white">{FREQUENCY_TYPES.map(f => <option key={f} value={f}>{f}</option>)}</select></div>
-                  <div className="col-span-1"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider whitespace-nowrap">Visits</label><input type="number" value={addonForm.frequencyCount} readOnly className="w-full px-2 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm text-center" /></div>
-                  <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Period</label><select value={addonForm.billingCycle} onChange={(e) => setAddonForm({ ...addonForm, billingCycle: e.target.value })} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Half-Yearly">Half-Yearly</option><option value="Yearly">Yearly</option></select></div>
-                  <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (₹)</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span><input type="text" value={addonForm.price} onChange={(e) => setAddonForm({ ...addonForm, price: e.target.value.replace(/[^0-9]/g, '') })} placeholder="0" className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div></div>
-                  <div className="col-span-2"><button onClick={handleSaveAddon} className="w-full px-4 py-2.5 bg-stone-700 text-white rounded-lg hover:bg-stone-800 font-medium flex items-center justify-center gap-2"><Plus className="w-4 h-4" />Save</button></div>
-                </div>
-                <div className="mt-6">
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Description (Optional)</label>
-                  <textarea 
-                    value={addonForm.description} 
-                    onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })} 
-                    placeholder="Add notes or description for this add-on..." 
-                    rows={3}
-                    className="w-full max-w-2xl px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400 resize-y" 
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-1">Create Add-on</h3>
+              <p className="text-sm text-gray-500 mb-6">For: <span className="font-medium text-indigo-600">{PROPERTY_TYPE_OPTIONS.find(t => t.id === addonSelectedPropertyType)?.label}</span></p>
+              
+              {/* Form Row */}
+              <div className="flex items-end gap-4 mb-6">
+                <div className="flex-1 max-w-xs">
+                  <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Select Service</label>
+                  <input 
+                    type="text" 
+                    value={addonForm.serviceName} 
+                    onChange={(e) => setAddonForm({ ...addonForm, serviceName: e.target.value })} 
+                    placeholder="Select or type service" 
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400" 
                   />
                 </div>
+                <div className="w-36">
+                  <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Frequency</label>
+                  <div className="relative">
+                    <select 
+                      value={addonForm.frequencyType} 
+                      onChange={(e) => { 
+                        const v = e.target.value; 
+                        const auto = FREQUENCY_COUNT_MAP[v]; 
+                        setAddonForm({ ...addonForm, frequencyType: v, frequencyCount: auto !== null ? auto : '' }); 
+                      }} 
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-white appearance-none focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
+                    >
+                      {FREQUENCY_TYPES.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                <div className="w-20">
+                  <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Visits</label>
+                  <input 
+                    type="number" 
+                    value={addonForm.frequencyCount} 
+                    readOnly 
+                    className="w-full px-3 py-2.5 border border-gray-300 bg-gray-50 rounded-lg text-sm text-center" 
+                  />
+                </div>
+                <div className="w-28">
+                  <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Price (₹)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">₹</span>
+                    <input 
+                      type="text" 
+                      value={addonForm.price} 
+                      onChange={(e) => setAddonForm({ ...addonForm, price: e.target.value.replace(/[^0-9]/g, '') })} 
+                      placeholder="0" 
+                      className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400" 
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={handleSaveAddon} 
+                  className="px-6 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium flex items-center gap-2 whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" />Save
+                </button>
               </div>
+              
+              {/* Description */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Description (Optional)</label>
+                <textarea 
+                  value={addonForm.description} 
+                  onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })} 
+                  placeholder="Add notes or description for this add-on..." 
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400 resize-y" 
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Add-ons List for Selected Property Type */}
+          {addonSelectedPropertyType && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h3 className="text-base font-semibold text-gray-800 mb-1">Add-ons for {PROPERTY_TYPE_OPTIONS.find(t => t.id === addonSelectedPropertyType)?.label}</h3>
+              <p className="text-sm text-gray-500 mb-4">{addons.filter(a => a.property_type === addonSelectedPropertyType).length} add-on(s) available</p>
+              
+              {addons.filter(a => a.property_type === addonSelectedPropertyType).length === 0 ? (
+                <div className="py-8 text-center text-gray-400">No add-ons created yet for this property type</div>
+              ) : (
+                <div className="space-y-3">
+                  {addons.filter(a => a.property_type === addonSelectedPropertyType).map(a => (
+                    <div key={a.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                          <PlusCircle className="w-5 h-5 text-gray-400" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800">{a.service_name}</p>
+                          <p className="text-sm text-gray-500">{a.frequency_count}x {a.frequency_type}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-xs text-gray-400 uppercase">Price</p>
+                          <p className="font-bold text-gray-800">{formatCurrency(a.price)}</p>
+                        </div>
+                        {!isFPManager && (
+                          <div className="flex items-center gap-1">
+                            <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleDeleteAddon(a.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
+
       {addonActiveTab === 'all-addons' && (
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -1030,46 +1153,51 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <p className="text-sm text-gray-500">{addons.length} add-on(s) available</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setAddonFilterPropertyType('all')} className={`px-3 py-1.5 text-sm rounded-lg ${addonFilterPropertyType === 'all' ? 'bg-stone-700 text-white' : 'bg-gray-100 text-gray-700'}`}>All</button>
-                {PROPERTY_TYPE_OPTIONS.map(t => <button key={t.id} onClick={() => setAddonFilterPropertyType(t.id)} className={`px-3 py-1.5 text-sm rounded-lg ${addonFilterPropertyType === t.id ? 'bg-stone-700 text-white' : 'bg-gray-100 text-gray-700'}`}>{t.label}</button>)}
+                <button onClick={() => setAddonFilterPropertyType('all')} className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${addonFilterPropertyType === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>All</button>
+                {PROPERTY_TYPE_OPTIONS.map(t => (
+                  <button key={t.id} onClick={() => setAddonFilterPropertyType(t.id)} className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${addonFilterPropertyType === t.id ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{t.label}</button>
+                ))}
               </div>
             </div>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             {filteredAddons.length === 0 ? (
-              <div className="py-16 text-center"><PlusCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No add-ons found</p></div>
+              <div className="py-16 text-center">
+                <PlusCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No add-ons found</p>
+              </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Add-on Name</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Property Type</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Frequency</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">No.of visits</th>
-                    {!isFPManager && <th className="px-4 py-3 text-left font-medium text-gray-600 uppercase text-xs">Total Rate</th>}
-                    {!isFPManager && <th className="px-4 py-3 text-center font-medium text-gray-600 uppercase text-xs">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredAddons.map(a => (
-                    <tr key={a.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium">{a.service_name}</td>
-                      <td className="px-4 py-3 text-gray-500">{PROPERTY_TYPE_OPTIONS.find(t => t.id === a.property_type)?.label || '-'}</td>
-                      <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${a.frequency_type === 'Monthly' ? 'bg-blue-100 text-blue-700' : a.frequency_type === 'Quarterly' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>{a.frequency_type}</span></td>
-                      <td className="px-4 py-3 text-gray-600">{a.frequency_count}x</td>
-                      {!isFPManager && <td className="px-4 py-3 font-semibold">{formatCurrency(a.price)}</td>}
+              <div className="divide-y divide-gray-100">
+                {filteredAddons.map(a => (
+                  <div key={a.id} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <PlusCircle className="w-5 h-5 text-gray-400" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-800">{a.service_name}</p>
+                        <p className="text-sm text-gray-500">{a.frequency_count}x {a.frequency_type} • {PROPERTY_TYPE_OPTIONS.find(t => t.id === a.property_type)?.label}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-xs text-gray-400 uppercase">Price</p>
+                        <p className="font-bold text-gray-800">{formatCurrency(a.price)}</p>
+                      </div>
                       {!isFPManager && (
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-1">
-                            <button className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Edit2 className="w-4 h-4" /></button>
-                            <button onClick={() => handleDeleteAddon(a.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
-                          </div>
-                        </td>
+                        <div className="flex items-center gap-1">
+                          <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDeleteAddon(a.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
