@@ -1237,17 +1237,16 @@ router.get('/employees', requireFPScope, async (req, res) => {
   try {
     console.log('Fetching FP employees for FP ID:', req.fpId);
     
-    // Join with FP zones (each FP has their own zones)
+    // Get employees with their assigned zone names
     const [employees] = await pool.execute(
       `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name, 
-              GROUP_CONCAT(DISTINCT fz.name) as zone_names
+              GROUP_CONCAT(DISTINCT ez.zone_name) as zone_names
        FROM fp_employees e
        LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
-       LEFT JOIN fp_zones fz ON ez.zone_id = fz.id AND fz.franchise_partner_id = ?
        WHERE e.franchise_partner_id = ? AND e.is_active = 1
        GROUP BY e.id
        ORDER BY e.created_at DESC`,
-      [req.fpId, req.fpId, req.fpId]
+      [req.fpId, req.fpId]
     );
 
     console.log('Raw employees data:', JSON.stringify(employees.slice(0, 2)));
@@ -1473,13 +1472,13 @@ router.post('/employees', requireFPScope, async (req, res) => {
         ]
       );
 
-      // 3. Assign zones if provided
+      // 3. Assign zones if provided (store zone names directly)
       if (assignedZones && assignedZones.length > 0) {
-        for (const zoneId of assignedZones) {
+        for (const zoneName of assignedZones) {
           await connection.execute(
-            `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_id)
+            `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_name)
              VALUES (?, ?, ?)`,
-            [req.fpId, empResult.insertId, zoneId]
+            [req.fpId, empResult.insertId, zoneName]
           );
         }
       }
@@ -1724,24 +1723,15 @@ router.put('/employees/:id/zones', requireFPScope, async (req, res) => {
       [id, req.fpId]
     );
     
-    // Get zone IDs from FP zones table (each FP has their own zones)
+    // Insert new zone assignments - store zone names directly since zones can come from multiple sources
     if (zones && zones.length > 0) {
       for (const zoneName of zones) {
-        const [zoneRows] = await pool.execute(
-          `SELECT id FROM fp_zones WHERE name = ? AND franchise_partner_id = ?`,
-          [zoneName, req.fpId]
+        // Store zone name directly in the assignment table
+        await pool.execute(
+          `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_name) VALUES (?, ?, ?)`,
+          [req.fpId, id, zoneName]
         );
-        
-        console.log('Zone lookup for', zoneName, ':', zoneRows);
-        if (zoneRows.length > 0) {
-          await pool.execute(
-            `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_id) VALUES (?, ?, ?)`,
-            [req.fpId, id, zoneRows[0].id]
-          );
-          console.log('Inserted zone assignment:', { fpId: req.fpId, empId: id, zoneId: zoneRows[0].id });
-        } else {
-          console.log('Zone not found in fp_zones:', zoneName);
-        }
+        console.log('Inserted zone assignment:', { fpId: req.fpId, empId: id, zoneName });
       }
     }
     
@@ -2585,60 +2575,22 @@ router.get('/export/:type', requireFPScope, async (req, res) => {
 });
 
 // ============================================
-// ZONES (Read-only for FP)
+// ZONES (FP-specific zones only - NOT global)
 // ============================================
 
 router.get('/zones', requireFPScope, async (req, res) => {
   try {
-    // Get zones from global zones table
-    const [globalZones] = await pool.execute(
-      'SELECT id, name FROM zones WHERE is_active = TRUE'
-    );
-
-    // Get zones from FP's properties (custom zones entered by FP)
-    const [propertyZones] = await pool.execute(
-      `SELECT DISTINCT zone_id as name FROM properties 
-       WHERE franchise_partner_id = ? AND zone_id IS NOT NULL AND zone_id != ''`,
-      [req.fpId]
-    );
-
-    // Get zones from FP zones table if exists
+    // Get zones ONLY from this FP's zones table (each FP has their own zones)
     let fpZones = [];
     try {
       const [fz] = await pool.execute(
-        'SELECT id, name FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1',
+        'SELECT id, name FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY name',
         [req.fpId]
       );
       fpZones = fz;
     } catch (_) {}
 
-    // Combine and deduplicate
-    const allZoneNames = new Set();
-    const combinedZones = [];
-
-    // Add global zones
-    globalZones.forEach(z => {
-      if (!allZoneNames.has(z.name)) {
-        allZoneNames.add(z.name);
-        combinedZones.push({ id: z.id, name: z.name });
-      }
-    });
-
-    // Add FP zones
-    fpZones.forEach(z => {
-      if (!allZoneNames.has(z.name)) {
-        allZoneNames.add(z.name);
-        combinedZones.push({ id: z.id, name: z.name });
-      }
-    });
-
-    // Add property zones (custom entered)
-    propertyZones.forEach(z => {
-      if (z.name && !allZoneNames.has(z.name)) {
-        allZoneNames.add(z.name);
-        combinedZones.push({ id: `custom-${z.name}`, name: z.name });
-      }
-    });
+    const combinedZones = fpZones.map(z => ({ id: z.id, name: z.name }));
 
     // Sort by name
     combinedZones.sort((a, b) => a.name.localeCompare(b.name));
