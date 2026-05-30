@@ -782,20 +782,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   />
                 </div>
 
-                {/* Description - Optional */}
-                <div className="mb-6">
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    Description <span className="text-gray-400 text-xs font-normal">(Optional)</span>
-                  </label>
-                  <textarea
-                    value={amcForm.description || ''}
-                    onChange={(e) => setAmcForm({ ...amcForm, description: e.target.value })}
-                    placeholder="Enter package description..."
-                    rows={3}
-                    className="w-full max-w-md px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400 resize-none"
-                  />
-                </div>
-
                 {/* Service Configuration with Price on Right */}
                 <div className="flex gap-6">
                   {/* Service Rows Section */}
@@ -933,6 +919,20 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                   </div>
                 </div>
+
+                {/* Description - Optional */}
+                <div className="mt-6">
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
+                    Description (Optional)
+                  </label>
+                  <textarea
+                    value={amcForm.description || ''}
+                    onChange={(e) => setAmcForm({ ...amcForm, description: e.target.value })}
+                    placeholder="Add notes or description for this package..."
+                    rows={3}
+                    className="w-full max-w-2xl px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400 resize-y"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -1006,7 +1006,16 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (₹)</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span><input type="text" value={addonForm.price} onChange={(e) => setAddonForm({ ...addonForm, price: e.target.value.replace(/[^0-9]/g, '') })} placeholder="0" className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div></div>
                   <div className="col-span-2"><button onClick={handleSaveAddon} className="w-full px-4 py-2.5 bg-stone-700 text-white rounded-lg hover:bg-stone-800 font-medium flex items-center justify-center gap-2"><Plus className="w-4 h-4" />Save</button></div>
                 </div>
-                <div className="mt-3"><input type="text" value={addonForm.description} onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })} placeholder="Add description/notes (optional)" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div>
+                <div className="mt-6">
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Description (Optional)</label>
+                  <textarea 
+                    value={addonForm.description} 
+                    onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })} 
+                    placeholder="Add notes or description for this add-on..." 
+                    rows={3}
+                    className="w-full max-w-2xl px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400 resize-y" 
+                  />
+                </div>
               </div>
             </div>
           )}
