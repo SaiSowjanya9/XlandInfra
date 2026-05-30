@@ -98,6 +98,7 @@ const FPEmployeeZones = ({ user }) => {
   };
 
   const isZoneLockedForEmployee = (zoneName, employeeId) => {
+    // Zones are exclusive - lock if assigned to another employee
     const assigned = assignedZonesMap[zoneName];
     return assigned && assigned.employeeId !== employeeId;
   };
