@@ -1236,14 +1236,14 @@ router.delete('/vendors/:id', requireFPScope, async (req, res) => {
 router.get('/employees', requireFPScope, async (req, res) => {
   try {
     const [employees] = await pool.execute(
-      `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name, GROUP_CONCAT(z.name) as zone_names
+      `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name, GROUP_CONCAT(DISTINCT z.name) as zone_names
        FROM fp_employees e
-       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id
+       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
        LEFT JOIN zones z ON ez.zone_id = z.id
-       WHERE e.franchise_partner_id = ?
+       WHERE e.franchise_partner_id = ? AND e.is_active = 1
        GROUP BY e.id
        ORDER BY e.created_at DESC`,
-      [req.fpId]
+      [req.fpId, req.fpId]
     );
 
     // Transform zone_names string into assigned_zones array
