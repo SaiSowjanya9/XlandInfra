@@ -1237,15 +1237,17 @@ router.get('/employees', requireFPScope, async (req, res) => {
   try {
     console.log('Fetching FP employees for FP ID:', req.fpId);
     
+    // Join with FP zones (each FP has their own zones)
     const [employees] = await pool.execute(
-      `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name, GROUP_CONCAT(DISTINCT z.name) as zone_names
+      `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name, 
+              GROUP_CONCAT(DISTINCT fz.name) as zone_names
        FROM fp_employees e
        LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
-       LEFT JOIN zones z ON ez.zone_id = z.id
+       LEFT JOIN fp_zones fz ON ez.zone_id = fz.id AND fz.franchise_partner_id = ?
        WHERE e.franchise_partner_id = ? AND e.is_active = 1
        GROUP BY e.id
        ORDER BY e.created_at DESC`,
-      [req.fpId, req.fpId]
+      [req.fpId, req.fpId, req.fpId]
     );
 
     console.log('Raw employees data:', JSON.stringify(employees.slice(0, 2)));
@@ -1722,13 +1724,14 @@ router.put('/employees/:id/zones', requireFPScope, async (req, res) => {
       [id, req.fpId]
     );
     
-    // Get zone IDs from zone names
+    // Get zone IDs from FP zones table (each FP has their own zones)
     if (zones && zones.length > 0) {
       for (const zoneName of zones) {
         const [zoneRows] = await pool.execute(
-          `SELECT id FROM zones WHERE name = ?`,
-          [zoneName]
+          `SELECT id FROM fp_zones WHERE name = ? AND franchise_partner_id = ?`,
+          [zoneName, req.fpId]
         );
+        
         console.log('Zone lookup for', zoneName, ':', zoneRows);
         if (zoneRows.length > 0) {
           await pool.execute(
@@ -1736,6 +1739,8 @@ router.put('/employees/:id/zones', requireFPScope, async (req, res) => {
             [req.fpId, id, zoneRows[0].id]
           );
           console.log('Inserted zone assignment:', { fpId: req.fpId, empId: id, zoneId: zoneRows[0].id });
+        } else {
+          console.log('Zone not found in fp_zones:', zoneName);
         }
       }
     }

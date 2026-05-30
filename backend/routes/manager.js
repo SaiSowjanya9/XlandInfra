@@ -805,20 +805,20 @@ router.get('/fp-employee-zones', requireManagerScope, async (req, res) => {
     const [employees] = await pool.execute(
       `SELECT e.id, e.first_name, e.last_name, CONCAT(e.first_name, ' ', e.last_name) as name,
               e.email, e.phone, e.role, e.is_active,
-              GROUP_CONCAT(DISTINCT z.id) as zone_ids,
-              GROUP_CONCAT(DISTINCT z.name ORDER BY z.name) as zone_names
+              GROUP_CONCAT(DISTINCT fz.id) as zone_ids,
+              GROUP_CONCAT(DISTINCT fz.name ORDER BY fz.name) as zone_names
        FROM fp_employees e
-       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id
-       LEFT JOIN zones z ON ez.zone_id = z.id
+       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
+       LEFT JOIN fp_zones fz ON ez.zone_id = fz.id AND fz.franchise_partner_id = ?
        WHERE e.franchise_partner_id = ? AND e.is_active = 1
        GROUP BY e.id
        ORDER BY e.first_name, e.last_name`,
-      [req.franchisePartnerId]
+      [req.franchisePartnerId, req.franchisePartnerId, req.franchisePartnerId]
     );
 
-    // Get all zones for reference
+    // Get all FP zones for reference
     const [zones] = await pool.execute(
-      `SELECT id, name FROM zones WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY name`,
+      `SELECT id, name FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY name`,
       [req.franchisePartnerId]
     );
 
