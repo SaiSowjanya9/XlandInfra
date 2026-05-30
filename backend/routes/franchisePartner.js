@@ -1235,6 +1235,8 @@ router.delete('/vendors/:id', requireFPScope, async (req, res) => {
 // Get all FP employees
 router.get('/employees', requireFPScope, async (req, res) => {
   try {
+    console.log('Fetching FP employees for FP ID:', req.fpId);
+    
     const [employees] = await pool.execute(
       `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name, GROUP_CONCAT(DISTINCT z.name) as zone_names
        FROM fp_employees e
@@ -1246,11 +1248,15 @@ router.get('/employees', requireFPScope, async (req, res) => {
       [req.fpId, req.fpId]
     );
 
+    console.log('Raw employees data:', JSON.stringify(employees.slice(0, 2)));
+
     // Transform zone_names string into assigned_zones array
     const transformedEmployees = employees.map(emp => ({
       ...emp,
       assigned_zones: emp.zone_names ? emp.zone_names.split(',').map(z => z.trim()) : []
     }));
+
+    console.log('Transformed employees:', JSON.stringify(transformedEmployees.slice(0, 2)));
 
     res.json({
       success: true,
@@ -1708,6 +1714,8 @@ router.put('/employees/:id/zones', requireFPScope, async (req, res) => {
     const { id } = req.params;
     const { zones } = req.body;
     
+    console.log('Updating zones for employee:', id, 'FP:', req.fpId, 'Zones:', zones);
+    
     // Delete existing zone assignments
     await pool.execute(
       `DELETE FROM fp_employee_zones WHERE fp_employee_id = ? AND franchise_partner_id = ?`,
@@ -1721,11 +1729,13 @@ router.put('/employees/:id/zones', requireFPScope, async (req, res) => {
           `SELECT id FROM zones WHERE name = ?`,
           [zoneName]
         );
+        console.log('Zone lookup for', zoneName, ':', zoneRows);
         if (zoneRows.length > 0) {
           await pool.execute(
             `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_id) VALUES (?, ?, ?)`,
             [req.fpId, id, zoneRows[0].id]
           );
+          console.log('Inserted zone assignment:', { fpId: req.fpId, empId: id, zoneId: zoneRows[0].id });
         }
       }
     }
