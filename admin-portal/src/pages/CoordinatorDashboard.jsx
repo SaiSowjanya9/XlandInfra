@@ -14,6 +14,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
+import FPEmployeeZonesView from '../components/FPEmployeeZonesView';
 
 const CoordinatorDashboard = ({ user }) => {
   const navigate = useNavigate();
@@ -291,6 +292,14 @@ const CoordinatorDashboard = ({ user }) => {
           </div>
         )}
       </div>
+
+      {/* FP Employee Zone Assignments - Only visible for FP Coordinators */}
+      {user?.franchise_partner_id && (
+        <FPEmployeeZonesView 
+          apiEndpoint="/api/coordinator/fp-employee-zones"
+          title="Team Zone Assignments"
+        />
+      )}
     </div>
   );
 };

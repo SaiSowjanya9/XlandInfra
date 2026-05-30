@@ -1237,4 +1237,47 @@ router.get('/export/work-orders', requireExecutiveScope, async (req, res) => {
   }
 });
 
+// View FP employee zone assignments (READ-ONLY for executives under FP)
+router.get('/fp-employee-zones', requireExecutiveScope, async (req, res) => {
+  try {
+    if (!req.franchisePartnerId) {
+      return res.status(403).json({ success: false, message: 'This feature is only available for FP employees' });
+    }
+
+    const [employees] = await pool.execute(
+      `SELECT e.id, e.first_name, e.last_name, CONCAT(e.first_name, ' ', e.last_name) as name,
+              e.email, e.phone, e.role, e.is_active,
+              GROUP_CONCAT(DISTINCT z.id) as zone_ids,
+              GROUP_CONCAT(DISTINCT z.name ORDER BY z.name) as zone_names
+       FROM fp_employees e
+       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id
+       LEFT JOIN zones z ON ez.zone_id = z.id
+       WHERE e.franchise_partner_id = ? AND e.is_active = 1
+       GROUP BY e.id
+       ORDER BY e.first_name, e.last_name`,
+      [req.franchisePartnerId]
+    );
+
+    const [zones] = await pool.execute(
+      `SELECT id, name FROM zones WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY name`,
+      [req.franchisePartnerId]
+    );
+
+    res.json({ 
+      success: true, 
+      data: {
+        employees: employees.map(emp => ({
+          ...emp,
+          zone_ids: emp.zone_ids ? emp.zone_ids.split(',').map(Number) : [],
+          zone_names: emp.zone_names || 'No zones assigned'
+        })),
+        zones
+      }
+    });
+  } catch (error) {
+    console.error('Get FP employee zones error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;
