@@ -25,7 +25,8 @@ const ManagerEmployeeZones = ({ user, viewOnly = false }) => {
   const token = sessionStorage.getItem('pm_auth_token');
   
   // Check if manager is under FP - makes the view read-only
-  const isFPManager = !!user?.franchise_partner_id;
+  // Note: User object may have franchisePartnerId (camelCase) from login response
+  const isFPManager = !!(user?.franchise_partner_id || user?.franchisePartnerId);
   const isViewOnly = viewOnly || isFPManager;
 
   useEffect(() => {

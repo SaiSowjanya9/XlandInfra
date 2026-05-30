@@ -281,7 +281,7 @@ const SupervisorDashboard = ({ user }) => {
       </div>
 
       {/* FP Employee Zone Assignments - Only visible for FP Supervisors */}
-      {user?.franchise_partner_id && (
+      {(user?.franchise_partner_id || user?.franchisePartnerId) && (
         <FPEmployeeZonesView 
           apiEndpoint="/api/supervisor/fp-employee-zones"
           title="Team Zone Assignments"
