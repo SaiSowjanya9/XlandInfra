@@ -2609,16 +2609,16 @@ router.get('/zones', requireFPScope, async (req, res) => {
       });
     } catch (_) {}
 
-    // Get zones from FP's properties (zone column)
+    // Get zones from FP's properties (zone_id column stores zone name)
     try {
       const [propertyZones] = await pool.execute(
-        `SELECT DISTINCT zone FROM properties WHERE franchise_partner_id = ? AND zone IS NOT NULL AND zone != ''`,
+        `SELECT DISTINCT zone_id FROM properties WHERE franchise_partner_id = ? AND zone_id IS NOT NULL AND zone_id != ''`,
         [req.fpId]
       );
       propertyZones.forEach(z => {
-        if (z.zone && !allZoneNames.has(z.zone)) {
-          allZoneNames.add(z.zone);
-          combinedZones.push({ id: `prop-${z.zone}`, name: z.zone });
+        if (z.zone_id && !allZoneNames.has(z.zone_id)) {
+          allZoneNames.add(z.zone_id);
+          combinedZones.push({ id: `prop-${z.zone_id}`, name: z.zone_id });
         }
       });
     } catch (_) {}
