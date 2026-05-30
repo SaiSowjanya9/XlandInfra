@@ -12,6 +12,7 @@ import {
   ArrowRight,
   Briefcase
 } from 'lucide-react';
+import FPEmployeeZonesView from '../components/FPEmployeeZonesView';
 
 const ExecutiveDashboard = ({ user }) => {
   const navigate = useNavigate();
@@ -276,6 +277,14 @@ const ExecutiveDashboard = ({ user }) => {
           </div>
         )}
       </div>
+
+      {/* FP Employee Zone Assignments - Only visible for FP Executives */}
+      {user?.franchise_partner_id && (
+        <FPEmployeeZonesView 
+          apiEndpoint="/api/executive/fp-employee-zones"
+          title="Team Zone Assignments"
+        />
+      )}
     </div>
   );
 };

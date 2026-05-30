@@ -13,6 +13,7 @@ import {
   ArrowRight,
   MapPin
 } from 'lucide-react';
+import FPEmployeeZonesView from '../components/FPEmployeeZonesView';
 
 const ManagerDashboard = ({ user }) => {
   const [stats, setStats] = useState(null);
@@ -287,6 +288,14 @@ const ManagerDashboard = ({ user }) => {
           </div>
         )}
       </div>
+
+      {/* FP Employee Zone Assignments - Only visible for FP Managers */}
+      {user?.franchise_partner_id && (
+        <FPEmployeeZonesView 
+          apiEndpoint="/api/manager/fp-employee-zones"
+          title="Team Zone Assignments"
+        />
+      )}
     </div>
   );
 };
