@@ -294,7 +294,7 @@ const CoordinatorDashboard = ({ user }) => {
       </div>
 
       {/* FP Employee Zone Assignments - Only visible for FP Coordinators */}
-      {user?.franchise_partner_id && (
+      {(user?.franchise_partner_id || user?.franchisePartnerId) && (
         <FPEmployeeZonesView 
           apiEndpoint="/api/coordinator/fp-employee-zones"
           title="Team Zone Assignments"
