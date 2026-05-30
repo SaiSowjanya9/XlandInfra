@@ -2470,11 +2470,10 @@ router.post('/amc-packages', requireFPScope, async (req, res) => {
 router.get('/addons', requireFPScope, async (req, res) => {
   try {
     const [addons] = await pool.execute(
-      `SELECT a.*, c.name as category_name
-       FROM fp_addons a
-       LEFT JOIN categories c ON a.category_id = c.id
-       WHERE a.franchise_partner_id = ?
-       ORDER BY a.created_at DESC`,
+      `SELECT id, franchise_partner_id, property_type, service_name, frequency_count, frequency_type, billing_cycle, price, description, created_at
+       FROM fp_addons
+       WHERE franchise_partner_id = ?
+       ORDER BY created_at DESC`,
       [req.fpId]
     );
 
@@ -2495,21 +2494,23 @@ router.get('/addons', requireFPScope, async (req, res) => {
 // Create addon
 router.post('/addons', requireFPScope, async (req, res) => {
   try {
-    const { name, description, price, unit, categoryId } = req.body;
+    const { property_type, service_name, frequency_count, frequency_type, billing_cycle, price, description } = req.body;
 
-    const addonCode = `FP${req.fpId}-ADD-${Date.now()}`;
+    if (!service_name || !property_type) {
+      return res.status(400).json({ success: false, message: 'Service name and property type are required' });
+    }
 
     const [result] = await pool.execute(
       `INSERT INTO fp_addons (
-        franchise_partner_id, addon_code, name, description, price, unit, category_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [req.fpId, addonCode, name, description, price || 0, unit || 'per_service', categoryId || null]
+        franchise_partner_id, property_type, service_name, frequency_count, frequency_type, billing_cycle, price, description
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [req.fpId, property_type, service_name, frequency_count || 1, frequency_type || 'Monthly', billing_cycle || 'Monthly', price || 0, description || '']
     );
 
     res.status(201).json({
       success: true,
       message: 'Add-on created successfully',
-      data: { id: result.insertId, addonCode }
+      data: { id: result.insertId, service_name, property_type }
     });
   } catch (error) {
     console.error('Create addon error:', error);
