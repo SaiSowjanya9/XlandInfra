@@ -322,7 +322,7 @@ const sendCustomerActivationEmail = async (customerData) => {
             <!-- Warning -->
             <div style="background: #2a1a0a; border: 1px solid #D8B25C44; border-radius: 8px; padding: 15px 20px; margin-top: 30px;">
               <p style="color: #D8B25C; font-size: 13px; margin: 0; line-height: 1.6;">
-                ⚠️ <strong>Important:</strong> This activation link will expire in <strong>72 hours</strong>. 
+                <strong>Important:</strong> This activation link will expire in <strong>72 hours</strong>. 
                 Please activate your account and set a new password before the link expires.
               </p>
             </div>
@@ -518,7 +518,7 @@ const sendEmployeeWelcomeEmail = async (userData) => {
             <!-- Warning -->
             <div style="background: #2a1a0a; border: 1px solid #D8B25C44; border-radius: 8px; padding: 15px 20px; margin-top: 30px;">
               <p style="color: #D8B25C; font-size: 13px; margin: 0; line-height: 1.6;">
-                ⚠️ <strong>Important:</strong> For security reasons, you must change your temporary password on your first login. 
+                <strong>Important:</strong> For security reasons, you must change your temporary password on your first login. 
                 Keep your credentials secure and do not share them with anyone.
               </p>
             </div>
@@ -615,7 +615,7 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
             
             <!-- Login Instructions -->
             <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 20px; margin: 25px 0;">
-              <h3 style="color: #ffffff; margin: 0 0 15px 0; font-size: 16px;">📋 First-Time Login Instructions</h3>
+              <h3 style="color: #ffffff; margin: 0 0 15px 0; font-size: 16px;">First-Time Login Instructions</h3>
               <ol style="color: #cccccc; font-size: 14px; line-height: 2; margin: 0; padding-left: 20px;">
                 <li>Click the <strong style="color: #D8B25C;">"Login to Portal"</strong> button below</li>
                 <li>Select <strong style="color: #D8B25C;">"Employee Portal"</strong> from the portal options</li>
@@ -641,7 +641,7 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
             <!-- Security Warning -->
             <div style="background: #2a1a0a; border: 1px solid #D8B25C44; border-radius: 8px; padding: 15px 20px; margin-top: 30px;">
               <p style="color: #D8B25C; font-size: 13px; margin: 0; line-height: 1.6;">
-                🔒 <strong>Security Notice:</strong> For your protection, you <strong>must change</strong> your temporary password on your first login. 
+                <strong>Security Notice:</strong> For your protection, you <strong>must change</strong> your temporary password on your first login. 
                 Choose a strong password with at least 8 characters. Never share your password with anyone.
               </p>
             </div>
@@ -1011,7 +1011,7 @@ const sendPasswordResetEmail = async (userData) => {
             <!-- Warning -->
             <div style="background: #2a1a0a; border: 1px solid #D8B25C44; border-radius: 8px; padding: 15px 20px; margin-top: 30px;">
               <p style="color: #D8B25C; font-size: 13px; margin: 0; line-height: 1.6;">
-                ⚠️ <strong>Important:</strong> This password reset link will expire in <strong>${expiryHours || 48} hours</strong>. 
+                <strong>Important:</strong> This password reset link will expire in <strong>${expiryHours || 48} hours</strong>. 
                 If you did not request this password reset, please ignore this email or contact support.
               </p>
             </div>
