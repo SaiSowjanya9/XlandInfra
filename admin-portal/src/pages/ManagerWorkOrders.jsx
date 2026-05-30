@@ -59,6 +59,13 @@ const ManagerWorkOrders = ({ user }) => {
     { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-700' }
   ];
 
+  const priorityOptions = [
+    { value: 'low', label: 'Low', color: 'bg-green-100 text-green-700' },
+    { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-700' },
+    { value: 'high', label: 'High', color: 'bg-orange-100 text-orange-700' },
+    { value: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-700' }
+  ];
+
   const fetchWorkOrders = async () => {
     setLoading(true);
     try {
