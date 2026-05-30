@@ -56,6 +56,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [addonSelectedPropertyType, setAddonSelectedPropertyType] = useState(null);
   const [addonFilterPropertyType, setAddonFilterPropertyType] = useState('all');
   const [addonForm, setAddonForm] = useState({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' });
+  const [editingAddon, setEditingAddon] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewEstimate, setViewEstimate] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
@@ -981,6 +982,46 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
   const handleDeleteAddon = async (id) => { if (!window.confirm('Delete this add-on?')) return; try { const res = await fetch(`/api/fp/addons/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
 
+  const openEditAddon = (addon) => {
+    setEditingAddon({
+      id: addon.id,
+      serviceName: addon.service_name || '',
+      frequencyType: addon.frequency_type || 'Monthly',
+      frequencyCount: addon.frequency_count || 1,
+      propertyType: addon.property_type || 'GC',
+      price: addon.price || '',
+      description: addon.description || ''
+    });
+  };
+
+  const handleUpdateAddon = async () => {
+    if (!editingAddon) return;
+    try {
+      const res = await fetch(`/api/fp/addons/${editingAddon.id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service_name: editingAddon.serviceName,
+          frequency_type: editingAddon.frequencyType,
+          frequency_count: editingAddon.frequencyCount,
+          property_type: editingAddon.propertyType,
+          price: parseFloat(editingAddon.price) || 0,
+          description: editingAddon.description
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast('Add-on updated!');
+        setEditingAddon(null);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to update', 'error');
+      }
+    } catch (e) {
+      showToast('Failed to update add-on', 'error');
+    }
+  };
+
   const renderAddons = () => (
     <div className="space-y-6">
       {/* Tabs */}
@@ -1126,7 +1167,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                         {!isFPManager && (
                           <div className="flex items-center gap-1">
-                            <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                            <button onClick={() => openEditAddon(a)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button onClick={() => handleDeleteAddon(a.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
@@ -1186,7 +1227,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </div>
                       {!isFPManager && (
                         <div className="flex items-center gap-1">
-                          <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                          <button onClick={() => openEditAddon(a)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button onClick={() => handleDeleteAddon(a.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
@@ -1199,6 +1240,99 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Add-on Modal */}
+      {editingAddon && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg m-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-800">Edit Add-on</h2>
+              <button onClick={() => setEditingAddon(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Service Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={editingAddon.serviceName}
+                  onChange={(e) => setEditingAddon({ ...editingAddon, serviceName: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Frequency</label>
+                  <select
+                    value={editingAddon.frequencyType}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const auto = FREQUENCY_COUNT_MAP[v];
+                      setEditingAddon({ ...editingAddon, frequencyType: v, frequencyCount: auto !== null ? auto : editingAddon.frequencyCount });
+                    }}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
+                  >
+                    {FREQUENCY_TYPES.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">No.of visits</label>
+                  <input
+                    type="number"
+                    value={editingAddon.frequencyCount}
+                    readOnly
+                    className="w-full px-4 py-2.5 border border-gray-300 bg-gray-50 rounded-lg text-sm"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Property Type <span className="text-red-500">*</span></label>
+                <select
+                  value={editingAddon.propertyType}
+                  onChange={(e) => setEditingAddon({ ...editingAddon, propertyType: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
+                >
+                  {PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Price (₹) <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={editingAddon.price}
+                  onChange={(e) => setEditingAddon({ ...editingAddon, price: e.target.value.replace(/[^0-9]/g, '') })}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
+                <textarea
+                  value={editingAddon.description}
+                  onChange={(e) => setEditingAddon({ ...editingAddon, description: e.target.value })}
+                  rows={3}
+                  placeholder="Add notes or description..."
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-200 focus:border-gray-400 resize-none"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+              <button onClick={() => setEditingAddon(null)} className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">
+                Cancel
+              </button>
+              <button onClick={handleUpdateAddon} className="px-5 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium">
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}
