@@ -1246,9 +1246,15 @@ router.get('/employees', requireFPScope, async (req, res) => {
       [req.fpId]
     );
 
+    // Transform zone_names string into assigned_zones array
+    const transformedEmployees = employees.map(emp => ({
+      ...emp,
+      assigned_zones: emp.zone_names ? emp.zone_names.split(',').map(z => z.trim()) : []
+    }));
+
     res.json({
       success: true,
-      data: employees
+      data: transformedEmployees
     });
   } catch (error) {
     console.error('Get employees error:', error);
