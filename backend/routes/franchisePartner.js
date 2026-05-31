@@ -2582,7 +2582,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     const { status, archived } = req.query;
 
     let query = `
-      SELECT e.*, c.name as client_name, p.name as property_name
+      SELECT e.*, c.name as db_client_name, p.name as db_property_name, p.property_id as property_code
        FROM estimates e
        LEFT JOIN clients c ON e.client_id = c.id
        LEFT JOIN properties p ON e.property_id = p.id
@@ -2605,9 +2605,31 @@ router.get('/estimates', requireFPScope, async (req, res) => {
 
     const [estimates] = await pool.execute(query, params);
 
+    // Parse services data from description to extract client info
+    const enrichedEstimates = estimates.map(est => {
+      let servicesData = {};
+      if (est.description && est.description.includes('[SERVICES_DATA]')) {
+        try {
+          const jsonStr = est.description.split('[SERVICES_DATA]')[1];
+          servicesData = JSON.parse(jsonStr);
+        } catch (e) {}
+      }
+      return {
+        ...est,
+        client_name: servicesData.client_name || est.db_client_name || est.title || '-',
+        client_phone: servicesData.client_phone || '',
+        client_email: servicesData.client_email || '',
+        property_name: servicesData.property_name || est.db_property_name || '',
+        property_id: est.property_code || est.property_id || servicesData.property_id || '',
+        property_type: servicesData.property_type || '',
+        package: servicesData.package || null,
+        addons: servicesData.addons || []
+      };
+    });
+
     res.json({
       success: true,
-      data: estimates
+      data: enrichedEstimates
     });
   } catch (error) {
     console.error('Get estimates error:', error);
@@ -2623,30 +2645,87 @@ router.get('/estimates', requireFPScope, async (req, res) => {
 router.post('/estimates', requireFPScope, async (req, res) => {
   try {
     const {
-      clientId, propertyId, title, description, estimateType,
-      subtotal, taxPercentage, discountPercentage, validUntil, items
+      // New FP estimate format
+      estimate_type, property_id, client_name, client_phone, client_email,
+      property_type, property_name, zone, city, address,
+      package_id, package_name, package_price,
+      addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
+      description,
+      // Legacy format support
+      clientId, propertyId, title, estimateType, taxPercentage, discountPercentage, validUntil, items
     } = req.body;
 
-    const estimateId = `FP${req.fpId}-EST-${Date.now()}`;
-    const taxAmount = (subtotal * (taxPercentage || 18)) / 100;
-    const discountAmount = (subtotal * (discountPercentage || 0)) / 100;
-    const totalAmount = subtotal + taxAmount - discountAmount;
+    const estimateId = `EST-${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    
+    // Calculate amounts based on which format is used
+    let finalSubtotal = subtotal || 0;
+    let finalGstPercent = gst_percent || taxPercentage || 18;
+    let finalGstAmount = gst_amount || ((finalSubtotal * finalGstPercent) / 100);
+    let finalDiscountPercent = discount_percent || discountPercentage || 0;
+    let finalDiscountAmount = discount_amount || ((finalSubtotal * finalDiscountPercent) / 100);
+    let finalTotal = total_amount || (finalSubtotal - finalDiscountAmount + finalGstAmount);
+
+    // Build services JSON with package and addons info
+    const servicesData = JSON.stringify({
+      client_name: client_name || '',
+      client_phone: client_phone || '',
+      client_email: client_email || '',
+      package: package_id ? { id: package_id, name: package_name, price: package_price } : null,
+      addons: addons || [],
+      property_type: property_type || '',
+      property_name: property_name || '',
+      property_id: property_id || '',
+      zone: zone || '',
+      city: city || '',
+      address: address || ''
+    });
 
     const [result] = await pool.execute(
       `INSERT INTO estimates (
         estimate_id, client_id, property_id, title, description, estimate_type,
         subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount,
-        total_amount, valid_until, franchise_partner_id, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        total_amount, valid_until, franchise_partner_id, created_by, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
       [
-        estimateId, clientId || null, propertyId || null, title, description,
-        estimateType || 'property_based', subtotal || 0, taxPercentage || 18,
-        taxAmount, discountPercentage || 0, discountAmount, totalAmount,
-        validUntil || null, req.fpId, req.user.id
+        estimateId, 
+        clientId || null, 
+        property_id || propertyId || null, 
+        package_name || title || 'FP Estimate',
+        description ? `${description}\n\n[SERVICES_DATA]${servicesData}` : `[SERVICES_DATA]${servicesData}`,
+        estimate_type || estimateType || 'property_based',
+        finalSubtotal,
+        finalGstPercent,
+        finalGstAmount,
+        finalDiscountPercent,
+        finalDiscountAmount,
+        finalTotal,
+        validUntil || null, 
+        req.fpId, 
+        req.user.id
       ]
     );
 
-    // Add estimate items
+    // Add package as estimate item
+    if (package_id) {
+      await pool.execute(
+        `INSERT INTO estimate_items (estimate_id, package_id, description, quantity, unit_price, total_price)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [result.insertId, package_id, package_name || 'AMC Package', 1, package_price || 0, package_price || 0]
+      );
+    }
+
+    // Add addon items
+    if (addons && addons.length > 0) {
+      for (const addon of addons) {
+        await pool.execute(
+          `INSERT INTO estimate_items (estimate_id, description, quantity, unit_price, total_price)
+           VALUES (?, ?, ?, ?, ?)`,
+          [result.insertId, addon.name || addon.service_name || 'Add-on', 1, addon.price || 0, addon.price || 0]
+        );
+      }
+    }
+
+    // Legacy items support
     if (items && items.length > 0) {
       for (const item of items) {
         await pool.execute(
