@@ -2732,7 +2732,10 @@ router.delete('/estimates/archived/delete-all', requireFPScope, async (req, res)
 router.get('/amc-packages', requireFPScope, async (req, res) => {
   try {
     const [packages] = await pool.execute(
-      `SELECT * FROM fp_amc_packages WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
+      `SELECT id, franchise_partner_id, package_code, name, description, 
+              duration_months, base_price as price, services, terms_conditions,
+              created_at, updated_at
+       FROM fp_amc_packages WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
       [req.fpId]
     );
 

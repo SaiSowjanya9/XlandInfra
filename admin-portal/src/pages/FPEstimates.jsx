@@ -711,13 +711,40 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         {!isFPManager && (
                           <td className="px-4 py-4">
                             <div className="flex items-center justify-center gap-1">
-                              <button className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Edit">
+                              <button 
+                                onClick={() => {
+                                  setAmcForm({
+                                    packageName: pkg.name || '',
+                                    description: pkg.description || '',
+                                    serviceRows: serviceRows.length > 0 ? serviceRows.map(s => ({
+                                      service: s.name || s.service || '',
+                                      frequencyCount: s.frequency_count || s.frequencyCount || 1,
+                                      frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
+                                    })) : [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }],
+                                    price: pkg.base_price || pkg.price || '',
+                                    billingDuration: billingDuration || 'monthly'
+                                  });
+                                  setSelectedPropertyType(propertyType);
+                                  setAmcActiveTab('create');
+                                  showToast('Edit package and save to update', 'info');
+                                }}
+                                className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" 
+                                title="Edit"
+                              >
                                 <Edit className="w-4 h-4" />
                               </button>
-                              <button className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Export PDF">
+                              <button 
+                                onClick={() => showToast('PDF export coming soon', 'info')}
+                                className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" 
+                                title="Export PDF"
+                              >
                                 <Download className="w-4 h-4" />
                               </button>
-                              <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Email">
+                              <button 
+                                onClick={() => showToast('Email feature coming soon', 'info')}
+                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" 
+                                title="Email"
+                              >
                                 <Mail className="w-4 h-4" />
                               </button>
                               <button onClick={() => handleDeleteAmcPackage(pkg.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
