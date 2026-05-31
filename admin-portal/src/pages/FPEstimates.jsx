@@ -6,7 +6,7 @@ import {
   DollarSign, Layers, Filter, Download, Mail, Save, Edit
 } from 'lucide-react';
 import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
-import { exportEstimateToPDF } from '../utils/pdfExport';
+import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
@@ -739,7 +739,27 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                 <Edit className="w-4 h-4" />
                               </button>
                               <button 
-                                onClick={() => showToast('PDF export coming soon', 'info')}
+                                onClick={() => {
+                                  const pdfData = {
+                                    id: pkg.id,
+                                    packageId: pkg.package_code || `PKG-${pkg.id}`,
+                                    packageName: pkg.name,
+                                    name: pkg.name,
+                                    propertyType: propertyType,
+                                    billingDuration: billingDuration,
+                                    price: pkg.price || pkg.base_price,
+                                    totalPrice: pkg.price || pkg.base_price,
+                                    services: serviceRows,
+                                    serviceRows: serviceRows,
+                                    description: pkg.description,
+                                    createdAt: pkg.created_at
+                                  };
+                                  if (exportPackageToPDF(pdfData)) {
+                                    showToast('PDF downloaded!', 'success');
+                                  } else {
+                                    showToast('Failed to export PDF', 'error');
+                                  }
+                                }}
                                 className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" 
                                 title="Export PDF"
                               >
