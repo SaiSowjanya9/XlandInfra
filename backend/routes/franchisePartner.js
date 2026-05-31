@@ -1089,9 +1089,11 @@ router.get('/vendors', requireFPScope, async (req, res) => {
 router.post('/vendors', requireFPScope, async (req, res) => {
   try {
     const {
-      companyName, contactPerson, email, phone, alternatePhone,
-      address, city, state, zipCode, serviceCategories,
-      gstNumber, panNumber
+      serviceType, zone, areaName,
+      ownerName, ownerMobile, ownerEmail, ownerAadhar, ownerCountryCode,
+      managerName, managerMobile, managerEmail, managerCountryCode,
+      pocName, pocMobile, pocEmail, pocCountryCode,
+      ratePerVisit, coveragePerDay
     } = req.body;
 
     const vendorId = `FP${req.fpId}-VND-${Date.now()}`;
@@ -1101,13 +1103,21 @@ router.post('/vendors', requireFPScope, async (req, res) => {
     const [result] = await pool.execute(
       `INSERT INTO vendors (
         vendor_id, username, email, password_hash, company_name, contact_person,
-        phone, alternate_phone, address, city, state, zip_code, service_categories,
-        gst_number, pan_number, franchise_partner_id, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        phone, service_type, zone, area_name,
+        owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
+        manager_name, manager_mobile, manager_email, manager_country_code,
+        poc_name, poc_mobile, poc_email, poc_country_code,
+        rate_per_visit, coverage_per_day,
+        franchise_partner_id, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        vendorId, username, email, tempPassword, companyName, contactPerson,
-        phone, alternatePhone, address, city, state, zipCode,
-        JSON.stringify(serviceCategories || []), gstNumber, panNumber,
+        vendorId, username, ownerEmail || '', tempPassword, 
+        ownerName || '', ownerName || '',
+        ownerMobile || '', serviceType || '', zone || '', areaName || '',
+        ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
+        managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
+        pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
+        parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0,
         req.fpId, req.user.id
       ]
     );
