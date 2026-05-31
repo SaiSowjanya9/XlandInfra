@@ -1235,9 +1235,9 @@ router.delete('/vendors/:id', requireFPScope, async (req, res) => {
       });
     }
 
+    // Soft delete - set is_active to 0
     await pool.execute(
-      `UPDATE vendors SET status = 'deleted', is_active = FALSE, updated_at = NOW() 
-       WHERE id = ? AND franchise_partner_id = ?`,
+      `UPDATE vendors SET is_active = 0, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
       [id, req.fpId]
     );
 
