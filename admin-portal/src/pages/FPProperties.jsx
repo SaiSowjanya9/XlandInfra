@@ -912,7 +912,7 @@ const FPProperties = ({ user }) => {
             <div className="p-6">
               {(() => {
                 // Filter vendors by property zone - zone is required
-                const propertyZone = (selectedProperty?.zone || selectedProperty?.zone_id || '').toString().toLowerCase().trim();
+                const propertyZone = (selectedProperty?.zone_name || selectedProperty?.zone || selectedProperty?.zone_id || '').toString().toLowerCase().trim();
                 
                 // If property has NO zone, don't show any vendors
                 if (assignType === 'vendor' && !propertyZone) {
@@ -927,20 +927,20 @@ const FPProperties = ({ user }) => {
                 // Filter vendors by EXACT zone match only
                 const zoneFilteredVendors = assignType === 'vendor' 
                   ? vendors.filter(v => {
-                      const vendorZone = (v.zone || v.zone_name || v.zone_id || '').toString().toLowerCase().trim();
+                      const vendorZone = (v.zone_name || v.zone || v.zone_id || '').toString().toLowerCase().trim();
                       if (!vendorZone) return false;
                       // Exact zone match - extract numbers for comparison
                       const propZoneNum = propertyZone.replace(/[^0-9]/g, '');
                       const vendorZoneNum = vendorZone.replace(/[^0-9]/g, '');
                       // Match exactly: "Zone 43" === "Zone 43" OR "43" === "43"
-                      return vendorZone === propertyZone || propZoneNum === vendorZoneNum;
+                      return vendorZone === propertyZone || (propZoneNum && vendorZoneNum && propZoneNum === vendorZoneNum);
                     })
                   : employees;
                 
                 return zoneFilteredVendors.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-gray-500">
-                      No {assignType === 'vendor' ? 'vendors' : 'employees'} available for Zone {selectedProperty?.zone || selectedProperty?.zone_id}
+                      No {assignType === 'vendor' ? 'vendors' : 'employees'} available for {selectedProperty?.zone_name || selectedProperty?.zone || selectedProperty?.zone_id}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">Add vendors with matching zone to assign them to this property</p>
                   </div>
