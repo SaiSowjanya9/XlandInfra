@@ -721,11 +721,12 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
     console.log('Manager Vendors Query:', { scopeId, scopeColumn, isFPManager: req.isFPManager, franchisePartnerId: req.franchisePartnerId, managerId: req.managerId });
     
     // Get vendors scoped to FP or Manager with creator name
+    // Join on created_by which stores the username, or franchise_partner_id for FP name
     const [vendors] = await pool.execute(
       `SELECT v.*, 'own' as vendor_type,
-        COALESCE(u.username, u.email, 'Unknown') as created_by_name
+        COALESCE(v.created_by, u.username, u.email, 'Unknown') as created_by_name
        FROM vendors v 
-       LEFT JOIN users u ON v.franchise_partner_id = u.id
+       LEFT JOIN users u ON u.franchise_partner_id = v.franchise_partner_id AND u.role = 'franchise_partner'
        WHERE v.${scopeColumn} = ?`,
       [scopeId]
     );
