@@ -363,10 +363,10 @@ const generatePDF = (data, type, filename) => {
       alternateRowStyles: { fillColor: [250, 251, 252] }
     });
 
-    y = doc.lastAutoTable.finalY + 10;
+    y = doc.lastAutoTable.finalY + 8;
 
-    // ===== DESCRIPTION SECTION =====
-    if (data.description) {
+    // ===== DESCRIPTION SECTION (Place right after services table) =====
+    if (data.description && data.description.trim()) {
       const maxDescLines = 50; // Maximum 50 lines
       const lineHeight = 5; // Good spacing between lines
       const descWidth = pageWidth - margin * 2;
@@ -417,11 +417,15 @@ const generatePDF = (data, type, filename) => {
         textY += lineHeight;
       });
       
-      y += descBoxHeight + 8;
+      y += descBoxHeight + 6;
     }
 
-    // Check if summary needs a new page
-    checkPageOverflow(95);
+    // Check if summary needs a new page (only if not enough space)
+    const summaryHeight = 95;
+    if (y + summaryHeight > pageHeight - 25) {
+      doc.addPage();
+      y = 20;
+    }
 
     // ===== TOTAL PRICE SUMMARY =====
     const summaryWidth = 100;
