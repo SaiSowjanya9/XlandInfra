@@ -19,7 +19,7 @@ const {
   validateOwnership,
   buildScopedQuery 
 } = require('../middleware/fpScope');
-const { sendFPEmployeeWelcomeEmail } = require('../services/emailService');
+const { sendFPEmployeeWelcomeEmail, sendVendorAssignmentEmail } = require('../services/emailService');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -481,9 +481,11 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
       return res.status(400).json({ success: false, message: 'Vendor ID is required' });
     }
 
-    // Verify property belongs to this FP
+    // Verify property belongs to this FP and get full details
     const [property] = await pool.execute(
-      `SELECT id FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+      `SELECT id, property_id, name, property_type, address, city, state, zip_code, zone_id, 
+              contact_person, contact_phone, contact_email 
+       FROM properties WHERE id = ? AND franchise_partner_id = ?`,
       [id, req.fpId]
     );
 
@@ -493,7 +495,7 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
 
     // Verify vendor belongs to this FP (handle both numeric id and string vendor_id)
     const [vendor] = await pool.execute(
-      `SELECT id, owner_name, service_type FROM vendors 
+      `SELECT id, owner_name, owner_email, owner_mobile, service_type FROM vendors 
        WHERE (id = ? OR vendor_id = ?) AND (franchise_partner_id = ? OR id IN (
         SELECT vendor_id FROM fp_assigned_vendors WHERE franchise_partner_id = ? AND is_active = TRUE
       ))`,
@@ -529,6 +531,12 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
        VALUES (?, ?, ?, NOW(), TRUE)`,
       [id, numericVendorId, req.user.id]
     );
+
+    // Send email notification to vendor
+    if (vendor[0].owner_email) {
+      sendVendorAssignmentEmail(vendor[0].owner_email, vendor[0].owner_name, property[0])
+        .catch(err => console.error('Failed to send vendor assignment email:', err));
+    }
 
     res.json({
       success: true,

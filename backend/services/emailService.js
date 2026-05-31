@@ -1208,6 +1208,101 @@ const sendPasswordUpdatedByAdminEmail = async (userData) => {
   }
 };
 
+// Send vendor property assignment notification
+const sendVendorAssignmentEmail = async (vendorEmail, vendorName, property) => {
+  const mailOptions = {
+    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    to: vendorEmail,
+    subject: `Property Assignment - ${property.name} | XLAND INFRA`,
+    headers: getDefaultHeaders(),
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="UTF-8"></head>
+      <body style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Arial, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+            <h1 style="color: #0D0D0D; margin: 0; font-size: 28px; font-weight: 700;">XLAND INFRA</h1>
+            <p style="color: #0D0D0D; margin: 10px 0 0 0; font-size: 14px; opacity: 0.8;">Property Management System</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none;">
+            <div style="text-align: center; margin-bottom: 25px;">
+              <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #D8B25C22 0%, #D8B25C11 100%); border-radius: 50%; margin: 0 auto 20px auto; border: 2px solid #D8B25C44; text-align: center; line-height: 66px;">
+                <span style="font-size: 36px; color: #D8B25C;">🏠</span>
+              </div>
+              <h2 style="color: #D8B25C; margin: 0; font-size: 24px; font-weight: 400;">New Property Assignment</h2>
+            </div>
+            
+            <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 25px 0; text-align: center;">
+              Hello <strong style="color: #ffffff;">${vendorName}</strong>, you have been assigned to a new property.
+            </p>
+            
+            <!-- Property Details Box -->
+            <div style="background: #0D0D0D; border: 1px solid #D8B25C44; border-radius: 12px; padding: 25px; margin: 30px 0;">
+              <h3 style="color: #D8B25C; margin: 0 0 20px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; text-align: center;">Property Details</h3>
+              
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #888;">Property ID:</td>
+                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #fff; font-weight: bold;">${property.property_id || property.id}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #888;">Property Name:</td>
+                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #fff; font-weight: bold;">${property.name}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #888;">Type:</td>
+                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #fff;">${property.property_type || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #888;">Address:</td>
+                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #fff;">${property.address || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #888;">City:</td>
+                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #fff;">${property.city || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #888;">Zone:</td>
+                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #fff;">${property.zone || property.zone_id || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 10px; color: #888;">Contact:</td>
+                  <td style="padding: 12px 10px; color: #fff;">${property.contact_person || '-'} ${property.contact_phone ? '(' + property.contact_phone + ')' : ''}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <p style="color: #888; font-size: 13px; text-align: center; margin-top: 20px;">
+              Please review the property details and coordinate with the property management team for any queries.
+            </p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #0D0D0D; padding: 25px 30px; border-radius: 0 0 16px 16px; border: 1px solid #D8B25C33; border-top: none; text-align: center;">
+            <p style="color: #666; font-size: 12px; margin: 0;">
+              © ${new Date().getFullYear()} XLAND INFRA. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`📧 Vendor assignment email sent to ${vendorEmail}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending vendor assignment email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWorkOrderNotification,
   sendContactNotification,
@@ -1221,5 +1316,6 @@ module.exports = {
   sendPasswordResetEmail,
   sendPasswordResetSuccess,
   sendPasswordUpdatedByAdminEmail,
+  sendVendorAssignmentEmail,
   NOTIFICATION_EMAIL
 };
