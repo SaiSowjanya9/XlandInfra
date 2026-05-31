@@ -417,7 +417,7 @@ const ManagerVendors = ({ user }) => {
                         <span className="text-sm text-gray-900">{vendor.coverage_per_day || '0'}</span>
                       </td>
                       <td className="py-4 px-4">
-                        <span className="text-sm text-gray-600">{vendor.created_by || '-'}</span>
+                        <span className="text-sm text-gray-600">{vendor.created_by_name || vendor.created_by || '-'}</span>
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-sm text-gray-600">
@@ -742,7 +742,7 @@ const ManagerVendors = ({ user }) => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-xs text-gray-400">Created By</p>
-                    <p className="text-gray-600">{selectedVendor.created_by || '-'}</p>
+                    <p className="text-gray-600">{selectedVendor.created_by_name || selectedVendor.created_by || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-400">Created At</p>
