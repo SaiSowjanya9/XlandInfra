@@ -1242,6 +1242,54 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
   }
 });
 
+// Update vendor assignment (change vendor)
+router.put('/vendors/assignments/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { vendorId, vendor_id } = req.body;
+    const newVendorId = vendorId || vendor_id;
+
+    if (!newVendorId) {
+      return res.status(400).json({ success: false, message: 'Vendor ID is required' });
+    }
+
+    // Verify assignment belongs to FP's property
+    const [assignment] = await pool.execute(
+      `SELECT pva.id, pva.property_id FROM property_vendor_assignments pva
+       JOIN properties p ON pva.property_id = p.id
+       WHERE pva.id = ? AND p.franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+
+    if (assignment.length === 0) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    // Verify new vendor belongs to this FP
+    const [vendor] = await pool.execute(
+      `SELECT id FROM vendors WHERE id = ? AND (franchise_partner_id = ? OR id IN (
+        SELECT vendor_id FROM fp_assigned_vendors WHERE franchise_partner_id = ? AND is_active = TRUE
+      ))`,
+      [newVendorId, req.fpId, req.fpId]
+    );
+
+    if (vendor.length === 0) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    // Update the assignment
+    await pool.execute(
+      `UPDATE property_vendor_assignments SET vendor_id = ?, assigned_at = NOW() WHERE id = ?`,
+      [newVendorId, id]
+    );
+
+    res.json({ success: true, message: 'Assignment updated successfully' });
+  } catch (error) {
+    console.error('Update assignment error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update assignment', error: error.message });
+  }
+});
+
 // Remove vendor assignment
 router.delete('/vendors/assignments/:id', requireFPScope, async (req, res) => {
   try {

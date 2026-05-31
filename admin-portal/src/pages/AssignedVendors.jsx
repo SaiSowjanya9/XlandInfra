@@ -137,24 +137,23 @@ const AssignedVendors = ({ user }) => {
   };
 
   const handleUpdateServiceVendor = async (assignment, newVendorId) => {
-    const vendor = vendors.find(v => v.vendorId === newVendorId || v.id === newVendorId);
+    const vendor = vendors.find(v => v.vendorId === newVendorId || v.id === newVendorId || v.vendor_id === newVendorId);
     if (!vendor) {
       showToast('Vendor not found', 'error');
       return;
     }
 
     try {
-      const response = await fetch(`/api/vendors/service-assignments/${assignment.id}`, {
+      // For property assignments, update the vendor
+      const response = await fetch(`${apiPrefix}/vendors/assignments/${assignment.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          vendorId: vendor.vendorId || vendor.id,
-          vendorName: vendor.ownerName || vendor.owner_name,
-          vendorZone: vendor.zone,
-          vendorServiceType: vendor.serviceType || vendor.service_type
+          vendorId: vendor.id || vendor.vendorId,
+          vendor_id: vendor.id
         })
       });
       const result = await response.json();
@@ -477,69 +476,101 @@ const AssignedVendors = ({ user }) => {
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              {/* Vendor Info */}
+            <div className="p-6 space-y-5">
+              {/* Service & Location */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Vendor Information</h3>
-                <div className="bg-amber-50 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                      <Truck className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{viewAssignment.vendorName}</p>
-                      <p className="text-xs font-mono text-gray-500">{viewAssignment.vendorId}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-700">{viewAssignment.vendorPhone || '-'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-700 truncate">{viewAssignment.vendorEmail || '-'}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">Service:</span>
-                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-medium">
-                      {viewAssignment.serviceType}
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Service & Location</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-400">Service Type</p>
+                    <span className="inline-flex items-center px-2 py-0.5 mt-1 bg-amber-100 text-amber-700 rounded text-xs font-medium">
+                      {viewAssignment.serviceType || viewAssignment.service_type || '-'}
                     </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Zone</p>
+                    <p className="text-sm font-medium text-gray-900">{viewAssignment.zone_name || viewAssignment.zone || viewAssignment.propertyZone || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Area</p>
+                    <p className="text-sm font-medium text-gray-900">{viewAssignment.area || viewAssignment.areaName || '-'}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Property Info */}
+              {/* Rate & Coverage */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Assigned Property</h3>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate & Coverage</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-400">Rate Per Visit</p>
+                    <p className="text-sm font-medium text-gray-900">₹{viewAssignment.rate_per_visit || viewAssignment.ratePerVisit || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Coverage Per Day</p>
+                    <p className="text-sm font-medium text-gray-900">{viewAssignment.coverage_per_day || viewAssignment.coveragePerDay || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Owner Details */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Owner Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-400">Name</p>
+                    <p className="text-sm font-medium text-gray-900">{viewAssignment.vendor_name || viewAssignment.vendorName || viewAssignment.owner_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Mobile</p>
+                    <p className="text-sm font-medium text-gray-900">{viewAssignment.vendor_phone || viewAssignment.vendorPhone || viewAssignment.owner_mobile || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Email</p>
+                    <p className="text-sm font-medium text-gray-900">{viewAssignment.vendor_email || viewAssignment.vendorEmail || viewAssignment.owner_email || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Vendor ID</p>
+                    <p className="text-sm font-mono text-gray-600">{viewAssignment.vendor_code || viewAssignment.vendorId || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Assigned Property */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Assigned Property</h3>
                 <div className="bg-blue-50 rounded-lg p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-blue-600" />
-                    <span className="font-medium text-gray-900">{viewAssignment.propertyName}</span>
+                    <span className="font-medium text-gray-900">{viewAssignment.property_name || viewAssignment.propertyName || '-'}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <MapPin className="w-4 h-4 text-gray-400" />
-                    <span>Zone: {viewAssignment.propertyZone || '-'}</span>
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <div>
+                      <p className="text-xs text-gray-400">Type</p>
+                      <p className="text-sm text-gray-700">{viewAssignment.property_type || viewAssignment.propertyType || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400">City</p>
+                      <p className="text-sm text-gray-700">{viewAssignment.city || '-'}</p>
+                    </div>
                   </div>
-                  <p className="text-xs font-mono text-gray-500">{viewAssignment.propertyId}</p>
                 </div>
               </div>
 
               {/* Assignment Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500">Assigned Date</p>
-                  <p className="text-sm font-medium text-gray-900">{formatDate(viewAssignment.assignedDate)}</p>
+              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100">
+                <div>
+                  <p className="text-xs text-gray-400">Assigned Date</p>
+                  <p className="text-sm font-medium text-gray-900">{formatDate(viewAssignment.assigned_at || viewAssignment.assignedDate)}</p>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500">Status</p>
+                <div>
+                  <p className="text-xs text-gray-400">Status</p>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                    viewAssignment.status === 'active'
+                    viewAssignment.is_active !== false && viewAssignment.status !== 'removed'
                       ? 'bg-green-100 text-green-700'
                       : 'bg-gray-200 text-gray-600'
                   }`}>
-                    {viewAssignment.status === 'active' ? 'Active' : 'Removed'}
+                    {viewAssignment.is_active !== false && viewAssignment.status !== 'removed' ? 'Active' : 'Removed'}
                   </span>
                 </div>
               </div>
@@ -605,19 +636,24 @@ const AssignedVendors = ({ user }) => {
             </div>
             
             <div className="p-6 space-y-4">
-              {/* Assignment Info */}
+              {/* Property Info */}
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm font-medium text-gray-900">{editModalData.propertyName}</span>
+                  <Building2 className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium text-gray-900">{editModalData.property_name || editModalData.propertyName}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-700">Service: <span className="font-medium">{editModalData.serviceType}</span></span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-700">Service: <span className="font-medium">{editModalData.service_type || editModalData.serviceType || '-'}</span></span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">Zone: {editModalData.zone_name || editModalData.propertyZone || '-'}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Zone: {editModalData.propertyZone || '-'}</span>
+                <div className="text-xs text-gray-500">
+                  Type: {editModalData.property_type || editModalData.propertyType || '-'} | City: {editModalData.city || '-'}
                 </div>
               </div>
 
@@ -628,10 +664,15 @@ const AssignedVendors = ({ user }) => {
                   <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
                     <Truck className="w-4 h-4 text-amber-600" />
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{editModalData.vendorName || 'Unassigned'}</p>
-                    <p className="text-xs text-gray-500 font-mono">{editModalData.vendorId || '-'}</p>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">{editModalData.vendor_name || editModalData.vendorName || 'Unassigned'}</p>
+                    <p className="text-xs text-gray-500 font-mono">{editModalData.vendor_code || editModalData.vendorId || '-'}</p>
                   </div>
+                  {(editModalData.vendor_phone || editModalData.vendorPhone) && (
+                    <div className="text-right text-xs text-gray-500">
+                      <p>{editModalData.vendor_phone || editModalData.vendorPhone}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -645,22 +686,11 @@ const AssignedVendors = ({ user }) => {
                     className="w-full appearance-none px-4 py-3 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-200 focus:border-amber-500 outline-none pr-10"
                   >
                     <option value="">-- Select a Vendor --</option>
-                    <optgroup label="Matching Service Type">
-                      {getMatchingVendors(editModalData.serviceType).map(v => (
-                        <option key={v.vendorId} value={v.vendorId}>
-                          {v.ownerName} ({v.zone})
-                        </option>
-                      ))}
-                    </optgroup>
-                    {vendors.filter(v => !getMatchingVendors(editModalData.serviceType).find(mv => mv.vendorId === v.vendorId)).length > 0 && (
-                      <optgroup label="Other Vendors">
-                        {vendors.filter(v => !getMatchingVendors(editModalData.serviceType).find(mv => mv.vendorId === v.vendorId)).map(v => (
-                          <option key={v.vendorId} value={v.vendorId}>
-                            {v.ownerName} - {v.serviceType} ({v.zone})
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
+                    {vendors.map(v => (
+                      <option key={v.id || v.vendorId} value={v.id || v.vendorId}>
+                        {v.owner_name || v.ownerName || v.company_name} - {v.service_type || v.serviceType} ({v.zone_name || v.zone || '-'})
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
