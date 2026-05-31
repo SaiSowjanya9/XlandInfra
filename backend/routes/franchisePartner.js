@@ -503,17 +503,23 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
       return res.status(404).json({ success: false, message: 'Vendor not found' });
     }
 
-    // Check if assignment already exists
-    const [existing] = await pool.execute(
+    // Check if same vendor assignment already exists and is active
+    const [existingSame] = await pool.execute(
       `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND is_active = TRUE`,
       [id, vendorId]
     );
 
-    if (existing.length > 0) {
-      return res.status(400).json({ success: false, message: 'Vendor already assigned to this property' });
+    if (existingSame.length > 0) {
+      return res.status(400).json({ success: false, message: 'This vendor is already assigned to this property' });
     }
 
-    // Create assignment
+    // Deactivate any existing vendor assignments for this property (allow only one vendor per property)
+    await pool.execute(
+      `UPDATE property_vendor_assignments SET is_active = FALSE WHERE property_id = ? AND is_active = TRUE`,
+      [id]
+    );
+
+    // Create new assignment
     await pool.execute(
       `INSERT INTO property_vendor_assignments (property_id, vendor_id, assigned_by, assigned_at, is_active)
        VALUES (?, ?, ?, NOW(), TRUE)`,
