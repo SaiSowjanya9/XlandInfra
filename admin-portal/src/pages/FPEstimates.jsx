@@ -601,7 +601,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           </div>
 
-          {/* AMC Package */}
+          {/* AMC Package - Only show after property type is selected */}
+          {estimateForm.propertyType ? (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
               <h2 className="text-base font-semibold text-gray-900">AMC Package</h2>
@@ -611,15 +612,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <label className="block text-sm font-medium text-slate-600 mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
                 <select 
                   value={estimateForm.selectedPackage} 
-                  onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value})}
+                  onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value, selectedAddons: []})}
                   className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
                   {(() => {
-                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
-                    const searchType = normalizePropertyType(propertyType);
+                    const searchType = normalizePropertyType(estimateForm.propertyType);
                     const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : amcPackages;
-                    if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
+                    if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {estimateForm.propertyType}</option>;
                     return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
                   })()}
                 </select>
@@ -748,7 +748,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           </div>
 
-          {/* Price Summary */}
+          ) : (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
+              <p className="text-amber-700 font-medium">Please select a Property Type to see available AMC Packages</p>
+            </div>
+          )}
+
+          {/* Price Summary - Only show when package selected */}
+          {estimateForm.selectedPackage && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
               <h2 className="text-base font-semibold text-gray-900">Price Summary</h2>
@@ -785,21 +792,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               })()}
             </div>
           </div>
-
-          {/* Description / Notes */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-900">Description / Notes</h2>
-            </div>
-            <div className="p-6">
-              <textarea 
-                value={estimateForm.description} 
-                onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
-                placeholder="Add any additional notes or description for this estimate..."
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm min-h-[100px]"
-              />
-            </div>
-          </div>
+          )}
 
           {/* Footer Note */}
           <div className="text-xs text-gray-500 border-t border-gray-200 pt-4">

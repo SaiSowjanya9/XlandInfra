@@ -180,6 +180,59 @@ CREATE TABLE IF NOT EXISTS fp_addons (
 );
 
 -- ============================================
+-- FP ESTIMATES (Dedicated estimates table for FP)
+-- ============================================
+CREATE TABLE IF NOT EXISTS fp_estimates (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  estimate_id VARCHAR(50) UNIQUE NOT NULL,
+  franchise_partner_id INT NOT NULL,
+  property_id INT,
+  estimate_type ENUM('property_based', 'direct') DEFAULT 'property_based',
+  -- Client Info
+  client_name VARCHAR(255),
+  client_phone VARCHAR(50),
+  client_email VARCHAR(255),
+  -- Property Info
+  property_name VARCHAR(255),
+  property_code VARCHAR(50),
+  property_type VARCHAR(50),
+  zone VARCHAR(100),
+  city VARCHAR(100),
+  address TEXT,
+  -- Package Info
+  package_id INT,
+  package_name VARCHAR(255),
+  package_price DECIMAL(12,2) DEFAULT 0.00,
+  -- Pricing
+  subtotal DECIMAL(12,2) DEFAULT 0.00,
+  discount_percent DECIMAL(5,2) DEFAULT 0.00,
+  discount_amount DECIMAL(12,2) DEFAULT 0.00,
+  gst_percent DECIMAL(5,2) DEFAULT 18.00,
+  gst_amount DECIMAL(12,2) DEFAULT 0.00,
+  total_amount DECIMAL(12,2) DEFAULT 0.00,
+  -- Additional Data (JSON for addons, services, etc.)
+  addons_data JSON,
+  description TEXT,
+  -- Status
+  status ENUM('draft', 'sent', 'approved', 'rejected', 'converted', 'archived') DEFAULT 'draft',
+  valid_until DATE,
+  -- Creator Info
+  created_by_id INT,
+  created_by_name VARCHAR(255),
+  created_by_role VARCHAR(50),
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  is_archived BOOLEAN DEFAULT FALSE,
+  archived_at TIMESTAMP NULL,
+  FOREIGN KEY (franchise_partner_id) REFERENCES franchise_partners(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_fp_estimates_fp ON fp_estimates(franchise_partner_id);
+CREATE INDEX idx_fp_estimates_status ON fp_estimates(status);
+CREATE INDEX idx_fp_estimates_archived ON fp_estimates(is_archived);
+
+-- ============================================
 -- FP EMPLOYEE ZONES (Zone assignments for FP employees)
 -- ============================================
 CREATE TABLE IF NOT EXISTS fp_employee_zones (
