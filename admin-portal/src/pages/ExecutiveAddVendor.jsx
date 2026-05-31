@@ -311,27 +311,7 @@ const ExecutiveAddVendor = ({ user }) => {
               {errors.serviceType && <p className="text-xs text-red-500 mt-1">{errors.serviceType}</p>}
             </div>
 
-            {/* Service Verification */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Vendor Service List Verification
-              </label>
-              <div className="flex items-center gap-3 h-[42px]">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.serviceVerified}
-                    onChange={(e) => updateField('serviceVerified', e.target.checked)}
-                    className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
-                  />
-                  <span className="text-sm text-gray-700">Verified against master list</span>
-                </label>
-                {formData.serviceVerified && (
-                  <FileCheck className="w-5 h-5 text-emerald-500" />
-                )}
-              </div>
             </div>
-          </div>
         </div>
 
         {/* Location Information */}
