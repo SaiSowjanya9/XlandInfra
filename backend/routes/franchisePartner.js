@@ -2581,65 +2581,79 @@ router.get('/estimates', requireFPScope, async (req, res) => {
   try {
     const { status, archived } = req.query;
 
-    let query = `
-      SELECT e.*, c.name as db_client_name, p.name as db_property_name, p.property_id as property_code
-       FROM estimates e
-       LEFT JOIN clients c ON e.client_id = c.id
-       LEFT JOIN properties p ON e.property_id = p.id
-       WHERE e.franchise_partner_id = ?
-    `;
+    // First ensure the fp_estimates table exists
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS fp_estimates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        estimate_id VARCHAR(50) UNIQUE NOT NULL,
+        franchise_partner_id INT NOT NULL,
+        property_id INT,
+        estimate_type VARCHAR(50) DEFAULT 'property_based',
+        client_name VARCHAR(255),
+        client_phone VARCHAR(50),
+        client_email VARCHAR(255),
+        property_name VARCHAR(255),
+        property_code VARCHAR(50),
+        property_type VARCHAR(50),
+        zone VARCHAR(100),
+        city VARCHAR(100),
+        address TEXT,
+        package_id INT,
+        package_name VARCHAR(255),
+        package_price DECIMAL(12,2) DEFAULT 0.00,
+        subtotal DECIMAL(12,2) DEFAULT 0.00,
+        discount_percent DECIMAL(5,2) DEFAULT 0.00,
+        discount_amount DECIMAL(12,2) DEFAULT 0.00,
+        gst_percent DECIMAL(5,2) DEFAULT 18.00,
+        gst_amount DECIMAL(12,2) DEFAULT 0.00,
+        total_amount DECIMAL(12,2) DEFAULT 0.00,
+        addons_data JSON,
+        description TEXT,
+        status VARCHAR(50) DEFAULT 'draft',
+        valid_until DATE,
+        created_by_id INT,
+        created_by_name VARCHAR(255),
+        created_by_role VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        is_archived BOOLEAN DEFAULT FALSE,
+        archived_at TIMESTAMP NULL
+      )
+    `);
+
+    let query = `SELECT * FROM fp_estimates WHERE franchise_partner_id = ?`;
     const params = [req.fpId];
 
     if (status) {
-      query += ' AND e.status = ?';
+      query += ' AND status = ?';
       params.push(status);
     }
 
     if (archived === 'true') {
-      query += ' AND e.status = "archived"';
-    } else if (archived === 'false') {
-      query += ' AND e.status != "archived"';
+      query += ' AND is_archived = 1';
+    } else {
+      query += ' AND is_archived = 0';
     }
 
-    query += ' ORDER BY e.created_at DESC';
+    query += ' ORDER BY created_at DESC';
 
     const [estimates] = await pool.execute(query, params);
 
-    // Parse services data from description to extract client info
+    // Parse addons_data JSON
     const enrichedEstimates = estimates.map(est => {
-      let servicesData = {};
-      if (est.description && est.description.includes('[SERVICES_DATA]')) {
+      let addons = [];
+      if (est.addons_data) {
         try {
-          const jsonStr = est.description.split('[SERVICES_DATA]')[1];
-          servicesData = JSON.parse(jsonStr);
+          addons = typeof est.addons_data === 'string' ? JSON.parse(est.addons_data) : est.addons_data;
         } catch (e) {}
       }
-      return {
-        ...est,
-        client_name: servicesData.client_name || est.db_client_name || est.title || '-',
-        client_phone: servicesData.client_phone || '',
-        client_email: servicesData.client_email || '',
-        property_name: servicesData.property_name || est.db_property_name || '',
-        property_id: est.property_code || est.property_id || servicesData.property_id || '',
-        property_type: servicesData.property_type || '',
-        package: servicesData.package || null,
-        addons: servicesData.addons || [],
-        created_by_name: servicesData.created_by_name || est.created_by_name || '-',
-        created_by_role: servicesData.created_by_role || est.created_by_role || 'franchise_partner'
-      };
+      return { ...est, addons };
     });
 
-    res.json({
-      success: true,
-      data: enrichedEstimates
-    });
+    res.json({ success: true, data: enrichedEstimates });
   } catch (error) {
     console.error('Get estimates error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch estimates',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Failed to fetch estimates', error: error.message });
   }
 });
 
@@ -2647,194 +2661,59 @@ router.get('/estimates', requireFPScope, async (req, res) => {
 router.post('/estimates', requireFPScope, async (req, res) => {
   try {
     const {
-      // New FP estimate format
       estimate_type, property_id, client_name, client_phone, client_email,
       property_type, property_name, zone, city, address,
       package_id, package_name, package_price,
       addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
-      description,
-      // Legacy format support
-      clientId, propertyId, title, estimateType, taxPercentage, discountPercentage, validUntil, items
+      description
     } = req.body;
 
     const estimateId = `EST-${Date.now()}${Math.floor(Math.random() * 1000)}`;
     
-    // Ensure title is never empty (required field)
-    const estimateTitle = client_name || package_name || title || property_name || 'FP Estimate';
-    
-    // Ensure created_by has a value
-    const createdBy = req.user?.id || req.userId || 1;
-    
-    // Get creator name and role for display
+    // Get creator info
     const creatorName = req.user?.first_name && req.user?.last_name 
       ? `${req.user.first_name} ${req.user.last_name}`.trim()
-      : req.user?.name || req.user?.email || 'Unknown';
-    const creatorRole = req.user?.role || req.userRole || 'franchise_partner';
+      : req.user?.name || req.user?.email || 'Franchise Partner';
+    const creatorRole = req.user?.role || 'franchise_partner';
+    const creatorId = req.user?.id || null;
     
-    console.log('Creating estimate:', { estimateId, client_name, package_name, createdBy, creatorName, creatorRole, fpId: req.fpId });
+    // Calculate amounts
+    const finalSubtotal = parseFloat(subtotal) || 0;
+    const finalGstPercent = parseFloat(gst_percent) || 18;
+    const finalGstAmount = parseFloat(gst_amount) || (finalSubtotal * finalGstPercent / 100);
+    const finalDiscountPercent = parseFloat(discount_percent) || 0;
+    const finalDiscountAmount = parseFloat(discount_amount) || (finalSubtotal * finalDiscountPercent / 100);
+    const finalTotal = parseFloat(total_amount) || (finalSubtotal - finalDiscountAmount + finalGstAmount);
+
+    // Stringify addons for storage
+    const addonsJson = addons ? JSON.stringify(addons) : null;
     
-    // Calculate amounts based on which format is used
-    let finalSubtotal = parseFloat(subtotal) || 0;
-    let finalGstPercent = gst_percent || taxPercentage || 18;
-    let finalGstAmount = gst_amount || ((finalSubtotal * finalGstPercent) / 100);
-    let finalDiscountPercent = discount_percent || discountPercentage || 0;
-    let finalDiscountAmount = discount_amount || ((finalSubtotal * finalDiscountPercent) / 100);
-    let finalTotal = total_amount || (finalSubtotal - finalDiscountAmount + finalGstAmount);
+    console.log('Creating FP estimate:', { estimateId, client_name, package_name, creatorName, fpId: req.fpId });
 
-    // Build services JSON with package and addons info
-    const servicesData = JSON.stringify({
-      client_name: client_name || '',
-      client_phone: client_phone || '',
-      client_email: client_email || '',
-      package: package_id ? { id: package_id, name: package_name, price: package_price } : null,
-      addons: addons || [],
-      property_type: property_type || '',
-      property_name: property_name || '',
-      property_id: property_id || '',
-      zone: zone || '',
-      city: city || '',
-      address: address || '',
-      created_by_name: creatorName,
-      created_by_role: creatorRole
-    });
+    // Insert into fp_estimates table (no FK constraints)
+    const [result] = await pool.execute(
+      `INSERT INTO fp_estimates (
+        estimate_id, franchise_partner_id, property_id, estimate_type,
+        client_name, client_phone, client_email,
+        property_name, property_code, property_type, zone, city, address,
+        package_id, package_name, package_price,
+        subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
+        addons_data, description, status,
+        created_by_id, created_by_name, created_by_role
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
+      [
+        estimateId, req.fpId, null, estimate_type || 'property_based',
+        client_name || '', client_phone || '', client_email || '',
+        property_name || '', property_id || '', property_type || '', zone || '', city || '', address || '',
+        package_id || null, package_name || '', parseFloat(package_price) || 0,
+        finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,
+        addonsJson, description || '', 
+        creatorId, creatorName, creatorRole
+      ]
+    );
 
-    // Resolve property_id to numeric ID if it's a string (property code)
-    let resolvedPropertyId = null;
-    const propIdValue = property_id || propertyId;
-    if (propIdValue) {
-      if (!isNaN(propIdValue)) {
-        resolvedPropertyId = parseInt(propIdValue);
-      } else {
-        // It's a property code string, try to look it up
-        const [[prop]] = await pool.execute(
-          'SELECT id FROM properties WHERE property_id = ? LIMIT 1',
-          [propIdValue]
-        );
-        resolvedPropertyId = prop?.id || null;
-      }
-    }
-
-    // Build description with all estimate data
-    const fullDescription = description 
-      ? `${description}\n\n[SERVICES_DATA]${servicesData}` 
-      : `[SERVICES_DATA]${servicesData}`;
+    console.log('Estimate created successfully:', result.insertId);
     
-    // Try multiple INSERT approaches until one works
-    let result;
-    let insertSuccess = false;
-    
-    // Approach 1: Full insert with franchise_partner_id
-    if (!insertSuccess) {
-      try {
-        [result] = await pool.execute(
-          `INSERT INTO estimates (
-            estimate_id, property_id, title, description, estimate_type,
-            subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount,
-            total_amount, franchise_partner_id, created_by, status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
-          [
-            estimateId, resolvedPropertyId, estimateTitle, fullDescription,
-            estimate_type || estimateType || 'property_based',
-            finalSubtotal, parseFloat(finalGstPercent) || 18, parseFloat(finalGstAmount) || 0,
-            parseFloat(finalDiscountPercent) || 0, parseFloat(finalDiscountAmount) || 0,
-            parseFloat(finalTotal) || 0, req.fpId, createdBy
-          ]
-        );
-        insertSuccess = true;
-        console.log('Estimate created with approach 1 (full)');
-      } catch (err1) {
-        console.log('Approach 1 failed:', err1.message);
-      }
-    }
-    
-    // Approach 2: Without franchise_partner_id
-    if (!insertSuccess) {
-      try {
-        [result] = await pool.execute(
-          `INSERT INTO estimates (
-            estimate_id, property_id, title, description, estimate_type,
-            subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount,
-            total_amount, created_by, status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
-          [
-            estimateId, resolvedPropertyId, estimateTitle, fullDescription,
-            estimate_type || estimateType || 'property_based',
-            finalSubtotal, parseFloat(finalGstPercent) || 18, parseFloat(finalGstAmount) || 0,
-            parseFloat(finalDiscountPercent) || 0, parseFloat(finalDiscountAmount) || 0,
-            parseFloat(finalTotal) || 0, createdBy
-          ]
-        );
-        insertSuccess = true;
-        console.log('Estimate created with approach 2 (no fp_id)');
-      } catch (err2) {
-        console.log('Approach 2 failed:', err2.message);
-      }
-    }
-    
-    // Approach 3: With created_by = 1 (system user fallback)
-    if (!insertSuccess) {
-      try {
-        [result] = await pool.execute(
-          `INSERT INTO estimates (
-            estimate_id, property_id, title, description, estimate_type,
-            subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount,
-            total_amount, created_by, status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'draft')`,
-          [
-            estimateId, resolvedPropertyId, estimateTitle, fullDescription,
-            estimate_type || estimateType || 'property_based',
-            finalSubtotal, parseFloat(finalGstPercent) || 18, parseFloat(finalGstAmount) || 0,
-            parseFloat(finalDiscountPercent) || 0, parseFloat(finalDiscountAmount) || 0,
-            parseFloat(finalTotal) || 0
-          ]
-        );
-        insertSuccess = true;
-        console.log('Estimate created with approach 3 (system user)');
-      } catch (err3) {
-        console.log('Approach 3 failed:', err3.message);
-        throw new Error(`All insert approaches failed. Last error: ${err3.message}`);
-      }
-    }
-
-    // Add package as estimate item (without package_id FK since FP packages are in separate table)
-    if (package_id) {
-      try {
-        await pool.execute(
-          `INSERT INTO estimate_items (estimate_id, description, quantity, unit_price, total_price)
-           VALUES (?, ?, ?, ?, ?)`,
-          [result.insertId, `[PKG:${package_id}] ${package_name || 'AMC Package'}`, 1, parseFloat(package_price) || 0, parseFloat(package_price) || 0]
-        );
-      } catch (itemErr) {
-        console.error('Failed to add package item:', itemErr.message);
-      }
-    }
-
-    // Add addon items
-    if (addons && addons.length > 0) {
-      for (const addon of addons) {
-        try {
-          await pool.execute(
-            `INSERT INTO estimate_items (estimate_id, description, quantity, unit_price, total_price)
-             VALUES (?, ?, ?, ?, ?)`,
-            [result.insertId, `[ADDON:${addon.id}] ${addon.name || addon.service_name || 'Add-on'}`, 1, parseFloat(addon.price) || 0, parseFloat(addon.price) || 0]
-          );
-        } catch (itemErr) {
-          console.error('Failed to add addon item:', itemErr.message);
-        }
-      }
-    }
-
-    // Legacy items support
-    if (items && items.length > 0) {
-      for (const item of items) {
-        await pool.execute(
-          `INSERT INTO estimate_items (estimate_id, description, quantity, unit_price, total_price)
-           VALUES (?, ?, ?, ?, ?)`,
-          [result.insertId, item.description, item.quantity || 1, item.unitPrice || 0, item.totalPrice || 0]
-        );
-      }
-    }
-
     res.status(201).json({
       success: true,
       message: 'Estimate created successfully',
