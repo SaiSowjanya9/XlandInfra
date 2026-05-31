@@ -723,14 +723,14 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
     // Get vendors scoped to FP or Manager with creator name
     const [vendors] = await pool.execute(
       `SELECT v.*, 'own' as vendor_type,
-        COALESCE(u.username, u.name, u.email, 'Unknown') as created_by_name
+        COALESCE(u.username, u.email, 'Unknown') as created_by_name
        FROM vendors v 
        LEFT JOIN users u ON v.franchise_partner_id = u.id
        WHERE v.${scopeColumn} = ?`,
       [scopeId]
     );
     
-    console.log('Vendors found:', vendors.length);
+    console.log('Vendors found:', vendors.length, 'for scope:', scopeColumn, '=', scopeId);
 
     res.json({
       success: true,
@@ -741,6 +741,7 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Manager vendors fetch error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 });
