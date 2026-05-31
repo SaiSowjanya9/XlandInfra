@@ -1194,6 +1194,83 @@ router.get('/vendors', requireFPScope, async (req, res) => {
   }
 });
 
+// Get vendor assignments (property-vendor assignments)
+router.get('/vendors/assignments', requireFPScope, async (req, res) => {
+  try {
+    // Get property-vendor assignments for this FP's properties
+    const [propertyAssignments] = await pool.execute(
+      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+        p.name as property_name, p.property_type, p.address, p.city,
+        v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
+        v.owner_mobile as vendor_phone, v.owner_email as vendor_email
+       FROM property_vendor_assignments pva
+       JOIN properties p ON pva.property_id = p.id
+       JOIN vendors v ON pva.vendor_id = v.id
+       WHERE p.franchise_partner_id = ? AND pva.is_active = TRUE
+       ORDER BY pva.assigned_at DESC`,
+      [req.fpId]
+    );
+
+    // Group by property for service assignments view
+    const serviceAssignments = propertyAssignments.reduce((acc, assignment) => {
+      const existing = acc.find(g => g.property_id === assignment.property_id);
+      if (existing) {
+        existing.assignments.push(assignment);
+      } else {
+        acc.push({
+          property_id: assignment.property_id,
+          propertyName: assignment.property_name,
+          propertyType: assignment.property_type,
+          address: assignment.address,
+          city: assignment.city,
+          assignments: [assignment]
+        });
+      }
+      return acc;
+    }, []);
+
+    res.json({
+      success: true,
+      data: {
+        propertyAssignments,
+        serviceAssignments
+      }
+    });
+  } catch (error) {
+    console.error('Get vendor assignments error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch assignments', error: error.message });
+  }
+});
+
+// Remove vendor assignment
+router.delete('/vendors/assignments/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verify assignment belongs to FP's property
+    const [assignment] = await pool.execute(
+      `SELECT pva.id FROM property_vendor_assignments pva
+       JOIN properties p ON pva.property_id = p.id
+       WHERE pva.id = ? AND p.franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+
+    if (assignment.length === 0) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    await pool.execute(
+      `UPDATE property_vendor_assignments SET is_active = FALSE WHERE id = ?`,
+      [id]
+    );
+
+    res.json({ success: true, message: 'Assignment removed successfully' });
+  } catch (error) {
+    console.error('Remove assignment error:', error);
+    res.status(500).json({ success: false, message: 'Failed to remove assignment', error: error.message });
+  }
+});
+
 // Create vendor
 router.post('/vendors', requireFPScope, async (req, res) => {
   try {

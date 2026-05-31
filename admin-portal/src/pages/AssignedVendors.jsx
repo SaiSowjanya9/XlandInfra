@@ -26,6 +26,8 @@ import {
 const AssignedVendors = ({ user }) => {
   // Check if user is FP Manager (view-only mode)
   const isFPManager = user?.role === 'manager';
+  const isFPUser = user?.role === 'franchise_partner' || user?.role === 'manager' || user?.role === 'fp_coordinator';
+  const apiPrefix = isFPUser ? '/api/fp' : '/api';
   
   const [activeTab, setActiveTab] = useState('service'); // 'service' or 'property'
   const [assignments, setAssignments] = useState([]);
@@ -63,10 +65,10 @@ const AssignedVendors = ({ user }) => {
     try {
       // Load vendor assignments from API
       const [assignResponse, vendorResponse] = await Promise.all([
-        fetch(`/api/vendors/assignments?status=${statusFilter}`, { 
+        fetch(`${apiPrefix}/vendors/assignments?status=${statusFilter}`, { 
           headers: { 'Authorization': `Bearer ${token}` } 
         }),
-        fetch('/api/vendors?status=active', { 
+        fetch(`${apiPrefix}/vendors?status=active`, { 
           headers: { 'Authorization': `Bearer ${token}` } 
         })
       ]);
@@ -80,7 +82,9 @@ const AssignedVendors = ({ user }) => {
       }
       
       if (vendorResult.success) {
-        setVendors(vendorResult.data || []);
+        // Handle FP vendor data structure
+        const vendorData = vendorResult.data?.all || vendorResult.data || [];
+        setVendors(vendorData);
       }
     } catch (err) {
       console.error('Error loading data:', err);
@@ -94,7 +98,7 @@ const AssignedVendors = ({ user }) => {
 
   const handleRemoveAssignment = async (assignment) => {
     try {
-      const response = await fetch(`/api/vendors/assignments/${assignment.id}`, {
+      const response = await fetch(`${apiPrefix}/vendors/assignments/${assignment.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

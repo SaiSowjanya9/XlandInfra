@@ -595,6 +595,37 @@ router.delete('/:id', authenticate, managerOrAdmin, async (req, res) => {
   }
 });
 
+// Restore vendor (set is_active back to TRUE)
+router.put('/:id/restore', authenticate, managerOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [result] = await pool.execute(
+      `UPDATE vendors SET is_active = TRUE, updated_at = NOW() WHERE id = ?`,
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Vendor restored successfully'
+    });
+  } catch (error) {
+    console.error('Error restoring vendor:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error restoring vendor',
+      error: error.message
+    });
+  }
+});
+
 // Get vendors for assignment dropdown
 router.get('/list/active', authenticate, managerOrAdmin, async (req, res) => {
   try {
