@@ -2754,19 +2754,24 @@ router.get('/amc-packages', requireFPScope, async (req, res) => {
 router.post('/amc-packages', requireFPScope, async (req, res) => {
   try {
     const {
-      name, description, durationMonths, basePrice, services, termsConditions
+      name, description, property_type, services, price, billing_duration
     } = req.body;
 
     const packageCode = `FP${req.fpId}-AMC-${Date.now()}`;
 
+    // Check if table has required columns, use appropriate insert
     const [result] = await pool.execute(
       `INSERT INTO fp_amc_packages (
-        franchise_partner_id, package_code, name, description, duration_months,
-        base_price, services, terms_conditions
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        franchise_partner_id, package_code, name, description, 
+        base_price, services
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
       [
-        req.fpId, packageCode, name, description, durationMonths || 12,
-        basePrice || 0, JSON.stringify(services || []), termsConditions
+        req.fpId, packageCode, name, description || '',
+        price || 0, JSON.stringify({ 
+          property_type, 
+          billing_duration,
+          serviceRows: services || [] 
+        })
       ]
     );
 
