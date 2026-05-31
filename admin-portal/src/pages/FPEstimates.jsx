@@ -894,7 +894,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const matchSearch = (e.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.estimate_id || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.client_name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = filterStatus === 'all' || e.status === filterStatus;
     const matchType = filterType === 'all' || e.estimate_type === filterType || (filterType === 'property_based' && (e.estimate_type === 'property_based' || e.estimate_type === 'property-based'));
-    const matchCategory = filterCategory === 'all' || e.property_type === filterCategory;
+    const matchCategory = filterCategory === 'all' || 
+      e.property_type === filterCategory || 
+      (e.property_type || '').toLowerCase().includes(filterCategory.toLowerCase()) ||
+      filterCategory.toLowerCase().includes((e.property_type || '').toLowerCase());
     // Date range filter
     let matchDate = true;
     if (filterFromDate || filterToDate) {
@@ -946,9 +949,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <label className="block text-xs font-medium text-gray-500 mb-1">Property Category</label>
                 <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
                   <option value="all">All Categories</option>
-                  {[...new Set(estimates.map(e => e.property_type).filter(Boolean))].map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
+                  <option value="IV">IV - Individual Villa</option>
+                  <option value="GC">GC - Gated Community</option>
+                  <option value="Gated Community">Gated Community</option>
+                  <option value="APT">APT - Apartment</option>
+                  <option value="Apartment">Apartment</option>
+                  <option value="COMM">COMM - Commercial</option>
+                  <option value="Commercial">Commercial</option>
+                  <option value="Individual Villa">Individual Villa</option>
                 </select>
               </div>
               <div>
@@ -1006,8 +1014,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="text-xs text-gray-400 capitalize">{(est.created_by_role || '').replace(/_/g, ' ')}</div>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {est.status || 'Draft'}
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          est.status?.toLowerCase() === 'approved' ? 'bg-green-100 text-green-700 border border-green-200' :
+                          est.status?.toLowerCase() === 'sent' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                          est.status?.toLowerCase() === 'rejected' ? 'bg-red-100 text-red-700 border border-red-200' :
+                          est.status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                          est.status?.toLowerCase() === 'expired' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                          'bg-gray-100 text-gray-600 border border-gray-200'
+                        }`}>
+                        {est.status || 'draft'}
                       </span>
                     </td>
                     <td className="px-4 py-4">
