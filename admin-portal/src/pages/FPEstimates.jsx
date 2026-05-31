@@ -50,6 +50,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [amcActiveTab, setAmcActiveTab] = useState(isFPManager ? 'all-packages' : 'create');
   const [selectedPropertyType, setSelectedPropertyType] = useState(null);
   const [amcForm, setAmcForm] = useState({ packageName: '', description: '', serviceRows: [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' });
+  const [editingAmcPackage, setEditingAmcPackage] = useState(null);
   const [filterPropertyType, setFilterPropertyType] = useState('all');
   // FP Manager defaults to 'all-addons' (no create access)
   const [addonActiveTab, setAddonActiveTab] = useState(isFPManager ? 'all-addons' : 'create');
@@ -543,11 +544,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const validSvc = amcForm.serviceRows.filter(r => r.service.trim());
     if (validSvc.length === 0) { showToast('Add at least one service', 'error'); return; }
     try {
-      const res = await fetch('/api/fp/amc-packages', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, frequency_count: parseInt(r.frequencyCount) || 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
+      const isEditing = !!editingAmcPackage;
+      const url = isEditing ? `/api/fp/amc-packages/${editingAmcPackage}` : '/api/fp/amc-packages';
+      const method = isEditing ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, frequency_count: parseInt(r.frequencyCount) || 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
-      if (result.success) { showToast('AMC Package created!'); setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); loadData(); setAmcActiveTab('all-packages'); }
+      if (result.success) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
-    } catch (e) { showToast('Failed to create package', 'error'); }
+    } catch (e) { showToast('Failed to save package', 'error'); }
   };
   const handleDeleteAmcPackage = async (id) => { if (!window.confirm('Delete this package?')) return; try { const res = await fetch(`/api/fp/amc-packages/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
   const handleAddServiceRow = () => setAmcForm({ ...amcForm, serviceRows: [...amcForm.serviceRows, { service: '', frequencyCount: 1, frequencyType: 'Monthly' }] });
@@ -555,7 +559,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const handleRemoveServiceRow = (i) => { if (amcForm.serviceRows.length > 1) setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, idx) => idx !== i) }); };
 
   const getPrice = () => parseFloat(amcForm.price) || 0;
-  const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); };
+  const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); setEditingAmcPackage(null); };
   const getBillingBadgeColor = (billing) => {
     switch (billing) {
       case 'monthly': return 'bg-blue-50 text-blue-700 border-blue-200';
@@ -713,6 +717,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             <div className="flex items-center justify-center gap-1">
                               <button 
                                 onClick={() => {
+                                  setEditingAmcPackage(pkg.id);
                                   setAmcForm({
                                     packageName: pkg.name || '',
                                     description: pkg.description || '',
@@ -726,7 +731,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                   });
                                   setSelectedPropertyType(propertyType);
                                   setAmcActiveTab('create');
-                                  showToast('Edit package and save to update', 'info');
+                                  showToast('Editing package - make changes and save', 'info');
                                 }}
                                 className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" 
                                 title="Edit"

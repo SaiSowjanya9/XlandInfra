@@ -2793,6 +2793,55 @@ router.post('/amc-packages', requireFPScope, async (req, res) => {
   }
 });
 
+// Update AMC package
+router.put('/amc-packages/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, property_type, services, price, billing_duration } = req.body;
+
+    const [result] = await pool.execute(
+      `UPDATE fp_amc_packages 
+       SET name = ?, description = ?, base_price = ?, 
+           services = ?, updated_at = NOW()
+       WHERE id = ? AND franchise_partner_id = ?`,
+      [
+        name, description || '',
+        price || 0, JSON.stringify({ property_type, billing_duration, serviceRows: services || [] }),
+        id, req.fpId
+      ]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Package not found' });
+    }
+
+    res.json({ success: true, message: 'AMC package updated successfully' });
+  } catch (error) {
+    console.error('Update AMC package error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update AMC package', error: error.message });
+  }
+});
+
+// Delete AMC package
+router.delete('/amc-packages/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [result] = await pool.execute(
+      `DELETE FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Package not found' });
+    }
+
+    res.json({ success: true, message: 'AMC package deleted successfully' });
+  } catch (error) {
+    console.error('Delete AMC package error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete AMC package', error: error.message });
+  }
+});
+
 // Get FP add-ons - Scoped to each FP
 router.get('/addons', requireFPScope, async (req, res) => {
   try {
