@@ -2664,7 +2664,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     } catch (e) {}
 
     // Parse addons_data JSON and fix creator name if it's an email
-    const enrichedEstimates = estimates.map(est => {
+    const enrichedEstimates = await Promise.all(estimates.map(async (est) => {
       let addons = [];
       if (est.addons_data) {
         try {
@@ -2676,8 +2676,23 @@ router.get('/estimates', requireFPScope, async (req, res) => {
       if (creatorName && creatorName.includes('@')) {
         creatorName = fpContactName;
       }
-      return { ...est, addons, created_by_name: creatorName };
-    });
+      
+      // If division is missing and we have property_code, try to fetch from property
+      let division = est.division;
+      if (!division && est.property_code && est.estimate_type !== 'direct') {
+        try {
+          const [[prop]] = await pool.execute(
+            'SELECT division, division_name FROM properties WHERE property_code = ? OR id = ?',
+            [est.property_code, est.property_id || 0]
+          );
+          if (prop) {
+            division = prop.division || prop.division_name || '';
+          }
+        } catch (e) {}
+      }
+      
+      return { ...est, addons, created_by_name: creatorName, division };
+    }));
 
     res.json({ success: true, data: enrichedEstimates });
   } catch (error) {
