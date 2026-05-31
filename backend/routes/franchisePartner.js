@@ -1142,9 +1142,11 @@ router.put('/vendors/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      companyName, contactPerson, email, phone, alternatePhone,
-      address, city, state, zipCode, serviceCategories,
-      gstNumber, panNumber, status
+      service_type, zone_name, area, rate_per_visit, coverage_per_day,
+      owner_name, owner_mobile, owner_email, owner_aadhar,
+      manager_name, manager_mobile, manager_email,
+      poc_name, poc_mobile, poc_email,
+      status
     } = req.body;
 
     // Verify vendor belongs to this FP
@@ -1162,26 +1164,35 @@ router.put('/vendors/:id', requireFPScope, async (req, res) => {
 
     await pool.execute(
       `UPDATE vendors SET 
+        service_type = COALESCE(?, service_type),
+        zone_name = COALESCE(?, zone_name),
+        area = COALESCE(?, area),
+        rate_per_visit = COALESCE(?, rate_per_visit),
+        coverage_per_day = COALESCE(?, coverage_per_day),
+        owner_name = COALESCE(?, owner_name),
+        owner_mobile = COALESCE(?, owner_mobile),
+        owner_email = COALESCE(?, owner_email),
+        owner_aadhar = COALESCE(?, owner_aadhar),
         company_name = COALESCE(?, company_name),
         contact_person = COALESCE(?, contact_person),
         email = COALESCE(?, email),
         phone = COALESCE(?, phone),
-        alternate_phone = COALESCE(?, alternate_phone),
-        address = COALESCE(?, address),
-        city = COALESCE(?, city),
-        state = COALESCE(?, state),
-        zip_code = COALESCE(?, zip_code),
-        service_categories = COALESCE(?, service_categories),
-        gst_number = COALESCE(?, gst_number),
-        pan_number = COALESCE(?, pan_number),
+        manager_name = COALESCE(?, manager_name),
+        manager_mobile = COALESCE(?, manager_mobile),
+        manager_email = COALESCE(?, manager_email),
+        poc_name = COALESCE(?, poc_name),
+        poc_mobile = COALESCE(?, poc_mobile),
+        poc_email = COALESCE(?, poc_email),
         status = COALESCE(?, status),
         updated_at = NOW()
       WHERE id = ? AND franchise_partner_id = ?`,
       [
-        companyName, contactPerson, email, phone, alternatePhone,
-        address, city, state, zipCode,
-        serviceCategories ? JSON.stringify(serviceCategories) : null,
-        gstNumber, panNumber, status,
+        service_type, zone_name, area, rate_per_visit, coverage_per_day,
+        owner_name, owner_mobile, owner_email, owner_aadhar,
+        owner_name, owner_name, owner_email, owner_mobile,
+        manager_name, manager_mobile, manager_email,
+        poc_name, poc_mobile, poc_email,
+        status,
         id, req.fpId
       ]
     );

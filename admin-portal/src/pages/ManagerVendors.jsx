@@ -604,53 +604,140 @@ const ManagerVendors = ({ user }) => {
               </div>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Vendor ID</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.vendor_id}</p>
+            <div className="p-6 space-y-6">
+              {/* Basic Info */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Basic Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Vendor ID</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.vendor_id}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Status</p>
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                      selectedVendor.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {selectedVendor.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Service Type</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.service_type || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Vendor Type</p>
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                      selectedVendor.vendor_type === 'own' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {selectedVendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Status</p>
-                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                    selectedVendor.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>
-                    {selectedVendor.is_active ? 'Active' : 'Inactive'}
-                  </span>
+              </div>
+
+              {/* Location */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Location</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Zone</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.zone_name || selectedVendor.zone || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Area</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.area || selectedVendor.area_name || '-'}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Company Name</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.company_name}</p>
+              </div>
+
+              {/* Rate & Coverage */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate & Coverage</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Rate Per Visit</p>
+                    <p className="font-medium text-gray-900">₹{selectedVendor.rate_per_visit || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Coverage Per Day</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || 0}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Contact Person</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.contact_person || '-'}</p>
+              </div>
+
+              {/* Owner Details */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Owner Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Name</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.owner_name || selectedVendor.company_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Mobile</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.owner_country_code || '+91'} {selectedVendor.owner_mobile || selectedVendor.phone || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.owner_email || selectedVendor.email || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Aadhar</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.owner_aadhar || '-'}</p>
+                  </div>
                 </div>
+              </div>
+
+              {/* Manager Details */}
+              {(selectedVendor.manager_name || selectedVendor.manager_mobile) && (
                 <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.email || '-'}</p>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Manager / Primary Contact</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Name</p>
+                      <p className="font-medium text-gray-900">{selectedVendor.manager_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Mobile</p>
+                      <p className="font-medium text-gray-900">{selectedVendor.manager_country_code || '+91'} {selectedVendor.manager_mobile || '-'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="font-medium text-gray-900">{selectedVendor.manager_email || '-'}</p>
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              {/* POC Details */}
+              {(selectedVendor.poc_name || selectedVendor.poc_mobile) && (
                 <div>
-                  <p className="text-sm text-gray-500">Phone</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.phone || '-'}</p>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Point of Contact</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Name</p>
+                      <p className="font-medium text-gray-900">{selectedVendor.poc_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Mobile</p>
+                      <p className="font-medium text-gray-900">{selectedVendor.poc_country_code || '+91'} {selectedVendor.poc_mobile || '-'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="font-medium text-gray-900">{selectedVendor.poc_email || '-'}</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Service Type</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.service_type || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Zone</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.zone || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Area</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.area || '-'}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-500">Address</p>
-                  <p className="font-medium text-gray-900">
-                    {selectedVendor.address ? `${selectedVendor.address}, ${selectedVendor.city || ''}, ${selectedVendor.state || ''}` : '-'}
-                  </p>
+              )}
+
+              {/* Created Info */}
+              <div className="pt-4 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-gray-400">Created At</p>
+                    <p className="text-gray-600">{selectedVendor.created_at ? new Date(selectedVendor.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</p>
+                  </div>
                 </div>
               </div>
 

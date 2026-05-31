@@ -89,7 +89,7 @@ const FPVendors = ({ user }) => {
 
   // Get unique divisions and zones for filters
   const divisions = [...new Set(vendors.map(v => v.division).filter(Boolean))];
-  const zones = [...new Set(vendors.map(v => v.zone).filter(Boolean))];
+  const zones = [...new Set(vendors.map(v => v.zone_name || v.zone).filter(Boolean))];
 
   // Filter vendors
   const filteredVendors = vendors.filter(v => {
@@ -100,7 +100,7 @@ const FPVendors = ({ user }) => {
     if (divisionFilter && v.division !== divisionFilter) return false;
     
     // Zone filter
-    if (zoneFilter && v.zone !== zoneFilter) return false;
+    if (zoneFilter && (v.zone_name || v.zone) !== zoneFilter) return false;
     
     // Status filter
     if (statusFilter === 'active' && v.status === 'deleted') return false;
@@ -113,8 +113,8 @@ const FPVendors = ({ user }) => {
         (v.vendorId || v.vendor_id || '').toLowerCase().includes(q) ||
         (v.ownerName || v.owner_name || '').toLowerCase().includes(q) ||
         (v.serviceType || v.service_type || '').toLowerCase().includes(q) ||
-        (v.zone || '').toLowerCase().includes(q) ||
-        (v.areaName || v.area_name || '').toLowerCase().includes(q)
+        (v.zone_name || v.zone || '').toLowerCase().includes(q) ||
+        (v.area || v.areaName || v.area_name || '').toLowerCase().includes(q)
       );
     }
     return true;
@@ -292,10 +292,10 @@ const FPVendors = ({ user }) => {
                       {vendor.ownerName || vendor.owner_name || '-'}
                     </td>
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                      {vendor.zone || '-'}
+                      {vendor.zone_name || vendor.zone || '-'}
                     </td>
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                      {vendor.areaName || vendor.area_name || '-'}
+                      {vendor.area || vendor.areaName || vendor.area_name || '-'}
                     </td>
                     {/* Rate/Coverage data - Hidden for FP Manager */}
                     {!isFPManager && (
@@ -409,9 +409,12 @@ const FPVendors = ({ user }) => {
       {/* Edit Vendor Modal */}
       {editVendor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditVendor(null)}>
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Modify Vendor</h2>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Modify Vendor</h2>
+                <p className="text-sm text-gray-500">{editVendor.vendor_id || editVendor.vendorId}</p>
+              </div>
               <button onClick={() => setEditVendor(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
@@ -428,10 +431,21 @@ const FPVendors = ({ user }) => {
                       'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                      companyName: formData.get('companyName'),
-                      contactPerson: formData.get('contactPerson'),
-                      email: formData.get('email'),
-                      phone: formData.get('phone')
+                      service_type: formData.get('serviceType'),
+                      zone_name: formData.get('zone'),
+                      area: formData.get('area'),
+                      rate_per_visit: parseFloat(formData.get('ratePerVisit')) || 0,
+                      coverage_per_day: parseInt(formData.get('coveragePerDay')) || 0,
+                      owner_name: formData.get('ownerName'),
+                      owner_mobile: formData.get('ownerMobile'),
+                      owner_email: formData.get('ownerEmail'),
+                      owner_aadhar: formData.get('ownerAadhar'),
+                      manager_name: formData.get('managerName'),
+                      manager_mobile: formData.get('managerMobile'),
+                      manager_email: formData.get('managerEmail'),
+                      poc_name: formData.get('pocName'),
+                      poc_mobile: formData.get('pocMobile'),
+                      poc_email: formData.get('pocEmail')
                     })
                   });
                   const result = await response.json();
@@ -446,55 +460,108 @@ const FPVendors = ({ user }) => {
                   showToastMessage('Failed to update vendor', 'error');
                 }
               }}
-              className="p-6 space-y-4"
+              className="p-6 space-y-6"
             >
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                  <input
-                    name="companyName"
-                    defaultValue={editVendor.company_name || editVendor.companyName}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-                  <input
-                    name="contactPerson"
-                    defaultValue={editVendor.contact_person || editVendor.contactPerson || editVendor.ownerName || editVendor.owner_name}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    name="email"
-                    type="email"
-                    defaultValue={editVendor.email || editVendor.ownerEmail || editVendor.owner_email}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                  <input
-                    name="phone"
-                    defaultValue={editVendor.phone || editVendor.ownerMobile || editVendor.owner_mobile}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
-                  />
+              {/* Service & Location */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Service & Location</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Service Type</label>
+                    <input name="serviceType" defaultValue={editVendor.service_type || editVendor.serviceType} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Zone</label>
+                    <input name="zone" defaultValue={editVendor.zone_name || editVendor.zone} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Area</label>
+                    <input name="area" defaultValue={editVendor.area || editVendor.areaName || editVendor.area_name} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
                 </div>
               </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setEditVendor(null)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
+
+              {/* Rate & Coverage */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate & Coverage</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Rate Per Visit (₹)</label>
+                    <input name="ratePerVisit" type="number" defaultValue={editVendor.rate_per_visit || editVendor.ratePerVisit || 0} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Coverage Per Day</label>
+                    <input name="coveragePerDay" type="number" defaultValue={editVendor.coverage_per_day || editVendor.coveragePerDay || 0} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Owner Details */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Owner Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                    <input name="ownerName" defaultValue={editVendor.owner_name || editVendor.ownerName || editVendor.company_name} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Mobile</label>
+                    <input name="ownerMobile" defaultValue={editVendor.owner_mobile || editVendor.ownerMobile || editVendor.phone} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                    <input name="ownerEmail" type="email" defaultValue={editVendor.owner_email || editVendor.ownerEmail || editVendor.email} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Aadhar</label>
+                    <input name="ownerAadhar" defaultValue={editVendor.owner_aadhar || editVendor.ownerAadhar} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Manager Details */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Manager / Primary Contact</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                    <input name="managerName" defaultValue={editVendor.manager_name || editVendor.managerName} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Mobile</label>
+                    <input name="managerMobile" defaultValue={editVendor.manager_mobile || editVendor.managerMobile} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                    <input name="managerEmail" type="email" defaultValue={editVendor.manager_email || editVendor.managerEmail} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* POC Details */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Point of Contact</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                    <input name="pocName" defaultValue={editVendor.poc_name || editVendor.pocName} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Mobile</label>
+                    <input name="pocMobile" defaultValue={editVendor.poc_mobile || editVendor.pocMobile} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                    <input name="pocEmail" type="email" defaultValue={editVendor.poc_email || editVendor.pocEmail} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <button type="button" onClick={() => setEditVendor(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
-                >
+                <button type="submit" className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors">
                   <Save className="w-4 h-4" />
                   Save Changes
                 </button>
@@ -539,11 +606,11 @@ const FPVendors = ({ user }) => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500">Zone</p>
-                    <p className="font-medium">{viewVendor.zone || '-'}</p>
+                    <p className="font-medium">{viewVendor.zone_name || viewVendor.zone || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Area</p>
-                    <p className="font-medium">{viewVendor.areaName || viewVendor.area_name || '-'}</p>
+                    <p className="font-medium">{viewVendor.area || viewVendor.areaName || viewVendor.area_name || '-'}</p>
                   </div>
                 </div>
               </div>
@@ -565,17 +632,81 @@ const FPVendors = ({ user }) => {
                 </div>
               )}
 
-              {/* Contact Info */}
+              {/* Owner Details */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Contact Information</h3>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Owner Details</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-gray-500">Owner Email</p>
+                    <p className="text-xs text-gray-500">Name</p>
+                    <p className="font-medium">{viewVendor.ownerName || viewVendor.owner_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Mobile</p>
+                    <p className="font-medium">{viewVendor.owner_country_code || '+91'} {viewVendor.ownerMobile || viewVendor.owner_mobile || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
                     <p className="font-medium">{viewVendor.ownerEmail || viewVendor.owner_email || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Owner Mobile</p>
-                    <p className="font-medium">{viewVendor.ownerMobile || viewVendor.owner_mobile || '-'}</p>
+                    <p className="text-xs text-gray-500">Aadhar</p>
+                    <p className="font-medium">{viewVendor.ownerAadhar || viewVendor.owner_aadhar || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Manager Details */}
+              {(viewVendor.managerName || viewVendor.manager_name || viewVendor.managerMobile || viewVendor.manager_mobile) && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Manager / Primary Contact</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Name</p>
+                      <p className="font-medium">{viewVendor.managerName || viewVendor.manager_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Mobile</p>
+                      <p className="font-medium">{viewVendor.manager_country_code || '+91'} {viewVendor.managerMobile || viewVendor.manager_mobile || '-'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="font-medium">{viewVendor.managerEmail || viewVendor.manager_email || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* POC Details */}
+              {(viewVendor.pocName || viewVendor.poc_name || viewVendor.pocMobile || viewVendor.poc_mobile) && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Point of Contact</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Name</p>
+                      <p className="font-medium">{viewVendor.pocName || viewVendor.poc_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Mobile</p>
+                      <p className="font-medium">{viewVendor.poc_country_code || '+91'} {viewVendor.pocMobile || viewVendor.poc_mobile || '-'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="font-medium">{viewVendor.pocEmail || viewVendor.poc_email || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Created Info */}
+              <div className="pt-4 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-gray-400">Created By</p>
+                    <p className="text-gray-600">{viewVendor.created_by_name || viewVendor.createdBy || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Created At</p>
+                    <p className="text-gray-600">{viewVendor.created_at ? new Date(viewVendor.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</p>
                   </div>
                 </div>
               </div>
