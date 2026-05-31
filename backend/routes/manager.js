@@ -718,6 +718,8 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
     const scopeId = getScopeId(req);
     const scopeColumn = getScopeColumn(req);
     
+    console.log('Manager Vendors Query:', { scopeId, scopeColumn, isFPManager: req.isFPManager, franchisePartnerId: req.franchisePartnerId, managerId: req.managerId });
+    
     // Get vendors scoped to FP or Manager with creator name
     const [vendors] = await pool.execute(
       `SELECT v.*, 'own' as vendor_type,
@@ -727,6 +729,8 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
        WHERE v.${scopeColumn} = ?`,
       [scopeId]
     );
+    
+    console.log('Vendors found:', vendors.length);
 
     res.json({
       success: true,
