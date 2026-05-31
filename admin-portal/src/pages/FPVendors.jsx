@@ -309,7 +309,7 @@ const FPVendors = ({ user }) => {
                       </>
                     )}
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                      {vendor.createdBy || 'Manager'}
+                      {vendor.created_by_name || vendor.createdBy || '-'}
                     </td>
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                       {formatDate(vendor.createdAt || vendor.created_at)}
