@@ -2680,6 +2680,22 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       address: address || ''
     });
 
+    // Resolve property_id to numeric ID if it's a string (property code)
+    let resolvedPropertyId = null;
+    const propIdValue = property_id || propertyId;
+    if (propIdValue) {
+      if (!isNaN(propIdValue)) {
+        resolvedPropertyId = parseInt(propIdValue);
+      } else {
+        // It's a property code string, try to look it up
+        const [[prop]] = await pool.execute(
+          'SELECT id FROM properties WHERE property_id = ? LIMIT 1',
+          [propIdValue]
+        );
+        resolvedPropertyId = prop?.id || null;
+      }
+    }
+
     const [result] = await pool.execute(
       `INSERT INTO estimates (
         estimate_id, client_id, property_id, title, description, estimate_type,
@@ -2689,8 +2705,8 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       [
         estimateId, 
         clientId || null, 
-        property_id || propertyId || null, 
-        package_name || title || 'FP Estimate',
+        resolvedPropertyId, 
+        client_name || package_name || title || 'FP Estimate',
         description ? `${description}\n\n[SERVICES_DATA]${servicesData}` : `[SERVICES_DATA]${servicesData}`,
         estimate_type || estimateType || 'property_based',
         finalSubtotal,
