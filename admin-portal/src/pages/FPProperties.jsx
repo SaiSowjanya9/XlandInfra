@@ -911,32 +911,37 @@ const FPProperties = ({ user }) => {
 
             <div className="p-6">
               {(() => {
-                // Filter vendors by property zone
+                // Filter vendors by property zone - zone is required
                 const propertyZone = (selectedProperty?.zone || selectedProperty?.zone_id || '').toString().toLowerCase().trim();
                 
-                // If property has a zone, filter vendors by that zone
-                // If property has no zone, show all vendors
+                // If property has NO zone, don't show any vendors
+                if (assignType === 'vendor' && !propertyZone) {
+                  return (
+                    <div className="text-center py-4">
+                      <p className="text-gray-500">This property has no zone assigned</p>
+                      <p className="text-xs text-gray-400 mt-1">Please assign a zone to this property first to see matching vendors</p>
+                    </div>
+                  );
+                }
+                
+                // Filter vendors by matching zone only
                 const zoneFilteredVendors = assignType === 'vendor' 
-                  ? (propertyZone 
-                      ? vendors.filter(v => {
-                          const vendorZone = (v.zone || v.zone_name || v.zone_id || '').toString().toLowerCase().trim();
-                          if (!vendorZone) return false;
-                          // Match zone - check if zones contain each other (handles "Zone 43" vs "43")
-                          return vendorZone.includes(propertyZone) || 
-                                 propertyZone.includes(vendorZone) ||
-                                 vendorZone.replace('zone', '').trim() === propertyZone.replace('zone', '').trim();
-                        })
-                      : vendors) // No property zone = show all vendors
+                  ? vendors.filter(v => {
+                      const vendorZone = (v.zone || v.zone_name || v.zone_id || '').toString().toLowerCase().trim();
+                      if (!vendorZone) return false;
+                      // Match zone - check if zones contain each other (handles "Zone 43" vs "43")
+                      return vendorZone.includes(propertyZone) || 
+                             propertyZone.includes(vendorZone) ||
+                             vendorZone.replace('zone', '').trim() === propertyZone.replace('zone', '').trim();
+                    })
                   : employees;
                 
                 return zoneFilteredVendors.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-gray-500">
-                      No {assignType === 'vendor' ? 'vendors' : 'employees'} available {assignType === 'vendor' && propertyZone ? `for Zone ${selectedProperty?.zone || selectedProperty?.zone_id}` : ''}
+                      No {assignType === 'vendor' ? 'vendors' : 'employees'} available for Zone {selectedProperty?.zone || selectedProperty?.zone_id}
                     </p>
-                    {assignType === 'vendor' && propertyZone && (
-                      <p className="text-xs text-gray-400 mt-1">Add vendors with matching zone to assign them to this property</p>
-                    )}
+                    <p className="text-xs text-gray-400 mt-1">Add vendors with matching zone to assign them to this property</p>
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
