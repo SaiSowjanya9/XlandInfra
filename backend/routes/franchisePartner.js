@@ -2657,8 +2657,16 @@ router.post('/estimates', requireFPScope, async (req, res) => {
 
     const estimateId = `EST-${Date.now()}${Math.floor(Math.random() * 1000)}`;
     
+    // Ensure title is never empty (required field)
+    const estimateTitle = client_name || package_name || title || property_name || 'FP Estimate';
+    
+    // Ensure created_by has a value
+    const createdBy = req.user?.id || req.userId || 1;
+    
+    console.log('Creating estimate:', { estimateId, client_name, package_name, createdBy, fpId: req.fpId });
+    
     // Calculate amounts based on which format is used
-    let finalSubtotal = subtotal || 0;
+    let finalSubtotal = parseFloat(subtotal) || 0;
     let finalGstPercent = gst_percent || taxPercentage || 18;
     let finalGstAmount = gst_amount || ((finalSubtotal * finalGstPercent) / 100);
     let finalDiscountPercent = discount_percent || discountPercentage || 0;
@@ -2709,21 +2717,22 @@ router.post('/estimates', requireFPScope, async (req, res) => {
           estimateId, 
           clientId || null, 
           resolvedPropertyId, 
-          client_name || package_name || title || 'FP Estimate',
+          estimateTitle,
           description ? `${description}\n\n[SERVICES_DATA]${servicesData}` : `[SERVICES_DATA]${servicesData}`,
           estimate_type || estimateType || 'property_based',
           finalSubtotal,
-          finalGstPercent,
-          finalGstAmount,
-          finalDiscountPercent,
-          finalDiscountAmount,
-          finalTotal,
+          parseFloat(finalGstPercent) || 18,
+          parseFloat(finalGstAmount) || 0,
+          parseFloat(finalDiscountPercent) || 0,
+          parseFloat(finalDiscountAmount) || 0,
+          parseFloat(finalTotal) || 0,
           validUntil || null, 
           req.fpId, 
-          req.user.id
+          createdBy
         ]
       );
     } catch (insertErr) {
+      console.error('Insert error with franchise_partner_id:', insertErr.message);
       // Fallback: try without franchise_partner_id if column doesn't exist
       if (insertErr.code === 'ER_BAD_FIELD_ERROR') {
         [result] = await pool.execute(
@@ -2736,17 +2745,17 @@ router.post('/estimates', requireFPScope, async (req, res) => {
             estimateId, 
             clientId || null, 
             resolvedPropertyId, 
-            client_name || package_name || title || 'FP Estimate',
+            estimateTitle,
             description ? `${description}\n\n[SERVICES_DATA]${servicesData}` : `[SERVICES_DATA]${servicesData}`,
             estimate_type || estimateType || 'property_based',
             finalSubtotal,
-            finalGstPercent,
-            finalGstAmount,
-            finalDiscountPercent,
-            finalDiscountAmount,
-            finalTotal,
+            parseFloat(finalGstPercent) || 18,
+            parseFloat(finalGstAmount) || 0,
+            parseFloat(finalDiscountPercent) || 0,
+            parseFloat(finalDiscountAmount) || 0,
+            parseFloat(finalTotal) || 0,
             validUntil || null, 
-            req.user.id
+            createdBy
           ]
         );
       } else {
