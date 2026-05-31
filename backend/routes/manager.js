@@ -744,22 +744,40 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
 // Create vendor - dual-tag with manager_id AND franchise_partner_id
 router.post('/vendors', requireManagerScope, async (req, res) => {
   try {
-    const { companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber } = req.body;
+    const { 
+      serviceType, zone, areaName,
+      ownerName, ownerMobile, ownerEmail, ownerAadhar, ownerCountryCode,
+      managerName, managerMobile, managerEmail, managerCountryCode,
+      pocName, pocMobile, pocEmail, pocCountryCode,
+      ratePerVisit, coveragePerDay, createdBy
+    } = req.body;
     
-    const vendorId = `VND-MGR-${Date.now()}`;
+    const vendorId = `FP2-VND-${Date.now()}`;
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId || null;
     
     const [result] = await pool.execute(
-      `INSERT INTO vendors (vendor_id, company_name, contact_person, email, phone, alternate_phone, 
-        address, city, state, zip_code, gst_number, pan_number, manager_id, franchise_partner_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [vendorId, companyName, contactPerson, email, phone, alternatePhone, address, city, state, 
-       zipCode, gstNumber, panNumber, managerId, franchisePartnerId]
+      `INSERT INTO vendors (
+        vendor_id, service_type, zone, area, 
+        owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
+        manager_name, manager_mobile, manager_email, manager_country_code,
+        poc_name, poc_mobile, poc_email, poc_country_code,
+        rate_per_visit, coverage_per_day, created_by,
+        manager_id, franchise_partner_id, is_active, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
+      [
+        vendorId, serviceType, zone, areaName,
+        ownerName, ownerMobile, ownerEmail, ownerAadhar, ownerCountryCode || '+91',
+        managerName || null, managerMobile || null, managerEmail || null, managerCountryCode || '+91',
+        pocName || null, pocMobile || null, pocEmail || null, pocCountryCode || '+91',
+        parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0, createdBy,
+        managerId, franchisePartnerId
+      ]
     );
 
     res.json({ success: true, message: 'Vendor created', data: { id: result.insertId, vendorId } });
   } catch (error) {
+    console.error('Create vendor error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
