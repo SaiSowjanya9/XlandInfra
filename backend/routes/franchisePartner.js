@@ -2732,12 +2732,14 @@ router.get('/estimates', requireFPScope, async (req, res) => {
 router.post('/estimates', requireFPScope, async (req, res) => {
   try {
     const {
-      estimate_type, property_id, client_name, client_phone, client_email,
+      estimate_type, property_id, property_code, client_name, client_phone, client_email,
       property_type, property_name, zone, division, city, address,
       package_id, package_name, package_price,
       addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
       description
     } = req.body;
+    
+    console.log('Creating estimate with division:', division, 'property_code:', property_code);
 
     // Ensure fp_estimates table exists
     await pool.execute(`
@@ -2834,9 +2836,9 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         created_by_id, created_by_name, created_by_role
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
       [
-        estimateId, req.fpId, null, estimate_type || 'property_based',
+        estimateId, req.fpId, property_id || null, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
-        property_name || '', property_id || '', property_type || '', zone || '', division || '', city || '', address || '',
+        property_name || '', property_code || '', property_type || '', zone || '', division || '', city || '', address || '',
         package_id || null, package_name || '', parseFloat(package_price) || 0,
         finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,
         addonsJson, description || '', 

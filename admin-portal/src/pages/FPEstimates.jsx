@@ -238,14 +238,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     try {
       const payload = {
         estimate_type: estimateType === 'property-based' ? 'property_based' : 'direct',
-        property_id: selectedProperty?.property_id || selectedProperty?.id || null,
+        property_id: selectedProperty?.id || null,
+        property_code: selectedProperty?.property_id || selectedProperty?.property_code || '',
         client_name: clientName,
         client_phone: clientPhone,
         client_email: selectedProperty?.contact_email || selectedProperty?.email || estimateForm.email || '',
         property_type: selectedProperty?.property_type || selectedProperty?.entry_type || estimateForm.propertyType || '',
         property_name: selectedProperty?.name || selectedProperty?.community_name || estimateForm.propertyName || '',
         zone: selectedProperty?.zone_id || selectedProperty?.zone || estimateForm.zone || '',
-        division: selectedProperty?.division || selectedProperty?.division_name || '',
+        division: selectedProperty?.division || selectedProperty?.division_id || selectedProperty?.division_name || '',
         city: selectedProperty?.city || estimateForm.city || '',
         address: selectedProperty?.address || estimateForm.address || '',
         package_id: estimateForm.selectedPackage,
