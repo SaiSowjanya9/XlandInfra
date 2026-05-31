@@ -829,7 +829,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div></div> : filteredEstimates.length === 0 ? <div className="py-16 text-center"><DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No estimates found</p><p className="text-gray-400 text-sm mt-1">Try adjusting your search or filters</p></div> : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[800px]">
+            <table className="w-full text-sm min-w-[900px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Estimate ID</th>
@@ -837,6 +837,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Client</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Date</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Total</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Created By</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Status</th>
                   <th className="px-4 py-3 text-center font-semibold text-gray-500 uppercase text-xs tracking-wider">Actions</th>
                 </tr>
@@ -862,6 +863,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </div>
                     </td>
                     <td className="px-4 py-4 font-semibold text-gray-900">{formatCurrency(est.total_amount)}</td>
+                    <td className="px-4 py-4">
+                      <div className="font-medium text-gray-900">{est.created_by_name || '-'}</div>
+                      <div className="text-xs text-gray-400 capitalize">{(est.created_by_role || '').replace(/_/g, ' ')}</div>
+                    </td>
                     <td className="px-4 py-4">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
                         {est.status || 'Draft'}
