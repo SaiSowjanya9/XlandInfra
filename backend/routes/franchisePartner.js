@@ -1255,6 +1255,43 @@ router.delete('/vendors/:id', requireFPScope, async (req, res) => {
   }
 });
 
+// Restore vendor (set is_active back to 1)
+router.put('/vendors/:id/restore', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verify vendor belongs to this FP
+    const [existing] = await pool.execute(
+      'SELECT id FROM vendors WHERE id = ? AND franchise_partner_id = ?',
+      [id, req.fpId]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found or access denied'
+      });
+    }
+
+    await pool.execute(
+      `UPDATE vendors SET is_active = 1, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Vendor restored successfully'
+    });
+  } catch (error) {
+    console.error('Restore vendor error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to restore vendor',
+      error: error.message
+    });
+  }
+});
+
 // ============================================
 // EMPLOYEE MANAGEMENT
 // ============================================
