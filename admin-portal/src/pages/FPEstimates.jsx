@@ -740,12 +740,18 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               </button>
                               <button 
                                 onClick={() => {
+                                  // Debug: log what's in serviceRows
+                                  console.log('[PDF Export] Raw serviceRows:', serviceRows);
+                                  console.log('[PDF Export] First service:', serviceRows?.[0]);
                                   // Map service fields to PDF expected format
-                                  const mappedServices = Array.isArray(serviceRows) ? serviceRows.map(s => ({
-                                    name: s.name || s.service || 'Service',
-                                    frequencyCount: s.frequency_count || s.frequencyCount || 1,
-                                    frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
-                                  })) : [];
+                                  const mappedServices = Array.isArray(serviceRows) ? serviceRows.map(s => {
+                                    console.log('[PDF Export] Mapping service:', s);
+                                    return {
+                                      name: s.name || s.service || 'Service',
+                                      frequencyCount: s.frequency_count || s.frequencyCount || 1,
+                                      frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
+                                    };
+                                  }) : [];
                                   const pdfData = {
                                     id: pkg.id,
                                     packageId: pkg.package_code || `PKG-${pkg.id}`,
