@@ -76,19 +76,21 @@ const ManagerProperties = ({ user }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [propRes, zoneRes, vendRes, empRes] = await Promise.all([
+      const [propRes, zoneRes, divRes, vendRes, empRes] = await Promise.all([
         fetch('/api/manager/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/manager/zones', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/manager/divisions', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/manager/vendors', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/manager/employees', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
-      const [propData, zoneData, vendData, empData] = await Promise.all([
-        propRes.json(), zoneRes.json(), vendRes.json(), empRes.json()
+      const [propData, zoneData, divData, vendData, empData] = await Promise.all([
+        propRes.json(), zoneRes.json(), divRes.json(), vendRes.json(), empRes.json()
       ]);
 
       if (propData.success) setProperties(propData.data);
       if (zoneData.success) setZones(zoneData.data);
+      if (divData.success) setDivisions(divData.data);
       if (vendData.success) setVendors(vendData.data.all || []);
       if (empData.success) setEmployees(empData.data);
     } catch (error) {
@@ -719,12 +721,12 @@ const ManagerProperties = ({ user }) => {
 
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Zone</p>
-                  <p className="text-gray-900">{viewingProperty.zone_name || viewingProperty.zone || '-'}</p>
+                  <p className="text-gray-900">{viewingProperty.zone_name || zones.find(z => z.id === viewingProperty.zone_id)?.name || viewingProperty.zone || '-'}</p>
                 </div>
 
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Division</p>
-                  <p className="text-gray-900">{viewingProperty.division_name || viewingProperty.division || '-'}</p>
+                  <p className="text-gray-900">{viewingProperty.division_name || divisions.find(d => d.id === viewingProperty.division_id)?.name || viewingProperty.division || '-'}</p>
                 </div>
 
                 <div className="md:col-span-2">

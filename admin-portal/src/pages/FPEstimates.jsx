@@ -118,8 +118,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   const calculatePricing = () => {
-    const pkgPrice = amcPackages.find(p => p.id === estimateForm.selectedPackage)?.price || 0;
-    const addonsPrice = estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id === id)?.price || 0), 0);
+    const pkgPrice = amcPackages.find(p => p.id == estimateForm.selectedPackage)?.price || 0;
+    const addonsPrice = estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0);
     const subtotal = pkgPrice + addonsPrice;
     const discountAmt = (subtotal * estimateForm.discount) / 100;
     const gstAmt = ((subtotal - discountAmt) * estimateForm.gst) / 100;
@@ -129,7 +129,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // Get selected package details with services
   const getSelectedPackage = () => {
     if (!estimateForm.selectedPackage) return null;
-    const pkg = amcPackages.find(p => p.id === estimateForm.selectedPackage);
+    const pkgId = estimateForm.selectedPackage;
+    const pkg = amcPackages.find(p => p.id == pkgId || p.id === parseInt(pkgId));
     if (!pkg) return null;
     let services = pkg.services;
     if (typeof services === 'string') { try { services = JSON.parse(services); } catch(e) { services = {}; } }
@@ -424,50 +425,50 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </select>
               </div>
 
-              {/* Additional Services (Add-ons) Table */}
-              <div className="border border-blue-200 rounded-xl overflow-hidden">
-                <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
-                  <span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span>
+              {/* Additional Services (Add-ons) Table - Only show when add-ons selected */}
+              {estimateForm.selectedAddons.length > 0 && (
+                <div className="border border-blue-200 rounded-xl overflow-hidden">
+                  <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
+                    <span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-blue-100 bg-white">
+                        <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th>
+                        <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th>
+                        <th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th>
+                        <th className="px-5 py-2.5 text-right text-xs font-semibold text-blue-600 uppercase">Price</th>
+                        <th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {estimateForm.selectedAddons.map(id => {
+                        const addon = addons.find(a => a.id == id || a.id === parseInt(id));
+                        if (!addon) return null;
+                        const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
+                        return (
+                          <tr key={id}>
+                            <td className="px-5 py-2.5 text-gray-800">{addon.service_name}</td>
+                            <td className="px-5 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
+                            <td className="px-5 py-2.5 text-center text-gray-600">{visits}</td>
+                            <td className="px-5 py-2.5 text-right text-gray-800">{formatCurrency(addon.price)}</td>
+                            <td className="px-5 py-2.5 text-center">
+                              <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter(a => a !== id)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-blue-50 border-t border-blue-200">
+                      <tr>
+                        <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons</td>
+                        <td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-blue-100 bg-white">
-                      <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th>
-                      <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th>
-                      <th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th>
-                      <th className="px-5 py-2.5 text-right text-xs font-semibold text-blue-600 uppercase">Price</th>
-                      <th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
-                    {estimateForm.selectedAddons.length === 0 ? (
-                      <tr><td colSpan={5} className="px-5 py-4 text-center text-gray-400 text-sm">No add-ons selected</td></tr>
-                    ) : estimateForm.selectedAddons.map(id => {
-                      const addon = addons.find(a => a.id === id);
-                      if (!addon) return null;
-                      const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
-                      return (
-                        <tr key={id}>
-                          <td className="px-5 py-2.5 text-gray-800">{addon.service_name}</td>
-                          <td className="px-5 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
-                          <td className="px-5 py-2.5 text-center text-gray-600">{visits}</td>
-                          <td className="px-5 py-2.5 text-right text-gray-800">{formatCurrency(addon.price)}</td>
-                          <td className="px-5 py-2.5 text-center">
-                            <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter(a => a !== id)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot className="bg-blue-50 border-t border-blue-200">
-                    <tr>
-                      <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons</td>
-                      <td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id === id)?.price || 0), 0))}</td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+              )}
 
               {/* Description / Notes */}
               <div className="pt-2">
@@ -677,50 +678,50 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </select>
               </div>
 
-              {/* Additional Services (Add-ons) Table */}
-              <div className="border border-blue-200 rounded-xl overflow-hidden">
-                <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
-                  <span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span>
+              {/* Additional Services (Add-ons) Table - Only show when add-ons selected */}
+              {estimateForm.selectedAddons.length > 0 && (
+                <div className="border border-blue-200 rounded-xl overflow-hidden">
+                  <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
+                    <span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-blue-100 bg-white">
+                        <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th>
+                        <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th>
+                        <th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th>
+                        <th className="px-5 py-2.5 text-right text-xs font-semibold text-blue-600 uppercase">Price</th>
+                        <th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {estimateForm.selectedAddons.map(id => {
+                        const addon = addons.find(a => a.id == id || a.id === parseInt(id));
+                        if (!addon) return null;
+                        const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
+                        return (
+                          <tr key={id}>
+                            <td className="px-5 py-2.5 text-gray-800">{addon.service_name}</td>
+                            <td className="px-5 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
+                            <td className="px-5 py-2.5 text-center text-gray-600">{visits}</td>
+                            <td className="px-5 py-2.5 text-right text-gray-800">{formatCurrency(addon.price)}</td>
+                            <td className="px-5 py-2.5 text-center">
+                              <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter(a => a !== id)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-blue-50 border-t border-blue-200">
+                      <tr>
+                        <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons</td>
+                        <td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-blue-100 bg-white">
-                      <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th>
-                      <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th>
-                      <th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th>
-                      <th className="px-5 py-2.5 text-right text-xs font-semibold text-blue-600 uppercase">Price</th>
-                      <th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
-                    {estimateForm.selectedAddons.length === 0 ? (
-                      <tr><td colSpan={5} className="px-5 py-4 text-center text-gray-400 text-sm">No add-ons selected</td></tr>
-                    ) : estimateForm.selectedAddons.map(id => {
-                      const addon = addons.find(a => a.id === id);
-                      if (!addon) return null;
-                      const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
-                      return (
-                        <tr key={id}>
-                          <td className="px-5 py-2.5 text-gray-800">{addon.service_name}</td>
-                          <td className="px-5 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
-                          <td className="px-5 py-2.5 text-center text-gray-600">{visits}</td>
-                          <td className="px-5 py-2.5 text-right text-gray-800">{formatCurrency(addon.price)}</td>
-                          <td className="px-5 py-2.5 text-center">
-                            <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter(a => a !== id)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot className="bg-blue-50 border-t border-blue-200">
-                    <tr>
-                      <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons</td>
-                      <td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id === id)?.price || 0), 0))}</td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+              )}
 
               {/* Description / Notes */}
               <div className="pt-2">
