@@ -349,128 +349,100 @@ const AssignedVendors = ({ user }) => {
         </div>
       </div>
 
-      {/* Vendor Assignments - Zone Management Style Card Grid */}
-      <div className="space-y-6">
-          {Object.keys(groupedByProperty).length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 py-16 text-center">
-              <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">No service vendor assignments found</p>
-              <p className="text-gray-400 text-sm mt-1">
-                {serviceAssignments.length === 0
-                  ? 'Assign vendors to services from Property Management → Assign Vendors.'
-                  : 'Try adjusting your search or filters.'
-                }
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Object.values(groupedByProperty).map((group) => (
-                <div
-                  key={group.propertyId}
-                  className="bg-white rounded-xl border border-gray-200 p-5 transition-all hover:shadow-md hover:border-amber-200"
-                >
-                  {/* Property Card Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                        <Building2 className="w-5 h-5 text-amber-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 line-clamp-1">{group.propertyName || 'Property'}</h3>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <MapPin className="w-3 h-3 text-gray-400" />
-                          <span className="text-xs text-gray-500">{group.propertyZone || 'No Zone'}</span>
+      {/* Vendor Assignments Table - Same style as Vendor Details */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {filteredServiceAssignments.length === 0 ? (
+          <div className="py-16 text-center">
+            <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 font-medium">No service vendor assignments found</p>
+            <p className="text-gray-400 text-sm mt-1">
+              {serviceAssignments.length === 0
+                ? 'Assign vendors to services from Property Management → Assign Vendors.'
+                : 'Try adjusting your search or filters.'
+              }
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor ID</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Service Type</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Rate/Visit</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Assigned</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredServiceAssignments.map((assignment) => (
+                    <tr key={assignment.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-4 px-4">
+                        <span className="text-sm font-mono text-blue-600">{assignment.vendorId || '-'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                          {assignment.serviceType || '-'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm font-medium text-gray-900">{assignment.vendorName || '-'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-600">{assignment.zone_name || assignment.propertyZone || '-'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-600">{assignment.area || '-'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-900">₹{assignment.rate_per_visit || '0.00'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-900">{assignment.coverage_per_day || '0'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-600">{assignment.propertyName || '-'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-600">
+                          {assignment.assignedDate ? new Date(assignment.assignedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                          assignment.status === 'active' ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-100'
+                        }`}>
+                          {assignment.status === 'active' ? 'Active' : 'Removed'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center justify-end">
+                          <button
+                            onClick={() => setViewAssignment(assignment)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
                         </div>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
-                      Active
-                    </span>
-                  </div>
-
-                  {/* Property Stats */}
-                  <div className="space-y-2 text-sm text-gray-600 mb-4">
-                    <div className="flex items-center justify-between">
-                      <span>Services:</span>
-                      <span className="font-medium text-amber-600">{group.assignments.length} assigned</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Property ID:</span>
-                      <span className="font-mono text-xs text-gray-500">{group.propertyId}</span>
-                    </div>
-                  </div>
-
-                  {/* Vendor Assignments List */}
-                  <div className="border-t border-gray-100 pt-3 mb-3">
-                    <p className="text-xs font-medium text-gray-500 uppercase mb-2">Assigned Vendors</p>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {group.assignments.map((assignment) => (
-                        <div 
-                          key={assignment.id} 
-                          className="flex items-center justify-between p-2 bg-gray-50 rounded-lg group hover:bg-amber-50 transition-colors"
-                        >
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                              <Truck className="w-3 h-3 text-amber-600" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-medium text-gray-900 truncate">{assignment.vendorName || 'Unassigned'}</p>
-                              <p className="text-xs text-gray-500 truncate">{assignment.serviceType}</p>
-                            </div>
-                          </div>
-                          {/* Edit/Remove buttons - Hidden for FP Manager */}
-                          {!isFPManager && (
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => setEditModalData(assignment)}
-                                className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-100 rounded transition-colors"
-                                title="Edit assignment"
-                              >
-                                <Edit className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setRemoveConfirm({ ...assignment, type: 'service' })}
-                                className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded transition-colors"
-                                title="Remove assignment"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Card Actions - Modify hidden for FP Manager */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                    <button
-                      onClick={() => setViewAssignment(group.assignments[0])}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                      View Details
-                    </button>
-                    {!isFPManager && (
-                      <button
-                        onClick={() => setEditModalData(group.assignments[0])}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Modify
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-
-          {filteredServiceAssignments.length > 0 && (
-            <div className="text-xs text-gray-500 text-center">
-              Showing {filteredServiceAssignments.length} service assignments across {Object.keys(groupedByProperty).length} properties
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-500">
+              Showing {filteredServiceAssignments.length} of {serviceAssignments.length} assignments
             </div>
-          )}
+          </>
+        )}
       </div>
 
       {/* View Assignment Modal */}
