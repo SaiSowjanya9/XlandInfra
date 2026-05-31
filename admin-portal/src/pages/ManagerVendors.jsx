@@ -4,17 +4,11 @@ import {
   Store,
   Plus,
   Search,
-  Edit,
-  Trash2,
-  Download,
   RefreshCw,
   X,
   Save,
   AlertCircle,
   CheckCircle,
-  Phone,
-  Mail,
-  MapPin,
   Eye,
   Truck,
   Wrench,
@@ -371,80 +365,92 @@ const ManagerVendors = ({ user }) => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Location</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor ID</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Service Type</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Rate/Visit</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredVendors.map((vendor) => (
-                  <tr key={vendor.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-4 px-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{vendor.company_name}</p>
-                        <p className="text-sm text-gray-500">{vendor.vendor_id}</p>
-                        {vendor.contact_person && (
-                          <p className="text-sm text-gray-400">{vendor.contact_person}</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        vendor.vendor_type === 'own' 
-                          ? 'bg-purple-100 text-purple-700' 
-                          : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {vendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="space-y-1">
-                        {vendor.phone && (
-                          <p className="text-sm text-gray-600 flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {vendor.phone}
-                          </p>
-                        )}
-                        {vendor.email && (
-                          <p className="text-sm text-gray-400 flex items-center gap-1">
-                            <Mail className="w-3 h-3" /> {vendor.email}
-                          </p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-start gap-1">
-                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-gray-600">
-                          {vendor.city ? `${vendor.city}, ${vendor.state || ''}` : '-'}
+                {filteredVendors.map((vendor) => {
+                  const getServiceTypeBadge = (type) => {
+                    const serviceColors = {
+                      'plumbing': 'bg-blue-100 text-blue-700',
+                      'electrical': 'bg-yellow-100 text-yellow-700',
+                      'hvac': 'bg-orange-100 text-orange-700',
+                      'cleaning': 'bg-green-100 text-green-700',
+                      'security': 'bg-purple-100 text-purple-700'
+                    };
+                    return serviceColors[type?.toLowerCase()] || 'bg-gray-100 text-gray-700';
+                  };
+                  
+                  return (
+                    <tr key={vendor.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-4 px-4">
+                        <span className="text-sm font-medium text-blue-600">{vendor.vendor_id || '-'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`inline-block px-2.5 py-1 rounded text-xs font-medium ${getServiceTypeBadge(vendor.service_type)}`}>
+                          {vendor.service_type || '-'}
                         </span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        vendor.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {vendor.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center justify-end">
-                        {/* View Details */}
-                        <button
-                          onClick={() => { setSelectedVendor(vendor); setShowViewModal(true); }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-900">{vendor.owner_name || vendor.contact_person || vendor.company_name || '-'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-600">{vendor.zone_name || vendor.zone || '-'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-600">{vendor.area || vendor.area_name || '-'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-900">₹{vendor.rate_per_visit || '0.00'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-900">{vendor.coverage_per_day || '0'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-600">{vendor.created_by || '-'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-gray-600">
+                          {vendor.created_at ? new Date(vendor.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                          vendor.is_active !== false ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {vendor.is_active !== false ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center justify-end">
+                          <button
+                            onClick={() => { setSelectedVendor(vendor); setShowViewModal(true); }}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+            {/* Pagination info */}
+            <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+              Showing {filteredVendors.length} of {getVendorList().length} vendors
+            </div>
           </div>
         )}
       </div>
@@ -734,6 +740,10 @@ const ManagerVendors = ({ user }) => {
               {/* Created Info */}
               <div className="pt-4 border-t border-gray-100">
                 <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-gray-400">Created By</p>
+                    <p className="text-gray-600">{selectedVendor.created_by || '-'}</p>
+                  </div>
                   <div>
                     <p className="text-xs text-gray-400">Created At</p>
                     <p className="text-gray-600">{selectedVendor.created_at ? new Date(selectedVendor.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</p>

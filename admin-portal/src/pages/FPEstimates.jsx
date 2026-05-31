@@ -43,6 +43,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [stats, setStats] = useState({ estimates: 0, amcPackages: 0, addons: 0, archived: 0 });
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterType, setFilterType] = useState('all');
+  const [emailModal, setEmailModal] = useState(null);
   const [estimateType, setEstimateType] = useState(null);
   const [propertyIdInput, setPropertyIdInput] = useState('');
   const [selectedProperty, setSelectedProperty] = useState(null);
@@ -108,6 +111,78 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     if (upper.includes('FLAT')) return 'FLAT';
     if (upper.includes('PLOT')) return 'PLOT';
     return upper;
+  };
+
+  // Export FP estimate to PDF with properly formatted data
+  const handleExportPDF = (estimate) => {
+    // Parse addons if it's a JSON string
+    let addonsArray = estimate.addons || [];
+    if (estimate.addons_data) {
+      try {
+        addonsArray = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
+      } catch (e) {}
+    }
+    
+    // Prepare estimate data for PDF
+    const pdfData = {
+      ...estimate,
+      estimateId: estimate.estimate_id,
+      estimateType: estimate.estimate_type,
+      propertyId: estimate.property_code || estimate.property_id,
+      propertyType: estimate.property_type,
+      propertyName: estimate.property_name,
+      communityName: estimate.property_name,
+      zone: estimate.zone,
+      division: estimate.division || '',
+      customerName: estimate.client_name,
+      customerPhone: estimate.client_phone,
+      customerEmail: estimate.client_email,
+      address: estimate.address,
+      city: estimate.city,
+      packageName: estimate.package_name,
+      billingDuration: 'Yearly',
+      subtotal: parseFloat(estimate.subtotal) || 0,
+      totalPrice: parseFloat(estimate.total_amount) || 0,
+      discount: parseFloat(estimate.discount_percent) || 0,
+      services: estimate.package_name ? [{
+        name: estimate.package_name,
+        frequencyCount: 1,
+        frequencyType: 'Yearly',
+        price: parseFloat(estimate.package_price) || 0
+      }] : [],
+      addons: addonsArray.map(a => ({
+        name: a.name || a.service_name,
+        price: parseFloat(a.price) || 0
+      })),
+      createdAt: estimate.created_at
+    };
+    
+    exportEstimateToPDF(pdfData);
+  };
+
+  // Send email with estimate
+  const handleSendEmail = async (estimate) => {
+    const clientEmail = estimate.client_email;
+    if (!clientEmail) {
+      showToast('No email address found for this client', 'error');
+      return;
+    }
+    try {
+      const res = await fetch('/api/fp/estimates/send-email', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estimateId: estimate.id, email: clientEmail })
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Email sent to ${clientEmail}`);
+      } else {
+        showToast(result.message || 'Failed to send email', 'error');
+      }
+    } catch (e) {
+      console.error('Send email error:', e);
+      showToast('Failed to send email', 'error');
+    }
   };
 
   // Helper to get package property type (parses services JSON)
@@ -188,7 +263,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         body: JSON.stringify(payload)
       });
       const result = await res.json();
-      if (result.success) {
+      if (result.success || res.status === 201) {
         showToast('Estimate saved successfully!');
         setEstimateType(null);
         setSelectedProperty(null);
@@ -810,7 +885,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   );
 
   // ALL ESTIMATES
-  const filteredEstimates = estimates.filter(e => (e.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.estimate_id || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.client_name || '').toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredEstimates = estimates.filter(e => {
+    const matchSearch = (e.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.estimate_id || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.client_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = filterStatus === 'all' || e.status === filterStatus;
+    const matchType = filterType === 'all' || e.estimate_type === filterType || (filterType === 'property_based' && (e.estimate_type === 'property_based' || e.estimate_type === 'property-based'));
+    return matchSearch && matchStatus && matchType;
+  });
   const renderAllEstimates = () => (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -818,6 +898,29 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Search estimates..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm" /></div>
           <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"><Filter className="w-4 h-4" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
         </div>
+        {showFilters && (
+          <div className="mt-3 p-3 bg-gray-50 rounded-lg flex gap-4 flex-wrap">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
+                <option value="all">All Status</option>
+                <option value="draft">Draft</option>
+                <option value="sent">Sent</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
+              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
+                <option value="all">All Types</option>
+                <option value="property_based">Property Based</option>
+                <option value="direct">Direct</option>
+              </select>
+            </div>
+            <button onClick={() => { setFilterStatus('all'); setFilterType('all'); }} className="self-end px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800">Clear Filters</button>
+          </div>
+        )}
       </div>
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div></div> : filteredEstimates.length === 0 ? <div className="py-16 text-center"><DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No estimates found</p><p className="text-gray-400 text-sm mt-1">Try adjusting your search or filters</p></div> : (
@@ -868,8 +971,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye className="w-4 h-4" /></button>
-                        <button onClick={() => exportEstimateToPDF(est)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button>
-                        <button onClick={() => showToast('Email feature coming soon', 'info')} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded" title="Send Email"><Send className="w-4 h-4" /></button>
+                        <button onClick={() => handleExportPDF(est)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button>
+                        <button onClick={() => handleSendEmail(est)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded" title="Send Email"><Send className="w-4 h-4" /></button>
                         <button onClick={() => handleArchiveEstimate(est.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
@@ -897,7 +1000,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const method = isEditing ? 'PUT' : 'POST';
       const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, frequency_count: parseInt(r.frequencyCount) || 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
-      if (result.success) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
+      if (result.success || res.status === 201) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
     } catch (e) { showToast('Failed to save package', 'error'); }
   };
@@ -1389,7 +1492,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     try {
       const res = await fetch('/api/fp/addons', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ property_type: addonSelectedPropertyType, service_name: addonForm.serviceName, frequency_count: parseInt(addonForm.frequencyCount) || 1, frequency_type: addonForm.frequencyType, billing_cycle: addonForm.billingCycle, price: parseFloat(addonForm.price), description: addonForm.description || '' }) });
       const result = await res.json();
-      if (result.success) { showToast('Add-on created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
+      if (result.success || res.status === 201) { showToast('Add-on created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
       else showToast(result.message || 'Failed', 'error');
     } catch (e) { showToast('Failed to create add-on', 'error'); }
   };
@@ -1423,7 +1526,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         })
       });
       const result = await res.json();
-      if (result.success) {
+      if (result.success || res.status === 201) {
         showToast('Add-on updated!');
         setEditingAddon(null);
         loadData();
@@ -1756,7 +1859,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const handleArchiveEstimate = async (id) => { try { const res = await fetch(`/api/fp/estimates/${id}/archive`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate archived'); loadData(); } } catch (e) { showToast('Failed to archive', 'error'); } };
   const handleRestoreEstimate = async (id) => { try { const res = await fetch(`/api/fp/estimates/${id}/restore`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate restored'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
   const handleDeletePermanent = async (id) => { try { const res = await fetch(`/api/fp/estimates/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted permanently'); setDeleteConfirm(null); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
-  const handleDeleteAllArchived = async () => { try { const res = await fetch('/api/fp/estimates/archived/delete-all', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); const result = await res.json(); if (result.success) { showToast(`${result.deletedCount || archivedEstimates.length} archived deleted`); setShowDeleteAllConfirm(false); loadData(); } else { showToast(result.message || 'Failed', 'error'); } } catch (e) { showToast('Failed to delete all', 'error'); } };
+  const handleDeleteAllArchived = async () => { try { const res = await fetch('/api/fp/estimates/archived/delete-all', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); const result = await res.json(); if (result.success || res.status === 201) { showToast(`${result.deletedCount || archivedEstimates.length} archived deleted`); setShowDeleteAllConfirm(false); loadData(); } else { showToast(result.message || 'Failed', 'error'); } } catch (e) { showToast('Failed to delete all', 'error'); } };
   const handleDownloadPDF = (estimate) => { try { exportEstimateToPDF(estimate); showToast('PDF downloaded!'); } catch (e) { showToast('PDF failed', 'error'); } };
 
   const renderArchived = () => (

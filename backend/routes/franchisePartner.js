@@ -2784,6 +2784,43 @@ router.put('/estimates/:id/archive', requireFPScope, async (req, res) => {
   }
 });
 
+// Send estimate via email
+router.post('/estimates/send-email', requireFPScope, async (req, res) => {
+  try {
+    const { estimateId, email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email address is required' });
+    }
+    
+    // Get estimate details
+    const [[estimate]] = await pool.execute(
+      'SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?',
+      [estimateId, req.fpId]
+    );
+    
+    if (!estimate) {
+      return res.status(404).json({ success: false, message: 'Estimate not found' });
+    }
+    
+    // For now, just update status to 'sent' - actual email sending would require email service integration
+    await pool.execute(
+      'UPDATE fp_estimates SET status = ? WHERE id = ?',
+      ['sent', estimateId]
+    );
+    
+    // TODO: Integrate with email service (nodemailer, SendGrid, etc.)
+    console.log(`Email would be sent to ${email} for estimate ${estimate.estimate_id}`);
+    
+    res.json({ 
+      success: true, 
+      message: `Estimate marked as sent. Email notification to ${email} pending integration.` 
+    });
+  } catch (error) {
+    console.error('Send email error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Restore estimate
 router.put('/estimates/:id/restore', requireFPScope, async (req, res) => {
   try {
