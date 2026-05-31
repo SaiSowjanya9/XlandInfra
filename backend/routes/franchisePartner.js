@@ -471,6 +471,115 @@ router.delete('/properties/:id', requireFPScope, validateOwnership('properties')
   }
 });
 
+// Assign vendor to property
+router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { vendorId } = req.body;
+
+    if (!vendorId) {
+      return res.status(400).json({ success: false, message: 'Vendor ID is required' });
+    }
+
+    // Verify property belongs to this FP
+    const [property] = await pool.execute(
+      `SELECT id FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+
+    if (property.length === 0) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+
+    // Verify vendor belongs to this FP
+    const [vendor] = await pool.execute(
+      `SELECT id, owner_name, service_type FROM vendors WHERE id = ? AND (franchise_partner_id = ? OR id IN (
+        SELECT vendor_id FROM fp_assigned_vendors WHERE franchise_partner_id = ? AND is_active = TRUE
+      ))`,
+      [vendorId, req.fpId, req.fpId]
+    );
+
+    if (vendor.length === 0) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    // Check if assignment already exists
+    const [existing] = await pool.execute(
+      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND is_active = TRUE`,
+      [id, vendorId]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Vendor already assigned to this property' });
+    }
+
+    // Create assignment
+    await pool.execute(
+      `INSERT INTO property_vendor_assignments (property_id, vendor_id, assigned_by, assigned_at, is_active)
+       VALUES (?, ?, ?, NOW(), TRUE)`,
+      [id, vendorId, req.user.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Vendor assigned successfully',
+      data: { vendorName: vendor[0].owner_name, serviceType: vendor[0].service_type }
+    });
+  } catch (error) {
+    console.error('Assign vendor error:', error);
+    res.status(500).json({ success: false, message: 'Failed to assign vendor', error: error.message });
+  }
+});
+
+// Assign employee to property
+router.post('/properties/:id/assign-employee', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { employeeId } = req.body;
+
+    if (!employeeId) {
+      return res.status(400).json({ success: false, message: 'Employee ID is required' });
+    }
+
+    // Verify property belongs to this FP
+    const [property] = await pool.execute(
+      `SELECT id FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+
+    if (property.length === 0) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+
+    // Verify employee belongs to this FP
+    const [employee] = await pool.execute(
+      `SELECT id, first_name, last_name FROM fp_employees WHERE id = ? AND franchise_partner_id = ?`,
+      [employeeId, req.fpId]
+    );
+
+    if (employee.length === 0) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+
+    // Create assignment
+    await pool.execute(
+      `INSERT INTO property_employee_assignments (property_id, employee_id, assigned_by, assigned_at, is_active)
+       VALUES (?, ?, ?, NOW(), TRUE)
+       ON DUPLICATE KEY UPDATE is_active = TRUE, assigned_at = NOW()`,
+      [id, employeeId, req.user.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Employee assigned successfully',
+      data: { employeeName: `${employee[0].first_name} ${employee[0].last_name}` }
+    });
+  } catch (error) {
+    console.error('Assign employee error:', error);
+    res.status(500).json({ success: false, message: 'Failed to assign employee', error: error.message });
+  }
+});
+
 // ============================================
 // WORK ORDERS
 // ============================================
