@@ -103,7 +103,8 @@ const generatePDF = (data, type, filename) => {
       y += 20;
     }
 
-    // ===== TWO COLUMN INFO SECTION =====
+    // ===== TWO COLUMN INFO SECTION (Skip for AMC Package PDFs) =====
+    if (type !== 'package') {
     const colWidth = (pageWidth - margin * 2 - 10) / 2;
     // Dynamic box height based on property fields available
     let extraFields = 0;
@@ -264,6 +265,7 @@ const generatePDF = (data, type, filename) => {
     doc.setFontSize(8);
     
     y += boxHeight + 8;
+    } // End of property/customer details section (skipped for package type)
 
     // ===== NO OF VISITS =====
     if (data.noOfVisits) {
