@@ -2760,11 +2760,12 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       data: { id: result.insertId, estimateId }
     });
   } catch (error) {
-    console.error('Create estimate error:', error);
+    console.error('Create estimate error:', error.message, error.code, error.sqlMessage);
     res.status(500).json({
       success: false,
-      message: 'Failed to create estimate',
-      error: error.message
+      message: `Failed to create estimate: ${error.sqlMessage || error.message}`,
+      error: error.message,
+      code: error.code
     });
   }
 });
