@@ -45,6 +45,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterFromDate, setFilterFromDate] = useState('');
+  const [filterToDate, setFilterToDate] = useState('');
   const [emailModal, setEmailModal] = useState(null);
   const [estimateType, setEstimateType] = useState(null);
   const [propertyIdInput, setPropertyIdInput] = useState('');
@@ -890,7 +893,25 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const matchSearch = (e.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.estimate_id || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.client_name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = filterStatus === 'all' || e.status === filterStatus;
     const matchType = filterType === 'all' || e.estimate_type === filterType || (filterType === 'property_based' && (e.estimate_type === 'property_based' || e.estimate_type === 'property-based'));
-    return matchSearch && matchStatus && matchType;
+    const matchCategory = filterCategory === 'all' || e.property_type === filterCategory;
+    // Date range filter
+    let matchDate = true;
+    if (filterFromDate || filterToDate) {
+      const estDate = e.created_at ? new Date(e.created_at) : null;
+      if (estDate) {
+        if (filterFromDate) {
+          const fromDate = new Date(filterFromDate);
+          fromDate.setHours(0, 0, 0, 0);
+          if (estDate < fromDate) matchDate = false;
+        }
+        if (filterToDate) {
+          const toDate = new Date(filterToDate);
+          toDate.setHours(23, 59, 59, 999);
+          if (estDate > toDate) matchDate = false;
+        }
+      }
+    }
+    return matchSearch && matchStatus && matchType && matchCategory && matchDate;
   });
   const renderAllEstimates = () => (
     <div className="space-y-4">
@@ -900,26 +921,46 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"><Filter className="w-4 h-4" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
         </div>
         {showFilters && (
-          <div className="mt-3 p-3 bg-gray-50 rounded-lg flex gap-4 flex-wrap">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
-                <option value="all">All Status</option>
-                <option value="draft">Draft</option>
-                <option value="sent">Sent</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Estimate Type</label>
+                <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option value="all">All Estimates</option>
+                  <option value="property_based">Property Based</option>
+                  <option value="direct">Direct</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option value="all">All Statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="sent">Sent</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Property Category</label>
+                <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option value="all">All Categories</option>
+                  <option value="IV">IV - Individual Villa</option>
+                  <option value="GC">GC - Gated Community</option>
+                  <option value="APT">APT - Apartment</option>
+                  <option value="COMM">COMM - Commercial</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
+                <input type="date" value={filterFromDate} onChange={(e) => setFilterFromDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
+                <input type="date" value={filterToDate} onChange={(e) => setFilterToDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
-              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
-                <option value="all">All Types</option>
-                <option value="property_based">Property Based</option>
-                <option value="direct">Direct</option>
-              </select>
-            </div>
-            <button onClick={() => { setFilterStatus('all'); setFilterType('all'); }} className="self-end px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800">Clear Filters</button>
+            <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); }} className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium">Clear all filters</button>
           </div>
         )}
       </div>
