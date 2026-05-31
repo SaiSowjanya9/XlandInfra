@@ -2623,7 +2623,9 @@ router.get('/estimates', requireFPScope, async (req, res) => {
         property_id: est.property_code || est.property_id || servicesData.property_id || '',
         property_type: servicesData.property_type || '',
         package: servicesData.package || null,
-        addons: servicesData.addons || []
+        addons: servicesData.addons || [],
+        created_by_name: servicesData.created_by_name || est.created_by_name || '-',
+        created_by_role: servicesData.created_by_role || est.created_by_role || 'franchise_partner'
       };
     });
 
@@ -2663,7 +2665,13 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     // Ensure created_by has a value
     const createdBy = req.user?.id || req.userId || 1;
     
-    console.log('Creating estimate:', { estimateId, client_name, package_name, createdBy, fpId: req.fpId });
+    // Get creator name and role for display
+    const creatorName = req.user?.first_name && req.user?.last_name 
+      ? `${req.user.first_name} ${req.user.last_name}`.trim()
+      : req.user?.name || req.user?.email || 'Unknown';
+    const creatorRole = req.user?.role || req.userRole || 'franchise_partner';
+    
+    console.log('Creating estimate:', { estimateId, client_name, package_name, createdBy, creatorName, creatorRole, fpId: req.fpId });
     
     // Calculate amounts based on which format is used
     let finalSubtotal = parseFloat(subtotal) || 0;
@@ -2685,7 +2693,9 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       property_id: property_id || '',
       zone: zone || '',
       city: city || '',
-      address: address || ''
+      address: address || '',
+      created_by_name: creatorName,
+      created_by_role: creatorRole
     });
 
     // Resolve property_id to numeric ID if it's a string (property code)
