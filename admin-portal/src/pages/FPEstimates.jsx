@@ -118,12 +118,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   const calculatePricing = () => {
-    const pkgPrice = amcPackages.find(p => p.id == estimateForm.selectedPackage)?.price || 0;
-    const addonsPrice = estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0);
+    const pkg = amcPackages.find(p => p.id == estimateForm.selectedPackage);
+    const pkgPrice = parseFloat(pkg?.price) || 0;
+    const addonsPrice = estimateForm.selectedAddons.reduce((sum, id) => {
+      const addon = addons.find(a => a.id == id);
+      return sum + (parseFloat(addon?.price) || 0);
+    }, 0);
     const subtotal = pkgPrice + addonsPrice;
-    const discountAmt = (subtotal * estimateForm.discount) / 100;
-    const gstAmt = ((subtotal - discountAmt) * estimateForm.gst) / 100;
-    return { subtotal, discountAmt, gstAmt, total: subtotal - discountAmt + gstAmt };
+    const discount = parseFloat(estimateForm.discount) || 0;
+    const gst = parseFloat(estimateForm.gst) || 18;
+    const discountAmt = (subtotal * discount) / 100;
+    const gstAmt = ((subtotal - discountAmt) * gst) / 100;
+    const total = subtotal - discountAmt + gstAmt;
+    return { subtotal, discountAmt, gstAmt, total };
   };
 
   // Get selected package details with services
@@ -489,30 +496,35 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <h2 className="text-base font-semibold text-gray-900">Price Summary</h2>
             </div>
             <div className="p-6">
-              <div className="max-w-md ml-auto space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Sub Total</span>
-                  <span className="font-medium">₹{calculatePricing().subtotal}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Discount (%)</span>
-                  <div className="flex items-center gap-2">
-                    <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" min="0" max="100" />
-                    <span className="text-gray-500">- ₹{calculatePricing().discountAmt.toFixed(0)}</span>
+              {(() => {
+                const pricing = calculatePricing();
+                return (
+                  <div className="max-w-md ml-auto space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Sub Total</span>
+                      <span className="font-medium">{formatCurrency(pricing.subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Discount (%)</span>
+                      <div className="flex items-center gap-2">
+                        <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" min="0" max="100" />
+                        <span className="text-gray-500">- {formatCurrency(pricing.discountAmt)}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">GST (%)</span>
+                      <div className="flex items-center gap-2">
+                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-blue-300 bg-blue-50 rounded text-sm text-center text-blue-700" />
+                        <span className="text-gray-500">+ {formatCurrency(pricing.gstAmt)}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center bg-slate-800 text-white px-4 py-3 rounded-lg mt-4">
+                      <span className="font-medium">Total Amount</span>
+                      <span className="text-lg font-bold">{formatCurrency(pricing.total)}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">GST (%)</span>
-                  <div className="flex items-center gap-2">
-                    <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-blue-300 bg-blue-50 rounded text-sm text-center text-blue-700" />
-                    <span className="text-gray-500">+ ₹{calculatePricing().gstAmt.toFixed(0)}</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center bg-slate-800 text-white px-4 py-3 rounded-lg mt-4">
-                  <span className="font-medium">Total Amount</span>
-                  <span className="text-lg font-bold">₹{calculatePricing().total.toFixed(0)}</span>
-                </div>
-              </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -742,30 +754,35 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <h2 className="text-base font-semibold text-gray-900">Price Summary</h2>
             </div>
             <div className="p-6">
-              <div className="max-w-md ml-auto space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Sub Total</span>
-                  <span className="font-medium">₹{calculatePricing().subtotal}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Discount (%)</span>
-                  <div className="flex items-center gap-2">
-                    <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" min="0" max="100" />
-                    <span className="text-gray-500">- ₹{calculatePricing().discountAmt.toFixed(0)}</span>
+              {(() => {
+                const pricing = calculatePricing();
+                return (
+                  <div className="max-w-md ml-auto space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Sub Total</span>
+                      <span className="font-medium">{formatCurrency(pricing.subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Discount (%)</span>
+                      <div className="flex items-center gap-2">
+                        <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" min="0" max="100" />
+                        <span className="text-gray-500">- {formatCurrency(pricing.discountAmt)}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">GST (%)</span>
+                      <div className="flex items-center gap-2">
+                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-blue-300 bg-blue-50 rounded text-sm text-center text-blue-700" />
+                        <span className="text-gray-500">+ {formatCurrency(pricing.gstAmt)}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center bg-slate-800 text-white px-4 py-3 rounded-lg mt-4">
+                      <span className="font-medium">Total Amount</span>
+                      <span className="text-lg font-bold">{formatCurrency(pricing.total)}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">GST (%)</span>
-                  <div className="flex items-center gap-2">
-                    <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-blue-300 bg-blue-50 rounded text-sm text-center text-blue-700" />
-                    <span className="text-gray-500">+ ₹{calculatePricing().gstAmt.toFixed(0)}</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center bg-slate-800 text-white px-4 py-3 rounded-lg mt-4">
-                  <span className="font-medium">Total Amount</span>
-                  <span className="text-lg font-bold">₹{calculatePricing().total.toFixed(0)}</span>
-                </div>
-              </div>
+                );
+              })()}
             </div>
           </div>
 
