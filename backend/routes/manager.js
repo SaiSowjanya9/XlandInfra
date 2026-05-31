@@ -748,6 +748,66 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
   }
 });
 
+// Get vendor assignments for Manager portal (view-only)
+router.get('/vendors/assignments', requireManagerScope, async (req, res) => {
+  try {
+    const scopeId = getScopeId(req);
+    const scopeColumn = getScopeColumn(req);
+    
+    console.log('Manager Vendor Assignments Query:', { scopeId, scopeColumn });
+    
+    // Get property-vendor assignments for this FP's properties with full vendor details
+    const [propertyAssignments] = await pool.execute(
+      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+        p.name as property_name, p.property_id as propertyId, p.property_type, p.address, p.city, p.zone as property_zone,
+        v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
+        v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
+        v.zone as zone_name, v.area, v.rate_per_visit, v.coverage_per_day,
+        v.owner_aadhar, v.manager_name, v.manager_mobile, v.manager_email,
+        v.poc_name, v.poc_mobile, v.poc_email
+       FROM property_vendor_assignments pva
+       JOIN properties p ON pva.property_id = p.id
+       JOIN vendors v ON pva.vendor_id = v.id
+       WHERE p.${scopeColumn} = ? AND pva.is_active = TRUE
+       ORDER BY pva.assigned_at DESC`,
+      [scopeId]
+    );
+
+    console.log('Vendor assignments found:', propertyAssignments.length);
+
+    // Convert to service assignments format for frontend
+    const serviceAssignments = propertyAssignments.map(a => ({
+      id: a.id,
+      propertyId: a.propertyId || a.property_id,
+      propertyName: a.property_name,
+      propertyType: a.property_type,
+      propertyZone: a.property_zone,
+      vendorId: a.vendor_code,
+      vendorName: a.vendor_name,
+      vendorPhone: a.vendor_phone,
+      vendorEmail: a.vendor_email,
+      serviceType: a.service_type,
+      zone_name: a.zone_name,
+      area: a.area,
+      rate_per_visit: a.rate_per_visit,
+      coverage_per_day: a.coverage_per_day,
+      assignedDate: a.assigned_at,
+      status: a.is_active ? 'active' : 'removed'
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        propertyAssignments: [],
+        serviceAssignments
+      }
+    });
+  } catch (error) {
+    console.error('Manager vendor assignments fetch error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Create vendor - dual-tag with manager_id AND franchise_partner_id
 router.post('/vendors', requireManagerScope, async (req, res) => {
   try {

@@ -27,7 +27,8 @@ const AssignedVendors = ({ user }) => {
   // Check if user is FP Manager (view-only mode)
   const isFPManager = user?.role === 'manager';
   const isFPUser = user?.role === 'franchise_partner' || user?.role === 'manager' || user?.role === 'fp_coordinator';
-  const apiPrefix = isFPUser ? '/api/fp' : '/api';
+  // Manager uses /api/manager, FP uses /api/fp
+  const apiPrefix = isFPManager ? '/api/manager' : (isFPUser ? '/api/fp' : '/api');
   
   const [activeTab, setActiveTab] = useState('service'); // 'service' or 'property'
   const [assignments, setAssignments] = useState([]);
