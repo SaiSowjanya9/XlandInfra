@@ -310,24 +310,6 @@ const generatePDF = (data, type, filename) => {
       tableBody.push(['1', 'No services listed', '-', String(fallbackVisits)]);
     }
 
-    // Add addons to table
-    if (data.addons && data.addons.length > 0) {
-      data.addons.forEach((addon, idx) => {
-        const addonName = addon.name || addon.serviceName || addon.services?.[0]?.name || 'Additional Service';
-        tableBody.push([
-          String(services.length + idx + 1),
-          addonName,
-          '-',
-          ''
-        ]);
-        
-        // Add description if exists
-        if (addon.description) {
-          tableBody.push(['', { content: addon.description, styles: { fontStyle: 'italic', textColor: grayText, fontSize: 7 } }, '', '']);
-        }
-      });
-    }
-
     autoTable(doc, {
       startY: y,
       head: [['#', 'Service Description', 'Frequency', 'No. of Visits']],
@@ -358,6 +340,88 @@ const generatePDF = (data, type, filename) => {
     });
 
     y = doc.lastAutoTable.finalY + 8;
+
+    // ===== ADD-ONS SECTION =====
+    if (data.addons && data.addons.length > 0) {
+      doc.setTextColor(...primaryColor);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ADD-ONS', margin, y);
+      doc.setDrawColor(...accentColor);
+      doc.setLineWidth(0.8);
+      doc.line(margin, y + 2, margin + 20, y + 2);
+      y += 8;
+
+      const addonsBody = data.addons.map((addon, idx) => {
+        const addonName = addon.name || addon.serviceName || addon.service_name || 'Additional Service';
+        const addonPrice = parseFloat(addon.price) || 0;
+        return [
+          String(idx + 1),
+          addonName,
+          addon.frequencyType || addon.frequency || 'One-time',
+          `Rs. ${addonPrice.toLocaleString('en-IN')}`
+        ];
+      });
+
+      autoTable(doc, {
+        startY: y,
+        head: [['#', 'Add-on Service', 'Frequency', 'Price']],
+        body: addonsBody,
+        margin: { left: margin, right: margin },
+        styles: {
+          fontSize: 9,
+          cellPadding: 4,
+          lineColor: borderColor,
+          lineWidth: 0.2
+        },
+        headStyles: {
+          fillColor: [76, 175, 80],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 8
+        },
+        bodyStyles: {
+          textColor: darkText
+        },
+        columnStyles: {
+          0: { cellWidth: 12, halign: 'center' },
+          1: { cellWidth: 'auto' },
+          2: { cellWidth: 28, halign: 'center' },
+          3: { cellWidth: 30, halign: 'right' }
+        },
+        alternateRowStyles: { fillColor: [250, 251, 252] }
+      });
+
+      y = doc.lastAutoTable.finalY + 8;
+    }
+
+    // ===== DESCRIPTION SECTION =====
+    if (data.description) {
+      doc.setTextColor(...primaryColor);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DESCRIPTION / NOTES', margin, y);
+      doc.setDrawColor(...accentColor);
+      doc.setLineWidth(0.8);
+      doc.line(margin, y + 2, margin + 45, y + 2);
+      y += 8;
+
+      // Description box
+      doc.setDrawColor(...borderColor);
+      doc.setFillColor(250, 251, 252);
+      const descBoxWidth = pageWidth - (margin * 2);
+      
+      // Split description into lines
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...darkText);
+      const descLines = doc.splitTextToSize(String(data.description), descBoxWidth - 10);
+      const descBoxHeight = Math.max(20, descLines.length * 5 + 10);
+      
+      doc.roundedRect(margin, y, descBoxWidth, descBoxHeight, 2, 2, 'FD');
+      doc.text(descLines, margin + 5, y + 8);
+      y += descBoxHeight + 8;
+    }
 
     // ===== PRICE SUMMARY (Right after services to minimize whitespace) =====
     const summaryWidth = 100;
