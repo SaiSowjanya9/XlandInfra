@@ -193,7 +193,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         setEstimateType(null);
         setSelectedProperty(null);
         setPropertyIdInput('');
-        setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: 0, gst: 18 });
+        setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: 0, gst: 18, description: '' });
         loadData();
         setActiveTab('list');
       } else {
