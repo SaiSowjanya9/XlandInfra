@@ -945,10 +945,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <label className="block text-xs font-medium text-gray-500 mb-1">Property Category</label>
                 <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
                   <option value="all">All Categories</option>
-                  <option value="IV">IV - Individual Villa</option>
-                  <option value="GC">GC - Gated Community</option>
-                  <option value="APT">APT - Apartment</option>
-                  <option value="COMM">COMM - Commercial</option>
+                  {[...new Set(estimates.map(e => e.property_type).filter(Boolean))].map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
                 </select>
               </div>
               <div>
