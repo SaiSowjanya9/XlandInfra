@@ -97,11 +97,24 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     selectedPackage: '', selectedAddons: [], discount: 0, gst: 18
   });
 
+  // Helper to normalize property type to short code (GC, Apt, Villa, etc.)
+  const normalizePropertyType = (type) => {
+    if (!type) return '';
+    const upper = type.toUpperCase();
+    // Map full names to short codes
+    if (upper.includes('GATED') || upper === 'GC') return 'GC';
+    if (upper.includes('APARTMENT') || upper === 'APT') return 'APT';
+    if (upper.includes('VILLA')) return 'VILLA';
+    if (upper.includes('FLAT')) return 'FLAT';
+    if (upper.includes('PLOT')) return 'PLOT';
+    return upper;
+  };
+
   // Helper to get package property type (parses services JSON)
   const getPkgPropertyType = (pkg) => {
     let svc = pkg.services;
     if (typeof svc === 'string') { try { svc = JSON.parse(svc); } catch(e) { svc = null; } }
-    return (svc?.property_type || pkg.property_type || '').toUpperCase();
+    return normalizePropertyType(svc?.property_type || pkg.property_type || '');
   };
 
   const calculatePricing = () => {
@@ -266,8 +279,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 >
                   <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
                   {(() => {
-                    const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || estimateForm?.propertyType;
-                    const searchType = (propertyType || '').toUpperCase();
+                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
+                    const searchType = normalizePropertyType(propertyType);
                     const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : amcPackages;
                     if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
                     return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
@@ -282,9 +295,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 >
                   <option value="">+ Select Add-on to add</option>
                   {(() => {
-                    const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || estimateForm?.propertyType;
-                    const searchType = (propertyType || '').toUpperCase();
-                    const filteredAddons = searchType ? addons.filter(addon => (addon.property_type || '').toUpperCase() === searchType) : addons;
+                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
+                    const searchType = normalizePropertyType(propertyType);
+                    const filteredAddons = searchType ? addons.filter(addon => normalizePropertyType(addon.property_type) === searchType) : addons;
                     if (searchType && filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
                     return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>);
                   })()}
@@ -431,8 +444,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 >
                   <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
                   {(() => {
-                    const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || estimateForm?.propertyType;
-                    const searchType = (propertyType || '').toUpperCase();
+                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
+                    const searchType = normalizePropertyType(propertyType);
                     const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : amcPackages;
                     if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
                     return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
@@ -447,9 +460,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 >
                   <option value="">+ Select Add-on to add</option>
                   {(() => {
-                    const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || estimateForm?.propertyType;
-                    const searchType = (propertyType || '').toUpperCase();
-                    const filteredAddons = searchType ? addons.filter(addon => (addon.property_type || '').toUpperCase() === searchType) : addons;
+                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
+                    const searchType = normalizePropertyType(propertyType);
+                    const filteredAddons = searchType ? addons.filter(addon => normalizePropertyType(addon.property_type) === searchType) : addons;
                     if (searchType && filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
                     return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>);
                   })()}
