@@ -2651,15 +2651,15 @@ router.get('/estimates', requireFPScope, async (req, res) => {
 
     const [estimates] = await pool.execute(query, params);
 
-    // Get FP's contact name to use for estimates with email as creator name
+    // Get FP's name to use for estimates with email as creator name
     let fpContactName = 'Franchise Partner';
     try {
       const [[fpInfo]] = await pool.execute(
-        'SELECT contact_name, company_name FROM franchise_partners WHERE id = ?',
+        'SELECT owner_name, company_name, username FROM franchise_partners WHERE id = ?',
         [req.fpId]
       );
       if (fpInfo) {
-        fpContactName = fpInfo.contact_name || fpInfo.company_name || 'Franchise Partner';
+        fpContactName = fpInfo.owner_name || fpInfo.company_name || fpInfo.username || 'Franchise Partner';
       }
     } catch (e) {}
 
@@ -2747,14 +2747,14 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     let creatorRole = req.user?.role || 'franchise_partner';
     let creatorId = req.user?.id || null;
     
-    // Try to get the FP's contact name from the database
+    // Try to get the FP's name from the database
     try {
       const [[fpInfo]] = await pool.execute(
-        'SELECT contact_name, company_name FROM franchise_partners WHERE id = ?',
+        'SELECT owner_name, company_name, username FROM franchise_partners WHERE id = ?',
         [req.fpId]
       );
       if (fpInfo) {
-        creatorName = fpInfo.contact_name || fpInfo.company_name || 'Franchise Partner';
+        creatorName = fpInfo.owner_name || fpInfo.company_name || fpInfo.username || 'Franchise Partner';
       }
     } catch (e) {
       console.log('Could not fetch FP name:', e.message);
