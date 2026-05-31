@@ -333,7 +333,31 @@ const FPVendors = ({ user }) => {
                         >
                           <Eye className="w-4 h-4 text-gray-500" />
                         </button>
-                        {!isFPManager && vendor.status !== 'deleted' && (
+                        {!isFPManager && (vendor.status === 'deleted' || vendor.is_active === 0) ? (
+                          <button
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(`/api/fp/vendors/${vendor.id}/restore`, {
+                                  method: 'PUT',
+                                  headers: { 'Authorization': `Bearer ${token}` }
+                                });
+                                const result = await response.json();
+                                if (result.success) {
+                                  showToastMessage('Vendor restored successfully');
+                                  fetchVendors();
+                                } else {
+                                  showToastMessage(result.message || 'Failed to restore vendor', 'error');
+                                }
+                              } catch (error) {
+                                showToastMessage('Failed to restore vendor', 'error');
+                              }
+                            }}
+                            className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Restore Vendor"
+                          >
+                            <RefreshCw className="w-4 h-4 text-green-600" />
+                          </button>
+                        ) : !isFPManager && (
                           <>
                             <button
                               onClick={() => setEditVendor(vendor)}
