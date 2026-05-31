@@ -137,9 +137,15 @@ const AssignedVendors = ({ user }) => {
   };
 
   const handleUpdateServiceVendor = async (assignment, newVendorId) => {
-    const vendor = vendors.find(v => v.vendorId === newVendorId || v.id === newVendorId || v.vendor_id === newVendorId);
+    // Find vendor - newVendorId could be numeric id or string vendor_id
+    const vendor = vendors.find(v => 
+      String(v.id) === String(newVendorId) || 
+      v.vendorId === newVendorId || 
+      v.vendor_id === newVendorId
+    );
+    
     if (!vendor) {
-      showToast('Vendor not found', 'error');
+      showToast('Please select a valid vendor', 'error');
       return;
     }
 
@@ -152,14 +158,14 @@ const AssignedVendors = ({ user }) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          vendorId: vendor.id || vendor.vendorId,
+          vendorId: vendor.id,
           vendor_id: vendor.id
         })
       });
       const result = await response.json();
       
       if (result.success) {
-        showToast('Vendor updated successfully');
+        showToast('Vendor assigned successfully');
         setEditAssignment(null);
         setEditModalData(null);
         loadData();
