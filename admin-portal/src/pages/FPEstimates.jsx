@@ -1014,16 +1014,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="text-xs text-gray-400 capitalize">{(est.created_by_role || '').replace(/_/g, ' ')}</div>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                          est.status?.toLowerCase() === 'approved' ? 'bg-green-100 text-green-700 border border-green-200' :
-                          est.status?.toLowerCase() === 'sent' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                          est.status?.toLowerCase() === 'rejected' ? 'bg-red-100 text-red-700 border border-red-200' :
-                          est.status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
-                          est.status?.toLowerCase() === 'expired' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                          'bg-gray-100 text-gray-600 border border-gray-200'
-                        }`}>
-                        {est.status || 'draft'}
-                      </span>
+                      {(() => {
+                        const status = (est.status || 'draft').toLowerCase().trim();
+                        const colors = {
+                          approved: 'bg-green-100 text-green-700 border border-green-200',
+                          sent: 'bg-blue-100 text-blue-700 border border-blue-200',
+                          rejected: 'bg-red-100 text-red-700 border border-red-200',
+                          pending: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
+                          expired: 'bg-orange-100 text-orange-700 border border-orange-200',
+                          draft: 'bg-gray-100 text-gray-600 border border-gray-200'
+                        };
+                        return (
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${colors[status] || colors.draft}`}>
+                            {est.status || 'draft'}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-center gap-1">
