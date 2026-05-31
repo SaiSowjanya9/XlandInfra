@@ -2596,6 +2596,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
         property_code VARCHAR(50),
         property_type VARCHAR(50),
         zone VARCHAR(100),
+        division VARCHAR(100),
         city VARCHAR(100),
         address TEXT,
         package_id INT,
@@ -2662,7 +2663,7 @@ router.post('/estimates', requireFPScope, async (req, res) => {
   try {
     const {
       estimate_type, property_id, client_name, client_phone, client_email,
-      property_type, property_name, zone, city, address,
+      property_type, property_name, zone, division, city, address,
       package_id, package_name, package_price,
       addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
       description
@@ -2683,6 +2684,7 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         property_code VARCHAR(50),
         property_type VARCHAR(50),
         zone VARCHAR(100),
+        division VARCHAR(100),
         city VARCHAR(100),
         address TEXT,
         package_id INT,
@@ -2735,16 +2737,16 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       `INSERT INTO fp_estimates (
         estimate_id, franchise_partner_id, property_id, estimate_type,
         client_name, client_phone, client_email,
-        property_name, property_code, property_type, zone, city, address,
+        property_name, property_code, property_type, zone, division, city, address,
         package_id, package_name, package_price,
         subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
         addons_data, description, status,
         created_by_id, created_by_name, created_by_role
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
       [
         estimateId, req.fpId, null, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
-        property_name || '', property_id || '', property_type || '', zone || '', city || '', address || '',
+        property_name || '', property_id || '', property_type || '', zone || '', division || '', city || '', address || '',
         package_id || null, package_name || '', parseFloat(package_price) || 0,
         finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,
         addonsJson, description || '', 

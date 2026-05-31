@@ -242,6 +242,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         property_type: selectedProperty?.property_type || selectedProperty?.entry_type || estimateForm.propertyType || '',
         property_name: selectedProperty?.name || selectedProperty?.community_name || estimateForm.propertyName || '',
         zone: selectedProperty?.zone_id || selectedProperty?.zone || estimateForm.zone || '',
+        division: selectedProperty?.division || selectedProperty?.division_name || '',
         city: selectedProperty?.city || estimateForm.city || '',
         address: selectedProperty?.address || estimateForm.address || '',
         package_id: estimateForm.selectedPackage,

@@ -132,10 +132,8 @@ const generatePDF = (data, type, filename) => {
     doc.setTextColor(...darkText);
     doc.setFontSize(8);
     
-    const isDirectEstimate = data.estimateType === 'direct' || (!data.propertyId && !data.division);
-    
-    // Property ID - only for property-based estimates
-    if (!isDirectEstimate) {
+    // Property ID - always show if available
+    if (data.propertyId) {
       doc.setFont('helvetica', 'bold');
       doc.text('Property ID:', margin + 5, infoY);
       doc.setFont('helvetica', 'normal');
@@ -155,8 +153,8 @@ const generatePDF = (data, type, filename) => {
     doc.text(String(data.zone || '-'), margin + 32, infoY);
     infoY += 7;
     
-    // Division - only for property-based estimates
-    if (!isDirectEstimate && data.division) {
+    // Division - always show if available
+    if (data.division) {
       doc.setFont('helvetica', 'bold');
       doc.text('Division:', margin + 5, infoY);
       doc.setFont('helvetica', 'normal');
