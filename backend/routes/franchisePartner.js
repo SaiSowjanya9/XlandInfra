@@ -1100,6 +1100,8 @@ router.post('/vendors', requireFPScope, async (req, res) => {
     const username = `vendor_${Date.now()}`;
     const tempPassword = await bcrypt.hash('temp123', 10);
 
+    const creatorName = req.user.name || req.user.username || req.user.full_name || 'Franchise Partner';
+    
     const [result] = await pool.execute(
       `INSERT INTO vendors (
         vendor_id, username, email, password_hash, company_name, contact_person,
@@ -1108,8 +1110,8 @@ router.post('/vendors', requireFPScope, async (req, res) => {
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
         rate_per_visit, coverage_per_day,
-        franchise_partner_id, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        franchise_partner_id, created_by, created_by_name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         vendorId, username, ownerEmail || '', tempPassword, 
         ownerName || '', ownerName || '',
@@ -1118,7 +1120,7 @@ router.post('/vendors', requireFPScope, async (req, res) => {
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
         parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0,
-        req.fpId, req.user.id
+        req.fpId, req.user.id, creatorName
       ]
     );
 
@@ -1141,13 +1143,7 @@ router.post('/vendors', requireFPScope, async (req, res) => {
 router.put('/vendors/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      service_type, zone_name, area, rate_per_visit, coverage_per_day,
-      owner_name, owner_mobile, owner_email, owner_aadhar,
-      manager_name, manager_mobile, manager_email,
-      poc_name, poc_mobile, poc_email,
-      status
-    } = req.body;
+    const body = req.body;
 
     // Verify vendor belongs to this FP
     const [existing] = await pool.execute(
@@ -1162,39 +1158,49 @@ router.put('/vendors/:id', requireFPScope, async (req, res) => {
       });
     }
 
+    // Build dynamic update query
+    const updates = [];
+    const values = [];
+
+    const fields = {
+      service_type: body.service_type,
+      zone_name: body.zone_name,
+      area: body.area,
+      rate_per_visit: body.rate_per_visit,
+      coverage_per_day: body.coverage_per_day,
+      owner_name: body.owner_name,
+      owner_mobile: body.owner_mobile,
+      owner_email: body.owner_email,
+      owner_aadhar: body.owner_aadhar,
+      company_name: body.owner_name,
+      contact_person: body.owner_name,
+      email: body.owner_email,
+      phone: body.owner_mobile,
+      manager_name: body.manager_name,
+      manager_mobile: body.manager_mobile,
+      manager_email: body.manager_email,
+      poc_name: body.poc_name,
+      poc_mobile: body.poc_mobile,
+      poc_email: body.poc_email
+    };
+
+    for (const [key, value] of Object.entries(fields)) {
+      if (value !== undefined && value !== null && value !== '') {
+        updates.push(`${key} = ?`);
+        values.push(value);
+      }
+    }
+
+    if (updates.length === 0) {
+      return res.json({ success: true, message: 'No changes to update' });
+    }
+
+    updates.push('updated_at = NOW()');
+    values.push(id, req.fpId);
+
     await pool.execute(
-      `UPDATE vendors SET 
-        service_type = COALESCE(?, service_type),
-        zone_name = COALESCE(?, zone_name),
-        area = COALESCE(?, area),
-        rate_per_visit = COALESCE(?, rate_per_visit),
-        coverage_per_day = COALESCE(?, coverage_per_day),
-        owner_name = COALESCE(?, owner_name),
-        owner_mobile = COALESCE(?, owner_mobile),
-        owner_email = COALESCE(?, owner_email),
-        owner_aadhar = COALESCE(?, owner_aadhar),
-        company_name = COALESCE(?, company_name),
-        contact_person = COALESCE(?, contact_person),
-        email = COALESCE(?, email),
-        phone = COALESCE(?, phone),
-        manager_name = COALESCE(?, manager_name),
-        manager_mobile = COALESCE(?, manager_mobile),
-        manager_email = COALESCE(?, manager_email),
-        poc_name = COALESCE(?, poc_name),
-        poc_mobile = COALESCE(?, poc_mobile),
-        poc_email = COALESCE(?, poc_email),
-        status = COALESCE(?, status),
-        updated_at = NOW()
-      WHERE id = ? AND franchise_partner_id = ?`,
-      [
-        service_type, zone_name, area, rate_per_visit, coverage_per_day,
-        owner_name, owner_mobile, owner_email, owner_aadhar,
-        owner_name, owner_name, owner_email, owner_mobile,
-        manager_name, manager_mobile, manager_email,
-        poc_name, poc_mobile, poc_email,
-        status,
-        id, req.fpId
-      ]
+      `UPDATE vendors SET ${updates.join(', ')} WHERE id = ? AND franchise_partner_id = ?`,
+      values
     );
 
     res.json({
