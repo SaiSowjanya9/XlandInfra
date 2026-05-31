@@ -912,21 +912,27 @@ const FPProperties = ({ user }) => {
             <div className="p-6">
               {(() => {
                 // Filter vendors by property zone
-                const propertyZone = selectedProperty?.zone || selectedProperty?.zone_id || '';
+                const propertyZone = (selectedProperty?.zone || selectedProperty?.zone_id || '').toString().toLowerCase().trim();
+                
+                // If property has a zone, filter vendors by that zone
+                // If property has no zone, show all vendors
                 const zoneFilteredVendors = assignType === 'vendor' 
-                  ? vendors.filter(v => {
-                      const vendorZone = v.zone || v.zone_name || v.zone_id || '';
-                      // Match zone (case insensitive, partial match)
-                      return vendorZone && propertyZone && 
-                        (vendorZone.toString().toLowerCase().includes(propertyZone.toString().toLowerCase()) ||
-                         propertyZone.toString().toLowerCase().includes(vendorZone.toString().toLowerCase()));
-                    })
+                  ? (propertyZone 
+                      ? vendors.filter(v => {
+                          const vendorZone = (v.zone || v.zone_name || v.zone_id || '').toString().toLowerCase().trim();
+                          if (!vendorZone) return false;
+                          // Match zone - check if zones contain each other (handles "Zone 43" vs "43")
+                          return vendorZone.includes(propertyZone) || 
+                                 propertyZone.includes(vendorZone) ||
+                                 vendorZone.replace('zone', '').trim() === propertyZone.replace('zone', '').trim();
+                        })
+                      : vendors) // No property zone = show all vendors
                   : employees;
                 
                 return zoneFilteredVendors.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-gray-500">
-                      No {assignType === 'vendor' ? 'vendors' : 'employees'} available {assignType === 'vendor' && propertyZone ? `for Zone ${propertyZone}` : ''}
+                      No {assignType === 'vendor' ? 'vendors' : 'employees'} available {assignType === 'vendor' && propertyZone ? `for Zone ${selectedProperty?.zone || selectedProperty?.zone_id}` : ''}
                     </p>
                     {assignType === 'vendor' && propertyZone && (
                       <p className="text-xs text-gray-400 mt-1">Add vendors with matching zone to assign them to this property</p>
