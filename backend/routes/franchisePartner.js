@@ -2624,13 +2624,19 @@ router.get('/estimates', requireFPScope, async (req, res) => {
       )
     `);
 
-    // Add missing columns if they don't exist (for existing tables)
-    try {
-      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN IF NOT EXISTS action_token VARCHAR(100)`);
-      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP NULL`);
-      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN IF NOT EXISTS division VARCHAR(100)`);
-    } catch (e) {
-      // Columns may already exist, ignore error
+    // Add missing columns if they don't exist (MySQL compatible)
+    const columnsToAdd = [
+      { name: 'action_token', def: 'VARCHAR(100)' },
+      { name: 'sent_at', def: 'TIMESTAMP NULL' },
+      { name: 'division', def: 'VARCHAR(100)' }
+    ];
+    for (const col of columnsToAdd) {
+      try {
+        const [cols] = await pool.execute(`SHOW COLUMNS FROM fp_estimates LIKE ?`, [col.name]);
+        if (cols.length === 0) {
+          await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN ${col.name} ${col.def}`);
+        }
+      } catch (e) { /* ignore */ }
     }
 
     let query = `SELECT * FROM fp_estimates WHERE franchise_partner_id = ?`;
@@ -2677,28 +2683,39 @@ router.get('/estimates', requireFPScope, async (req, res) => {
         creatorName = fpContactName;
       }
       
-      // If division is missing and we have property_code, try to fetch from property
+      // If division is missing, try to fetch from property tables
       let division = est.division;
-      if (!division && (est.property_code || est.property_id) && est.estimate_type !== 'direct') {
+      if (!division && est.estimate_type !== 'direct') {
+        const propCode = est.property_code || est.property_id || '';
+        const propId = parseInt(est.property_id) || 0;
+        
         try {
           // Try properties table first (uses division_id)
-          const [[prop]] = await pool.execute(
-            'SELECT division_id as division FROM properties WHERE property_code = ? OR id = ? LIMIT 1',
-            [est.property_code || '', est.property_id || 0]
+          let [props] = await pool.execute(
+            `SELECT division_id as division FROM properties 
+             WHERE (property_code = ? OR id = ? OR name LIKE ?) 
+             AND franchise_partner_id = ? LIMIT 1`,
+            [propCode, propId, `%${est.property_name || ''}%`, req.fpId]
           );
-          if (prop && prop.division) {
-            division = prop.division;
-          } else {
-            // Try onboarded_properties table (uses division)
-            const [[op]] = await pool.execute(
-              'SELECT division FROM onboarded_properties WHERE property_id = ? OR id = ? LIMIT 1',
-              [est.property_code || '', est.property_id || 0]
+          if (props.length > 0 && props[0].division) {
+            division = props[0].division;
+          }
+          
+          // If still not found, try onboarded_properties
+          if (!division) {
+            [props] = await pool.execute(
+              `SELECT division FROM onboarded_properties 
+               WHERE (property_id = ? OR id = ? OR community_name LIKE ?) 
+               AND franchise_partner_id = ? LIMIT 1`,
+              [propCode, propId, `%${est.property_name || ''}%`, req.fpId]
             );
-            if (op && op.division) {
-              division = op.division;
+            if (props.length > 0 && props[0].division) {
+              division = props[0].division;
             }
           }
-        } catch (e) {}
+        } catch (e) { 
+          console.log('Division lookup error:', e.message);
+        }
       }
       
       return { ...est, addons, created_by_name: creatorName, division };
@@ -2877,21 +2894,40 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Estimate not found' });
     }
     
-    // Ensure columns exist (for existing tables)
+    // Ensure columns exist (for existing tables) - MySQL compatible
     try {
-      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN IF NOT EXISTS action_token VARCHAR(100)`);
-      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP NULL`);
-    } catch (e) { /* ignore if columns exist */ }
+      // Check if action_token column exists
+      const [cols] = await pool.execute(`SHOW COLUMNS FROM fp_estimates LIKE 'action_token'`);
+      if (cols.length === 0) {
+        await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN action_token VARCHAR(100)`);
+      }
+    } catch (e) { console.log('action_token column check:', e.message); }
+    
+    try {
+      const [cols2] = await pool.execute(`SHOW COLUMNS FROM fp_estimates LIKE 'sent_at'`);
+      if (cols2.length === 0) {
+        await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN sent_at TIMESTAMP NULL`);
+      }
+    } catch (e) { console.log('sent_at column check:', e.message); }
     
     // Generate action token for approve/reject links
     const crypto = require('crypto');
     const actionToken = crypto.randomBytes(32).toString('hex');
     
     // Update estimate with action token and status
-    await pool.execute(
-      'UPDATE fp_estimates SET status = ?, action_token = ?, sent_at = NOW() WHERE id = ?',
-      ['sent', actionToken, estimateId]
-    );
+    try {
+      await pool.execute(
+        'UPDATE fp_estimates SET status = ?, action_token = ?, sent_at = NOW() WHERE id = ?',
+        ['sent', actionToken, estimateId]
+      );
+    } catch (updateErr) {
+      // If action_token column doesn't exist, just update status
+      console.log('Update with token failed, trying without:', updateErr.message);
+      await pool.execute(
+        'UPDATE fp_estimates SET status = ? WHERE id = ?',
+        ['sent', estimateId]
+      );
+    }
     
     // Try to send email using the email service
     try {
