@@ -97,6 +97,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     selectedPackage: '', selectedAddons: [], discount: 0, gst: 18
   });
 
+  // Helper to get package property type (parses services JSON)
+  const getPkgPropertyType = (pkg) => {
+    let svc = pkg.services;
+    if (typeof svc === 'string') { try { svc = JSON.parse(svc); } catch(e) { svc = null; } }
+    return (svc?.property_type || pkg.property_type || '').toUpperCase();
+  };
+
   const calculatePricing = () => {
     const pkgPrice = amcPackages.find(p => p.id === estimateForm.selectedPackage)?.price || 0;
     const addonsPrice = estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id === id)?.price || 0), 0);
@@ -260,9 +267,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
                   {(() => {
                     const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || estimateForm?.propertyType;
-                    const filteredPkgs = propertyType ? amcPackages.filter(pkg => { const pkgType = (pkg.property_type || '').toUpperCase(); const searchType = propertyType.toUpperCase(); return pkgType === searchType || pkgType === 'GC' && searchType === 'GC'; }) : amcPackages;
-                    const otherPkgs = propertyType ? amcPackages.filter(pkg => !filteredPkgs.includes(pkg)) : [];
-                    return (<>{filteredPkgs.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}{otherPkgs.length > 0 && <optgroup label="Other Packages">{otherPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}{!propertyType && amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</>);
+                    const searchType = (propertyType || '').toUpperCase();
+                    const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : amcPackages;
+                    if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
+                    return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
                   })()}
                 </select>
               </div>
@@ -423,9 +431,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
                   {(() => {
                     const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || estimateForm?.propertyType;
-                    const filteredPkgs = propertyType ? amcPackages.filter(pkg => { const pkgType = (pkg.property_type || '').toUpperCase(); const searchType = propertyType.toUpperCase(); return pkgType === searchType || pkgType === 'GC' && searchType === 'GC'; }) : amcPackages;
-                    const otherPkgs = propertyType ? amcPackages.filter(pkg => !filteredPkgs.includes(pkg)) : [];
-                    return (<>{filteredPkgs.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}{otherPkgs.length > 0 && <optgroup label="Other Packages">{otherPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}{!propertyType && amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</>);
+                    const searchType = (propertyType || '').toUpperCase();
+                    const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : amcPackages;
+                    if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
+                    return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
                   })()}
                 </select>
               </div>
