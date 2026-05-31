@@ -362,7 +362,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <select className="px-2 py-2.5 border border-gray-300 border-r-0 rounded-l-lg text-sm bg-gray-50">
                       <option>+91</option>
                     </select>
-                    <input type="tel" placeholder="10-digit phone number" value={estimateForm.phone} onChange={(e) => setEstimateForm({...estimateForm, phone: e.target.value})} className="flex-1 px-3 py-2.5 border border-gray-300 rounded-r-lg text-sm" />
+                    <input type="tel" placeholder="10-digit phone number" value={estimateForm.phone} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setEstimateForm({...estimateForm, phone: val}); }} className="flex-1 px-3 py-2.5 border border-gray-300 rounded-r-lg text-sm" />
                   </div>
                 </div>
                 <div>
