@@ -491,22 +491,26 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
-    // Verify vendor belongs to this FP
+    // Verify vendor belongs to this FP (handle both numeric id and string vendor_id)
     const [vendor] = await pool.execute(
-      `SELECT id, owner_name, service_type FROM vendors WHERE id = ? AND (franchise_partner_id = ? OR id IN (
+      `SELECT id, owner_name, service_type FROM vendors 
+       WHERE (id = ? OR vendor_id = ?) AND (franchise_partner_id = ? OR id IN (
         SELECT vendor_id FROM fp_assigned_vendors WHERE franchise_partner_id = ? AND is_active = TRUE
       ))`,
-      [vendorId, req.fpId, req.fpId]
+      [vendorId, vendorId, req.fpId, req.fpId]
     );
 
     if (vendor.length === 0) {
       return res.status(404).json({ success: false, message: 'Vendor not found' });
     }
+    
+    // Use numeric id for assignment
+    const numericVendorId = vendor[0].id;
 
     // Check if same vendor assignment already exists and is active
     const [existingSame] = await pool.execute(
       `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND is_active = TRUE`,
-      [id, vendorId]
+      [id, numericVendorId]
     );
 
     if (existingSame.length > 0) {
@@ -523,7 +527,7 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
     await pool.execute(
       `INSERT INTO property_vendor_assignments (property_id, vendor_id, assigned_by, assigned_at, is_active)
        VALUES (?, ?, ?, NOW(), TRUE)`,
-      [id, vendorId, req.user.id]
+      [id, numericVendorId, req.user.id]
     );
 
     res.json({
