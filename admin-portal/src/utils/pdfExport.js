@@ -365,69 +365,7 @@ const generatePDF = (data, type, filename) => {
 
     y = doc.lastAutoTable.finalY + 8;
 
-    // ===== DESCRIPTION SECTION (Place right after services table) =====
-    if (data.description && data.description.trim()) {
-      const maxDescLines = 50; // Maximum 50 lines
-      const lineHeight = 5; // Good spacing between lines
-      const descWidth = pageWidth - margin * 2;
-      const textWidth = descWidth - 20; // Padding inside box
-      
-      doc.setFontSize(8);
-      let descLines = doc.splitTextToSize(data.description, textWidth);
-      
-      // Limit to 50 lines
-      if (descLines.length > maxDescLines) {
-        descLines = descLines.slice(0, maxDescLines);
-        descLines[maxDescLines - 1] = descLines[maxDescLines - 1] + '...';
-      }
-      
-      const headerHeight = 18;
-      const contentHeight = descLines.length * lineHeight;
-      const descBoxHeight = headerHeight + contentHeight + 10; // Extra padding at bottom
-      
-      // Check if description fits on current page, otherwise add new page
-      if (y + descBoxHeight > pageHeight - 40) {
-        doc.addPage();
-        y = 20;
-      }
-      
-      // Description box with clean styling
-      doc.setFillColor(250, 251, 252); // Very light gray background
-      doc.setDrawColor(220, 225, 230);
-      doc.setLineWidth(0.3);
-      doc.roundedRect(margin, y, descWidth, descBoxHeight, 4, 4, 'FD');
-      
-      // Header bar
-      doc.setFillColor(...primaryColor);
-      doc.roundedRect(margin, y, descWidth, 14, 4, 4, 'F');
-      doc.rect(margin, y + 10, descWidth, 4, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text('DESCRIPTION / NOTES', margin + 10, y + 9);
-      
-      // Description content with proper alignment
-      doc.setTextColor(60, 60, 60);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      
-      let textY = y + headerHeight + 4;
-      descLines.forEach((line) => {
-        doc.text(line, margin + 10, textY);
-        textY += lineHeight;
-      });
-      
-      y += descBoxHeight + 6;
-    }
-
-    // Check if summary needs a new page (only if not enough space)
-    const summaryHeight = 95;
-    if (y + summaryHeight > pageHeight - 25) {
-      doc.addPage();
-      y = 20;
-    }
-
-    // ===== TOTAL PRICE SUMMARY =====
+    // ===== PRICE SUMMARY (Right after services to minimize whitespace) =====
     const summaryWidth = 100;
     const summaryX = pageWidth - margin - summaryWidth;
     
@@ -500,6 +438,60 @@ const generatePDF = (data, type, filename) => {
     doc.text('TOTAL', summaryX + 12, sumY + 8);
     doc.setFontSize(11);
     doc.text(formatCurrency(total), summaryX + summaryWidth - 12, sumY + 8, { align: 'right' });
+
+    y += summaryBoxHeight + 10;
+
+    // ===== DESCRIPTION SECTION (After price summary) =====
+    if (data.description && data.description.trim()) {
+      const maxDescLines = 50;
+      const lineHeight = 5;
+      const descWidth = pageWidth - margin * 2;
+      const textWidth = descWidth - 20;
+      
+      doc.setFontSize(8);
+      let descLines = doc.splitTextToSize(data.description, textWidth);
+      
+      if (descLines.length > maxDescLines) {
+        descLines = descLines.slice(0, maxDescLines);
+        descLines[maxDescLines - 1] = descLines[maxDescLines - 1] + '...';
+      }
+      
+      const headerHeight = 18;
+      const contentHeight = descLines.length * lineHeight;
+      const descBoxHeight = headerHeight + contentHeight + 10;
+      
+      // Check if description fits on current page
+      if (y + descBoxHeight > pageHeight - 25) {
+        doc.addPage();
+        y = 20;
+      }
+      
+      // Description box
+      doc.setFillColor(250, 251, 252);
+      doc.setDrawColor(220, 225, 230);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, y, descWidth, descBoxHeight, 4, 4, 'FD');
+      
+      // Header bar
+      doc.setFillColor(...primaryColor);
+      doc.roundedRect(margin, y, descWidth, 14, 4, 4, 'F');
+      doc.rect(margin, y + 10, descWidth, 4, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DESCRIPTION / NOTES', margin + 10, y + 9);
+      
+      // Description content
+      doc.setTextColor(60, 60, 60);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      
+      let textY = y + headerHeight + 4;
+      descLines.forEach((line) => {
+        doc.text(line, margin + 10, textY);
+        textY += lineHeight;
+      });
+    }
 
     // ===== FOOTER =====
     doc.setFillColor(...lightGray);
