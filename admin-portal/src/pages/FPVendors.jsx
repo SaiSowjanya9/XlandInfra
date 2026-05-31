@@ -102,9 +102,10 @@ const FPVendors = ({ user }) => {
     // Zone filter
     if (zoneFilter && (v.zone_name || v.zone) !== zoneFilter) return false;
     
-    // Status filter
-    if (statusFilter === 'active' && v.status === 'deleted') return false;
-    if (statusFilter === 'deleted' && v.status !== 'deleted') return false;
+    // Status filter - check both status and is_active
+    const isDeleted = v.status === 'deleted' || v.is_active === 0 || v.is_active === false;
+    if (statusFilter === 'active' && isDeleted) return false;
+    if (statusFilter === 'deleted' && !isDeleted) return false;
     
     // Search filter
     if (searchTerm) {
