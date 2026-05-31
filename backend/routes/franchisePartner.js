@@ -2754,23 +2754,31 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       }
     }
 
-    // Add package as estimate item
+    // Add package as estimate item (without package_id FK since FP packages are in separate table)
     if (package_id) {
-      await pool.execute(
-        `INSERT INTO estimate_items (estimate_id, package_id, description, quantity, unit_price, total_price)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [result.insertId, package_id, package_name || 'AMC Package', 1, package_price || 0, package_price || 0]
-      );
+      try {
+        await pool.execute(
+          `INSERT INTO estimate_items (estimate_id, description, quantity, unit_price, total_price)
+           VALUES (?, ?, ?, ?, ?)`,
+          [result.insertId, `[PKG:${package_id}] ${package_name || 'AMC Package'}`, 1, parseFloat(package_price) || 0, parseFloat(package_price) || 0]
+        );
+      } catch (itemErr) {
+        console.error('Failed to add package item:', itemErr.message);
+      }
     }
 
     // Add addon items
     if (addons && addons.length > 0) {
       for (const addon of addons) {
-        await pool.execute(
-          `INSERT INTO estimate_items (estimate_id, description, quantity, unit_price, total_price)
-           VALUES (?, ?, ?, ?, ?)`,
-          [result.insertId, addon.name || addon.service_name || 'Add-on', 1, addon.price || 0, addon.price || 0]
-        );
+        try {
+          await pool.execute(
+            `INSERT INTO estimate_items (estimate_id, description, quantity, unit_price, total_price)
+             VALUES (?, ?, ?, ?, ?)`,
+            [result.insertId, `[ADDON:${addon.id}] ${addon.name || addon.service_name || 'Add-on'}`, 1, parseFloat(addon.price) || 0, parseFloat(addon.price) || 0]
+          );
+        } catch (itemErr) {
+          console.error('Failed to add addon item:', itemErr.message);
+        }
       }
     }
 
