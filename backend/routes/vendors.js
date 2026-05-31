@@ -285,7 +285,7 @@ router.put('/work-orders/:id/status', authenticate, vendorOnly, async (req, res)
 // Get all vendors
 router.get('/', authenticate, requireModuleAccess(MODULES.VENDOR_MANAGEMENT), async (req, res) => {
   try {
-    const { isActive, isVerified } = req.query;
+    const { isActive, isVerified, status } = req.query;
     
     let query = `
       SELECT v.*, 
@@ -295,6 +295,14 @@ router.get('/', authenticate, requireModuleAccess(MODULES.VENDOR_MANAGEMENT), as
       WHERE 1=1
     `;
     const params = [];
+
+    // Handle status filter (active, deleted, all)
+    if (status === 'active') {
+      query += ` AND v.is_active = TRUE`;
+    } else if (status === 'deleted') {
+      query += ` AND v.is_active = FALSE`;
+    }
+    // 'all' returns everything
 
     if (isActive !== undefined) {
       query += ` AND v.is_active = ?`;
