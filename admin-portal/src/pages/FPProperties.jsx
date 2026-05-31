@@ -910,41 +910,60 @@ const FPProperties = ({ user }) => {
             </div>
 
             <div className="p-6">
-              {(assignType === 'vendor' ? vendors : employees).length === 0 ? (
-                <p className="text-gray-500 text-center py-4">
-                  No {assignType === 'vendor' ? 'vendors' : 'employees'} available
-                </p>
-              ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {(assignType === 'vendor' ? vendors : employees).map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleAssign(item.id)}
-                      className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
-                    >
-                      <div className={`w-10 h-10 ${assignType === 'vendor' ? 'bg-purple-100' : 'bg-green-100'} rounded-full flex items-center justify-center`}>
-                        {assignType === 'vendor' ? (
-                          <Store className="w-5 h-5 text-purple-600" />
-                        ) : (
-                          <User className="w-5 h-5 text-green-600" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {assignType === 'vendor' 
-                            ? (item.ownerName || item.owner_name || item.company_name || 'Unknown Vendor')
-                            : (`${item.first_name || ''} ${item.last_name || ''}`.trim() || item.name || 'Unknown Employee')}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {assignType === 'vendor' 
-                            ? (item.serviceType || item.service_type || item.email || '-')
-                            : (item.role || item.email || '-')}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              {(() => {
+                // Filter vendors by property zone
+                const propertyZone = selectedProperty?.zone || selectedProperty?.zone_id || '';
+                const zoneFilteredVendors = assignType === 'vendor' 
+                  ? vendors.filter(v => {
+                      const vendorZone = v.zone || v.zone_name || v.zone_id || '';
+                      // Match zone (case insensitive, partial match)
+                      return vendorZone && propertyZone && 
+                        (vendorZone.toString().toLowerCase().includes(propertyZone.toString().toLowerCase()) ||
+                         propertyZone.toString().toLowerCase().includes(vendorZone.toString().toLowerCase()));
+                    })
+                  : employees;
+                
+                return zoneFilteredVendors.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-gray-500">
+                      No {assignType === 'vendor' ? 'vendors' : 'employees'} available {assignType === 'vendor' && propertyZone ? `for Zone ${propertyZone}` : ''}
+                    </p>
+                    {assignType === 'vendor' && propertyZone && (
+                      <p className="text-xs text-gray-400 mt-1">Add vendors with matching zone to assign them to this property</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {zoneFilteredVendors.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleAssign(item.id)}
+                        className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
+                      >
+                        <div className={`w-10 h-10 ${assignType === 'vendor' ? 'bg-purple-100' : 'bg-green-100'} rounded-full flex items-center justify-center`}>
+                          {assignType === 'vendor' ? (
+                            <Store className="w-5 h-5 text-purple-600" />
+                          ) : (
+                            <User className="w-5 h-5 text-green-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {assignType === 'vendor' 
+                              ? (item.ownerName || item.owner_name || item.company_name || 'Unknown Vendor')
+                              : (`${item.first_name || ''} ${item.last_name || ''}`.trim() || item.name || 'Unknown Employee')}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {assignType === 'vendor' 
+                              ? (item.serviceType || item.service_type || item.email || '-')
+                              : (item.role || item.email || '-')}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
