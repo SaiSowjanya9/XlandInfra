@@ -490,18 +490,18 @@ const VendorDetails = () => {
                       {vendor.coveragePerDay}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden xl:table-cell">
-                      Manager
+                      {vendor.created_by_name || vendor.createdBy || '-'}
                     </td>
                     <td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden sm:table-cell">
                       {formatDate(vendor.createdAt)}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        vendor.status === 'deleted' 
+                        (vendor.status === 'deleted' || vendor.is_active === 0 || vendor.is_active === false)
                           ? 'bg-red-100 text-red-700' 
                           : 'bg-green-100 text-green-700'
                       }`}>
-                        {vendor.status === 'deleted' ? 'Deleted' : 'Active'}
+                        {(vendor.status === 'deleted' || vendor.is_active === 0 || vendor.is_active === false) ? 'Inactive' : 'Active'}
                       </span>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
@@ -527,13 +527,39 @@ const VendorDetails = () => {
                         >
                           <Download className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => setDeleteConfirm(vendor)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {(vendor.status === 'deleted' || vendor.is_active === 0 || vendor.is_active === false) ? (
+                          <button
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(`/api/vendors/${vendor.id || vendor.vendorId}/restore`, {
+                                  method: 'PUT',
+                                  headers: { 'Authorization': `Bearer ${token}` }
+                                });
+                                const result = await response.json();
+                                if (result.success) {
+                                  showToast('Vendor restored successfully');
+                                  loadData();
+                                } else {
+                                  showToast(result.message || 'Failed to restore vendor', 'error');
+                                }
+                              } catch (error) {
+                                showToast('Failed to restore vendor', 'error');
+                              }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                            title="Restore Vendor"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteConfirm(vendor)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -604,17 +630,39 @@ const VendorDetails = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Rate & Coverage</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><span className="text-xs text-gray-400">Rate Per Visit</span><p className="text-sm font-medium text-gray-900">₹{viewVendor.ratePerVisit}</p></div>
-                  <div><span className="text-xs text-gray-400">Coverage Per Day</span><p className="text-sm font-medium text-gray-900">{viewVendor.coveragePerDay}</p></div>
+                  <div><span className="text-xs text-gray-400">Rate Per Visit</span><p className="text-sm font-medium text-gray-900">₹{viewVendor.ratePerVisit || viewVendor.rate_per_visit || 0}</p></div>
+                  <div><span className="text-xs text-gray-400">Coverage Per Day</span><p className="text-sm font-medium text-gray-900">{viewVendor.coveragePerDay || viewVendor.coverage_per_day || 0}</p></div>
                 </div>
               </div>
+              {/* Manager Details */}
+              {(viewVendor.managerName || viewVendor.manager_name) && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-3">Manager / Primary Contact</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div><span className="text-xs text-gray-400">Name</span><p className="text-sm font-medium text-gray-900">{viewVendor.managerName || viewVendor.manager_name || '-'}</p></div>
+                    <div><span className="text-xs text-gray-400">Mobile</span><p className="text-sm font-medium text-gray-900">{viewVendor.managerMobile || viewVendor.manager_mobile || '-'}</p></div>
+                    <div><span className="text-xs text-gray-400">Email</span><p className="text-sm font-medium text-gray-900">{viewVendor.managerEmail || viewVendor.manager_email || '-'}</p></div>
+                  </div>
+                </div>
+              )}
+              {/* POC Details */}
+              {(viewVendor.pocName || viewVendor.poc_name) && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-3">Point of Contact</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div><span className="text-xs text-gray-400">Name</span><p className="text-sm font-medium text-gray-900">{viewVendor.pocName || viewVendor.poc_name || '-'}</p></div>
+                    <div><span className="text-xs text-gray-400">Mobile</span><p className="text-sm font-medium text-gray-900">{viewVendor.pocMobile || viewVendor.poc_mobile || '-'}</p></div>
+                    <div><span className="text-xs text-gray-400">Email</span><p className="text-sm font-medium text-gray-900">{viewVendor.pocEmail || viewVendor.poc_email || '-'}</p></div>
+                  </div>
+                </div>
+              )}
               {/* Metadata */}
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Metadata</h3>
                 <div className="grid grid-cols-3 gap-4">
-                  <div><span className="text-xs text-gray-400">Created By</span><p className="text-sm font-medium text-gray-900">Manager</p></div>
+                  <div><span className="text-xs text-gray-400">Created By</span><p className="text-sm font-medium text-gray-900">{viewVendor.created_by_name || viewVendor.createdBy || '-'}</p></div>
                   <div><span className="text-xs text-gray-400">Created</span><p className="text-sm font-medium text-gray-900">{formatDate(viewVendor.createdAt)}</p></div>
-                  <div><span className="text-xs text-gray-400">Status</span><p className={`text-sm font-medium ${viewVendor.status === 'deleted' ? 'text-red-600' : 'text-green-600'}`}>{viewVendor.status === 'deleted' ? 'Deleted' : 'Active'}</p></div>
+                  <div><span className="text-xs text-gray-400">Status</span><p className={`text-sm font-medium ${(viewVendor.status === 'deleted' || viewVendor.is_active === 0) ? 'text-red-600' : 'text-green-600'}`}>{(viewVendor.status === 'deleted' || viewVendor.is_active === 0) ? 'Inactive' : 'Active'}</p></div>
                 </div>
               </div>
             </div>
