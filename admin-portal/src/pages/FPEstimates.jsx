@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
-  DollarSign, Layers, Filter, Download, Mail, Save, Edit
+  DollarSign, Layers, Filter, Download, Mail, Save, Edit, Send, Link2
 } from 'lucide-react';
 import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
@@ -94,7 +94,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // Estimate form state
   const [estimateForm, setEstimateForm] = useState({
     customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '',
-    selectedPackage: '', selectedAddons: [], discount: 0, gst: 18
+    selectedPackage: '', selectedAddons: [], discount: 0, gst: 18, description: ''
   });
 
   // Helper to normalize property type to short code (GC, Apt, Villa, etc.)
@@ -124,6 +124,77 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const discountAmt = (subtotal * estimateForm.discount) / 100;
     const gstAmt = ((subtotal - discountAmt) * estimateForm.gst) / 100;
     return { subtotal, discountAmt, gstAmt, total: subtotal - discountAmt + gstAmt };
+  };
+
+  // Get selected package details with services
+  const getSelectedPackage = () => {
+    if (!estimateForm.selectedPackage) return null;
+    const pkg = amcPackages.find(p => p.id === estimateForm.selectedPackage);
+    if (!pkg) return null;
+    let services = pkg.services;
+    if (typeof services === 'string') { try { services = JSON.parse(services); } catch(e) { services = {}; } }
+    return { ...pkg, parsedServices: services?.serviceRows || services?.services || [] };
+  };
+
+  // Save estimate to backend
+  const handleSaveEstimate = async () => {
+    // Validation
+    const clientName = selectedProperty?.contact_person || selectedProperty?.contact_name || selectedProperty?.customer_name || estimateForm.customerName;
+    const clientPhone = selectedProperty?.contact_phone || selectedProperty?.phone || estimateForm.phone;
+    if (!clientName?.trim()) { showToast('Customer name is required', 'error'); return; }
+    if (!clientPhone?.trim()) { showToast('Phone number is required', 'error'); return; }
+    if (!estimateForm.selectedPackage) { showToast('Please select an AMC package', 'error'); return; }
+
+    const pkg = getSelectedPackage();
+    const pricing = calculatePricing();
+    const selectedAddonsList = estimateForm.selectedAddons.map(id => addons.find(a => a.id === id)).filter(Boolean);
+
+    try {
+      const payload = {
+        estimate_type: estimateType === 'property-based' ? 'property_based' : 'direct',
+        property_id: selectedProperty?.property_id || selectedProperty?.id || null,
+        client_name: clientName,
+        client_phone: clientPhone,
+        client_email: selectedProperty?.contact_email || selectedProperty?.email || estimateForm.email || '',
+        property_type: selectedProperty?.property_type || selectedProperty?.entry_type || estimateForm.propertyType || '',
+        property_name: selectedProperty?.name || selectedProperty?.community_name || estimateForm.propertyName || '',
+        zone: selectedProperty?.zone_id || selectedProperty?.zone || estimateForm.zone || '',
+        city: selectedProperty?.city || estimateForm.city || '',
+        address: selectedProperty?.address || estimateForm.address || '',
+        package_id: estimateForm.selectedPackage,
+        package_name: pkg?.name || '',
+        package_price: pkg?.price || 0,
+        addons: selectedAddonsList.map(a => ({ id: a.id, name: a.service_name, price: a.price, frequency_count: a.frequency_count, frequency_type: a.frequency_type })),
+        subtotal: pricing.subtotal,
+        discount_percent: estimateForm.discount,
+        discount_amount: pricing.discountAmt,
+        gst_percent: estimateForm.gst,
+        gst_amount: pricing.gstAmt,
+        total_amount: pricing.total,
+        description: estimateForm.description || ''
+      };
+
+      const res = await fetch('/api/fp/estimates', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast('Estimate saved successfully!');
+        setEstimateType(null);
+        setSelectedProperty(null);
+        setPropertyIdInput('');
+        setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: 0, gst: 18 });
+        loadData();
+        setActiveTab('list');
+      } else {
+        showToast(result.message || 'Failed to save estimate', 'error');
+      }
+    } catch (e) {
+      console.error('Save estimate error:', e);
+      showToast('Failed to save estimate', 'error');
+    }
   };
 
   // CREATE ESTIMATE - Both Property-Based and Direct-Based available for FP Manager
@@ -287,6 +358,47 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   })()}
                 </select>
               </div>
+
+              {/* Package Services Table */}
+              {(() => {
+                const pkg = getSelectedPackage();
+                if (!pkg) return null;
+                const services = pkg.parsedServices || [];
+                return (
+                  <div className="border border-blue-200 rounded-lg overflow-hidden">
+                    <div className="bg-blue-50 px-4 py-2 border-b border-blue-200">
+                      <span className="text-sm font-semibold text-blue-700">Package Services ({pkg.name})</span>
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead className="bg-blue-50/50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 uppercase">Service</th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th>
+                          <th className="px-4 py-2 text-right text-xs font-semibold text-blue-600 uppercase">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {services.length > 0 ? services.map((svc, idx) => (
+                          <tr key={idx}>
+                            <td className="px-4 py-2">{svc.service || svc.name || '-'}</td>
+                            <td className="px-4 py-2">Every {svc.frequencyCount || svc.frequency_count || 1} {svc.frequencyType || svc.frequency_type || 'Month'}</td>
+                            <td className="px-4 py-2 text-center">{FREQUENCY_COUNT_MAP?.[svc.frequencyType || svc.frequency_type] || 12}</td>
+                            <td className="px-4 py-2 text-right">-</td>
+                          </tr>
+                        )) : <tr><td colSpan={4} className="px-4 py-3 text-center text-gray-500">No services defined</td></tr>}
+                      </tbody>
+                      <tfoot className="bg-blue-50 border-t border-blue-200">
+                        <tr>
+                          <td colSpan={3} className="px-4 py-2 text-sm font-semibold text-blue-700">Package Total</td>
+                          <td className="px-4 py-2 text-right font-bold text-blue-700">{formatCurrency(pkg.price)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                );
+              })()}
+
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1.5">Add Service from Add-ons</label>
                 <select 
@@ -303,21 +415,49 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   })()}
                 </select>
               </div>
-              {estimateForm.selectedAddons.length === 0 ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center text-sm text-amber-700">
-                  No add-ons selected. Use the dropdown above to add services.
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {estimateForm.selectedAddons.map(id => {
-                    const addon = addons.find(a => a.id === id);
-                    return addon ? (
-                      <span key={id} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
-                        {addon.service_name}
-                        <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter(a => a !== id)})} className="hover:text-blue-900"><X className="w-3 h-3" /></button>
-                      </span>
-                    ) : null;
-                  })}
+
+              {/* Additional Services (Add-ons) Table */}
+              {estimateForm.selectedAddons.length > 0 && (
+                <div className="border border-blue-200 rounded-lg overflow-hidden">
+                  <div className="bg-blue-50 px-4 py-2 border-b border-blue-200">
+                    <span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-blue-50/50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 uppercase">Service</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th>
+                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th>
+                        <th className="px-4 py-2 text-right text-xs font-semibold text-blue-600 uppercase">Price</th>
+                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 uppercase">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {estimateForm.selectedAddons.map(id => {
+                        const addon = addons.find(a => a.id === id);
+                        if (!addon) return null;
+                        const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
+                        return (
+                          <tr key={id}>
+                            <td className="px-4 py-2">{addon.service_name}</td>
+                            <td className="px-4 py-2">Every {addon.frequency_count || 1} {addon.frequency_type || 'Month'}</td>
+                            <td className="px-4 py-2 text-center">{visits}</td>
+                            <td className="px-4 py-2 text-right">{formatCurrency(addon.price)}</td>
+                            <td className="px-4 py-2 text-center">
+                              <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter(a => a !== id)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-blue-50 border-t border-blue-200">
+                      <tr>
+                        <td colSpan={3} className="px-4 py-2 text-sm font-semibold text-blue-700">Total Add-ons</td>
+                        <td className="px-4 py-2 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id === id)?.price || 0), 0))}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               )}
             </div>
@@ -356,10 +496,25 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           </div>
 
+          {/* Description / Notes */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">Description / Notes</h2>
+            </div>
+            <div className="p-6">
+              <textarea 
+                value={estimateForm.description} 
+                onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
+                placeholder="Add any additional notes or description for this estimate..."
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm min-h-[100px]"
+              />
+            </div>
+          </div>
+
           {/* Actions */}
           <div className="flex justify-end gap-3">
             <button onClick={() => { setEstimateType(null); setSelectedProperty(null); setPropertyIdInput(''); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
+            <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
           </div>
         </div>
       )}
@@ -452,6 +607,47 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   })()}
                 </select>
               </div>
+
+              {/* Package Services Table */}
+              {(() => {
+                const pkg = getSelectedPackage();
+                if (!pkg) return null;
+                const services = pkg.parsedServices || [];
+                return (
+                  <div className="border border-blue-200 rounded-lg overflow-hidden">
+                    <div className="bg-blue-50 px-4 py-2 border-b border-blue-200">
+                      <span className="text-sm font-semibold text-blue-700">Package Services ({pkg.name})</span>
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead className="bg-blue-50/50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 uppercase">Service</th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th>
+                          <th className="px-4 py-2 text-right text-xs font-semibold text-blue-600 uppercase">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {services.length > 0 ? services.map((svc, idx) => (
+                          <tr key={idx}>
+                            <td className="px-4 py-2">{svc.service || svc.name || '-'}</td>
+                            <td className="px-4 py-2">Every {svc.frequencyCount || svc.frequency_count || 1} {svc.frequencyType || svc.frequency_type || 'Month'}</td>
+                            <td className="px-4 py-2 text-center">{FREQUENCY_COUNT_MAP?.[svc.frequencyType || svc.frequency_type] || 12}</td>
+                            <td className="px-4 py-2 text-right">-</td>
+                          </tr>
+                        )) : <tr><td colSpan={4} className="px-4 py-3 text-center text-gray-500">No services defined</td></tr>}
+                      </tbody>
+                      <tfoot className="bg-blue-50 border-t border-blue-200">
+                        <tr>
+                          <td colSpan={3} className="px-4 py-2 text-sm font-semibold text-blue-700">Package Total</td>
+                          <td className="px-4 py-2 text-right font-bold text-blue-700">{formatCurrency(pkg.price)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                );
+              })()}
+
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1.5">Add Service from Add-ons</label>
                 <select 
@@ -468,21 +664,49 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   })()}
                 </select>
               </div>
-              {estimateForm.selectedAddons.length === 0 ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center text-sm text-amber-700">
-                  No add-ons selected. Use the dropdown above to add services.
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {estimateForm.selectedAddons.map(id => {
-                    const addon = addons.find(a => a.id === id);
-                    return addon ? (
-                      <span key={id} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
-                        {addon.service_name}
-                        <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter(a => a !== id)})} className="hover:text-blue-900"><X className="w-3 h-3" /></button>
-                      </span>
-                    ) : null;
-                  })}
+
+              {/* Additional Services (Add-ons) Table */}
+              {estimateForm.selectedAddons.length > 0 && (
+                <div className="border border-blue-200 rounded-lg overflow-hidden">
+                  <div className="bg-blue-50 px-4 py-2 border-b border-blue-200">
+                    <span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-blue-50/50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 uppercase">Service</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th>
+                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th>
+                        <th className="px-4 py-2 text-right text-xs font-semibold text-blue-600 uppercase">Price</th>
+                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 uppercase">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {estimateForm.selectedAddons.map(id => {
+                        const addon = addons.find(a => a.id === id);
+                        if (!addon) return null;
+                        const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
+                        return (
+                          <tr key={id}>
+                            <td className="px-4 py-2">{addon.service_name}</td>
+                            <td className="px-4 py-2">Every {addon.frequency_count || 1} {addon.frequency_type || 'Month'}</td>
+                            <td className="px-4 py-2 text-center">{visits}</td>
+                            <td className="px-4 py-2 text-right">{formatCurrency(addon.price)}</td>
+                            <td className="px-4 py-2 text-center">
+                              <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter(a => a !== id)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-blue-50 border-t border-blue-200">
+                      <tr>
+                        <td colSpan={3} className="px-4 py-2 text-sm font-semibold text-blue-700">Total Add-ons</td>
+                        <td className="px-4 py-2 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id === id)?.price || 0), 0))}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               )}
             </div>
@@ -521,15 +745,30 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           </div>
 
+          {/* Description / Notes */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">Description / Notes</h2>
+            </div>
+            <div className="p-6">
+              <textarea 
+                value={estimateForm.description} 
+                onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
+                placeholder="Add any additional notes or description for this estimate..."
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm min-h-[100px]"
+              />
+            </div>
+          </div>
+
           {/* Footer Note */}
           <div className="text-xs text-gray-500 border-t border-gray-200 pt-4">
-            * Currency: INR (₹) | GST: 18% applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section
+            * Currency: INR (₹) | GST: 18% applied on total | Fields marked with * are mandatory
           </div>
 
           {/* Actions */}
           <div className="flex justify-end gap-3">
             <button onClick={() => setEstimateType(null)} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
+            <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
           </div>
         </div>
       )}
@@ -549,9 +788,55 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div></div> : filteredEstimates.length === 0 ? <div className="py-16 text-center"><DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No estimates found</p><p className="text-gray-400 text-sm mt-1">Try adjusting your search or filters</p></div> : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[700px]">
-              <thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Estimate ID</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Client</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden sm:table-cell">Type</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Amount</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden md:table-cell">Status</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden lg:table-cell">Created</th><th className="px-3 py-3 text-center font-medium text-gray-600 whitespace-nowrap text-xs">Actions</th></tr></thead>
-              <tbody className="divide-y divide-gray-100">{filteredEstimates.map((est) => <tr key={est.id} className="hover:bg-gray-50"><td className="px-3 py-3 font-mono text-xs whitespace-nowrap">{est.estimate_id}</td><td className="px-3 py-3 truncate max-w-[120px]">{est.client_name}</td><td className="px-3 py-3 whitespace-nowrap hidden sm:table-cell"><span className={`px-2 py-0.5 rounded text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></td><td className="px-3 py-3 font-semibold whitespace-nowrap">{formatCurrency(est.total_amount)}</td><td className="px-3 py-3 hidden md:table-cell"><span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{est.status}</span></td><td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell">{est.created_at ? new Date(est.created_at).toLocaleDateString() : '-'}</td><td className="px-3 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Eye className="w-4 h-4" /></button><button onClick={() => exportEstimateToPDF(est)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => handleArchiveEstimate(est.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Archive className="w-4 h-4" /></button></div></td></tr>)}</tbody>
+            <table className="w-full text-sm min-w-[800px]">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Estimate ID</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Type</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Client</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Date</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Total</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-500 uppercase text-xs tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredEstimates.map((est) => (
+                  <tr key={est.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-4 font-mono text-sm text-gray-900">{est.estimate_id}</td>
+                    <td className="px-4 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                        <Link2 className="w-3 h-3" />
+                        {est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="font-medium text-gray-900">{est.client_name}</div>
+                      {est.property_id && <div className="text-xs text-gray-400">{est.property_id}</div>}
+                    </td>
+                    <td className="px-4 py-4 text-gray-600">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                        {est.created_at ? new Date(est.created_at).toLocaleDateString() : '-'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 font-semibold text-gray-900">{formatCurrency(est.total_amount)}</td>
+                    <td className="px-4 py-4">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {est.status || 'Draft'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye className="w-4 h-4" /></button>
+                        <button onClick={() => exportEstimateToPDF(est)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button>
+                        <button onClick={() => showToast('Email feature coming soon', 'info')} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded" title="Send Email"><Send className="w-4 h-4" /></button>
+                        <button onClick={() => handleArchiveEstimate(est.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         )}
