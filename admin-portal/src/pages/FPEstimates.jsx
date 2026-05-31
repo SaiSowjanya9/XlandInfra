@@ -118,13 +118,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Export FP estimate to PDF with properly formatted data
   const handleExportPDF = (estimate) => {
-    // Parse addons if it's a JSON string
-    let addonsArray = estimate.addons || [];
-    if (estimate.addons_data) {
-      try {
-        addonsArray = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
-      } catch (e) {}
+    // Parse addons from multiple possible sources
+    let addonsArray = [];
+    
+    // Try estimate.addons first (from backend enrichment)
+    if (estimate.addons && Array.isArray(estimate.addons) && estimate.addons.length > 0) {
+      addonsArray = estimate.addons;
     }
+    // Try addons_data JSON string
+    else if (estimate.addons_data) {
+      try {
+        const parsed = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
+        if (Array.isArray(parsed)) addonsArray = parsed;
+      } catch (e) { console.log('Addon parse error:', e); }
+    }
+    
+    console.log('PDF Export - Estimate:', estimate.estimate_id, 'Division:', estimate.division, 'Addons:', addonsArray);
     
     // Prepare estimate data for PDF
     const pdfData = {
@@ -147,6 +156,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       subtotal: parseFloat(estimate.subtotal) || 0,
       totalPrice: parseFloat(estimate.total_amount) || 0,
       discount: parseFloat(estimate.discount_percent) || 0,
+      description: estimate.description || '',
       services: estimate.package_name ? [{
         name: estimate.package_name,
         frequencyCount: 1,
@@ -154,12 +164,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         price: parseFloat(estimate.package_price) || 0
       }] : [],
       addons: addonsArray.map(a => ({
-        name: a.name || a.service_name,
-        price: parseFloat(a.price) || 0
-      })),
-      createdAt: estimate.created_at
+        name: a.name || a.service_name || a.serviceName || 'Add-on',
+        price: parseFloat(a.price) || 0,
+        frequencyType: a.frequency_type || a.frequencyType || 'One-time',
+        frequency: a.frequency_count || a.frequencyCount || 1
+      }))
     };
     
+    console.log('PDF Data addons:', pdfData.addons);
     exportEstimateToPDF(pdfData);
   };
 
