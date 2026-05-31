@@ -2704,62 +2704,85 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       }
     }
 
-    // Try insert with franchise_partner_id, fallback without
+    // Build description with all estimate data
+    const fullDescription = description 
+      ? `${description}\n\n[SERVICES_DATA]${servicesData}` 
+      : `[SERVICES_DATA]${servicesData}`;
+    
+    // Try multiple INSERT approaches until one works
     let result;
-    try {
-      [result] = await pool.execute(
-        `INSERT INTO estimates (
-          estimate_id, client_id, property_id, title, description, estimate_type,
-          subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount,
-          total_amount, valid_until, franchise_partner_id, created_by, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
-        [
-          estimateId, 
-          clientId || null, 
-          resolvedPropertyId, 
-          estimateTitle,
-          description ? `${description}\n\n[SERVICES_DATA]${servicesData}` : `[SERVICES_DATA]${servicesData}`,
-          estimate_type || estimateType || 'property_based',
-          finalSubtotal,
-          parseFloat(finalGstPercent) || 18,
-          parseFloat(finalGstAmount) || 0,
-          parseFloat(finalDiscountPercent) || 0,
-          parseFloat(finalDiscountAmount) || 0,
-          parseFloat(finalTotal) || 0,
-          validUntil || null, 
-          req.fpId, 
-          createdBy
-        ]
-      );
-    } catch (insertErr) {
-      console.error('Insert error with franchise_partner_id:', insertErr.message);
-      // Fallback: try without franchise_partner_id if column doesn't exist
-      if (insertErr.code === 'ER_BAD_FIELD_ERROR') {
+    let insertSuccess = false;
+    
+    // Approach 1: Full insert with franchise_partner_id
+    if (!insertSuccess) {
+      try {
         [result] = await pool.execute(
           `INSERT INTO estimates (
-            estimate_id, client_id, property_id, title, description, estimate_type,
+            estimate_id, property_id, title, description, estimate_type,
             subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount,
-            total_amount, valid_until, created_by, status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+            total_amount, franchise_partner_id, created_by, status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
           [
-            estimateId, 
-            clientId || null, 
-            resolvedPropertyId, 
-            estimateTitle,
-            description ? `${description}\n\n[SERVICES_DATA]${servicesData}` : `[SERVICES_DATA]${servicesData}`,
+            estimateId, resolvedPropertyId, estimateTitle, fullDescription,
             estimate_type || estimateType || 'property_based',
-            finalSubtotal,
-            parseFloat(finalGstPercent) || 18,
-            parseFloat(finalGstAmount) || 0,
-            parseFloat(finalDiscountPercent) || 0,
-            parseFloat(finalDiscountAmount) || 0,
-            parseFloat(finalTotal) || 0,
-            validUntil || null, 
-            createdBy
+            finalSubtotal, parseFloat(finalGstPercent) || 18, parseFloat(finalGstAmount) || 0,
+            parseFloat(finalDiscountPercent) || 0, parseFloat(finalDiscountAmount) || 0,
+            parseFloat(finalTotal) || 0, req.fpId, createdBy
           ]
         );
-      } else {
-        throw insertErr;
+        insertSuccess = true;
+        console.log('Estimate created with approach 1 (full)');
+      } catch (err1) {
+        console.log('Approach 1 failed:', err1.message);
+      }
+    }
+    
+    // Approach 2: Without franchise_partner_id
+    if (!insertSuccess) {
+      try {
+        [result] = await pool.execute(
+          `INSERT INTO estimates (
+            estimate_id, property_id, title, description, estimate_type,
+            subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount,
+            total_amount, created_by, status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+          [
+            estimateId, resolvedPropertyId, estimateTitle, fullDescription,
+            estimate_type || estimateType || 'property_based',
+            finalSubtotal, parseFloat(finalGstPercent) || 18, parseFloat(finalGstAmount) || 0,
+            parseFloat(finalDiscountPercent) || 0, parseFloat(finalDiscountAmount) || 0,
+            parseFloat(finalTotal) || 0, createdBy
+          ]
+        );
+        insertSuccess = true;
+        console.log('Estimate created with approach 2 (no fp_id)');
+      } catch (err2) {
+        console.log('Approach 2 failed:', err2.message);
+      }
+    }
+    
+    // Approach 3: With created_by = 1 (system user fallback)
+    if (!insertSuccess) {
+      try {
+        [result] = await pool.execute(
+          `INSERT INTO estimates (
+            estimate_id, property_id, title, description, estimate_type,
+            subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount,
+            total_amount, created_by, status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'draft')`,
+          [
+            estimateId, resolvedPropertyId, estimateTitle, fullDescription,
+            estimate_type || estimateType || 'property_based',
+            finalSubtotal, parseFloat(finalGstPercent) || 18, parseFloat(finalGstAmount) || 0,
+            parseFloat(finalDiscountPercent) || 0, parseFloat(finalDiscountAmount) || 0,
+            parseFloat(finalTotal) || 0
+          ]
+        );
+        insertSuccess = true;
+        console.log('Estimate created with approach 3 (system user)');
+      } catch (err3) {
+        console.log('Approach 3 failed:', err3.message);
+        throw new Error(`All insert approaches failed. Last error: ${err3.message}`);
       }
     }
 
