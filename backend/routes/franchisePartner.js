@@ -2696,30 +2696,63 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       }
     }
 
-    const [result] = await pool.execute(
-      `INSERT INTO estimates (
-        estimate_id, client_id, property_id, title, description, estimate_type,
-        subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount,
-        total_amount, valid_until, franchise_partner_id, created_by, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
-      [
-        estimateId, 
-        clientId || null, 
-        resolvedPropertyId, 
-        client_name || package_name || title || 'FP Estimate',
-        description ? `${description}\n\n[SERVICES_DATA]${servicesData}` : `[SERVICES_DATA]${servicesData}`,
-        estimate_type || estimateType || 'property_based',
-        finalSubtotal,
-        finalGstPercent,
-        finalGstAmount,
-        finalDiscountPercent,
-        finalDiscountAmount,
-        finalTotal,
-        validUntil || null, 
-        req.fpId, 
-        req.user.id
-      ]
-    );
+    // Try insert with franchise_partner_id, fallback without
+    let result;
+    try {
+      [result] = await pool.execute(
+        `INSERT INTO estimates (
+          estimate_id, client_id, property_id, title, description, estimate_type,
+          subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount,
+          total_amount, valid_until, franchise_partner_id, created_by, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+        [
+          estimateId, 
+          clientId || null, 
+          resolvedPropertyId, 
+          client_name || package_name || title || 'FP Estimate',
+          description ? `${description}\n\n[SERVICES_DATA]${servicesData}` : `[SERVICES_DATA]${servicesData}`,
+          estimate_type || estimateType || 'property_based',
+          finalSubtotal,
+          finalGstPercent,
+          finalGstAmount,
+          finalDiscountPercent,
+          finalDiscountAmount,
+          finalTotal,
+          validUntil || null, 
+          req.fpId, 
+          req.user.id
+        ]
+      );
+    } catch (insertErr) {
+      // Fallback: try without franchise_partner_id if column doesn't exist
+      if (insertErr.code === 'ER_BAD_FIELD_ERROR') {
+        [result] = await pool.execute(
+          `INSERT INTO estimates (
+            estimate_id, client_id, property_id, title, description, estimate_type,
+            subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount,
+            total_amount, valid_until, created_by, status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+          [
+            estimateId, 
+            clientId || null, 
+            resolvedPropertyId, 
+            client_name || package_name || title || 'FP Estimate',
+            description ? `${description}\n\n[SERVICES_DATA]${servicesData}` : `[SERVICES_DATA]${servicesData}`,
+            estimate_type || estimateType || 'property_based',
+            finalSubtotal,
+            finalGstPercent,
+            finalGstAmount,
+            finalDiscountPercent,
+            finalDiscountAmount,
+            finalTotal,
+            validUntil || null, 
+            req.user.id
+          ]
+        );
+      } else {
+        throw insertErr;
+      }
+    }
 
     // Add package as estimate item
     if (package_id) {
