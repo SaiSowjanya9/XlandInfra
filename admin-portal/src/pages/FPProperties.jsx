@@ -924,15 +924,16 @@ const FPProperties = ({ user }) => {
                   );
                 }
                 
-                // Filter vendors by matching zone only
+                // Filter vendors by EXACT zone match only
                 const zoneFilteredVendors = assignType === 'vendor' 
                   ? vendors.filter(v => {
                       const vendorZone = (v.zone || v.zone_name || v.zone_id || '').toString().toLowerCase().trim();
                       if (!vendorZone) return false;
-                      // Match zone - check if zones contain each other (handles "Zone 43" vs "43")
-                      return vendorZone.includes(propertyZone) || 
-                             propertyZone.includes(vendorZone) ||
-                             vendorZone.replace('zone', '').trim() === propertyZone.replace('zone', '').trim();
+                      // Exact zone match - extract numbers for comparison
+                      const propZoneNum = propertyZone.replace(/[^0-9]/g, '');
+                      const vendorZoneNum = vendorZone.replace(/[^0-9]/g, '');
+                      // Match exactly: "Zone 43" === "Zone 43" OR "43" === "43"
+                      return vendorZone === propertyZone || propZoneNum === vendorZoneNum;
                     })
                   : employees;
                 
