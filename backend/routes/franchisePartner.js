@@ -1103,7 +1103,7 @@ router.post('/vendors', requireFPScope, async (req, res) => {
     const [result] = await pool.execute(
       `INSERT INTO vendors (
         vendor_id, username, email, password_hash, company_name, contact_person,
-        phone, service_type, zone, area_name,
+        phone, service_type, zone_name, area,
         owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
