@@ -283,9 +283,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <option value="">+ Select Add-on to add</option>
                   {(() => {
                     const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || estimateForm?.propertyType;
-                    const filteredAddons = propertyType ? addons.filter(addon => { const addonType = (addon.property_type || '').toUpperCase(); const searchType = propertyType.toUpperCase(); return addonType === searchType || addonType === 'GC' && searchType === 'GC'; }) : addons;
-                    const otherAddons = propertyType ? addons.filter(addon => !filteredAddons.includes(addon)) : [];
-                    return (<>{filteredAddons.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}</optgroup>}{otherAddons.length > 0 && <optgroup label="Other Add-ons">{otherAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}</optgroup>}{!propertyType && addons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}</>);
+                    const searchType = (propertyType || '').toUpperCase();
+                    const filteredAddons = searchType ? addons.filter(addon => (addon.property_type || '').toUpperCase() === searchType) : addons;
+                    if (searchType && filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
+                    return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>);
                   })()}
                 </select>
               </div>
@@ -447,9 +448,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <option value="">+ Select Add-on to add</option>
                   {(() => {
                     const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || estimateForm?.propertyType;
-                    const filteredAddons = propertyType ? addons.filter(addon => { const addonType = (addon.property_type || '').toUpperCase(); const searchType = propertyType.toUpperCase(); return addonType === searchType || addonType === 'GC' && searchType === 'GC'; }) : addons;
-                    const otherAddons = propertyType ? addons.filter(addon => !filteredAddons.includes(addon)) : [];
-                    return (<>{filteredAddons.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}</optgroup>}{otherAddons.length > 0 && <optgroup label="Other Add-ons">{otherAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}</optgroup>}{!propertyType && addons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>)}</>);
+                    const searchType = (propertyType || '').toUpperCase();
+                    const filteredAddons = searchType ? addons.filter(addon => (addon.property_type || '').toUpperCase() === searchType) : addons;
+                    if (searchType && filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
+                    return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>);
                   })()}
                 </select>
               </div>
