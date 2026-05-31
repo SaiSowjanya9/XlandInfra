@@ -2624,6 +2624,15 @@ router.get('/estimates', requireFPScope, async (req, res) => {
       )
     `);
 
+    // Add missing columns if they don't exist (for existing tables)
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN IF NOT EXISTS action_token VARCHAR(100)`);
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP NULL`);
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN IF NOT EXISTS division VARCHAR(100)`);
+    } catch (e) {
+      // Columns may already exist, ignore error
+    }
+
     let query = `SELECT * FROM fp_estimates WHERE franchise_partner_id = ?`;
     const params = [req.fpId];
 
