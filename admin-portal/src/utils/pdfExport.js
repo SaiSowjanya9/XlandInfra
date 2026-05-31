@@ -132,19 +132,17 @@ const generatePDF = (data, type, filename) => {
     doc.setTextColor(...darkText);
     doc.setFontSize(8);
     
-    // Property ID - always show if available
-    if (data.propertyId) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Property ID:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.propertyId || '-'), margin + 32, infoY);
-      infoY += 7;
-    }
+    // Property ID - always show
+    doc.setFont('helvetica', 'bold');
+    doc.text('Property ID:', margin + 5, infoY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.propertyId || data.property_code || data.property_id || '-'), margin + 32, infoY);
+    infoY += 7;
     
     doc.setFont('helvetica', 'bold');
     doc.text('Property Type:', margin + 5, infoY);
     doc.setFont('helvetica', 'normal');
-    doc.text(String(data.propertyType || '-'), margin + 32, infoY);
+    doc.text(String(data.propertyType || data.property_type || '-'), margin + 32, infoY);
     infoY += 7;
     
     doc.setFont('helvetica', 'bold');
@@ -153,14 +151,12 @@ const generatePDF = (data, type, filename) => {
     doc.text(String(data.zone || '-'), margin + 32, infoY);
     infoY += 7;
     
-    // Division - always show if available
-    if (data.division) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Division:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.division || '-'), margin + 32, infoY);
-      infoY += 7;
-    }
+    // Division - always show
+    doc.setFont('helvetica', 'bold');
+    doc.text('Division:', margin + 5, infoY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.division || '-'), margin + 32, infoY);
+    infoY += 7;
     
     // Area Name
     if (data.areaName) {
