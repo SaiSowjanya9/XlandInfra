@@ -317,11 +317,11 @@ const FPVendors = ({ user }) => {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        vendor.status === 'deleted' 
+                        (vendor.status === 'deleted' || vendor.is_active === 0 || vendor.is_active === false)
                           ? 'bg-red-100 text-red-700' 
                           : 'bg-green-100 text-green-700'
                       }`}>
-                        {vendor.status === 'deleted' ? 'Deleted' : 'Active'}
+                        {(vendor.status === 'deleted' || vendor.is_active === 0 || vendor.is_active === false) ? 'Inactive' : 'Active'}
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
