@@ -2651,7 +2651,19 @@ router.get('/estimates', requireFPScope, async (req, res) => {
 
     const [estimates] = await pool.execute(query, params);
 
-    // Parse addons_data JSON
+    // Get FP's contact name to use for estimates with email as creator name
+    let fpContactName = 'Franchise Partner';
+    try {
+      const [[fpInfo]] = await pool.execute(
+        'SELECT contact_name, company_name FROM franchise_partners WHERE id = ?',
+        [req.fpId]
+      );
+      if (fpInfo) {
+        fpContactName = fpInfo.contact_name || fpInfo.company_name || 'Franchise Partner';
+      }
+    } catch (e) {}
+
+    // Parse addons_data JSON and fix creator name if it's an email
     const enrichedEstimates = estimates.map(est => {
       let addons = [];
       if (est.addons_data) {
@@ -2659,7 +2671,12 @@ router.get('/estimates', requireFPScope, async (req, res) => {
           addons = typeof est.addons_data === 'string' ? JSON.parse(est.addons_data) : est.addons_data;
         } catch (e) {}
       }
-      return { ...est, addons };
+      // If created_by_name looks like an email, replace with FP contact name
+      let creatorName = est.created_by_name;
+      if (creatorName && creatorName.includes('@')) {
+        creatorName = fpContactName;
+      }
+      return { ...est, addons, created_by_name: creatorName };
     });
 
     res.json({ success: true, data: enrichedEstimates });
@@ -2834,6 +2851,12 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
     if (!estimate) {
       return res.status(404).json({ success: false, message: 'Estimate not found' });
     }
+    
+    // Ensure columns exist (for existing tables)
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN IF NOT EXISTS action_token VARCHAR(100)`);
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP NULL`);
+    } catch (e) { /* ignore if columns exist */ }
     
     // Generate action token for approve/reject links
     const crypto = require('crypto');
