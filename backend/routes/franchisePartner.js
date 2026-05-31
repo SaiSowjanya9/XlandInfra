@@ -2668,6 +2668,46 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       description
     } = req.body;
 
+    // Ensure fp_estimates table exists
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS fp_estimates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        estimate_id VARCHAR(50) UNIQUE NOT NULL,
+        franchise_partner_id INT NOT NULL,
+        property_id INT,
+        estimate_type VARCHAR(50) DEFAULT 'property_based',
+        client_name VARCHAR(255),
+        client_phone VARCHAR(50),
+        client_email VARCHAR(255),
+        property_name VARCHAR(255),
+        property_code VARCHAR(50),
+        property_type VARCHAR(50),
+        zone VARCHAR(100),
+        city VARCHAR(100),
+        address TEXT,
+        package_id INT,
+        package_name VARCHAR(255),
+        package_price DECIMAL(12,2) DEFAULT 0.00,
+        subtotal DECIMAL(12,2) DEFAULT 0.00,
+        discount_percent DECIMAL(5,2) DEFAULT 0.00,
+        discount_amount DECIMAL(12,2) DEFAULT 0.00,
+        gst_percent DECIMAL(5,2) DEFAULT 18.00,
+        gst_amount DECIMAL(12,2) DEFAULT 0.00,
+        total_amount DECIMAL(12,2) DEFAULT 0.00,
+        addons_data JSON,
+        description TEXT,
+        status VARCHAR(50) DEFAULT 'draft',
+        valid_until DATE,
+        created_by_id INT,
+        created_by_name VARCHAR(255),
+        created_by_role VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        is_archived BOOLEAN DEFAULT FALSE,
+        archived_at TIMESTAMP NULL
+      )
+    `);
+
     const estimateId = `EST-${Date.now()}${Math.floor(Math.random() * 1000)}`;
     
     // Get creator info
