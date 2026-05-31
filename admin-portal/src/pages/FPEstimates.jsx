@@ -740,6 +740,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               </button>
                               <button 
                                 onClick={() => {
+                                  // Map service fields to PDF expected format
+                                  const mappedServices = Array.isArray(serviceRows) ? serviceRows.map(s => ({
+                                    name: s.name || s.service || 'Service',
+                                    frequencyCount: s.frequency_count || s.frequencyCount || 1,
+                                    frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
+                                  })) : [];
                                   const pdfData = {
                                     id: pkg.id,
                                     packageId: pkg.package_code || `PKG-${pkg.id}`,
@@ -749,8 +755,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                     billingDuration: billingDuration,
                                     price: pkg.price || pkg.base_price,
                                     totalPrice: pkg.price || pkg.base_price,
-                                    services: serviceRows,
-                                    serviceRows: serviceRows,
+                                    services: mappedServices,
+                                    serviceRows: mappedServices,
                                     description: pkg.description,
                                     createdAt: pkg.created_at
                                   };
