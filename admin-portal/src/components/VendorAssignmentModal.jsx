@@ -183,7 +183,8 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     setError(null);
     
     // DEBUG: Log property info with enhanced zone debugging
-    const propZoneDebug = getZoneDebugInfo(property?.zone);
+    const propertyZone = property?.zone_name || property?.zone || property?.zone_id || '';
+    const propZoneDebug = getZoneDebugInfo(propertyZone);
     console.log('═══════════════════════════════════════════════════════════════════════════');
     console.log('[DEBUG] ASSIGN VENDORS - DATA LOAD');
     console.log('═══════════════════════════════════════════════════════════════════════════');
@@ -217,12 +218,13 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       const allVendorZones = new Set();
       const allVendorServiceTypes = new Set();
       vendorData?.forEach((v, i) => {
-        const vendorZoneDebug = getZoneDebugInfo(v.zone);
-        allVendorZones.add(v.zone);
-        allVendorServiceTypes.add(v.serviceType);
-        console.log(`  ${i + 1}. ${v.ownerName}`);
-        console.log(`      Service: "${v.serviceType}" → normalized: "${normalizeServiceType(v.serviceType)}"`);
-        console.log(`      Zone: "${v.zone}" → normalized: "${vendorZoneDebug.normalized}"${vendorZoneDebug.wasMapped ? ' (mapped)' : ''}`);
+        const vZone = v.zone_name || v.zone || v.zone_id || '';
+        const vendorZoneDebug = getZoneDebugInfo(vZone);
+        allVendorZones.add(vZone);
+        allVendorServiceTypes.add(v.serviceType || v.service_type);
+        console.log(`  ${i + 1}. ${v.ownerName || v.owner_name}`);
+        console.log(`      Service: "${v.serviceType || v.service_type}" → normalized: "${normalizeServiceType(v.serviceType || v.service_type)}"`);
+        console.log(`      Zone: "${vZone}" → normalized: "${vendorZoneDebug.normalized}"${vendorZoneDebug.wasMapped ? ' (mapped)' : ''}`);
       });
       console.log('[DEBUG] All unique Vendor Zones:', Array.from(allVendorZones).join(', '));
       console.log('[DEBUG] All unique Vendor Service Types:', Array.from(allVendorServiceTypes).join(', '));
@@ -354,10 +356,11 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     );
     
     // Get property zone for filtering (normalized for exact match)
-    const propZoneNormalized = normalizeZone(property?.zone);
+    const propZone = property?.zone_name || property?.zone || property?.zone_id || '';
+    const propZoneNormalized = normalizeZone(propZone);
     
-    console.log(`[EstimateSelect] Property: ${property?.propertyId}, Zone: "${property?.zone}"`);
-    console.log(`[EstimateSelect] Available vendors:`, vendorList.map(v => `${v.ownerName} (${v.serviceType}, ${v.zone})`));
+    console.log(`[EstimateSelect] Property: ${property?.propertyId}, Zone: "${propZone}"`);
+    console.log(`[EstimateSelect] Available vendors:`, vendorList.map(v => `${v.ownerName || v.owner_name} (${v.serviceType || v.service_type}, ${v.zone_name || v.zone})`));
     
     // Map services with auto-matched vendors (by BOTH service type AND zone - exact match)
     const mappedServices = services.map(service => {
@@ -379,8 +382,9 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       // Auto-match vendor by BOTH service type AND zone (exact match)
       const normalizedService = normalizeServiceType(service.serviceType);
       const matchingVendor = vendorList.find(v => {
-        const vendorServiceNormalized = normalizeServiceType(v.serviceType);
-        const vendorZoneNormalized = normalizeZone(v.zone);
+        const vendorServiceNormalized = normalizeServiceType(v.serviceType || v.service_type);
+        const vendorZone = v.zone_name || v.zone || v.zone_id || '';
+        const vendorZoneNormalized = normalizeZone(vendorZone);
         
         const matchesService = vendorServiceNormalized === normalizedService;
         const matchesZone = vendorZoneNormalized === propZoneNormalized;
@@ -388,14 +392,14 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
         return matchesService && matchesZone;
       });
       
-      console.log(`[EstimateSelect] Service "${service.serviceType}" → Matched: ${matchingVendor?.ownerName || 'None (no vendor for this service in ' + property?.zone + ' zone)'}`);
+      console.log(`[EstimateSelect] Service "${service.serviceType}" → Matched: ${matchingVendor?.ownerName || matchingVendor?.owner_name || 'None (no vendor for this service in ' + propZone + ' zone)'}`);
       
       return {
         ...service,
-        vendorId: matchingVendor?.vendorId || '',
-        vendorName: matchingVendor?.ownerName || '',
-        vendorZone: matchingVendor?.zone || '',
-        vendorServiceType: matchingVendor?.serviceType || ''
+        vendorId: matchingVendor?.vendorId || matchingVendor?.vendor_id || '',
+        vendorName: matchingVendor?.ownerName || matchingVendor?.owner_name || '',
+        vendorZone: matchingVendor?.zone_name || matchingVendor?.zone || '',
+        vendorServiceType: matchingVendor?.serviceType || matchingVendor?.service_type || ''
       };
     });
     
