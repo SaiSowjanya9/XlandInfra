@@ -397,10 +397,23 @@ router.post('/:estimateId/action', async (req, res) => {
     }
     
     const pool = db.pool;
-    const [estimates] = await pool.execute(
-      `SELECT * FROM estimates WHERE estimate_id = ? AND action_token = ? AND is_active = TRUE`,
+    
+    // First check regular estimates table
+    let [estimates] = await pool.execute(
+      `SELECT *, 'regular' as source FROM estimates WHERE estimate_id = ? AND action_token = ? AND is_active = TRUE`,
       [estimateId, token]
     );
+    
+    let source = 'regular';
+    
+    // If not found, check fp_estimates table
+    if (estimates.length === 0) {
+      [estimates] = await pool.execute(
+        `SELECT *, 'fp' as source FROM fp_estimates WHERE estimate_id = ? AND action_token = ?`,
+        [estimateId, token]
+      );
+      source = 'fp';
+    }
     
     if (estimates.length === 0) {
       return res.status(404).json({ success: false, message: 'Estimate not found or invalid token' });
@@ -409,7 +422,7 @@ router.post('/:estimateId/action', async (req, res) => {
     const est = estimates[0];
     
     // Check if already actioned
-    if (['Approved', 'Rejected'].includes(est.status)) {
+    if (['Approved', 'Rejected', 'approved', 'rejected'].includes(est.status)) {
       return res.status(400).json({ 
         success: false, 
         message: `This estimate has already been ${est.status.toLowerCase()}` 
@@ -417,25 +430,29 @@ router.post('/:estimateId/action', async (req, res) => {
     }
     
     // Check if expired
-    if (est.status === 'Expired') {
+    if (est.status === 'Expired' || est.status === 'expired') {
       return res.status(400).json({ success: false, message: 'This estimate has expired' });
     }
     
-    const newStatus = action === 'approve' ? 'Approved' : 'Rejected';
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
     
-    // Update estimate status
-    await pool.execute(
-      `UPDATE estimates SET status = ?, actioned_at = NOW() WHERE estimate_id = ?`,
-      [newStatus, estimateId]
-    );
-    
-    // Note: Admin notification emails disabled for now
-    // Can be enabled later by uncommenting sendEstimateActionNotification call
+    // Update estimate status based on source table
+    if (source === 'fp') {
+      await pool.execute(
+        `UPDATE fp_estimates SET status = ? WHERE estimate_id = ?`,
+        [newStatus, estimateId]
+      );
+    } else {
+      await pool.execute(
+        `UPDATE estimates SET status = ?, actioned_at = NOW() WHERE estimate_id = ?`,
+        [action === 'approve' ? 'Approved' : 'Rejected', estimateId]
+      );
+    }
     
     res.json({ 
       success: true, 
-      message: `Estimate ${newStatus.toLowerCase()} successfully`,
-      status: newStatus
+      message: `Estimate ${newStatus} successfully`,
+      status: action === 'approve' ? 'Approved' : 'Rejected'
     });
   } catch (error) {
     console.error('Estimate action error:', error);
@@ -454,11 +471,22 @@ router.get('/:estimateId/status', async (req, res) => {
     const { token } = req.query;
     
     const pool = db.pool;
-    const [estimates] = await pool.execute(
-      `SELECT estimate_id, customer_name, property_name, total, status, sent_at 
+    
+    // First check regular estimates table
+    let [estimates] = await pool.execute(
+      `SELECT estimate_id, customer_name, property_name, total, status, sent_at, 'regular' as source
        FROM estimates WHERE estimate_id = ? AND action_token = ? AND is_active = TRUE`,
       [estimateId, token]
     );
+    
+    // If not found, check fp_estimates table
+    if (estimates.length === 0) {
+      [estimates] = await pool.execute(
+        `SELECT estimate_id, client_name as customer_name, property_name, total_amount as total, status, created_at as sent_at, 'fp' as source
+         FROM fp_estimates WHERE estimate_id = ? AND action_token = ?`,
+        [estimateId, token]
+      );
+    }
     
     if (estimates.length === 0) {
       return res.status(404).json({ success: false, message: 'Estimate not found or invalid token' });
@@ -473,7 +501,8 @@ router.get('/:estimateId/status', async (req, res) => {
         propertyName: est.property_name,
         total: parseFloat(est.total || 0),
         status: est.status,
-        sentAt: est.sent_at
+        sentAt: est.sent_at,
+        source: est.source
       }
     });
   } catch (error) {

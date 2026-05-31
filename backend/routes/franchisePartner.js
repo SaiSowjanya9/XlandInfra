@@ -2612,6 +2612,8 @@ router.get('/estimates', requireFPScope, async (req, res) => {
         description TEXT,
         status VARCHAR(50) DEFAULT 'draft',
         valid_until DATE,
+        action_token VARCHAR(100),
+        sent_at TIMESTAMP NULL,
         created_by_id INT,
         created_by_name VARCHAR(255),
         created_by_role VARCHAR(50),
@@ -2700,6 +2702,8 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         description TEXT,
         status VARCHAR(50) DEFAULT 'draft',
         valid_until DATE,
+        action_token VARCHAR(100),
+        sent_at TIMESTAMP NULL,
         created_by_id INT,
         created_by_name VARCHAR(255),
         created_by_role VARCHAR(50),
@@ -2712,12 +2716,30 @@ router.post('/estimates', requireFPScope, async (req, res) => {
 
     const estimateId = `EST-${Date.now()}${Math.floor(Math.random() * 1000)}`;
     
-    // Get creator info
-    const creatorName = req.user?.first_name && req.user?.last_name 
-      ? `${req.user.first_name} ${req.user.last_name}`.trim()
-      : req.user?.name || req.user?.email || 'Franchise Partner';
-    const creatorRole = req.user?.role || 'franchise_partner';
-    const creatorId = req.user?.id || null;
+    // Get creator info - fetch FP name from database
+    let creatorName = 'Franchise Partner';
+    let creatorRole = req.user?.role || 'franchise_partner';
+    let creatorId = req.user?.id || null;
+    
+    // Try to get the FP's contact name from the database
+    try {
+      const [[fpInfo]] = await pool.execute(
+        'SELECT contact_name, company_name FROM franchise_partners WHERE id = ?',
+        [req.fpId]
+      );
+      if (fpInfo) {
+        creatorName = fpInfo.contact_name || fpInfo.company_name || 'Franchise Partner';
+      }
+    } catch (e) {
+      console.log('Could not fetch FP name:', e.message);
+    }
+    
+    // For FP employees (manager, coordinator, etc), use their name
+    if (req.user?.first_name || req.user?.name) {
+      creatorName = req.user?.first_name && req.user?.last_name 
+        ? `${req.user.first_name} ${req.user.last_name}`.trim()
+        : req.user?.name || creatorName;
+    }
     
     // Calculate amounts
     const finalSubtotal = parseFloat(subtotal) || 0;
@@ -2804,19 +2826,62 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Estimate not found' });
     }
     
-    // For now, just update status to 'sent' - actual email sending would require email service integration
+    // Generate action token for approve/reject links
+    const crypto = require('crypto');
+    const actionToken = crypto.randomBytes(32).toString('hex');
+    
+    // Update estimate with action token and status
     await pool.execute(
-      'UPDATE fp_estimates SET status = ? WHERE id = ?',
-      ['sent', estimateId]
+      'UPDATE fp_estimates SET status = ?, action_token = ?, sent_at = NOW() WHERE id = ?',
+      ['sent', actionToken, estimateId]
     );
     
-    // TODO: Integrate with email service (nodemailer, SendGrid, etc.)
-    console.log(`Email would be sent to ${email} for estimate ${estimate.estimate_id}`);
-    
-    res.json({ 
-      success: true, 
-      message: `Estimate marked as sent. Email notification to ${email} pending integration.` 
-    });
+    // Try to send email using the email service
+    try {
+      const { sendEstimateEmail } = require('../services/emailService');
+      
+      // Parse addons
+      let addons = [];
+      if (estimate.addons_data) {
+        try {
+          addons = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
+        } catch (e) {}
+      }
+      
+      const estimateData = {
+        estimateId: estimate.estimate_id,
+        customerName: estimate.client_name,
+        customerEmail: email,
+        propertyName: estimate.property_name,
+        services: estimate.package_name ? [{ name: estimate.package_name, price: estimate.package_price }] : [],
+        addons: addons,
+        subtotal: parseFloat(estimate.subtotal) || 0,
+        discount: parseFloat(estimate.discount_percent) || 0,
+        tax: parseFloat(estimate.gst_amount) || 0,
+        total: parseFloat(estimate.total_amount) || 0,
+        validUntil: estimate.valid_until
+      };
+      
+      const emailResult = await sendEstimateEmail(estimateData, actionToken);
+      
+      if (emailResult.success) {
+        res.json({ 
+          success: true, 
+          message: `Estimate sent to ${email}` 
+        });
+      } else {
+        res.json({ 
+          success: true, 
+          message: `Estimate marked as sent. Email delivery: ${emailResult.error || 'pending'}` 
+        });
+      }
+    } catch (emailErr) {
+      console.log('Email service not available:', emailErr.message);
+      res.json({ 
+        success: true, 
+        message: `Estimate marked as sent to ${email}` 
+      });
+    }
   } catch (error) {
     console.error('Send email error:', error);
     res.status(500).json({ success: false, message: error.message });
