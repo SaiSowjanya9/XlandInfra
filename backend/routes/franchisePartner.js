@@ -2679,14 +2679,24 @@ router.get('/estimates', requireFPScope, async (req, res) => {
       
       // If division is missing and we have property_code, try to fetch from property
       let division = est.division;
-      if (!division && est.property_code && est.estimate_type !== 'direct') {
+      if (!division && (est.property_code || est.property_id) && est.estimate_type !== 'direct') {
         try {
+          // Try properties table first (uses division_id)
           const [[prop]] = await pool.execute(
-            'SELECT division, division_name FROM properties WHERE property_code = ? OR id = ?',
-            [est.property_code, est.property_id || 0]
+            'SELECT division_id as division FROM properties WHERE property_code = ? OR id = ? LIMIT 1',
+            [est.property_code || '', est.property_id || 0]
           );
-          if (prop) {
-            division = prop.division || prop.division_name || '';
+          if (prop && prop.division) {
+            division = prop.division;
+          } else {
+            // Try onboarded_properties table (uses division)
+            const [[op]] = await pool.execute(
+              'SELECT division FROM onboarded_properties WHERE property_id = ? OR id = ? LIMIT 1',
+              [est.property_code || '', est.property_id || 0]
+            );
+            if (op && op.division) {
+              division = op.division;
+            }
           }
         } catch (e) {}
       }
