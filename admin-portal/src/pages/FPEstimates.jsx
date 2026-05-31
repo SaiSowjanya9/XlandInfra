@@ -674,7 +674,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredAmcPackages.map((pkg) => {
-                    const servicesText = pkg.services || (pkg.services_data ? pkg.services_data.map(s => s.name).join(', ') : '-');
+                    // Parse services JSON if needed
+                    let servicesData = pkg.services;
+                    if (typeof servicesData === 'string') {
+                      try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = null; }
+                    }
+                    const serviceRows = servicesData?.serviceRows || servicesData || [];
+                    const servicesText = Array.isArray(serviceRows) ? serviceRows.map(s => s.name || s.service || s).join(', ') : '-';
+                    const propertyType = servicesData?.property_type || pkg.property_type;
+                    const billingDuration = servicesData?.billing_duration || pkg.billing_duration;
                     return (
                       <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
@@ -682,12 +690,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </td>
                         <td className="px-4 py-4">
                           <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">
-                            {PROPERTY_TYPE_OPTIONS.find(t => t.id === pkg.property_type)?.label || pkg.property_type || '-'}
+                            {PROPERTY_TYPE_OPTIONS.find(t => t.id === propertyType)?.label || propertyType || '-'}
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getBillingBadgeColor(pkg.billing_duration)}`}>
-                            {BILLING_DURATIONS.find(d => d.value === pkg.billing_duration)?.label || 'Monthly'}
+                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getBillingBadgeColor(billingDuration)}`}>
+                            {BILLING_DURATIONS.find(d => d.value === billingDuration)?.label || 'Monthly'}
                           </span>
                         </td>
                         <td className="px-4 py-4 max-w-xs">
