@@ -555,14 +555,8 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     });
   };
 
-  // Save all assignments - ONLY when estimate exists
+  // Save all assignments - uses production database API
   const handleSave = async () => {
-    // Validate estimate exists
-    if (!selectedEstimate?.estimateId) {
-      setError('Cannot save assignments without a linked estimate. Please create an estimate first.');
-      return;
-    }
-    
     if (assignedCount === 0) {
       setError('Please assign at least one vendor');
       return;
@@ -571,36 +565,52 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     setSaving(true);
     setError(null);
     
+    const token = sessionStorage.getItem('pm_auth_token');
+    
     try {
-      // Log the data being saved for debugging
-      console.log('[VendorAssignmentModal] Saving assignments:', {
-        propertyId: property.propertyId,
-        estimateId: selectedEstimate.estimateId,
-        serviceAssignments: serviceAssignments.filter(s => s.vendorId),
-        propertyInfo: {
-          propertyName: property.name || property.communityName,
-          propertyZone: property.zone
-        }
+      // Get assignments with vendors
+      const assignmentsToSave = serviceAssignments.filter(s => s.vendorId);
+      
+      console.log('[VendorAssignmentModal] Saving to database:', {
+        propertyId: property.id,
+        assignments: assignmentsToSave
       });
       
-      const result = saveServiceVendorAssignmentsWithSync(
-        property.propertyId,
-        selectedEstimate.estimateId,
-        serviceAssignments,
-        {
-          propertyName: property.name || property.communityName,
-          propertyZone: property.zone,
-          assignedBy: 'admin'
+      // Save each vendor assignment to database
+      let successCount = 0;
+      let errorMessages = [];
+      
+      for (const assignment of assignmentsToSave) {
+        try {
+          const response = await fetch('/api/vendors/assignments', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              propertyId: property.id,
+              vendorId: assignment.vendorId
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            successCount++;
+          } else {
+            errorMessages.push(result.message || 'Failed to assign vendor');
+          }
+        } catch (err) {
+          errorMessages.push(err.message);
         }
-      );
+      }
       
-      console.log('[VendorAssignmentModal] Save result:', result);
-      
-      if (result.success) {
-        onSuccess?.(`Vendor assignments saved successfully! ${result.message}`);
+      if (successCount > 0) {
+        onSuccess?.(`${successCount} vendor(s) assigned successfully!`);
         onClose();
       } else {
-        setError(result.message || 'Failed to save assignments');
+        setError(errorMessages.join(', ') || 'Failed to save assignments');
       }
     } catch (err) {
       console.error('Error saving assignments:', err);

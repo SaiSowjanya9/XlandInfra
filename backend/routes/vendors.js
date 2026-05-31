@@ -17,6 +17,7 @@ const {
   MODULES 
 } = require('../middleware/rbac');
 const { ROLE_NAMES, WORK_ORDER_STATUS } = require('../config/roles');
+const { sendVendorAssignmentEmail } = require('../services/emailService');
 
 // ============================================
 // VENDOR LOGIN
@@ -749,6 +750,194 @@ router.get('/dashboard', authenticate, vendorOnly, async (req, res) => {
   } catch (error) {
     console.error('Vendor dashboard error:', error);
     res.status(500).json({ success: false, message: 'Failed to load dashboard', error: error.message });
+  }
+});
+
+// ============================================
+// VENDOR PROPERTY ASSIGNMENTS (Admin Portal)
+// ============================================
+
+// Get vendor assignments for properties
+router.get('/assignments', authenticate, managerOrAdmin, async (req, res) => {
+  try {
+    const { status } = req.query;
+    
+    let whereClause = status === 'removed' ? 'pva.is_active = FALSE' : 'pva.is_active = TRUE';
+    
+    const [propertyAssignments] = await pool.execute(
+      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+        p.name as property_name, p.property_id as property_code, p.property_type, p.address, p.city, p.zone_id as property_zone,
+        v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
+        v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
+        v.zone_name, v.area, v.rate_per_visit, v.coverage_per_day
+       FROM property_vendor_assignments pva
+       JOIN properties p ON pva.property_id = p.id
+       JOIN vendors v ON pva.vendor_id = v.id
+       WHERE ${whereClause}
+       ORDER BY pva.assigned_at DESC`
+    );
+
+    // Group by property for service assignments view
+    const serviceAssignments = propertyAssignments.reduce((acc, assignment) => {
+      const existing = acc.find(g => g.property_id === assignment.property_id);
+      if (existing) {
+        existing.assignments.push(assignment);
+      } else {
+        acc.push({
+          property_id: assignment.property_id,
+          propertyName: assignment.property_name,
+          propertyType: assignment.property_type,
+          address: assignment.address,
+          city: assignment.city,
+          assignments: [assignment]
+        });
+      }
+      return acc;
+    }, []);
+
+    res.json({
+      success: true,
+      data: {
+        propertyAssignments,
+        serviceAssignments
+      }
+    });
+  } catch (error) {
+    console.error('Get vendor assignments error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch assignments', error: error.message });
+  }
+});
+
+// Assign vendor to property
+router.post('/assignments', authenticate, managerOrAdmin, async (req, res) => {
+  try {
+    const { propertyId, vendorId } = req.body;
+
+    if (!propertyId || !vendorId) {
+      return res.status(400).json({ success: false, message: 'Property ID and Vendor ID are required' });
+    }
+
+    // Get property details
+    const [property] = await pool.execute(
+      `SELECT id, property_id, name, property_type, address, city, state, zone_id, 
+              contact_person, contact_phone 
+       FROM properties WHERE id = ?`,
+      [propertyId]
+    );
+
+    if (property.length === 0) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+
+    // Get vendor details
+    const [vendor] = await pool.execute(
+      `SELECT id, owner_name, owner_email, owner_mobile, service_type FROM vendors 
+       WHERE id = ? OR vendor_id = ?`,
+      [vendorId, vendorId]
+    );
+
+    if (vendor.length === 0) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    const numericVendorId = vendor[0].id;
+
+    // Check if same assignment exists
+    const [existing] = await pool.execute(
+      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND is_active = TRUE`,
+      [propertyId, numericVendorId]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'This vendor is already assigned to this property' });
+    }
+
+    // Create assignment
+    await pool.execute(
+      `INSERT INTO property_vendor_assignments (property_id, vendor_id, assigned_by, assigned_at, is_active)
+       VALUES (?, ?, ?, NOW(), TRUE)`,
+      [propertyId, numericVendorId, req.user.id]
+    );
+
+    // Send email notification
+    if (vendor[0].owner_email) {
+      sendVendorAssignmentEmail(vendor[0].owner_email, vendor[0].owner_name, property[0])
+        .catch(err => console.error('Failed to send vendor assignment email:', err));
+    }
+
+    res.json({
+      success: true,
+      message: 'Vendor assigned successfully',
+      data: { vendorName: vendor[0].owner_name, serviceType: vendor[0].service_type }
+    });
+  } catch (error) {
+    console.error('Assign vendor error:', error);
+    res.status(500).json({ success: false, message: 'Failed to assign vendor', error: error.message });
+  }
+});
+
+// Update vendor assignment (change vendor)
+router.put('/assignments/:id', authenticate, managerOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { vendorId, vendor_id } = req.body;
+    const newVendorId = vendorId || vendor_id;
+
+    if (!newVendorId) {
+      return res.status(400).json({ success: false, message: 'Vendor ID is required' });
+    }
+
+    // Get assignment
+    const [assignment] = await pool.execute(
+      `SELECT id, property_id FROM property_vendor_assignments WHERE id = ?`,
+      [id]
+    );
+
+    if (assignment.length === 0) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    // Get vendor
+    const [vendor] = await pool.execute(
+      `SELECT id FROM vendors WHERE id = ? OR vendor_id = ?`,
+      [newVendorId, newVendorId]
+    );
+
+    if (vendor.length === 0) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    // Update assignment
+    await pool.execute(
+      `UPDATE property_vendor_assignments SET vendor_id = ?, assigned_at = NOW() WHERE id = ?`,
+      [vendor[0].id, id]
+    );
+
+    res.json({ success: true, message: 'Assignment updated successfully' });
+  } catch (error) {
+    console.error('Update assignment error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update assignment', error: error.message });
+  }
+});
+
+// Remove vendor assignment
+router.delete('/assignments/:id', authenticate, managerOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [result] = await pool.execute(
+      `UPDATE property_vendor_assignments SET is_active = FALSE WHERE id = ?`,
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    res.json({ success: true, message: 'Assignment removed successfully' });
+  } catch (error) {
+    console.error('Remove assignment error:', error);
+    res.status(500).json({ success: false, message: 'Failed to remove assignment', error: error.message });
   }
 });
 
