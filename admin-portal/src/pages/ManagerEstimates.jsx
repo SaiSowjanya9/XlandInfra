@@ -57,6 +57,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [addonForm, setAddonForm] = useState({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewEstimate, setViewEstimate] = useState(null);
+  const [viewAmcPackage, setViewAmcPackage] = useState(null);
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -681,18 +682,13 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                           <span className="text-lg font-bold text-slate-800">{formatCurrency(pkg.price || pkg.base_price)}</span>
                         </td>
                         <td className="px-4 py-4">
-                          <div className="flex items-center justify-center gap-1">
-                            <button className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Edit">
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Export PDF">
-                              <Download className="w-4 h-4" />
-                            </button>
-                            <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Email">
-                              <Mail className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => handleDeleteAmcPackage(pkg.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                              <Trash2 className="w-4 h-4" />
+                          <div className="flex items-center justify-center">
+                            <button 
+                              onClick={() => setViewAmcPackage({ ...pkg, servicesData, serviceRows, propertyType, billingDuration })}
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" 
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -1076,6 +1072,81 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 <div className="flex justify-between items-center pt-2 border-t">
                   <p className="text-lg font-semibold">Total</p>
                   <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total_amount || 0).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View AMC Package Modal */}
+      {viewAmcPackage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">AMC Package Details</h3>
+              <button onClick={() => setViewAmcPackage(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              {/* Package Header */}
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-4 rounded-lg border border-indigo-100">
+                <h4 className="text-xl font-bold text-indigo-900">{viewAmcPackage.name}</h4>
+                <p className="text-sm text-indigo-600 mt-1">{viewAmcPackage.package_code || `PKG-${viewAmcPackage.id}`}</p>
+              </div>
+
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Property Type</p>
+                  <p className="font-semibold text-sm">{PROPERTY_TYPE_OPTIONS.find(t => t.id === viewAmcPackage.propertyType)?.label || viewAmcPackage.propertyType || '-'}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Billing Duration</p>
+                  <p className="font-semibold text-sm capitalize">{viewAmcPackage.billingDuration || 'Monthly'}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Total Price</p>
+                  <p className="font-bold text-lg text-green-700">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</p>
+                </div>
+              </div>
+
+              {/* Description */}
+              {viewAmcPackage.description && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Description</p>
+                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewAmcPackage.description}</p>
+                </div>
+              )}
+
+              {/* Services Included */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Services Included</p>
+                {viewAmcPackage.serviceRows && viewAmcPackage.serviceRows.length > 0 ? (
+                  <div className="space-y-2">
+                    {viewAmcPackage.serviceRows.map((svc, idx) => (
+                      <div key={idx} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                          <p className="font-medium text-blue-900">{svc.name || svc.service || 'Service'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-blue-700">
+                            {svc.frequency_count || svc.frequencyCount || 1}x {svc.frequency_type || svc.frequencyType || 'Monthly'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No services listed</p>
+                )}
+              </div>
+
+              {/* Created Info */}
+              <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
+                <div className="flex justify-between">
+                  <span>Created: {viewAmcPackage.created_at ? new Date(viewAmcPackage.created_at).toLocaleDateString() : '-'}</span>
+                  <span>ID: {viewAmcPackage.id}</span>
                 </div>
               </div>
             </div>
