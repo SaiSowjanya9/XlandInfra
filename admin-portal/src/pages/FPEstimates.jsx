@@ -66,6 +66,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [editingAddon, setEditingAddon] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewEstimate, setViewEstimate] = useState(null);
+  const [viewAmcPackage, setViewAmcPackage] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   const token = sessionStorage.getItem('pm_auth_token');
@@ -1242,6 +1243,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <td className="px-4 py-4">
                             <div className="flex items-center justify-center gap-1">
                               <button 
+                                onClick={() => setViewAmcPackage({ ...pkg, servicesData: serviceRows, propertyType, billingDuration })}
+                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" 
+                                title="View"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button 
                                 onClick={() => {
                                   setEditingAmcPackage(pkg.id);
                                   setAmcForm({
@@ -1981,49 +1989,181 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       {/* View Estimate Modal */}
       {viewEstimate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
               <button onClick={() => setViewEstimate(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div><p className="text-sm text-gray-500">Estimate ID</p><p className="font-medium">{viewEstimate.estimate_id}</p></div>
-                <div><p className="text-sm text-gray-500">Status</p><span className={`px-2 py-1 rounded-full text-xs font-medium ${viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{viewEstimate.status}</span></div>
-                <div><p className="text-sm text-gray-500">Type</p><p className="font-medium capitalize">{viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
-                <div><p className="text-sm text-gray-500">Created</p><p className="font-medium">{viewEstimate.created_at ? new Date(viewEstimate.created_at).toLocaleDateString() : '-'}</p></div>
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div><p className="text-xs text-gray-500">Estimate ID</p><p className="font-medium text-sm">{viewEstimate.estimate_id}</p></div>
+                <div><p className="text-xs text-gray-500">Status</p>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
+                    viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
+                    viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                  }`}>{viewEstimate.status || 'draft'}</span>
+                </div>
+                <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
+                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{viewEstimate.created_at ? new Date(viewEstimate.created_at).toLocaleDateString() : '-'}</p></div>
               </div>
+
+              {/* Property Details */}
               <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm text-gray-500 mb-2">Client Information</p>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <p className="font-medium text-lg">{viewEstimate.client_name || viewEstimate.customer_name || 'N/A'}</p>
-                  {viewEstimate.client_phone && <p className="text-sm text-gray-600">📞 {viewEstimate.client_phone}</p>}
-                  {viewEstimate.client_email && <p className="text-sm text-gray-600">✉️ {viewEstimate.client_email}</p>}
-                  {viewEstimate.property_type && <p className="text-sm text-gray-600">🏠 Property Type: {viewEstimate.property_type}</p>}
-                  {viewEstimate.property_name && <p className="text-sm text-gray-600">🏢 Property: {viewEstimate.property_name}</p>}
-                  {viewEstimate.property_address && <p className="text-sm text-gray-600">📍 {viewEstimate.property_address}</p>}
+                <p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p>
+                <div className="bg-slate-50 p-4 rounded-lg grid grid-cols-2 gap-3">
+                  <div><p className="text-xs text-gray-500">Property ID</p><p className="font-medium text-sm">{viewEstimate.property_code || viewEstimate.property_id || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Property Name</p><p className="font-medium text-sm">{viewEstimate.property_name || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Property Type</p><p className="font-medium text-sm">{viewEstimate.property_type || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Zone</p><p className="font-medium text-sm">{viewEstimate.zone || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Division</p><p className="font-medium text-sm">{viewEstimate.division || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-gray-500">Address</p><p className="font-medium text-sm">{viewEstimate.address || viewEstimate.property_address || '-'}</p></div>
                 </div>
               </div>
-              {viewEstimate.services && (
+
+              {/* Customer Details */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p>
+                <div className="bg-blue-50 p-4 rounded-lg grid grid-cols-2 gap-3">
+                  <div><p className="text-xs text-gray-500">Contact Name</p><p className="font-medium text-sm">{viewEstimate.client_name || viewEstimate.customer_name || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium text-sm">{viewEstimate.client_phone || '-'}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-gray-500">Email</p><p className="font-medium text-sm">{viewEstimate.client_email || '-'}</p></div>
+                </div>
+              </div>
+
+              {/* Package */}
+              {viewEstimate.package_name && (
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm text-gray-500 mb-2">Services</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
+                  <div className="flex justify-between items-center bg-indigo-50 p-4 rounded-lg">
+                    <div>
+                      <p className="font-semibold text-indigo-900">{viewEstimate.package_name}</p>
+                      <p className="text-xs text-indigo-600">Yearly Billing</p>
+                    </div>
+                    <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.package_price || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Add-ons */}
+              {viewEstimate.addons && viewEstimate.addons.length > 0 && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Add-ons</p>
                   <div className="space-y-2">
-                    {(typeof viewEstimate.services === 'string' ? JSON.parse(viewEstimate.services) : viewEstimate.services).map((svc, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
-                        <p className="font-medium">{svc.name || svc.service}</p>
-                        <p className="font-semibold">₹{Number(svc.price || 0).toLocaleString()}</p>
+                    {viewEstimate.addons.map((addon, idx) => (
+                      <div key={idx} className="flex justify-between items-center bg-green-50 p-3 rounded-lg">
+                        <div>
+                          <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
+                          <p className="text-xs text-green-600">{addon.frequency_type || addon.frequencyType || 'One-time'}</p>
+                        </div>
+                        <p className="font-semibold text-green-700">₹{Number(addon.price || 0).toLocaleString()}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-              <div className="border-t border-gray-100 pt-4 space-y-2">
-                {viewEstimate.subtotal > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>₹{Number(viewEstimate.subtotal).toLocaleString()}</span></div>}
-                {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm text-green-600"><span>Discount</span><span>-₹{Number(viewEstimate.discount_amount).toLocaleString()}</span></div>}
-                {viewEstimate.tax_amount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Tax (GST)</span><span>₹{Number(viewEstimate.tax_amount).toLocaleString()}</span></div>}
-                <div className="flex justify-between items-center pt-2 border-t">
-                  <p className="text-lg font-semibold">Total</p>
-                  <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total_amount || 0).toLocaleString()}</p>
+
+              {/* Description */}
+              {viewEstimate.description && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Description / Notes</p>
+                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.description}</p>
+                </div>
+              )}
+
+              {/* Price Summary */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>₹{Number(viewEstimate.subtotal || 0).toLocaleString()}</span></div>
+                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm text-green-600"><span>Discount ({viewEstimate.discount_percent || 0}%)</span><span>-₹{Number(viewEstimate.discount_amount).toLocaleString()}</span></div>}
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 18}%)</span><span>₹{Number(viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
+                  <div className="flex justify-between items-center pt-3 border-t border-gray-200">
+                    <p className="text-lg font-semibold">Total</p>
+                    <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total_amount || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Created By */}
+              <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
+                Created by: {viewEstimate.created_by_name || '-'} ({viewEstimate.created_by_role?.replace('_', ' ') || '-'})
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View AMC Package Modal */}
+      {viewAmcPackage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">AMC Package Details</h3>
+              <button onClick={() => setViewAmcPackage(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              {/* Package Header */}
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-4 rounded-lg border border-indigo-100">
+                <h4 className="text-xl font-bold text-indigo-900">{viewAmcPackage.name}</h4>
+                <p className="text-sm text-indigo-600 mt-1">{viewAmcPackage.package_code || `PKG-${viewAmcPackage.id}`}</p>
+              </div>
+
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Property Type</p>
+                  <p className="font-semibold text-sm">{PROPERTY_TYPE_OPTIONS.find(t => t.id === viewAmcPackage.propertyType)?.label || viewAmcPackage.propertyType || '-'}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Billing Duration</p>
+                  <p className="font-semibold text-sm capitalize">{viewAmcPackage.billingDuration || 'Monthly'}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Total Price</p>
+                  <p className="font-bold text-lg text-green-700">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</p>
+                </div>
+              </div>
+
+              {/* Description */}
+              {viewAmcPackage.description && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Description</p>
+                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewAmcPackage.description}</p>
+                </div>
+              )}
+
+              {/* Services Included */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Services Included</p>
+                {viewAmcPackage.servicesData && viewAmcPackage.servicesData.length > 0 ? (
+                  <div className="space-y-2">
+                    {viewAmcPackage.servicesData.map((svc, idx) => (
+                      <div key={idx} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                          <p className="font-medium text-blue-900">{svc.name || svc.service || 'Service'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-blue-700">
+                            {svc.frequency_count || svc.frequencyCount || 1}x {svc.frequency_type || svc.frequencyType || 'Monthly'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No services listed</p>
+                )}
+              </div>
+
+              {/* Created Info */}
+              <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
+                <div className="flex justify-between">
+                  <span>Created: {viewAmcPackage.created_at ? new Date(viewAmcPackage.created_at).toLocaleDateString() : '-'}</span>
+                  <span>ID: {viewAmcPackage.id}</span>
                 </div>
               </div>
             </div>
