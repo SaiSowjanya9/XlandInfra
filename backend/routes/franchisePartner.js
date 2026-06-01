@@ -1232,23 +1232,27 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
       [req.fpId]
     );
 
-    // Group by property for service assignments view
-    const serviceAssignments = propertyAssignments.reduce((acc, assignment) => {
-      const existing = acc.find(g => g.property_id === assignment.property_id);
-      if (existing) {
-        existing.assignments.push(assignment);
-      } else {
-        acc.push({
-          property_id: assignment.property_id,
-          propertyName: assignment.property_name,
-          propertyType: assignment.property_type,
-          address: assignment.address,
-          city: assignment.city,
-          assignments: [assignment]
-        });
-      }
-      return acc;
-    }, []);
+    // Map property assignments to service assignments format (flat list for table display)
+    const serviceAssignments = propertyAssignments.map(a => ({
+      id: a.id,
+      vendorId: a.vendor_code,
+      vendorName: a.vendor_name,
+      serviceType: a.service_type,
+      propertyId: a.property_id,
+      propertyName: a.property_name,
+      propertyType: a.property_type,
+      propertyZone: a.property_zone,
+      zone_name: a.zone_name,
+      area: a.area,
+      rate_per_visit: a.rate_per_visit,
+      coverage_per_day: a.coverage_per_day,
+      vendor_phone: a.vendor_phone,
+      vendor_email: a.vendor_email,
+      city: a.city,
+      address: a.address,
+      assignedDate: a.assigned_at,
+      status: a.is_active ? 'active' : 'removed'
+    }));
 
     res.json({
       success: true,
