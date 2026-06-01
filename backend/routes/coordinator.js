@@ -206,47 +206,91 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
   try {
     const coordinatorId = req.coordinatorId;
     const franchisePartnerId = req.franchisePartnerId;
+    const isFPCoordinator = !!franchisePartnerId;
 
-    // Get properties scoped to Coordinator or FP with creator name
-    const propQuery = `SELECT p.*, 
-        z.name as zone_name,
-        COALESCE(p.area_name, p.city) as area,
-        COALESCE(p.division, 'General') as division,
-        COALESCE(p.total_units, 1) as units,
-        COALESCE(p.status, 'active') as status,
-        COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
-        CONCAT(COALESCE(p.contact_person, ''), CASE WHEN p.contact_phone IS NOT NULL THEN CONCAT(' | ', p.contact_phone) ELSE '' END) as contacts,
-        'properties' as source_table
-       FROM properties p
-       LEFT JOIN zones z ON p.zone_id = z.id
-       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
-       WHERE (p.coordinator_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})
-       ORDER BY p.created_at DESC`;
-    const propParams = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+    console.log(`Coordinator properties fetch - coordinatorId: ${coordinatorId}, franchisePartnerId: ${franchisePartnerId}, isFPCoordinator: ${isFPCoordinator}`);
+
+    // For FP Coordinators: primarily filter by franchise_partner_id
+    // For standalone Coordinators: filter by coordinator_id
+    let propQuery, propParams;
+    
+    if (isFPCoordinator) {
+      propQuery = `SELECT p.*, 
+          z.name as zone_name,
+          COALESCE(p.area_name, p.city) as area,
+          COALESCE(p.division, 'General') as division,
+          COALESCE(p.total_units, 1) as units,
+          COALESCE(p.status, 'active') as status,
+          COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+          CONCAT(COALESCE(p.contact_person, ''), CASE WHEN p.contact_phone IS NOT NULL THEN CONCAT(' | ', p.contact_phone) ELSE '' END) as contacts,
+          'properties' as source_table
+         FROM properties p
+         LEFT JOIN zones z ON p.zone_id = z.id
+         LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
+         WHERE p.franchise_partner_id = ?
+         ORDER BY p.created_at DESC`;
+      propParams = [franchisePartnerId];
+    } else {
+      propQuery = `SELECT p.*, 
+          z.name as zone_name,
+          COALESCE(p.area_name, p.city) as area,
+          COALESCE(p.division, 'General') as division,
+          COALESCE(p.total_units, 1) as units,
+          COALESCE(p.status, 'active') as status,
+          COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+          CONCAT(COALESCE(p.contact_person, ''), CASE WHEN p.contact_phone IS NOT NULL THEN CONCAT(' | ', p.contact_phone) ELSE '' END) as contacts,
+          'properties' as source_table
+         FROM properties p
+         LEFT JOIN zones z ON p.zone_id = z.id
+         LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
+         WHERE p.coordinator_id = ?
+         ORDER BY p.created_at DESC`;
+      propParams = [coordinatorId];
+    }
+    
     const [regularProperties] = await pool.query(propQuery, propParams);
+    console.log(`Found ${regularProperties.length} properties from properties table`);
 
-    // Also fetch from onboarded_properties with creator name
+    // Also fetch from onboarded_properties
     let onboardedProperties = [];
     try {
-      const onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
-                op.zone_id as zone_name, op.division, op.total_units as units,
-                op.address, op.city, op.state, op.pincode as zip_code,
-                op.contact_person, op.contact_phone, op.contact_email as email,
-                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
-                op.created_at, op.status,
-                'onboarded_properties' as source_table
-         FROM onboarded_properties op
-         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
-         WHERE (op.coordinator_id = ?${franchisePartnerId ? ' OR op.franchise_partner_id = ?' : ''}) AND op.status = 'active'
-         ORDER BY op.created_at DESC`;
-      const onbParams = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+      let onbQuery, onbParams;
+      if (isFPCoordinator) {
+        onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
+                  op.zone_id as zone_name, op.division, op.total_units as units,
+                  op.address, op.city, op.state, op.pincode as zip_code,
+                  op.contact_person, op.contact_phone, op.contact_email as email,
+                  COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
+                  op.created_at, op.status,
+                  'onboarded_properties' as source_table
+           FROM onboarded_properties op
+           LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR CAST(op.created_by AS UNSIGNED) = u.id
+           WHERE op.franchise_partner_id = ?
+           ORDER BY op.created_at DESC`;
+        onbParams = [franchisePartnerId];
+      } else {
+        onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
+                  op.zone_id as zone_name, op.division, op.total_units as units,
+                  op.address, op.city, op.state, op.pincode as zip_code,
+                  op.contact_person, op.contact_phone, op.contact_email as email,
+                  COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
+                  op.created_at, op.status,
+                  'onboarded_properties' as source_table
+           FROM onboarded_properties op
+           LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR CAST(op.created_by AS UNSIGNED) = u.id
+           WHERE op.coordinator_id = ?
+           ORDER BY op.created_at DESC`;
+        onbParams = [coordinatorId];
+      }
       const [rows] = await pool.execute(onbQuery, onbParams);
       onboardedProperties = rows;
+      console.log(`Found ${onboardedProperties.length} properties from onboarded_properties table`);
     } catch (e) {
       console.log('onboarded_properties fetch error:', e.message);
     }
 
     const allProperties = [...regularProperties, ...onboardedProperties];
+    console.log(`Total properties returned: ${allProperties.length}`);
 
     res.json({ success: true, data: allProperties });
   } catch (error) {
