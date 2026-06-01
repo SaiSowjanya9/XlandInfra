@@ -975,16 +975,16 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
         // Always try to fetch the original property_id from the property tables
         if (propId || propName) {
           try {
-            // Try onboarded_properties first (most common for FP)
+            // Try onboarded_properties first (admin-created properties visible to FP)
             let [props] = await pool.execute(
               `SELECT property_id as orig_code FROM onboarded_properties 
-               WHERE (id = ? OR community_name = ?) AND franchise_partner_id = ? LIMIT 1`,
-              [propId || 0, propName, franchisePartnerId]
+               WHERE (id = ? OR community_name = ?) LIMIT 1`,
+              [propId || 0, propName]
             );
             if (props.length > 0 && props[0].orig_code) {
               property_code = props[0].orig_code;
             } else {
-              // Try properties table
+              // Try properties table (FP-created properties)
               [props] = await pool.execute(
                 `SELECT property_id as orig_code FROM properties 
                  WHERE (id = ? OR name = ?) AND franchise_partner_id = ? LIMIT 1`,
