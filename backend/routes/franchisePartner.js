@@ -1218,12 +1218,11 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
     // Get property-vendor assignments for this FP's properties with full vendor details
     const [propertyAssignments] = await pool.execute(
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
-        p.name as property_name, p.property_type, p.address, p.city, p.zone as property_zone,
+        p.name as property_name, p.property_type, p.address, p.city, 
+        p.zone_id as property_zone,
         v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
-        v.zone_name, v.area, v.rate_per_visit, v.coverage_per_day,
-        v.owner_aadhar, v.manager_name, v.manager_mobile, v.manager_email,
-        v.poc_name, v.poc_mobile, v.poc_email, v.created_by_name
+        v.zone_name, v.area, v.rate_per_visit, v.coverage_per_day
        FROM property_vendor_assignments pva
        JOIN properties p ON pva.property_id = p.id
        JOIN vendors v ON pva.vendor_id = v.id
