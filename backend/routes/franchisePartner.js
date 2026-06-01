@@ -2690,42 +2690,42 @@ router.get('/estimates', requireFPScope, async (req, res) => {
         creatorName = fpContactName;
       }
       
-      // If division is missing, try to fetch from property tables
+      // If division or property_code is missing, try to fetch from property tables
       let division = est.division;
-      if (!division && est.estimate_type !== 'direct') {
-        const propCode = est.property_code || est.property_id || '';
-        const propId = parseInt(est.property_id) || 0;
-        
+      let property_code = est.property_code;
+      const propName = est.property_name || '';
+      
+      if ((!division || !property_code) && propName) {
         try {
-          // Try properties table first (uses division_id)
+          // Try properties table first
           let [props] = await pool.execute(
-            `SELECT division_id as division FROM properties 
-             WHERE (property_code = ? OR id = ? OR name LIKE ?) 
-             AND franchise_partner_id = ? LIMIT 1`,
-            [propCode, propId, `%${est.property_name || ''}%`, req.fpId]
+            `SELECT property_id as property_code, division_id as division FROM properties 
+             WHERE name = ? AND franchise_partner_id = ? LIMIT 1`,
+            [propName, req.fpId]
           );
-          if (props.length > 0 && props[0].division) {
-            division = props[0].division;
+          if (props.length > 0) {
+            if (!division && props[0].division) division = props[0].division;
+            if (!property_code && props[0].property_code) property_code = props[0].property_code;
           }
           
           // If still not found, try onboarded_properties
-          if (!division) {
+          if (!division || !property_code) {
             [props] = await pool.execute(
-              `SELECT division FROM onboarded_properties 
-               WHERE (property_id = ? OR id = ? OR community_name LIKE ?) 
-               AND franchise_partner_id = ? LIMIT 1`,
-              [propCode, propId, `%${est.property_name || ''}%`, req.fpId]
+              `SELECT property_id as property_code, division FROM onboarded_properties 
+               WHERE community_name = ? AND franchise_partner_id = ? LIMIT 1`,
+              [propName, req.fpId]
             );
-            if (props.length > 0 && props[0].division) {
-              division = props[0].division;
+            if (props.length > 0) {
+              if (!division && props[0].division) division = props[0].division;
+              if (!property_code && props[0].property_code) property_code = props[0].property_code;
             }
           }
         } catch (e) { 
-          console.log('Division lookup error:', e.message);
+          console.log('Property lookup error:', e.message);
         }
       }
       
-      return { ...est, addons, created_by_name: creatorName, division };
+      return { ...est, addons, created_by_name: creatorName, division, property_code };
     }));
 
     res.json({ success: true, data: enrichedEstimates });
