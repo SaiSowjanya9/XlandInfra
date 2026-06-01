@@ -62,10 +62,17 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
   const token = sessionStorage.getItem('pm_auth_token');
 
-  useEffect(() => { loadData(); }, [defaultTab]);
+  // Auto-refresh every 30 seconds to sync with FP updates
+  useEffect(() => { 
+    loadData(); 
+    const interval = setInterval(() => {
+      loadData(true); // silent refresh
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [defaultTab]);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [estRes, amcRes, addRes, propRes, archivedRes] = await Promise.all([
         fetch('/api/manager/estimates?archived=false', { headers: { 'Authorization': `Bearer ${token}` } }),
