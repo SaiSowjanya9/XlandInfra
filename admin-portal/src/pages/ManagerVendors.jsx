@@ -370,7 +370,7 @@ const ManagerVendors = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Rate/Visit</th>
+                  {!isFPManager && <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Rate/Visit</th>}
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
@@ -410,9 +410,9 @@ const ManagerVendors = ({ user }) => {
                       <td className="py-4 px-4">
                         <span className="text-sm text-gray-600">{vendor.area || vendor.area_name || '-'}</span>
                       </td>
-                      <td className="py-4 px-4">
+                      {!isFPManager && <td className="py-4 px-4">
                         <span className="text-sm text-gray-900">₹{vendor.rate_per_visit || '0.00'}</span>
-                      </td>
+                      </td>}
                       <td className="py-4 px-4">
                         <span className="text-sm text-gray-900">{vendor.coverage_per_day || '0'}</span>
                       </td>
@@ -659,12 +659,14 @@ const ManagerVendors = ({ user }) => {
 
               {/* Rate & Coverage */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate & Coverage</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Rate Per Visit</p>
-                    <p className="font-medium text-gray-900">₹{selectedVendor.rate_per_visit || 0}</p>
-                  </div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">{isFPManager ? 'Coverage' : 'Rate & Coverage'}</h3>
+                <div className={`grid ${isFPManager ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
+                  {!isFPManager && (
+                    <div>
+                      <p className="text-xs text-gray-500">Rate Per Visit</p>
+                      <p className="font-medium text-gray-900">₹{selectedVendor.rate_per_visit || 0}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-xs text-gray-500">Coverage Per Day</p>
                     <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || 0}</p>
