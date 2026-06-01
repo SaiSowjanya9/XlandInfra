@@ -215,30 +215,29 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     let propQuery, propParams;
     
     if (isFPCoordinator) {
+      // FP Coordinators see: properties they created OR properties from their FP
       propQuery = `SELECT p.*, 
           z.name as zone_name,
           COALESCE(p.area_name, p.city) as area,
           COALESCE(p.division, 'General') as division,
-          COALESCE(p.total_units, 1) as units,
+          1 as units,
           COALESCE(p.status, 'active') as status,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
-          CONCAT(COALESCE(p.contact_person, ''), CASE WHEN p.contact_phone IS NOT NULL THEN CONCAT(' | ', p.contact_phone) ELSE '' END) as contacts,
           'properties' as source_table
          FROM properties p
          LEFT JOIN zones z ON p.zone_id = z.id
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
-         WHERE p.franchise_partner_id = ?
+         WHERE (p.coordinator_id = ? OR p.franchise_partner_id = ?)
          ORDER BY p.created_at DESC`;
-      propParams = [franchisePartnerId];
+      propParams = [coordinatorId, franchisePartnerId];
     } else {
       propQuery = `SELECT p.*, 
           z.name as zone_name,
           COALESCE(p.area_name, p.city) as area,
           COALESCE(p.division, 'General') as division,
-          COALESCE(p.total_units, 1) as units,
+          1 as units,
           COALESCE(p.status, 'active') as status,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
-          CONCAT(COALESCE(p.contact_person, ''), CASE WHEN p.contact_phone IS NOT NULL THEN CONCAT(' | ', p.contact_phone) ELSE '' END) as contacts,
           'properties' as source_table
          FROM properties p
          LEFT JOIN zones z ON p.zone_id = z.id
@@ -265,9 +264,9 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
                   'onboarded_properties' as source_table
            FROM onboarded_properties op
            LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR CAST(op.created_by AS UNSIGNED) = u.id
-           WHERE op.franchise_partner_id = ?
+           WHERE (op.coordinator_id = ? OR op.franchise_partner_id = ?)
            ORDER BY op.created_at DESC`;
-        onbParams = [franchisePartnerId];
+        onbParams = [coordinatorId, franchisePartnerId];
       } else {
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                   op.zone_id as zone_name, op.division, op.total_units as units,
