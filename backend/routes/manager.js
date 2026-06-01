@@ -967,28 +967,31 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
           try { addons = JSON.parse(est.addons_data); } catch(e) {}
         }
         
-        // Get property_code if missing
+        // Get property_code if missing - use property_id (numeric) to lookup
         let property_code = est.property_code;
+        const propId = est.property_id;
         const propName = est.property_name || '';
         
-        if (!property_code && propName) {
+        if (!property_code && (propId || propName)) {
           try {
-            // Try properties table first
+            // Try onboarded_properties first (most common for FP)
             let [props] = await pool.execute(
-              `SELECT property_id as property_code FROM properties WHERE name = ? AND franchise_partner_id = ? LIMIT 1`,
-              [propName, franchisePartnerId]
+              `SELECT property_id as prop_code FROM onboarded_properties 
+               WHERE (id = ? OR community_name = ?) AND franchise_partner_id = ? LIMIT 1`,
+              [propId || 0, propName, franchisePartnerId]
             );
-            if (props.length > 0 && props[0].property_code) {
-              property_code = props[0].property_code;
+            if (props.length > 0 && props[0].prop_code) {
+              property_code = props[0].prop_code;
             } else {
-              // Try onboarded_properties
+              // Try properties table
               [props] = await pool.execute(
-                `SELECT property_id as property_code FROM onboarded_properties WHERE community_name = ? AND franchise_partner_id = ? LIMIT 1`,
-                [propName, franchisePartnerId]
+                `SELECT property_id as prop_code FROM properties 
+                 WHERE (id = ? OR name = ?) AND franchise_partner_id = ? LIMIT 1`,
+                [propId || 0, propName, franchisePartnerId]
               );
-              if (props.length > 0) property_code = props[0].property_code;
+              if (props.length > 0 && props[0].prop_code) property_code = props[0].prop_code;
             }
-          } catch (e) {}
+          } catch (e) { console.log('Property lookup error:', e.message); }
         }
         
         return { ...est, addons, property_code };
