@@ -958,7 +958,42 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
          ORDER BY created_at DESC`,
         [franchisePartnerId, isArchived ? 1 : 0]
       );
-      estimates = fpEstimates;
+      
+      // Enrich estimates with property_code and parse addons
+      estimates = await Promise.all(fpEstimates.map(async (est) => {
+        // Parse addons JSON
+        let addons = [];
+        if (est.addons_data) {
+          try { addons = JSON.parse(est.addons_data); } catch(e) {}
+        }
+        
+        // Get property_code if missing
+        let property_code = est.property_code;
+        const propName = est.property_name || '';
+        
+        if (!property_code && propName) {
+          try {
+            // Try properties table first
+            let [props] = await pool.execute(
+              `SELECT property_id as property_code FROM properties WHERE name = ? AND franchise_partner_id = ? LIMIT 1`,
+              [propName, franchisePartnerId]
+            );
+            if (props.length > 0 && props[0].property_code) {
+              property_code = props[0].property_code;
+            } else {
+              // Try onboarded_properties
+              [props] = await pool.execute(
+                `SELECT property_id as property_code FROM onboarded_properties WHERE community_name = ? AND franchise_partner_id = ? LIMIT 1`,
+                [propName, franchisePartnerId]
+              );
+              if (props.length > 0) property_code = props[0].property_code;
+            }
+          } catch (e) {}
+        }
+        
+        return { ...est, addons, property_code };
+      }));
+      
       console.log(`Manager ${managerId} (FP: ${franchisePartnerId}) - Found ${estimates.length} FP estimates`);
     }
     
