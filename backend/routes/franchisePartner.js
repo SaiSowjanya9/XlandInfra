@@ -1215,6 +1215,8 @@ router.get('/vendors', requireFPScope, async (req, res) => {
 // Get vendor assignments (property-vendor assignments)
 router.get('/vendors/assignments', requireFPScope, async (req, res) => {
   try {
+    console.log('[Vendor Assignments] FP ID:', req.fpId, 'User:', req.user?.email);
+    
     // Get property-vendor assignments for this FP's properties with full vendor details
     const [propertyAssignments] = await pool.execute(
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
@@ -1253,6 +1255,8 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
       status: a.is_active ? 'active' : 'removed'
     }));
 
+    console.log('[Vendor Assignments] Found:', propertyAssignments.length, 'assignments');
+    
     res.json({
       success: true,
       data: {
