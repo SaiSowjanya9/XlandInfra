@@ -371,7 +371,7 @@ const ManagerVendors = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
                   {!isFPManager && <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Rate/Visit</th>}
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
@@ -413,7 +413,7 @@ const ManagerVendors = ({ user }) => {
                       {!isFPManager && <td className="py-4 px-4">
                         <span className="text-sm text-gray-900">₹{vendor.rate_per_visit || '0.00'}</span>
                       </td>}
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-4 text-center">
                         <span className="text-sm text-gray-900">{vendor.coverage_per_day || '0'}</span>
                       </td>
                       <td className="py-4 px-4">
