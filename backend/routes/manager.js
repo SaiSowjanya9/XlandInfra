@@ -762,7 +762,7 @@ router.get('/vendors/assignments', requireManagerScope, async (req, res) => {
         p.name as property_name, p.property_id as propertyId, p.property_type, p.address, p.city,
         v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
-        v.zone as zone_name, v.area, v.rate_per_visit, v.coverage_per_day,
+        v.zone_name, v.area, v.rate_per_visit, v.coverage_per_day,
         v.owner_aadhar, v.manager_name, v.manager_mobile, v.manager_email,
         v.poc_name, v.poc_mobile, v.poc_email
        FROM property_vendor_assignments pva
