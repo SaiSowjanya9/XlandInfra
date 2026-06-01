@@ -1032,12 +1032,13 @@ router.get('/amc-packages', requireManagerScope, async (req, res) => {
     const scopeColumn = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
     
     const [packages] = await pool.execute(
-      `SELECT * FROM ${table} WHERE ${scopeColumn} = ? AND is_active = 1 ORDER BY created_at DESC`,
+      `SELECT * FROM ${table} WHERE ${scopeColumn} = ? ORDER BY created_at DESC`,
       [scopeId]
     );
     
     res.json({ success: true, data: packages });
   } catch (error) {
+    console.error('AMC packages fetch error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1079,16 +1080,13 @@ router.get('/addons', requireManagerScope, async (req, res) => {
     const scopeColumn = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
     
     const [addons] = await pool.execute(
-      `SELECT a.*, c.name as category_name 
-       FROM ${table} a
-       LEFT JOIN categories c ON a.category_id = c.id
-       WHERE a.${scopeColumn} = ? AND a.is_active = 1
-       ORDER BY a.created_at DESC`,
+      `SELECT * FROM ${table} WHERE ${scopeColumn} = ? ORDER BY created_at DESC`,
       [scopeId]
     );
     
     res.json({ success: true, data: addons });
   } catch (error) {
+    console.error('Addons fetch error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 });
