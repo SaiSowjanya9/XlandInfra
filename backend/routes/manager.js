@@ -940,7 +940,7 @@ router.get('/fp-employee-zones', requireManagerScope, async (req, res) => {
 // ESTIMATES MANAGEMENT
 // ============================================
 
-// Get all manager estimates - Manager sees their own + linked FP estimates
+// Get all manager estimates - Manager sees FP estimates from fp_estimates table
 router.get('/estimates', requireManagerScope, async (req, res) => {
   try {
     const { archived } = req.query;
@@ -950,35 +950,18 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
     
     let estimates = [];
     
-    // If manager is linked to an FP, fetch FP estimates
+    // If manager is linked to an FP, fetch from fp_estimates table
     if (franchisePartnerId) {
       const [fpEstimates] = await pool.execute(
-        `SELECT e.*, p.name as property_name, c.name as client_name, 'fp' as source
-         FROM estimates e
-         LEFT JOIN properties p ON e.property_id = p.id
-         LEFT JOIN clients c ON e.client_id = c.id
-         WHERE e.franchise_partner_id = ? AND (e.is_archived = ? OR e.is_archived IS NULL)
-         ORDER BY e.created_at DESC`,
-        [franchisePartnerId, isArchived]
+        `SELECT * FROM fp_estimates 
+         WHERE franchise_partner_id = ? AND (is_archived = ? OR is_archived IS NULL OR is_archived = 0)
+         ORDER BY created_at DESC`,
+        [franchisePartnerId, isArchived ? 1 : 0]
       );
-      estimates = [...fpEstimates];
+      estimates = fpEstimates;
+      console.log(`Manager ${managerId} (FP: ${franchisePartnerId}) - Found ${estimates.length} FP estimates`);
     }
     
-    // Also fetch manager's own estimates
-    const [managerEstimates] = await pool.execute(
-      `SELECT e.*, p.name as property_name, c.name as client_name, 'manager' as source
-       FROM estimates e
-       LEFT JOIN properties p ON e.property_id = p.id
-       LEFT JOIN clients c ON e.client_id = c.id
-       WHERE e.manager_id = ? AND e.franchise_partner_id IS NULL AND (e.is_archived = ? OR e.is_archived IS NULL)
-       ORDER BY e.created_at DESC`,
-      [managerId, isArchived]
-    );
-    
-    estimates = [...estimates, ...managerEstimates];
-    estimates.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    
-    console.log(`Manager ${managerId} (FP: ${franchisePartnerId}) - Found ${estimates.length} estimates`);
     res.json({ success: true, data: estimates });
   } catch (error) {
     console.error('Error fetching manager estimates:', error);
