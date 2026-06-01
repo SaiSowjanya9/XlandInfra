@@ -308,23 +308,42 @@ const FPEmployees = ({ user }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredEmployees.map((employee) => {
+                {filteredEmployees.map((employee, index) => {
                   const empStatus = employee.status || (employee.is_active ? 'active' : 'inactive');
                   const empZones = employee.assignedZones || employee.assigned_zones;
+                  
+                  // Different colors for each employee
+                  const colors = [
+                    { bg: 'bg-blue-100', text: 'text-blue-700', avatar: 'bg-blue-500' },
+                    { bg: 'bg-purple-100', text: 'text-purple-700', avatar: 'bg-purple-500' },
+                    { bg: 'bg-green-100', text: 'text-green-700', avatar: 'bg-green-500' },
+                    { bg: 'bg-amber-100', text: 'text-amber-700', avatar: 'bg-amber-500' },
+                    { bg: 'bg-rose-100', text: 'text-rose-700', avatar: 'bg-rose-500' },
+                    { bg: 'bg-cyan-100', text: 'text-cyan-700', avatar: 'bg-cyan-500' },
+                    { bg: 'bg-indigo-100', text: 'text-indigo-700', avatar: 'bg-indigo-500' },
+                    { bg: 'bg-teal-100', text: 'text-teal-700', avatar: 'bg-teal-500' }
+                  ];
+                  const color = colors[index % colors.length];
+                  const zoneCount = Array.isArray(empZones) ? empZones.length : (empZones === 'all' ? 'All' : 0);
                   
                   return (
                     <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="font-medium text-gray-900">{employee.name}</span>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 ${color.avatar} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
+                            {(employee.name || 'E')[0].toUpperCase()}
+                          </div>
+                          <span className="font-medium text-gray-900">{employee.name}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
                         {employee.employee_code || employee.employeeId || employee.employee_id}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize ${
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium capitalize ${
                           employee.role === 'manager' ? 'bg-blue-100 text-blue-700' :
                           employee.role === 'supervisor' ? 'bg-purple-100 text-purple-700' :
-                          employee.role === 'coordinator' ? 'bg-indigo-100 text-indigo-700' :
+                          employee.role === 'coordinator' ? 'bg-amber-100 text-amber-700' :
                           employee.role === 'executive' ? 'bg-teal-100 text-teal-700' :
                           'bg-gray-100 text-gray-700'
                         }`}>
