@@ -78,7 +78,7 @@ const CoordinatorWorkOrders = ({ user }) => {
   const viewType = location.pathname.includes('/pending') ? 'pending' 
                  : location.pathname.includes('/completed') ? 'completed'
                  : location.pathname.includes('/create') ? 'create'
-                 : 'all';
+                 : 'pending'; // Default to pending
 
   const token = sessionStorage.getItem('pm_auth_token');
 

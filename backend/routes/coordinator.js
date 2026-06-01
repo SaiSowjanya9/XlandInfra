@@ -384,18 +384,19 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
   try {
     const coordinatorId = req.coordinatorId;
     const franchisePartnerId = req.franchisePartnerId;
+    const isFPCoordinator = !!franchisePartnerId;
     const { status } = req.query;
 
-    // FP employees see FP work orders, standalone coordinators see their created work orders
+    // FP Coordinators see: their created work orders OR FP work orders
     let query = `
       SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-      WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'}
+      WHERE ${isFPCoordinator ? '(wo.coordinator_id = ? OR wo.franchise_partner_id = ?)' : 'wo.coordinator_id = ?'}
     `;
-    const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
+    const params = isFPCoordinator ? [coordinatorId, franchisePartnerId] : [coordinatorId];
 
     if (status) {
       query += ' AND wo.status = ?';
@@ -416,15 +417,17 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
   try {
     const coordinatorId = req.coordinatorId;
     const franchisePartnerId = req.franchisePartnerId;
+    const isFPCoordinator = !!franchisePartnerId;
 
     const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')
+       WHERE ${isFPCoordinator ? '(wo.coordinator_id = ? OR wo.franchise_partner_id = ?)' : 'wo.coordinator_id = ?'} 
+         AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')
        ORDER BY wo.created_at DESC`;
-    const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
+    const params = isFPCoordinator ? [coordinatorId, franchisePartnerId] : [coordinatorId];
 
     const [workOrders] = await pool.query(query, params);
 
@@ -439,15 +442,17 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
   try {
     const coordinatorId = req.coordinatorId;
     const franchisePartnerId = req.franchisePartnerId;
+    const isFPCoordinator = !!franchisePartnerId;
 
     const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('completed', 'closed')
+       WHERE ${isFPCoordinator ? '(wo.coordinator_id = ? OR wo.franchise_partner_id = ?)' : 'wo.coordinator_id = ?'} 
+         AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`;
-    const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
+    const params = isFPCoordinator ? [coordinatorId, franchisePartnerId] : [coordinatorId];
 
     const [workOrders] = await pool.query(query, params);
 
