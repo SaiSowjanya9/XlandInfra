@@ -646,7 +646,19 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredAmcPackages.map((pkg) => {
-                    const servicesText = pkg.services || (pkg.services_data ? pkg.services_data.map(s => s.name).join(', ') : '-');
+                    // Parse services JSON if it's a string, or use directly if object
+                    let servicesData = pkg.services;
+                    if (typeof servicesData === 'string') {
+                      try { servicesData = JSON.parse(servicesData); } catch(e) { servicesData = null; }
+                    }
+                    // Extract service names from serviceRows array
+                    const serviceRows = servicesData?.serviceRows || servicesData || [];
+                    const servicesText = Array.isArray(serviceRows) 
+                      ? serviceRows.map(s => s.name || s.service || 'Service').join(', ') 
+                      : '-';
+                    // Property type and billing duration might be in services JSON or as separate columns
+                    const propertyType = pkg.property_type || servicesData?.property_type || '-';
+                    const billingDuration = pkg.billing_duration || servicesData?.billing_duration || 'monthly';
                     return (
                       <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
@@ -654,19 +666,19 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                         </td>
                         <td className="px-4 py-4">
                           <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">
-                            {PROPERTY_TYPE_OPTIONS.find(t => t.id === pkg.property_type)?.label || pkg.property_type || '-'}
+                            {PROPERTY_TYPE_OPTIONS.find(t => t.id === propertyType)?.label || propertyType || '-'}
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getBillingBadgeColor(pkg.billing_duration)}`}>
-                            {BILLING_DURATIONS.find(d => d.value === pkg.billing_duration)?.label || 'Monthly'}
+                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getBillingBadgeColor(billingDuration)}`}>
+                            {BILLING_DURATIONS.find(d => d.value === billingDuration)?.label || 'Monthly'}
                           </span>
                         </td>
                         <td className="px-4 py-4 max-w-xs">
                           <p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText}</p>
                         </td>
                         <td className="px-4 py-4 text-right">
-                          <span className="text-lg font-bold text-slate-800">{formatCurrency(pkg.price)}</span>
+                          <span className="text-lg font-bold text-slate-800">{formatCurrency(pkg.price || pkg.base_price)}</span>
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center justify-center gap-1">
