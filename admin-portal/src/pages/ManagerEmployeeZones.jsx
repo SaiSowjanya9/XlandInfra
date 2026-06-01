@@ -249,16 +249,36 @@ const ManagerEmployeeZones = ({ user, viewOnly = false }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.map((emp) => (
-                  <tr key={emp.id} className="border-b border-gray-50 hover:bg-gray-50">
+                {filteredEmployees.map((emp, index) => {
+                  // Different colors for each employee
+                  const colors = [
+                    { bg: 'bg-blue-100', text: 'text-blue-700', avatar: 'bg-blue-500' },
+                    { bg: 'bg-purple-100', text: 'text-purple-700', avatar: 'bg-purple-500' },
+                    { bg: 'bg-green-100', text: 'text-green-700', avatar: 'bg-green-500' },
+                    { bg: 'bg-amber-100', text: 'text-amber-700', avatar: 'bg-amber-500' },
+                    { bg: 'bg-rose-100', text: 'text-rose-700', avatar: 'bg-rose-500' },
+                    { bg: 'bg-cyan-100', text: 'text-cyan-700', avatar: 'bg-cyan-500' },
+                    { bg: 'bg-indigo-100', text: 'text-indigo-700', avatar: 'bg-indigo-500' },
+                    { bg: 'bg-teal-100', text: 'text-teal-700', avatar: 'bg-teal-500' }
+                  ];
+                  const color = colors[index % colors.length];
+                  const zoneCount = emp.assigned_zones?.length || 0;
+                  
+                  return (
+                  <tr key={emp.id} className={`border-b border-gray-50 hover:bg-gray-50 ${color.bg}/30`}>
                     <td className="py-4 px-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{emp.name || `${emp.first_name} ${emp.last_name}`}</p>
-                        <p className="text-sm text-gray-500">{emp.user_id || emp.id}</p>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 ${color.avatar} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
+                          {(emp.name || emp.first_name || 'E')[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{emp.name || `${emp.first_name} ${emp.last_name}`}</p>
+                          <p className="text-xs text-gray-500">ID: {emp.user_id || emp.id} • {zoneCount} zone{zoneCount !== 1 ? 's' : ''}</p>
+                        </div>
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium capitalize">
+                      <span className={`px-2 py-1 ${color.bg} ${color.text} rounded-full text-xs font-medium capitalize`}>
                         {emp.role}
                       </span>
                     </td>
@@ -311,7 +331,8 @@ const ManagerEmployeeZones = ({ user, viewOnly = false }) => {
                     </td>
                     )}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
