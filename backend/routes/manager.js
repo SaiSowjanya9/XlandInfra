@@ -948,17 +948,40 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId;
     
-    const query = `SELECT e.*, p.name as property_name, c.name as client_name
+    let estimates = [];
+    
+    // If manager is linked to an FP, fetch FP estimates
+    if (franchisePartnerId) {
+      const [fpEstimates] = await pool.execute(
+        `SELECT e.*, p.name as property_name, c.name as client_name, 'fp' as source
+         FROM estimates e
+         LEFT JOIN properties p ON e.property_id = p.id
+         LEFT JOIN clients c ON e.client_id = c.id
+         WHERE e.franchise_partner_id = ? AND (e.is_archived = ? OR e.is_archived IS NULL)
+         ORDER BY e.created_at DESC`,
+        [franchisePartnerId, isArchived]
+      );
+      estimates = [...fpEstimates];
+    }
+    
+    // Also fetch manager's own estimates
+    const [managerEstimates] = await pool.execute(
+      `SELECT e.*, p.name as property_name, c.name as client_name, 'manager' as source
        FROM estimates e
        LEFT JOIN properties p ON e.property_id = p.id
        LEFT JOIN clients c ON e.client_id = c.id
-       WHERE (e.manager_id = ?${franchisePartnerId ? ' OR e.franchise_partner_id = ?' : ''}) AND e.is_archived = ?
-       ORDER BY e.created_at DESC`;
-    const params = franchisePartnerId ? [managerId, franchisePartnerId, isArchived] : [managerId, isArchived];
+       WHERE e.manager_id = ? AND e.franchise_partner_id IS NULL AND (e.is_archived = ? OR e.is_archived IS NULL)
+       ORDER BY e.created_at DESC`,
+      [managerId, isArchived]
+    );
     
-    const [estimates] = await pool.execute(query, params);
+    estimates = [...estimates, ...managerEstimates];
+    estimates.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    console.log(`Manager ${managerId} (FP: ${franchisePartnerId}) - Found ${estimates.length} estimates`);
     res.json({ success: true, data: estimates });
   } catch (error) {
+    console.error('Error fetching manager estimates:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
