@@ -995,7 +995,7 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
           } catch (e) { console.log('Property lookup error:', e.message); }
         }
         
-        return { ...est, addons, property_code };
+        return { ...est, addons, property_code, created_by_name: est.created_by_name || 'Franchise Partner' };
       }));
       
       console.log(`Manager ${managerId} (FP: ${franchisePartnerId}) - Found ${estimates.length} FP estimates`);
