@@ -967,29 +967,30 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
           try { addons = JSON.parse(est.addons_data); } catch(e) {}
         }
         
-        // Get property_code if missing - use property_id (numeric) to lookup
+        // Get original property_code from onboarded_properties or properties table
         let property_code = est.property_code;
         const propId = est.property_id;
         const propName = est.property_name || '';
         
-        if (!property_code && (propId || propName)) {
+        // Always try to fetch the original property_id from the property tables
+        if (propId || propName) {
           try {
             // Try onboarded_properties first (most common for FP)
             let [props] = await pool.execute(
-              `SELECT property_id as prop_code FROM onboarded_properties 
+              `SELECT property_id as orig_code FROM onboarded_properties 
                WHERE (id = ? OR community_name = ?) AND franchise_partner_id = ? LIMIT 1`,
               [propId || 0, propName, franchisePartnerId]
             );
-            if (props.length > 0 && props[0].prop_code) {
-              property_code = props[0].prop_code;
+            if (props.length > 0 && props[0].orig_code) {
+              property_code = props[0].orig_code;
             } else {
               // Try properties table
               [props] = await pool.execute(
-                `SELECT property_id as prop_code FROM properties 
+                `SELECT property_id as orig_code FROM properties 
                  WHERE (id = ? OR name = ?) AND franchise_partner_id = ? LIMIT 1`,
                 [propId || 0, propName, franchisePartnerId]
               );
-              if (props.length > 0 && props[0].prop_code) property_code = props[0].prop_code;
+              if (props.length > 0 && props[0].orig_code) property_code = props[0].orig_code;
             }
           } catch (e) { console.log('Property lookup error:', e.message); }
         }
