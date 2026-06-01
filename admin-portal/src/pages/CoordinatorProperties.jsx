@@ -498,73 +498,61 @@ const CoordinatorProperties = ({ user }) => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Name</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">ID</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Division</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Units</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Address</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contacts</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 uppercase">Property</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 uppercase">Type</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 uppercase">Location</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 uppercase">Contact</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 uppercase">Created By</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredProperties.map((property) => (
                   <tr key={property.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-4 px-4">
-                      <p className="font-medium text-gray-900">{property.name}</p>
+                      <p className="font-semibold text-gray-900">{property.name}</p>
+                      <p className="text-xs text-gray-500 font-mono">{property.property_id}</p>
                     </td>
                     <td className="py-4 px-4">
-                      <p className="text-sm text-gray-600 font-mono">{property.property_id}</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="inline-block px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium capitalize">
-                        {property.property_type}
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium capitalize ${
+                        property.property_type === 'gated_community' || property.entry_type === 'GC' ? 'bg-blue-100 text-blue-700' :
+                        property.property_type === 'apartment' || property.entry_type === 'APT' ? 'bg-purple-100 text-purple-700' :
+                        property.property_type === 'villa' || property.entry_type === 'VILLA' ? 'bg-green-100 text-green-700' :
+                        property.property_type === 'flat' || property.entry_type === 'FLAT' ? 'bg-orange-100 text-orange-700' :
+                        property.property_type === 'plot' || property.entry_type === 'PLOT' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-teal-100 text-teal-700'
+                      }`}>
+                        {property.entry_type === 'GC' ? 'Gated Community' : 
+                         property.entry_type === 'APT' ? 'Apartment' :
+                         property.entry_type === 'VILLA' ? 'Villa' :
+                         property.entry_type === 'FLAT' ? 'Flat' :
+                         property.entry_type === 'PLOT' ? 'Plot' :
+                         property.property_type?.replace('_', ' ') || 'Residential'}
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <p className="text-sm text-gray-600">{property.zone_name || '-'}</p>
+                      <div className="flex items-start gap-1.5">
+                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm text-gray-700">{property.city}{property.state ? `, ${property.state}` : ''}</p>
+                          <p className="text-xs text-gray-400">{property.zone_name || 'No zone'}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="py-4 px-4">
-                      <p className="text-sm text-gray-600">{property.area || property.city || '-'}</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <p className="text-sm text-gray-600">{property.division || '-'}</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <p className="text-sm text-gray-600">{property.units || property.total_units || 1}</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <p className="text-sm text-gray-600 max-w-[150px] truncate" title={property.address}>
-                        {property.address || `${property.city}, ${property.state}`}
-                      </p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <p className="text-sm text-gray-600">{property.contacts || property.contact_person || '-'}</p>
+                      <p className="text-sm text-gray-700">{property.contact_person || '-'}</p>
+                      {property.contact_phone && (
+                        <p className="text-xs text-gray-400 flex items-center gap-1">
+                          <Phone className="w-3 h-3" />
+                          {property.contact_phone}
+                        </p>
+                      )}
                     </td>
                     <td className="py-4 px-4">
                       <p className="text-sm text-gray-600">{property.created_by_name || 'System'}</p>
                     </td>
                     <td className="py-4 px-4">
-                      <p className="text-sm text-gray-500">
-                        {property.created_at ? new Date(property.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                      </p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                        property.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {property.status || 'active'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-1">
-                        {/* View Details - Always visible */}
+                      <div className="flex items-center justify-end">
                         <button
                           onClick={() => { setViewProperty(property); setShowViewModal(true); }}
                           className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
@@ -572,36 +560,6 @@ const CoordinatorProperties = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Assign Vendor - Hidden for FP Coordinator */}
-                        {!isFPCoordinator && (
-                          <button
-                            onClick={() => openAssignModal(property, 'vendor')}
-                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
-                            title="Assign Vendor"
-                          >
-                            <Store className="w-4 h-4" />
-                          </button>
-                        )}
-                        {/* Assign Employee - Hidden for FP Coordinator */}
-                        {!isFPCoordinator && (
-                          <button
-                            onClick={() => openAssignModal(property, 'employee')}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
-                            title="Assign Employee"
-                          >
-                            <Users className="w-4 h-4" />
-                          </button>
-                        )}
-                        {/* Delete - Hidden for FP Coordinator */}
-                        {!isFPCoordinator && property.can_delete && (
-                          <button
-                            onClick={() => handleDelete(property)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
