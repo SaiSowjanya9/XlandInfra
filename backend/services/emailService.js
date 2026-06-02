@@ -38,7 +38,7 @@ const getDefaultHeaders = () => ({
 });
 
 // Notification email addresses
-const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'ssmspy@gmail.com';
+const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'info@xlandinfra.com';
 const CONTACT_EMAILS = ['info@xlandinfra.com', 'xlandinfra@gmail.com'];
 
 // Send notification for new work order submission
@@ -1303,8 +1303,271 @@ const sendVendorAssignmentEmail = async (vendorEmail, vendorName, property) => {
   }
 };
 
+// Send notification when work order is created (from any portal)
+const sendWorkOrderCreatedNotification = async (workOrderData) => {
+  const {
+    orderId, orderNumber, title, propertyName, propertyId,
+    customerName, customerEmail, customerPhone,
+    categoryName, subcategoryName, priority, description,
+    createdBy, createdByRole, createdFromPortal
+  } = workOrderData;
+
+  const priorityColors = {
+    high: '#ef4444',
+    medium: '#f59e0b', 
+    low: '#22c55e'
+  };
+
+  const portalColors = {
+    'Customer Portal': '#6366f1',
+    'Manager Portal': '#3b82f6',
+    'Coordinator Portal': '#14b8a6',
+    'Admin Portal': '#8b5cf6',
+    'FP Portal': '#f59e0b'
+  };
+
+  const mailOptions = {
+    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    to: NOTIFICATION_EMAIL,
+    subject: `🔔 New Work Order Created - ${orderNumber || orderId}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Arial, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+            <h1 style="margin: 0; color: #fbbf24; font-size: 24px;">New Work Order Created</h1>
+            <p style="margin: 10px 0 0 0; color: #94a3b8; font-size: 14px;">
+              Created from <span style="color: ${portalColors[createdFromPortal] || '#94a3b8'}; font-weight: bold;">${createdFromPortal}</span>
+            </p>
+          </div>
+          
+          <!-- Content -->
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
+            <!-- Order Info -->
+            <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px; border-bottom: 2px solid #fbbf24; padding-bottom: 10px;">
+                📋 Work Order Details
+              </h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b; width: 140px;">Order ID:</td>
+                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold;">${orderNumber || orderId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Title:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${title || 'Service Request'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Category:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${categoryName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Subcategory:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${subcategoryName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Priority:</td>
+                  <td style="padding: 8px 0;">
+                    <span style="background: ${priorityColors[priority] || '#64748b'}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">
+                      ${(priority || 'MEDIUM').toUpperCase()}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            
+            <!-- Property Info -->
+            <div style="background: #f0fdf4; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <h2 style="margin: 0 0 15px 0; color: #166534; font-size: 18px;">🏠 Property</h2>
+              <p style="margin: 0; color: #1e293b; font-size: 16px; font-weight: bold;">${propertyName || '-'}</p>
+              <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">ID: ${propertyId || '-'}</p>
+            </div>
+            
+            <!-- Customer Info -->
+            <div style="background: #eff6ff; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <h2 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">👤 Customer</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 5px 0; color: #64748b;">Name:</td>
+                  <td style="padding: 5px 0; color: #1e293b; font-weight: bold;">${customerName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 5px 0; color: #64748b;">Email:</td>
+                  <td style="padding: 5px 0; color: #1e293b;">${customerEmail || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 5px 0; color: #64748b;">Phone:</td>
+                  <td style="padding: 5px 0; color: #1e293b;">${customerPhone || '-'}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <!-- Description -->
+            ${description ? `
+            <div style="background: #fefce8; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <h2 style="margin: 0 0 10px 0; color: #854d0e; font-size: 18px;">📝 Description</h2>
+              <p style="margin: 0; color: #1e293b; line-height: 1.6;">${description}</p>
+            </div>
+            ` : ''}
+            
+            <!-- Created By -->
+            <div style="background: #f1f5f9; border-radius: 12px; padding: 15px; text-align: center;">
+              <p style="margin: 0; color: #64748b; font-size: 14px;">
+                Created by <strong style="color: #1e293b;">${createdBy || 'System'}</strong>
+                ${createdByRole ? `(${createdByRole})` : ''}
+              </p>
+              <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">
+                ${new Date().toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}
+              </p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #1e293b; padding: 20px; border-radius: 0 0 16px 16px; text-align: center;">
+            <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+              XLAND INFRA Private Limited | Automated Notification
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`📧 Work order creation notification sent for ${orderNumber || orderId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending work order notification:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send notification when work order is completed
+const sendWorkOrderCompletedNotification = async (workOrderData) => {
+  const {
+    orderId, orderNumber, title, propertyName, propertyId,
+    customerName, customerEmail, customerPhone,
+    categoryName, subcategoryName, completedBy, completedByRole
+  } = workOrderData;
+
+  const mailOptions = {
+    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    to: NOTIFICATION_EMAIL,
+    subject: `✅ Work Order Completed - ${orderNumber || orderId}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Arial, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+            <h1 style="margin: 0; color: #ffffff; font-size: 24px;">✅ Work Order Completed</h1>
+            <p style="margin: 10px 0 0 0; color: #d1fae5; font-size: 14px;">${orderNumber || orderId}</p>
+          </div>
+          
+          <!-- Content -->
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
+            <!-- Order Info -->
+            <div style="background: #ecfdf5; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #10b981;">
+              <h2 style="margin: 0 0 15px 0; color: #065f46; font-size: 18px;">📋 Work Order Details</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b; width: 140px;">Order ID:</td>
+                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold;">${orderNumber || orderId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Title:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${title || 'Service Request'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Category:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${categoryName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Subcategory:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${subcategoryName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Status:</td>
+                  <td style="padding: 8px 0;">
+                    <span style="background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">
+                      COMPLETED
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            
+            <!-- Property Info -->
+            <div style="background: #f0fdf4; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <h2 style="margin: 0 0 15px 0; color: #166534; font-size: 18px;">🏠 Property</h2>
+              <p style="margin: 0; color: #1e293b; font-size: 16px; font-weight: bold;">${propertyName || '-'}</p>
+              <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">ID: ${propertyId || '-'}</p>
+            </div>
+            
+            <!-- Customer Info -->
+            <div style="background: #eff6ff; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <h2 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">👤 Customer</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 5px 0; color: #64748b;">Name:</td>
+                  <td style="padding: 5px 0; color: #1e293b; font-weight: bold;">${customerName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 5px 0; color: #64748b;">Email:</td>
+                  <td style="padding: 5px 0; color: #1e293b;">${customerEmail || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 5px 0; color: #64748b;">Phone:</td>
+                  <td style="padding: 5px 0; color: #1e293b;">${customerPhone || '-'}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <!-- Completed By -->
+            <div style="background: #f1f5f9; border-radius: 12px; padding: 15px; text-align: center;">
+              <p style="margin: 0; color: #64748b; font-size: 14px;">
+                Marked as completed by <strong style="color: #059669;">${completedBy || 'System'}</strong>
+                ${completedByRole ? `(${completedByRole})` : ''}
+              </p>
+              <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">
+                ${new Date().toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}
+              </p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #059669; padding: 20px; border-radius: 0 0 16px 16px; text-align: center;">
+            <p style="margin: 0; color: #d1fae5; font-size: 12px;">
+              XLAND INFRA Private Limited | Work Order Completion Notification
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`📧 Work order completion notification sent for ${orderNumber || orderId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending completion notification:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendWorkOrderNotification,
+  sendWorkOrderCreatedNotification,
+  sendWorkOrderCompletedNotification,
   sendContactNotification,
   sendRegistrationNotification,
   sendCustomerActivationEmail,

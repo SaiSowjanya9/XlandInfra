@@ -214,6 +214,26 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
         [workOrderId]
       );
 
+      // Send email notification for new work order
+      const { sendWorkOrderCreatedNotification } = require('../services/emailService');
+      sendWorkOrderCreatedNotification({
+        orderId: workOrderId,
+        orderNumber,
+        title: `Service Request - ${category.name}`,
+        propertyName,
+        propertyId,
+        customerName,
+        customerEmail,
+        customerPhone,
+        categoryName: category.name,
+        subcategoryName,
+        priority: priority || 'medium',
+        description,
+        createdBy: customerName || customerEmail || 'Customer',
+        createdByRole: 'Customer',
+        createdFromPortal: 'Customer Portal'
+      }).catch(err => console.error('Email notification error:', err));
+
       return res.status(201).json({
         success: true,
         message: 'Work order created successfully',
@@ -427,6 +447,31 @@ router.patch('/:id/status', async (req, res) => {
         [id, current.status, status, adminId || null, notes || null]
       );
 
+      // Send completion email if status is completed
+      if (status === 'completed') {
+        const [workOrder] = await pool.query(
+          `SELECT work_order_id, title, property_name, property_id, customer_name, customer_email, customer_phone, category_name, subcategory_name 
+           FROM work_orders WHERE id = ?`, [id]
+        );
+        if (workOrder.length > 0) {
+          const { sendWorkOrderCompletedNotification } = require('../services/emailService');
+          sendWorkOrderCompletedNotification({
+            orderId: id,
+            orderNumber: workOrder[0].work_order_id,
+            title: workOrder[0].title,
+            propertyName: workOrder[0].property_name,
+            propertyId: workOrder[0].property_id,
+            customerName: workOrder[0].customer_name,
+            customerEmail: workOrder[0].customer_email,
+            customerPhone: workOrder[0].customer_phone,
+            categoryName: workOrder[0].category_name,
+            subcategoryName: workOrder[0].subcategory_name,
+            completedBy: 'Admin',
+            completedByRole: 'Admin'
+          }).catch(err => console.error('Completion email error:', err));
+        }
+      }
+
       return res.json({ success: true, message: 'Status updated successfully' });
     } catch (dbError) {
       console.error('Status update DB error:', dbError.message);
@@ -540,6 +585,26 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
          VALUES (?, 'pending', ?, 'admin', 'Work order created by admin')`,
         [workOrderId, adminId || null]
       );
+
+      // Send email notification for new work order
+      const { sendWorkOrderCreatedNotification } = require('../services/emailService');
+      sendWorkOrderCreatedNotification({
+        orderId: workOrderId,
+        orderNumber,
+        title: `Service Request - ${category.name}`,
+        propertyName,
+        propertyId,
+        customerName,
+        customerEmail,
+        customerPhone,
+        categoryName: category.name,
+        subcategoryName,
+        priority: priority || 'medium',
+        description,
+        createdBy: 'Admin',
+        createdByRole: 'Admin',
+        createdFromPortal: 'Admin Portal'
+      }).catch(err => console.error('Email notification error:', err));
 
       return res.status(201).json({
         success: true,
