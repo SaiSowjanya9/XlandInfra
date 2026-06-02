@@ -919,18 +919,9 @@ const CoordinatorWorkOrders = ({ user }) => {
                       <span className="text-sm text-gray-600">{wo.category_name || '-'}</span>
                     </td>
                     <td className="py-4 px-4">
-                      <select
-                        value={wo.status}
-                        onChange={(e) => handleStatusUpdate(wo.id, e.target.value)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="assigned">Assigned</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="closed">Closed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
+                        {wo.status?.replace(/_/g, ' ').toUpperCase()}
+                      </span>
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
@@ -995,19 +986,6 @@ const CoordinatorWorkOrders = ({ user }) => {
                         {/* COMPLETED TAB ACTIONS */}
                         {viewType === 'completed' && (
                           <div className="flex items-center gap-1">
-                            {/* Change of Status - dropdown */}
-                            <select
-                              value={wo.status}
-                              onChange={(e) => handleStatusUpdate(wo.id, e.target.value)}
-                              className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-teal-500"
-                              title="Change Status"
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="assigned">Assigned</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="completed">Completed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
                             {/* Revert to Pending */}
                             <button
                               onClick={() => handleStatusUpdate(wo.id, 'pending')}

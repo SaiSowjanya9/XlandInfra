@@ -12,6 +12,7 @@ import {
   Save,
   AlertCircle,
   CheckCircle,
+  XCircle,
   Phone,
   Mail,
   MapPin,
@@ -30,6 +31,7 @@ const CoordinatorEmployees = ({ user }) => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
@@ -54,34 +56,50 @@ const CoordinatorEmployees = ({ user }) => {
     { value: 'coord_executive', label: 'Executive' }
   ];
 
-  const fetchEmployees = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/coordinator/employees', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success) {
-        setEmployees(result.data);
+      if (isFPCoordinator) {
+        // FP Coordinator: Fetch all FP employees with zones (view-only)
+        const response = await fetch('/api/coordinator/fp-employee-zones', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+          // Transform data to match expected format
+          const transformedEmployees = result.data.employees.map(emp => ({
+            ...emp,
+            assigned_zones: emp.zone_names !== 'No zones assigned' 
+              ? emp.zone_names.split(',').map(z => z.trim()) 
+              : []
+          }));
+          setEmployees(transformedEmployees);
+          setZones(result.data.zones || []);
+        }
+      } else {
+        // Standalone Coordinator: Fetch own employees
+        const [empRes, zoneRes] = await Promise.all([
+          fetch('/api/coordinator/employees', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          fetch('/api/coordinator/zones', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        ]);
+
+        const [empData, zoneData] = await Promise.all([
+          empRes.json(),
+          zoneRes.json()
+        ]);
+
+        if (empData.success) setEmployees(empData.data || []);
+        if (zoneData.success) setZones(zoneData.data || []);
       }
     } catch (error) {
-      console.error('Fetch employees error:', error);
+      console.error('Fetch data error:', error);
+      setMessage({ type: 'error', text: 'Failed to load data' });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchZones = async () => {
-    try {
-      const response = await fetch('/api/coordinator/zones', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success) {
-        setZones(result.data);
-      }
-    } catch (error) {
-      console.error('Fetch zones error:', error);
     }
   };
 
@@ -101,9 +119,8 @@ const CoordinatorEmployees = ({ user }) => {
   };
 
   useEffect(() => {
-    fetchEmployees();
-    fetchZones();
-    if (viewType === 'add') {
+    fetchData();
+    if (viewType === 'add' && !isFPCoordinator) {
       resetForm();
       setShowModal(true);
     }
@@ -133,7 +150,7 @@ const CoordinatorEmployees = ({ user }) => {
         setMessage({ type: 'success', text: `Employee ${editingEmployee ? 'updated' : 'created'} successfully!` });
         setShowModal(false);
         resetForm();
-        fetchEmployees();
+        fetchData();
       } else {
         setMessage({ type: 'error', text: result.message || 'Operation failed' });
       }
@@ -155,7 +172,7 @@ const CoordinatorEmployees = ({ user }) => {
 
       if (result.success) {
         setMessage({ type: 'success', text: 'Employee deleted successfully!' });
-        fetchEmployees();
+        fetchData();
       } else {
         setMessage({ type: 'error', text: result.message || 'Delete failed' });
       }
@@ -234,49 +251,70 @@ const CoordinatorEmployees = ({ user }) => {
     return roleOptions.find(r => r.value === role)?.label || role;
   };
 
-  const filteredEmployees = employees.filter(e =>
-    e.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.employee_code?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = employees.filter(emp => {
+    const matchesSearch = !searchTerm ||
+      emp.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.employee_code?.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const getViewTitle = () => {
-    if (viewType === 'zones') return 'Zone Management';
-    return 'Employee Management';
-  };
+    const hasZones = (emp.assigned_zones && emp.assigned_zones.length > 0) || 
+                     (emp.zone_names && emp.zone_names !== 'No zones assigned');
+
+    if (statusFilter === 'assigned') {
+      return matchesSearch && hasZones;
+    }
+    if (statusFilter === 'pending') {
+      return matchesSearch && !hasZones;
+    }
+    return matchesSearch;
+  });
+
+  // Calculate stats
+  const totalEmployees = employees.length;
+  const zonesAssigned = employees.filter(e => (e.assigned_zones && e.assigned_zones.length > 0) || (e.zone_names && e.zone_names !== 'No zones assigned')).length;
+  const pendingAssignment = employees.filter(e => (!e.assigned_zones || e.assigned_zones.length === 0) && (!e.zone_names || e.zone_names === 'No zones assigned')).length;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{getViewTitle()}</h1>
-          <p className="text-gray-500 mt-1">
-            {isFPCoordinator 
-              ? 'View employee information' 
-              : viewType === 'zones' ? 'Manage employee zone assignments' : 'Manage your employees'}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Employee Zone Management</h1>
+        <p className="text-gray-500 mt-1">
+          View team zone assignments • <span className="text-teal-600 font-medium">{totalEmployees} employees</span>
+        </p>
+        {isFPCoordinator && (
+          <p className="text-sm text-orange-600 mt-1 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            Zone assignments are managed by your Franchise Partner
           </p>
-        </div>
-        {/* Actions - Hidden for FP Coordinator */}
-        {!isFPCoordinator && (
-          <div className="flex gap-2">
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-            >
-              <Download className="w-4 h-4" />
-              <span>Export</span>
-            </button>
-            <button
-              onClick={() => { resetForm(); setShowModal(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Employee</span>
-            </button>
-          </div>
         )}
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-500">Total Employees</p>
+            <p className="text-2xl font-bold text-gray-900">{totalEmployees}</p>
+          </div>
+          <Users className="w-10 h-10 text-blue-500" />
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-500">Zones Assigned</p>
+            <p className="text-2xl font-bold text-green-600">{zonesAssigned}</p>
+          </div>
+          <CheckCircle className="w-10 h-10 text-green-500" />
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-500">Pending Assignment</p>
+            <p className="text-2xl font-bold text-orange-600">{pendingAssignment}</p>
+          </div>
+          <XCircle className="w-10 h-10 text-orange-500" />
+        </div>
       </div>
 
       {/* Message */}
@@ -292,17 +330,28 @@ const CoordinatorEmployees = ({ user }) => {
         </div>
       )}
 
-      {/* Search */}
+      {/* Search & Filter */}
       <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search employees..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-          />
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search employees by name, ID, or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
+          >
+            <option value="all">All Employees</option>
+            <option value="assigned">Zones Assigned</option>
+            <option value="pending">Pending Assignment</option>
+          </select>
         </div>
       </div>
 
@@ -316,6 +365,7 @@ const CoordinatorEmployees = ({ user }) => {
           <div className="text-center py-12">
             <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No employees found</p>
+            <p className="text-sm text-gray-400 mt-1">Add employees from the Add Employee page.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
