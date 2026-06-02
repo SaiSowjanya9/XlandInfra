@@ -42,13 +42,12 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     { path: '/manager/employees/zones', icon: MapPin, label: 'Employee Zone Management' },
   ];
 
-  // Vendor sub-items - Add Vendor hidden for FP Manager
-  const allVendorSubItems = [
-    { path: '/manager/vendors/add', icon: UserPlus, label: 'Add Vendor', adminOnly: true },
+  // Vendor sub-items
+  const vendorSubItems = [
+    { path: '/manager/vendors/add', icon: UserPlus, label: 'Add Vendor' },
     { path: '/manager/vendors', icon: Hammer, label: 'Vendor Details' },
     { path: '/manager/vendors/assigned', icon: ClipboardCheck, label: 'Assigned Vendors' }
   ];
-  const vendorSubItems = isFPManager ? allVendorSubItems.filter(item => !item.adminOnly) : allVendorSubItems;
 
   // Estimates sub-items
   const estimatesSubItems = [

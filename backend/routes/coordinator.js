@@ -874,46 +874,71 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
 // Get vendor assignments (view-only for coordinators)
 router.get('/vendors/assignments', requireCoordinatorScope, async (req, res) => {
   try {
-    const { status } = req.query;
+    const franchisePartnerId = req.franchisePartnerId;
     
-    // Fetch vendor assignments - all service vendor assignments
-    const [assignments] = await pool.query(
-      `SELECT va.id, va.vendor_id, va.property_id, va.service_type, va.zone,
-              va.status, va.created_at, va.updated_at,
-              ov.owner_name as vendor_name, ov.owner_mobile as vendor_phone,
-              ov.owner_email as vendor_email, ov.rate_per_visit, ov.coverage_per_day,
-              p.name as property_name, p.property_id as property_code
-       FROM vendor_assignments va
-       LEFT JOIN onboarded_vendors ov ON va.vendor_id = ov.id
-       LEFT JOIN properties p ON va.property_id = p.id
-       WHERE va.status = ?
-       ORDER BY va.created_at DESC`,
-      [status || 'active']
+    if (!franchisePartnerId) {
+      return res.json({ success: true, data: { propertyAssignments: [], serviceAssignments: [] } });
+    }
+    
+    console.log('Coordinator Vendor Assignments Query - FP:', franchisePartnerId);
+    
+    // Get property-vendor assignments for this FP's properties (same as Manager)
+    const [propertyAssignments] = await pool.execute(
+      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+        p.name as property_name, p.property_id as propertyId, p.property_type, p.address, p.city,
+        v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
+        v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
+        v.zone_name, v.area, v.rate_per_visit, v.coverage_per_day,
+        v.owner_aadhar, v.manager_name, v.manager_mobile, v.manager_email,
+        v.poc_name, v.poc_mobile, v.poc_email
+       FROM property_vendor_assignments pva
+       JOIN properties p ON pva.property_id = p.id
+       JOIN vendors v ON pva.vendor_id = v.id
+       WHERE p.franchise_partner_id = ? AND pva.is_active = TRUE
+       ORDER BY pva.assigned_at DESC`,
+      [franchisePartnerId]
     );
 
-    // Also get service-based assignments
-    const [serviceAssignments] = await pool.query(
-      `SELECT sva.id, sva.vendor_id, sva.service_type, sva.zone_id, sva.zone_name,
-              sva.status, sva.created_at,
-              ov.owner_name as vendor_name, ov.owner_mobile as vendor_phone,
-              ov.owner_email as vendor_email, ov.rate_per_visit, ov.coverage_per_day
-       FROM service_vendor_assignments sva
-       LEFT JOIN onboarded_vendors ov ON sva.vendor_id = ov.id
-       WHERE sva.status = ?
-       ORDER BY sva.created_at DESC`,
-      [status || 'active']
-    );
+    console.log('Coordinator Vendor assignments found:', propertyAssignments.length);
+
+    // Convert to service assignments format for frontend
+    const serviceAssignments = propertyAssignments.map(a => ({
+      id: a.id,
+      propertyId: a.propertyId || a.property_id,
+      propertyName: a.property_name,
+      propertyType: a.property_type,
+      propertyZone: a.zone_name || '',
+      city: a.city || '',
+      address: a.address || '',
+      vendorId: a.vendor_code,
+      vendorName: a.vendor_name,
+      vendorPhone: a.vendor_phone,
+      vendorEmail: a.vendor_email,
+      owner_aadhar: a.owner_aadhar,
+      serviceType: a.service_type,
+      zone_name: a.zone_name,
+      area: a.area,
+      rate_per_visit: a.rate_per_visit,
+      coverage_per_day: a.coverage_per_day,
+      manager_name: a.manager_name,
+      manager_mobile: a.manager_mobile,
+      manager_email: a.manager_email,
+      poc_name: a.poc_name,
+      poc_mobile: a.poc_mobile,
+      poc_email: a.poc_email,
+      assignedDate: a.assigned_at,
+      status: a.is_active ? 'active' : 'removed'
+    }));
 
     res.json({
       success: true,
       data: {
-        propertyAssignments: assignments,
-        serviceAssignments: serviceAssignments
+        propertyAssignments: [],
+        serviceAssignments
       }
     });
   } catch (error) {
-    console.error('Vendor assignments fetch error:', error);
-    // Return empty arrays if tables don't exist
+    console.error('Coordinator Vendor assignments fetch error:', error.message);
     res.json({
       success: true,
       data: {

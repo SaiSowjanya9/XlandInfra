@@ -10,7 +10,7 @@ import {
   CheckCircle,
   RefreshCw,
   ArrowRight,
-  Eye
+  MapPin
 } from 'lucide-react';
 import FPEmployeeZonesView from '../components/FPEmployeeZonesView';
 
@@ -46,11 +46,14 @@ const SupervisorDashboard = ({ user }) => {
   }, []);
 
   const statCards = [
-    { label: 'Properties', value: stats?.properties || 0, icon: Building2, color: 'amber', path: '/supervisor/properties' },
-    { label: 'Vendors', value: stats?.vendors || 0, icon: Store, color: 'purple', path: '/supervisor/vendors' },
-    { label: 'Customers', value: stats?.customers || 0, icon: Users, color: 'green', path: '/supervisor/customers' },
-    { label: 'Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, color: 'orange', path: '/supervisor/work-orders' },
-    { label: 'Estimates', value: stats?.estimates || 0, icon: FileText, color: 'pink', path: '/supervisor/estimates' }
+    { label: 'Properties', value: stats?.properties || 0, icon: Building2, bgColor: 'bg-blue-50', textColor: 'text-blue-600', path: '/supervisor/properties' },
+    { label: 'Vendors', value: stats?.vendors || 0, icon: Store, bgColor: 'bg-purple-50', textColor: 'text-purple-600', path: '/supervisor/vendors' },
+    { label: 'Customers', value: stats?.customers || 0, icon: Users, bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/supervisor/customers' },
+    { label: 'Employees', value: stats?.employees || 0, icon: Users, bgColor: 'bg-orange-50', textColor: 'text-orange-600', path: '/supervisor/employees/zones' },
+    { label: 'Total Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, bgColor: 'bg-indigo-50', textColor: 'text-indigo-600', path: '/supervisor/work-orders' },
+    { label: 'Pending Work Orders', value: stats?.pendingWorkOrders || 0, icon: Clock, bgColor: 'bg-amber-50', textColor: 'text-amber-600', path: '/supervisor/work-orders' },
+    { label: 'Completed Work Orders', value: stats?.completedWorkOrders || 0, icon: CheckCircle, bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/supervisor/work-orders' },
+    { label: 'Estimates', value: stats?.estimates || 0, icon: FileText, bgColor: 'bg-teal-50', textColor: 'text-teal-600', path: '/supervisor/estimates' }
   ];
 
   const getColorClasses = (color) => {
@@ -89,12 +92,12 @@ const SupervisorDashboard = ({ user }) => {
     });
   };
 
-  // Quick actions - View only for Supervisor
+  // Quick actions - same as Manager dashboard
   const quickActions = [
-    { label: 'View Properties', icon: Building2, path: '/supervisor/properties', color: 'amber' },
-    { label: 'View Work Orders', icon: ClipboardList, path: '/supervisor/work-orders', color: 'orange' },
-    { label: 'View Customers', icon: Users, path: '/supervisor/customers', color: 'green' },
-    { label: 'View Estimates', icon: FileText, path: '/supervisor/estimates', color: 'purple' }
+    { label: 'Create Work Order', icon: ClipboardList, path: '/supervisor/work-orders/create', bgColor: 'bg-blue-100', textColor: 'text-blue-600' },
+    { label: 'Create Estimate', icon: FileText, path: '/supervisor/estimates/create', bgColor: 'bg-green-100', textColor: 'text-green-600' },
+    { label: 'View Properties', icon: Building2, path: '/supervisor/properties', bgColor: 'bg-purple-100', textColor: 'text-purple-600' },
+    { label: 'Manage Zones', icon: MapPin, path: '/supervisor/employees/zones', bgColor: 'bg-orange-100', textColor: 'text-orange-600' }
   ];
 
   if (loading) {
@@ -107,17 +110,40 @@ const SupervisorDashboard = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {statCards.map((stat) => (
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome, {user?.firstName || user?.name?.split(' ')[0] || 'Supervisor'}!
+          </h1>
+          <p className="text-gray-500 mt-1">Here's your dashboard overview</p>
+        </div>
+        <button
+          onClick={fetchDashboard}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      {/* Stats Grid - 4 columns like Manager */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map((stat, index) => (
           <button
-            key={stat.label}
+            key={index}
             onClick={() => navigate(stat.path)}
-            className={`p-4 rounded-xl border ${getColorClasses(stat.color)} hover:shadow-md transition-all text-left`}
+            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left"
           >
-            <stat.icon className="w-6 h-6 mb-2" />
-            <p className="text-2xl font-bold">{stat.value}</p>
-            <p className="text-sm opacity-70">{stat.label}</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+              </div>
+              <div className={`w-12 h-12 ${stat.bgColor} rounded-full flex items-center justify-center`}>
+                <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
+              </div>
+            </div>
           </button>
         ))}
       </div>
@@ -130,12 +156,12 @@ const SupervisorDashboard = ({ user }) => {
             <button
               key={action.label}
               onClick={() => navigate(action.path)}
-              className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-all group"
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all group"
             >
-              <div className={`w-10 h-10 rounded-lg bg-${action.color}-100 flex items-center justify-center`}>
-                <action.icon className={`w-5 h-5 text-${action.color}-600`} />
+              <div className={`w-12 h-12 rounded-lg ${action.bgColor} flex items-center justify-center`}>
+                <action.icon className={`w-6 h-6 ${action.textColor}`} />
               </div>
-              <span className="text-sm font-medium text-gray-700 group-hover:text-amber-700">
+              <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700">
                 {action.label}
               </span>
             </button>
