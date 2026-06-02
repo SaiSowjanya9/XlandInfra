@@ -1393,13 +1393,20 @@ router.get('/export/work-orders', requireCoordinatorScope, async (req, res) => {
 router.get('/fp-employee-zones', requireCoordinatorScope, async (req, res) => {
   try {
     // Get FP ID from multiple sources
-    const fpId = req.franchisePartnerId || req.fpId || req.user?.franchisePartnerId || req.user?.fpId;
+    let fpId = req.franchisePartnerId || req.fpId || req.user?.franchisePartnerId || req.user?.fpId;
     
-    console.log('FP Employee Zones - fpId:', fpId, 'from sources:', {
-      franchisePartnerId: req.franchisePartnerId,
-      fpId: req.fpId,
-      userFpId: req.user?.franchisePartnerId || req.user?.fpId
-    });
+    // If still no fpId, try to get it from fp_employees table using coordinator's user id
+    if (!fpId && req.user?.id) {
+      const [fpEmp] = await pool.execute(
+        'SELECT franchise_partner_id FROM fp_employees WHERE id = ? OR user_id = ?',
+        [req.user.id, req.user.id]
+      );
+      if (fpEmp.length > 0) {
+        fpId = fpEmp[0].franchise_partner_id;
+      }
+    }
+    
+    console.log('FP Employee Zones - fpId:', fpId, 'userId:', req.user?.id);
     
     if (!fpId) {
       return res.status(403).json({ success: false, message: 'This feature is only available for FP employees' });
