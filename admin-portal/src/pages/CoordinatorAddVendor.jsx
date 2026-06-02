@@ -170,7 +170,7 @@ const CoordinatorAddVendor = ({ user }) => {
         },
         body: JSON.stringify({
           ...formData,
-          createdBy: user?.username || 'Coordinator',
+          createdBy: user?.name || user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.username || 'Coordinator',
           createdAt: new Date().toISOString()
         })
       });
