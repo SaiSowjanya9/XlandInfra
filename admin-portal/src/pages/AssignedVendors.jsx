@@ -24,11 +24,14 @@ import {
   Filter,
 } from 'lucide-react';
 const AssignedVendors = ({ user }) => {
-  // Check if user is FP Manager (view-only mode)
+  // Check user role for view-only mode and API prefix
+  const isCoordinator = user?.role === 'coordinator' || user?.role === 'coord_supervisor' || user?.role === 'coord_executive';
   const isFPManager = user?.role === 'manager';
   const isFPUser = user?.role === 'franchise_partner' || user?.role === 'manager' || user?.role === 'fp_coordinator';
-  // Manager uses /api/manager, FP uses /api/fp
-  const apiPrefix = isFPManager ? '/api/manager' : (isFPUser ? '/api/fp' : '/api');
+  // Coordinator uses /api/coordinator, Manager uses /api/manager, FP uses /api/fp
+  const apiPrefix = isCoordinator ? '/api/coordinator' : (isFPManager ? '/api/manager' : (isFPUser ? '/api/fp' : '/api'));
+  // Coordinators and FP Managers are view-only
+  const isViewOnly = isCoordinator || isFPManager;
   
   const [activeTab, setActiveTab] = useState('service'); // 'service' or 'property'
   const [assignments, setAssignments] = useState([]);
