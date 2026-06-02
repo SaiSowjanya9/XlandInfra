@@ -910,32 +910,44 @@ router.delete('/employees/:id', requireExecutiveScope, async (req, res) => {
 });
 
 // =====================================================
-// ESTIMATES
+// ESTIMATES - Executive sees FP estimates from fp_estimates table
 // =====================================================
 router.get('/estimates', requireExecutiveScope, async (req, res) => {
   try {
+    const { archived } = req.query;
+    const isArchived = archived === 'true';
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
-    const { archived } = req.query;
-
-    let query = `
-      SELECT e.*, c.name as client_name, p.name as property_name
-      FROM estimates e
-      LEFT JOIN clients c ON e.client_id = c.id
-      LEFT JOIN properties p ON e.property_id = p.id
-      WHERE (e.executive_id = ?${franchisePartnerId ? ' OR e.franchise_partner_id = ?' : ''})
-    `;
-    const params = franchisePartnerId ? [executiveId, franchisePartnerId] : [executiveId];
-
-    if (archived === 'true') {
-      query += ` AND e.status = 'archived'`;
-    } else {
-      query += ` AND e.status != 'archived'`;
+    
+    let estimates = [];
+    
+    // If executive is linked to an FP, fetch from fp_estimates table
+    if (franchisePartnerId) {
+      const [fpEstimates] = await pool.query(
+        `SELECT e.*, 
+                COALESCE(
+                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                  CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+                  e.created_by_name
+                ) as created_by_name
+         FROM fp_estimates e
+         LEFT JOIN fp_employees fpe ON e.created_by_name = fpe.email OR e.created_by_name = fpe.username
+         LEFT JOIN users u ON e.created_by_name = u.email
+         WHERE e.franchise_partner_id = ? AND (e.is_archived = ? OR e.is_archived IS NULL OR e.is_archived = 0)
+         ORDER BY e.created_at DESC`,
+        [franchisePartnerId, isArchived ? 1 : 0]
+      );
+      
+      // Enrich estimates with property_code and parse addons
+      estimates = await Promise.all(fpEstimates.map(async (est) => {
+        let addons = [];
+        if (est.addons_data) {
+          try { addons = JSON.parse(est.addons_data); } catch(e) {}
+        }
+        return { ...est, addons };
+      }));
     }
-
-    query += ' ORDER BY e.created_at DESC';
-
-    const [estimates] = await pool.query(query, params);
+    
     res.json({ success: true, data: estimates });
   } catch (error) {
     console.error('Estimates fetch error:', error);
@@ -991,31 +1003,22 @@ router.post('/estimates', requireExecutiveScope, async (req, res) => {
 });
 
 // =====================================================
-// AMC PACKAGES
+// AMC PACKAGES - FP Executives use FP packages
 // =====================================================
 router.get('/amc-packages', requireExecutiveScope, async (req, res) => {
   try {
-    const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
-    const canView = await canViewPricing(executiveId, 'amc_packages');
-
-    // Get executive's own packages + FP packages if linked to FP
-    let packages = [];
-    const [ownPackages] = await pool.query(
-      `SELECT *, 'executive' as source FROM executive_amc_packages WHERE executive_id = ? ORDER BY created_at DESC`,
-      [executiveId]
-    );
-    packages = [...ownPackages];
     
+    // FP Executives read from fp_amc_packages
     if (franchisePartnerId) {
-      const [fpPackages] = await pool.query(
-        `SELECT *, 'fp' as source FROM fp_amc_packages WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY created_at DESC`,
+      const [packages] = await pool.query(
+        `SELECT * FROM fp_amc_packages WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
         [franchisePartnerId]
       );
-      packages = [...packages, ...fpPackages];
+      return res.json({ success: true, data: packages });
     }
-
-    res.json({ success: true, data: filterPricing(packages, canView) });
+    
+    res.json({ success: true, data: [] });
   } catch (error) {
     console.error('AMC packages fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch AMC packages' });
@@ -1047,39 +1050,22 @@ router.post('/amc-packages', requireExecutiveScope, async (req, res) => {
 });
 
 // =====================================================
-// ADD-ONS
+// ADD-ONS - FP Executives use FP addons
 // =====================================================
 router.get('/addons', requireExecutiveScope, async (req, res) => {
   try {
-    const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
-    const canView = await canViewPricing(executiveId, 'addons');
-
-    // Get executive's own addons + FP addons if linked to FP
-    let addons = [];
-    const [ownAddons] = await pool.query(
-      `SELECT ea.*, c.name as category_name, 'executive' as source
-       FROM executive_addons ea
-       LEFT JOIN categories c ON ea.category_id = c.id
-       WHERE ea.executive_id = ?
-       ORDER BY ea.created_at DESC`,
-      [executiveId]
-    );
-    addons = [...ownAddons];
     
+    // FP Executives read from fp_addons
     if (franchisePartnerId) {
-      const [fpAddons] = await pool.query(
-        `SELECT fa.*, c.name as category_name, 'fp' as source
-         FROM fp_addons fa
-         LEFT JOIN categories c ON fa.category_id = c.id
-         WHERE fa.franchise_partner_id = ? AND fa.is_active = 1
-         ORDER BY fa.created_at DESC`,
+      const [addons] = await pool.query(
+        `SELECT * FROM fp_addons WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
         [franchisePartnerId]
       );
-      addons = [...addons, ...fpAddons];
+      return res.json({ success: true, data: addons });
     }
-
-    res.json({ success: true, data: filterPricing(addons, canView) });
+    
+    res.json({ success: true, data: [] });
   } catch (error) {
     console.error('Addons fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch addons' });

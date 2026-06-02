@@ -1044,9 +1044,17 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
     // If manager is linked to an FP, fetch from fp_estimates table
     if (franchisePartnerId) {
       const [fpEstimates] = await pool.execute(
-        `SELECT * FROM fp_estimates 
-         WHERE franchise_partner_id = ? AND (is_archived = ? OR is_archived IS NULL OR is_archived = 0)
-         ORDER BY created_at DESC`,
+        `SELECT e.*, 
+                COALESCE(
+                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                  CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+                  e.created_by_name
+                ) as created_by_name
+         FROM fp_estimates e
+         LEFT JOIN fp_employees fpe ON e.created_by_name = fpe.email OR e.created_by_name = fpe.username
+         LEFT JOIN users u ON e.created_by_name = u.email
+         WHERE e.franchise_partner_id = ? AND (e.is_archived = ? OR e.is_archived IS NULL OR e.is_archived = 0)
+         ORDER BY e.created_at DESC`,
         [franchisePartnerId, isArchived ? 1 : 0]
       );
       
