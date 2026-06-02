@@ -221,22 +221,23 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     
     console.log('[Manager Properties] managerId:', managerId, 'franchisePartnerId:', franchisePartnerId);
     
-    // Fetch from properties table with creator name (FP company name for FP-created)
+    // Fetch from properties table with creator name - filter by FP for FP employees
     const propQuery = `SELECT p.*, 
         COALESCE(p.area_name, p.city) as area,
         COALESCE(p.division, 'General') as division,
         COALESCE(p.number_of_units, 1) as units,
-        CASE 
-          WHEN p.franchise_partner_id IS NOT NULL THEN fp.owner_name
-          ELSE COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), 'System')
-        END as created_by_name,
+        COALESCE(
+          CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+          CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+          p.created_by, 'System'
+        ) as created_by_name,
         'properties' as source_table
        FROM properties p 
-       LEFT JOIN users u ON p.created_by = u.id
-       LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
-       WHERE (p.manager_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})
+       LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
+       LEFT JOIN users u ON p.created_by = u.email OR CAST(p.created_by AS UNSIGNED) = u.id
+       WHERE ${franchisePartnerId ? 'p.franchise_partner_id = ?' : 'p.manager_id = ?'}
        ORDER BY p.created_at DESC`;
-    const propParams = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
+    const propParams = franchisePartnerId ? [franchisePartnerId] : [managerId];
     console.log('[Manager Properties] Params:', propParams);
     const [regularProperties] = await pool.execute(propQuery, propParams);
     console.log('[Manager Properties] Found:', regularProperties.length, 'properties');
@@ -248,14 +249,19 @@ router.get('/properties', requireManagerScope, async (req, res) => {
                 op.zone_id as zone_name, op.division, op.total_units as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
-                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
+                COALESCE(
+                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                  CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+                  op.created_by, 'System'
+                ) as created_by_name,
                 op.created_at, op.status,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
+         LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
-         WHERE (op.manager_id = ?${franchisePartnerId ? ' OR op.franchise_partner_id = ?' : ''}) AND op.status = 'active'
+         WHERE ${franchisePartnerId ? 'op.franchise_partner_id = ?' : 'op.manager_id = ?'} AND op.status = 'active'
          ORDER BY op.created_at DESC`;
-      const onbParams = franchisePartnerId ? [managerId, franchisePartnerId] : [managerId];
+      const onbParams = franchisePartnerId ? [franchisePartnerId] : [managerId];
       const [rows] = await pool.execute(onbQuery, onbParams);
       onboardedProperties = rows;
     } catch (e) {
@@ -431,12 +437,17 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
     
     // FP employees see FP work orders, standalone managers see their created work orders
     let query = `SELECT wo.*, p.name as property_name, c.name as category_name, 
-                        v.company_name as vendor_name, cl.name as client_name
+                        v.company_name as vendor_name, cl.name as client_name,
+                        COALESCE(
+                          CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                          wo.created_by, 'System'
+                        ) as created_by_name
                  FROM work_orders wo
                  LEFT JOIN properties p ON wo.property_id = p.id
                  LEFT JOIN categories c ON wo.category_id = c.id
                  LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
                  LEFT JOIN clients cl ON wo.client_id = cl.id
+                 LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username
                  WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'}`;
     
     const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
@@ -735,8 +746,10 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
               CASE WHEN ov.status = 'active' THEN 1 ELSE 0 END as is_active,
               'own' as vendor_type
        FROM onboarded_vendors ov
-       LEFT JOIN fp_employees fpe ON ov.created_by = fpe.email OR ov.created_by = CONCAT(fpe.first_name, ' ', fpe.last_name)
-       ORDER BY ov.created_at DESC`
+       LEFT JOIN fp_employees fpe ON ov.created_by = fpe.email OR ov.created_by = fpe.username OR ov.created_by = CONCAT(fpe.first_name, ' ', fpe.last_name)
+       WHERE ov.franchise_partner_id = ?
+       ORDER BY ov.created_at DESC`,
+      [req.franchisePartnerId]
     );
 
     res.json({
@@ -843,14 +856,15 @@ router.post('/vendors', requireManagerScope, async (req, res) => {
         owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
-        rate_per_visit, coverage_per_day, created_by, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+        rate_per_visit, coverage_per_day, franchise_partner_id, manager_id, created_by, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
       [
         vendorId, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '',
         ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
         parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0,
+        franchisePartnerId, managerId,
         createdBy || req.user?.email || 'Manager'
       ]
     );

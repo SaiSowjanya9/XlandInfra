@@ -222,11 +222,16 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
           COALESCE(p.division_id, p.division, 'General') as division,
           1 as units,
           COALESCE(p.status, 'active') as status,
-          COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+          COALESCE(
+            CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+            CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+            p.created_by, 'System'
+          ) as created_by_name,
           'properties' as source_table
          FROM properties p
          LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id
          LEFT JOIN zones zn ON p.zone_id = zn.name
+         LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
          WHERE p.franchise_partner_id = ?
          ORDER BY p.created_at DESC`;
@@ -239,11 +244,16 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
           COALESCE(p.division_id, p.division, 'General') as division,
           1 as units,
           COALESCE(p.status, 'active') as status,
-          COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+          COALESCE(
+            CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+            CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+            p.created_by, 'System'
+          ) as created_by_name,
           'properties' as source_table
          FROM properties p
          LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id
          LEFT JOIN zones zn ON p.zone_id = zn.name
+         LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
          WHERE (p.coordinator_id = ? OR p.created_by = ? OR p.created_by = ?)
          ORDER BY p.created_at DESC`;
@@ -399,11 +409,16 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
     if (isFPCoordinator) {
       query = `
         SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
-          COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
+          COALESCE(
+            CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+            CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+            wo.created_by, 'System'
+          ) as created_by_name
         FROM work_orders wo
         LEFT JOIN properties p ON wo.property_id = p.id
         LEFT JOIN categories c ON wo.category_id = c.id
         LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+        LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username
         LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
         WHERE wo.franchise_partner_id = ?
       `;
@@ -411,11 +426,16 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
     } else {
       query = `
         SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
-          COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
+          COALESCE(
+            CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+            CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+            wo.created_by, 'System'
+          ) as created_by_name
         FROM work_orders wo
         LEFT JOIN properties p ON wo.property_id = p.id
         LEFT JOIN categories c ON wo.category_id = c.id
         LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+        LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username
         LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
         WHERE (wo.coordinator_id = ? OR wo.created_by = ? OR wo.created_by = ?)
       `;
@@ -762,8 +782,10 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
               CASE WHEN ov.status = 'active' THEN 1 ELSE 0 END as is_active,
               'own' as vendor_type
        FROM onboarded_vendors ov
-       LEFT JOIN fp_employees fpe ON ov.created_by = fpe.email OR ov.created_by = CONCAT(fpe.first_name, ' ', fpe.last_name)
-       ORDER BY ov.created_at DESC`
+       LEFT JOIN fp_employees fpe ON ov.created_by = fpe.email OR ov.created_by = fpe.username OR ov.created_by = CONCAT(fpe.first_name, ' ', fpe.last_name)
+       WHERE ov.franchise_partner_id = ?
+       ORDER BY ov.created_at DESC`,
+      [req.franchisePartnerId]
     );
 
     res.json({
@@ -853,14 +875,15 @@ router.post('/vendors', requireCoordinatorScope, async (req, res) => {
         owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
-        rate_per_visit, coverage_per_day, created_by, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+        rate_per_visit, coverage_per_day, franchise_partner_id, coordinator_id, created_by, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
       [
         vendorId, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '',
         ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
         parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0,
+        franchisePartnerId, coordinatorId,
         createdBy || req.user?.email || 'Coordinator'
       ]
     );

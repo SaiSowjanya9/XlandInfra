@@ -312,6 +312,9 @@ const initOnboardingTables = async () => {
         poc_country_code VARCHAR(10) DEFAULT '+91',
         rate_per_visit DECIMAL(10,2) DEFAULT 0,
         coverage_per_day INT DEFAULT 0,
+        franchise_partner_id INT,
+        coordinator_id INT,
+        manager_id INT,
         created_by VARCHAR(100) DEFAULT 'Manager',
         status VARCHAR(20) DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -320,9 +323,23 @@ const initOnboardingTables = async () => {
         INDEX idx_service_type (service_type),
         INDEX idx_zone (zone),
         INDEX idx_division (division),
-        INDEX idx_status (status)
+        INDEX idx_status (status),
+        INDEX idx_franchise_partner_id (franchise_partner_id)
       )
     `);
+
+    // Add missing columns to onboarded_vendors if they don't exist
+    const vendorCols = ['franchise_partner_id INT', 'coordinator_id INT', 'manager_id INT'];
+    for (const colDef of vendorCols) {
+      const colName = colDef.split(' ')[0];
+      try {
+        const [cols] = await conn.execute(`SHOW COLUMNS FROM onboarded_vendors LIKE ?`, [colName]);
+        if (cols.length === 0) {
+          await conn.execute(`ALTER TABLE onboarded_vendors ADD COLUMN ${colDef}`);
+          console.log(`  ✅ Added column ${colName} to onboarded_vendors`);
+        }
+      } catch (e) { /* ignore */ }
+    }
 
     // Seed sample vendor data if table is empty
     const [vendorRows] = await conn.execute(`SELECT COUNT(*) as cnt FROM onboarded_vendors WHERE status = 'active'`);
