@@ -12,11 +12,28 @@ const { pool } = require('../config/database');
  * For FP-created Coordinators: uses franchise_partner_id for filtering
  * For standalone Coordinators: uses coordinator_id for filtering
  */
-const attachCoordinatorScope = (req, res, next) => {
+const attachCoordinatorScope = async (req, res, next) => {
   if (req.user && (req.user.role === 'coordinator' || req.user.coordinatorId)) {
     req.coordinatorId = req.user.coordinatorId || req.user.id;
     // Check both req.user.franchisePartnerId AND req.fpId (set by auth middleware)
     req.franchisePartnerId = req.user.franchisePartnerId || req.fpId || null;
+    
+    // If no FP ID yet, try to get it from fp_employees table
+    if (!req.franchisePartnerId && req.user?.id) {
+      try {
+        const [fpEmp] = await pool.execute(
+          'SELECT franchise_partner_id FROM fp_employees WHERE id = ? OR user_id = ?',
+          [req.user.id, req.user.id]
+        );
+        if (fpEmp.length > 0 && fpEmp[0].franchise_partner_id) {
+          req.franchisePartnerId = fpEmp[0].franchise_partner_id;
+          req.fpId = fpEmp[0].franchise_partner_id;
+        }
+      } catch (e) {
+        console.log('FP lookup error:', e.message);
+      }
+    }
+    
     req.coordinatorScope = true;
     // Flag to indicate if this coordinator belongs to an FP
     req.isFPCoordinator = !!req.franchisePartnerId;
