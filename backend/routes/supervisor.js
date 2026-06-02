@@ -184,8 +184,8 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
     );
 
     const [customersCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM clients WHERE supervisor_id = ?`,
-      [supervisorId]
+      `SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?`,
+      [franchisePartnerId]
     );
 
     const [employeesCount] = await pool.query(
@@ -278,7 +278,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
     const query = `SELECT p.*, z.name as zone_name, 
               COALESCE(p.area_name, p.city) as area,
               COALESCE(p.division_id, p.division, 'General') as division,
-              COALESCE(p.number_of_units, p.total_units, 1) as units,
+              COALESCE(p.number_of_units, 1) as units,
               COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'own' as access_type, TRUE as can_modify, TRUE as can_delete,
               TRUE as can_assign_vendor, TRUE as can_assign_employee,
@@ -291,7 +291,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
        SELECT p.*, z.name as zone_name,
               COALESCE(p.area_name, p.city) as area,
               COALESCE(p.division_id, p.division, 'General') as division,
-              COALESCE(p.number_of_units, p.total_units, 1) as units,
+              COALESCE(p.number_of_units, 1) as units,
               COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'assigned' as access_type, sap.can_modify, sap.can_delete,
               sap.can_assign_vendor, sap.can_assign_employee,
@@ -312,7 +312,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
       const scopeId = franchisePartnerId || supervisorId;
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
-                op.zone_id as zone_name, op.division, op.total_units as units,
+                op.zone as zone_name, op.division, COALESCE(op.total_units, 1) as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
                 COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
