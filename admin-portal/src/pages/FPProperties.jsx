@@ -698,17 +698,10 @@ const FPProperties = ({ user }) => {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+            <div className="px-4 py-3 border-t border-gray-100">
               <p className="text-sm text-gray-500">
                 Showing {filteredProperties.length} of {properties.length} properties
               </p>
-              <button
-                onClick={exportAllProperties}
-                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
-              >
-                <Download className="w-4 h-4" />
-                Export All Properties
-              </button>
             </div>
           </>
         )}

@@ -430,8 +430,8 @@ const FPVendors = ({ user }) => {
       {/* Edit Vendor Modal */}
       {editVendor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditVendor(null)}>
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 bg-gray-50 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Modify Vendor</h2>
                 <p className="text-sm text-gray-500">{editVendor.vendor_id || editVendor.vendorId}</p>
@@ -595,8 +595,8 @@ const FPVendors = ({ user }) => {
       {/* View Vendor Modal */}
       {viewVendor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setViewVendor(null)}>
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 bg-gray-50 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">{viewVendor.ownerName || viewVendor.owner_name}</h2>
                 <p className="text-sm text-gray-500 font-mono">{viewVendor.vendorId || viewVendor.vendor_id}</p>

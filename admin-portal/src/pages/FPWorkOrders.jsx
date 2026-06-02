@@ -405,8 +405,16 @@ const FPWorkOrders = ({ user }) => {
     if (activeTab === 'pending' && !isPending) return false;
     if (activeTab === 'completed' && !isCompleted) return false;
 
-    // Status dropdown filter
-    if (statusFilter !== 'all' && wo.status !== statusFilter) return false;
+    // Status dropdown filter - "completed" includes completed, verified, closed
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'completed') {
+        if (!['completed', 'verified', 'closed'].includes(wo.status)) return false;
+      } else if (statusFilter === 'pending') {
+        if (!['pending', 'draft', 'requested', 'under_review'].includes(wo.status)) return false;
+      } else if (wo.status !== statusFilter) {
+        return false;
+      }
+    }
 
     // Search filter
     if (searchTerm) {
