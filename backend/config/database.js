@@ -329,7 +329,7 @@ const initOnboardingTables = async () => {
     `);
 
     // Add missing columns to onboarded_vendors if they don't exist
-    const vendorCols = ['franchise_partner_id INT', 'coordinator_id INT', 'manager_id INT'];
+    const vendorCols = ['franchise_partner_id INT', 'coordinator_id INT', 'manager_id INT', 'created_by_id INT'];
     for (const colDef of vendorCols) {
       const colName = colDef.split(' ')[0];
       try {

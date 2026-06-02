@@ -1206,7 +1206,7 @@ router.get('/vendors', requireFPScope, async (req, res) => {
               ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
               ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
               ov.rate_per_visit, ov.coverage_per_day,
-              ov.created_by,
+              ov.created_by, ov.created_by_id,
               COALESCE(
                 CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
                 ov.created_by, 'System'
@@ -1216,7 +1216,7 @@ router.get('/vendors', requireFPScope, async (req, res) => {
               CASE WHEN ov.status = 'active' THEN 1 ELSE 0 END as is_active,
               'own' as vendor_type
        FROM onboarded_vendors ov
-       LEFT JOIN fp_employees fpe ON ov.created_by = fpe.email OR ov.created_by = fpe.username OR ov.created_by = CONCAT(fpe.first_name, ' ', fpe.last_name)
+       LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
        WHERE ov.franchise_partner_id = ?
        ORDER BY ov.created_at DESC`,
       [req.fpId]
