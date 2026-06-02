@@ -506,20 +506,6 @@ const FPProperties = ({ user }) => {
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>
-      
-        <div className="relative">
-          <select
-            value={selectedDivision}
-            onChange={(e) => setSelectedDivision(e.target.value)}
-            className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm"
-          >
-            <option value="">All Divisions</option>
-            {uniqueDivisions.map((div) => (
-              <option key={div} value={div}>{div}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-        </div>
 
         <div className="relative">
           <select

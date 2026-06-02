@@ -3,158 +3,158 @@ import {
   Building2,
   Plus,
   Search,
-  Edit,
-  Trash2,
-  Download,
   RefreshCw,
-  MapPin,
-  Phone,
-  X,
-  Save,
+  ArrowLeft,
+  Home,
+  Building,
+  Lock,
+  Grid3X3,
+  Landmark,
+  LayoutGrid,
+  Users,
+  ChevronDown,
   AlertCircle,
   CheckCircle,
+  X,
+  Eye,
+  UserPlus,
+  Truck,
+  Trash2,
   User,
   Store,
-  Eye,
-  Lock,
-  Users,
-  FileSpreadsheet,
+  Edit2,
+  Save,
+  ExternalLink,
+  FileText,
+  MapPin,
   Calendar,
-  Home,
-  Grid3X3
+  Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const CoordinatorProperties = ({ user }) => {
   // Check if this is an FP-created Coordinator (has franchisePartnerId)
   const isFPCoordinator = !!user?.franchisePartnerId;
   
-  const [selectedCategory, setSelectedCategory] = useState(null);
   const [properties, setProperties] = useState([]);
   const [zones, setZones] = useState([]);
-  const [vendors, setVendors] = useState([]);
-  const [employees, setEmployees] = useState([]);
+  const [divisions, setDivisions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
-  const [divisionFilter, setDivisionFilter] = useState('all');
-  const [zoneFilter, setZoneFilter] = useState('all');
+  const [selectedDivision, setSelectedDivision] = useState('');
+  const [selectedZone, setSelectedZone] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
-  const [showModal, setShowModal] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignType, setAssignType] = useState('vendor');
-  const [selectedProperty, setSelectedProperty] = useState(null);
-  const [editingProperty, setEditingProperty] = useState(null);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [viewProperty, setViewProperty] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    propertyType: 'residential',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    contactPerson: '',
-    contactPhone: '',
-    contactEmail: '',
-    zoneId: ''
-  });
+  const [vendors, setVendors] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({});
 
   const token = sessionStorage.getItem('pm_auth_token');
 
-  const fetchData = async () => {
+  const fetchProperties = async () => {
     setLoading(true);
     try {
-      const [propRes, zoneRes, vendRes, empRes] = await Promise.all([
-        fetch('/api/coordinator/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/coordinator/zones', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/coordinator/vendors', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/coordinator/employees', { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-
-      const [propData, zoneData, vendData, empData] = await Promise.all([
-        propRes.json(), zoneRes.json(), vendRes.json(), empRes.json()
-      ]);
-
-      if (propData.success) setProperties(propData.data);
-      if (zoneData.success) setZones(zoneData.data);
-      if (vendData.success) setVendors(vendData.data.all || []);
-      if (empData.success) setEmployees(empData.data);
+      const response = await fetch('/api/coordinator/properties', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setProperties(result.data);
+      }
     } catch (error) {
-      console.error('Fetch error:', error);
+      console.error('Fetch properties error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage({ type: '', text: '' });
-
+  const fetchZones = async () => {
     try {
-      const url = editingProperty 
-        ? `/api/coordinator/properties/${editingProperty.id}`
-        : '/api/coordinator/properties';
-      
-      const response = await fetch(url, {
-        method: editingProperty ? 'PUT' : 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
+      const response = await fetch('/api/coordinator/zones', {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-
       const result = await response.json();
-
       if (result.success) {
-        setMessage({ type: 'success', text: `Property ${editingProperty ? 'updated' : 'created'} successfully!` });
-        setShowModal(false);
-        resetForm();
-        fetchData();
-      } else {
-        setMessage({ type: 'error', text: result.message || 'Operation failed' });
+        setZones(result.data);
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to save property' });
+      console.error('Fetch zones error:', error);
     }
   };
 
-  const handleDelete = async (property) => {
-    if (!property.can_delete) {
-      setMessage({ type: 'error', text: 'You do not have permission to delete this property' });
-      return;
-    }
-    if (!window.confirm('Are you sure you want to delete this property?')) return;
-
+  const fetchVendors = async () => {
     try {
-      const response = await fetch(`/api/coordinator/properties/${property.id}`, {
+      const response = await fetch('/api/coordinator/vendors', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setVendors(result.data?.all || result.data || []);
+      }
+    } catch (error) {
+      console.error('Fetch vendors error:', error);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await fetch('/api/coordinator/employees', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setEmployees(result.data || []);
+      }
+    } catch (error) {
+      console.error('Fetch employees error:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchProperties();
+    fetchZones();
+    fetchVendors();
+    fetchEmployees();
+  }, []);
+
+  const handleDeleteProperty = async (propertyId) => {
+    if (!window.confirm('Are you sure you want to delete this property?')) return;
+    
+    try {
+      const response = await fetch(`/api/coordinator/properties/${propertyId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-
       const result = await response.json();
-
       if (result.success) {
-        setMessage({ type: 'success', text: 'Property deleted successfully!' });
-        fetchData();
+        setMessage({ type: 'success', text: 'Property deleted successfully' });
+        fetchProperties();
       } else {
-        setMessage({ type: 'error', text: result.message || 'Delete failed' });
+        setMessage({ type: 'error', text: result.message || 'Failed to delete property' });
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to delete property' });
     }
   };
 
+  const openAssignModal = (property, type) => {
+    setSelectedProperty(property);
+    setAssignType(type);
+    setShowAssignModal(true);
+  };
+
   const handleAssign = async (assigneeId) => {
     if (!selectedProperty) return;
 
     try {
-      const endpoint = assignType === 'vendor' 
+      const endpoint = assignType === 'vendor'
         ? `/api/coordinator/properties/${selectedProperty.id}/assign-vendor`
         : `/api/coordinator/properties/${selectedProperty.id}/assign-employee`;
 
@@ -173,7 +173,7 @@ const CoordinatorProperties = ({ user }) => {
         setMessage({ type: 'success', text: `${assignType === 'vendor' ? 'Vendor' : 'Employee'} assigned successfully!` });
         setShowAssignModal(false);
         setSelectedProperty(null);
-        fetchData();
+        fetchProperties();
       } else {
         setMessage({ type: 'error', text: result.message || 'Assignment failed' });
       }
@@ -182,66 +182,9 @@ const CoordinatorProperties = ({ user }) => {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      const response = await fetch('/api/coordinator/export/properties', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      
-      const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'coordinator_properties_export.json';
-      a.click();
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Export failed' });
-    }
-  };
-
-  const handleExportSingle = (property) => {
-    try {
-      // Create CSV content for single property export
-      const headers = ['Name', 'ID', 'Type', 'Zone', 'Area', 'Division', 'Units', 'Address', 'City', 'State', 'Contacts', 'Created By', 'Created', 'Status'];
-      const values = [
-        property.name,
-        property.property_id,
-        property.property_type,
-        property.zone_name || '',
-        property.area || property.city || '',
-        property.division || '',
-        property.units || property.total_units || 1,
-        property.address || '',
-        property.city || '',
-        property.state || '',
-        property.contacts || property.contact_person || '',
-        property.created_by_name || 'System',
-        property.created_at ? new Date(property.created_at).toLocaleDateString() : '',
-        property.status || 'active'
-      ];
-      
-      const csvContent = [headers.join(','), values.map(v => `"${v}"`).join(',')].join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `property_${property.property_id}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setMessage({ type: 'success', text: 'Property exported successfully!' });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Export failed' });
-    }
-  };
-
   const openEditModal = (property) => {
-    if (!property.can_modify) {
-      setMessage({ type: 'error', text: 'You do not have permission to edit this property' });
-      return;
-    }
-    setEditingProperty(property);
-    setFormData({
+    setEditFormData({
+      id: property.id,
       name: property.name || '',
       propertyType: property.property_type || 'residential',
       address: property.address || '',
@@ -251,89 +194,205 @@ const CoordinatorProperties = ({ user }) => {
       contactPerson: property.contact_person || '',
       contactPhone: property.contact_phone || '',
       contactEmail: property.contact_email || '',
-      zoneId: property.zone_id || ''
+      zone: property.zone_name || property.zone_id || '',
+      division: property.division || property.division_id || '',
+      area: property.area || property.area_name || '',
+      isActive: property.is_active !== false
     });
-    setShowModal(true);
+    setShowEditModal(true);
   };
 
-  const openAssignModal = (property, type) => {
-    const canAssign = type === 'vendor' ? property.can_assign_vendor : property.can_assign_employee;
-    if (!canAssign) {
-      setMessage({ type: 'error', text: `You do not have permission to assign ${type}s to this property` });
+  const handleSaveEdit = async () => {
+    try {
+      const response = await fetch(`/api/coordinator/properties/${editFormData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: editFormData.name,
+          propertyType: editFormData.propertyType,
+          address: editFormData.address,
+          city: editFormData.city,
+          state: editFormData.state,
+          zipCode: editFormData.zipCode,
+          contactPerson: editFormData.contactPerson,
+          contactPhone: editFormData.contactPhone,
+          contactEmail: editFormData.contactEmail,
+          zoneId: editFormData.zone,
+          divisionId: editFormData.division,
+          areaName: editFormData.area,
+          isActive: editFormData.isActive
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Property updated successfully!' });
+        setShowEditModal(false);
+        setEditFormData({});
+        fetchProperties();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Update failed' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to update property' });
+    }
+  };
+
+  // Export single property to CSV
+  const exportSingleProperty = (property) => {
+    const headers = ['Property ID', 'Name', 'Type', 'Zone', 'Area', 'Division', 'Units', 'Address', 'City', 'State', 'ZIP', 'Contact', 'Phone', 'Email', 'Created By', 'Created Date', 'Status'];
+    const values = [
+      property.property_id || '',
+      property.name || '',
+      property.property_type?.replace(/_/g, ' ') || '',
+      property.zone_name || '',
+      property.area || property.area_name || '',
+      property.division || '',
+      property.units || property.number_of_units || '1',
+      property.address || '',
+      property.city || '',
+      property.state || '',
+      property.zip_code || '',
+      property.contact_person || '',
+      property.contact_phone || '',
+      property.contact_email || '',
+      property.created_by_name || 'System',
+      property.created_at ? new Date(property.created_at).toLocaleDateString() : '',
+      property.is_active !== false ? 'Active' : 'Inactive'
+    ];
+    
+    const csvContent = [headers.join(','), values.map(v => `"${v}"`).join(',')].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `property_${property.property_id || property.id}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Export all properties to Excel
+  const exportAllProperties = () => {
+    if (filteredProperties.length === 0) {
+      setMessage({ type: 'error', text: 'No properties to export' });
       return;
     }
-    setSelectedProperty(property);
-    setAssignType(type);
-    setShowAssignModal(true);
+
+    const exportData = filteredProperties.map(property => ({
+      'Property ID': property.property_id || '',
+      'Name': property.name || '',
+      'Type': property.property_type?.replace(/_/g, ' ') || '',
+      'Zone': property.zone_name || '',
+      'Area': property.area || property.area_name || '',
+      'Division': property.division || '',
+      'Units': property.units || property.number_of_units || '1',
+      'Address': property.address || '',
+      'City': property.city || '',
+      'State': property.state || '',
+      'ZIP Code': property.zip_code || '',
+      'Contact Person': property.contact_person || '',
+      'Phone': property.contact_phone || '',
+      'Email': property.contact_email || '',
+      'Created By': property.created_by_name || 'System',
+      'Created Date': property.created_at ? new Date(property.created_at).toLocaleDateString() : '',
+      'Status': property.is_active !== false ? 'Active' : 'Inactive'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Properties');
+    XLSX.writeFile(wb, `fp_properties_${new Date().toISOString().split('T')[0]}.xlsx`);
+    setMessage({ type: 'success', text: `Exported ${filteredProperties.length} properties` });
   };
 
-  const resetForm = () => {
-    setEditingProperty(null);
-    setFormData({
-      name: '',
-      propertyType: 'residential',
-      address: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      contactPerson: '',
-      contactPhone: '',
-      contactEmail: '',
-      zoneId: ''
-    });
-  };
-
-  // Property type tabs config
-  const propertyTabs = [
-    { id: 'all', label: 'All Customers' },
-    { id: 'gated_community', label: 'Gated Communities' },
-    { id: 'apartment', label: 'Apartments' },
-    { id: 'villa', label: 'Villas' },
-    { id: 'plot', label: 'Plots' },
-    { id: 'flat', label: 'Flats' }
+  // Property type tabs
+  const tabs = [
+    { id: 'all', label: 'All Customers', icon: Users },
+    { id: 'gated_community', label: 'Gated Communities', icon: Grid3X3 },
+    { id: 'apartment', label: 'Apartments', icon: Building },
+    { id: 'villa', label: 'Villas', icon: Home },
+    { id: 'plot', label: 'Plots', icon: LayoutGrid },
+    { id: 'flat', label: 'Flats', icon: Landmark }
   ];
 
-  // Get unique divisions from properties
-  const divisions = [...new Set(properties.map(p => p.division).filter(Boolean))];
+  // Get type badge color
+  const getTypeBadgeColor = (type) => {
+    const colors = {
+      'apartment': 'bg-blue-100 text-blue-700',
+      'gated_community': 'bg-teal-100 text-teal-700',
+      'villa': 'bg-amber-100 text-amber-700',
+      'plot': 'bg-purple-100 text-purple-700',
+      'flat': 'bg-pink-100 text-pink-700'
+    };
+    return colors[type] || 'bg-gray-100 text-gray-700';
+  };
 
+  // Filter properties
   const filteredProperties = properties.filter(p => {
+    // Tab filter
+    if (activeTab !== 'all' && p.property_type !== activeTab) return false;
+    
     // Search filter
-    const matchesSearch = !searchTerm || 
-      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.property_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.zone_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.address?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Tab filter (property type)
-    const matchesTab = activeTab === 'all' || 
-      p.property_type?.toLowerCase().replace(/\s+/g, '_') === activeTab ||
-      p.entry_type?.toLowerCase() === activeTab.replace('_', '');
-    
-    // Division filter
-    const matchesDivision = divisionFilter === 'all' || p.division === divisionFilter;
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      if (!(
+        p.name?.toLowerCase().includes(search) ||
+        p.property_id?.toLowerCase().includes(search) ||
+        p.zone_name?.toLowerCase().includes(search) ||
+        p.address?.toLowerCase().includes(search)
+      )) return false;
+    }
     
     // Zone filter
-    const matchesZone = zoneFilter === 'all' || p.zone_id === zoneFilter || p.zone_name === zoneFilter;
+    if (selectedZone && p.zone_id !== parseInt(selectedZone)) return false;
+    
+    // Division filter
+    if (selectedDivision && p.division !== selectedDivision) return false;
     
     // Status filter
-    const matchesStatus = statusFilter === 'all' || (p.status || 'active') === statusFilter;
+    if (statusFilter === 'active' && p.status !== 'active') return false;
+    if (statusFilter === 'inactive' && p.status !== 'inactive') return false;
     
-    return matchesSearch && matchesTab && matchesDivision && matchesZone && matchesStatus;
-  }
-  );
+    return true;
+  });
 
-  // Category Selection Screen
+  // Count properties by type
+  const getTypeCount = (type) => {
+    if (type === 'all') return properties.length;
+    return properties.filter(p => p.property_type === type).length;
+  };
+
+  // Get unique divisions from properties
+  const uniqueDivisions = [...new Set(properties.map(p => p.division).filter(Boolean))];
+
+  // Category Selection View
   if (!selectedCategory) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-            <p className="text-gray-500 mt-1">View and manage created customers</p>
-          </div>
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
+          <p className="text-gray-500 mt-1">View and manage created customers</p>
         </div>
 
+        {/* Message */}
+        {message.text && (
+          <div className={`p-4 rounded-lg flex items-center gap-3 ${
+            message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            <span>{message.text}</span>
+            <button onClick={() => setMessage({ type: '', text: '' })} className="ml-auto">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Category Selection */}
         <div className="bg-gray-50 rounded-2xl p-12">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
@@ -359,7 +418,7 @@ const CoordinatorProperties = ({ user }) => {
                 <span className="text-xs font-medium text-gray-500">Coming Soon</span>
               </div>
               <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mb-5">
-                <Store className="w-7 h-7 text-gray-400" />
+                <Building className="w-7 h-7 text-gray-400" />
               </div>
               <p className="text-lg font-medium text-gray-400">Commercial</p>
             </div>
@@ -369,20 +428,29 @@ const CoordinatorProperties = ({ user }) => {
     );
   }
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setSelectedCategory(null)}
+          className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          title="Back to categories"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
         <div>
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-2"
-          >
-            <X className="w-4 h-4" />
-            <span className="text-sm">Back to Categories</span>
-          </button>
           <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-gray-500 mt-1">{properties.length} total customers</p>
+          <p className="text-gray-500">{properties.length} total customers</p>
         </div>
       </div>
 
@@ -399,73 +467,87 @@ const CoordinatorProperties = ({ user }) => {
         </div>
       )}
 
-      {/* Tabs and Filters */}
-      <div className="bg-white rounded-xl border border-gray-100">
-        {/* Property Type Tabs */}
-        <div className="flex items-center gap-1 px-4 pt-4 border-b border-gray-100 overflow-x-auto">
-          {propertyTabs.map((tab) => {
-            const count = tab.id === 'all' 
-              ? properties.length 
-              : properties.filter(p => 
-                  p.property_type?.toLowerCase().replace(/\s+/g, '_') === tab.id ||
-                  p.entry_type?.toLowerCase() === tab.id.replace('_', '')
-                ).length;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs ${
-                  activeTab === tab.id ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Search and Filters */}
-        <div className="p-4 space-y-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name, ID, zone, or address..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Filter Dropdowns */}
-          <div className="flex flex-wrap gap-3">
-            <select
-              value={zoneFilter}
-              onChange={(e) => setZoneFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-gray-200 overflow-x-auto">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const count = getTypeCount(tab.id);
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
             >
-              <option value="all">All Zones</option>
-              {zones.map(zone => (
-                <option key={zone.id} value={zone.name}>{zone.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs ${
+                activeTab === tab.id ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Properties List */}
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name, ID, zone, or address..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="relative">
+          <select
+            value={selectedZone}
+            onChange={(e) => setSelectedZone(e.target.value)}
+            className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+          >
+            <option value="">All Zones</option>
+            {zones.map((zone) => (
+              <option key={zone.id} value={zone.id}>{zone.name}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        </div>
+
+        <div className="relative">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+          >
+            <option value="active">Active Customers</option>
+            <option value="all">All Customers</option>
+            <option value="inactive">Inactive Customers</option>
+          </select>
+          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        </div>
+
+        <button
+          onClick={fetchProperties}
+          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          title="Refresh"
+        >
+          <RefreshCw className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Properties Table */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-6 h-6 text-teal-600 animate-spin" />
+            <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
           </div>
         ) : filteredProperties.length === 0 ? (
           <div className="text-center py-12">
@@ -473,236 +555,319 @@ const CoordinatorProperties = ({ user }) => {
             <p className="text-gray-500">No properties found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 uppercase">Property</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 uppercase">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 uppercase">Location</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 uppercase">Contact</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 uppercase">Created By</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProperties.map((property) => (
-                  <tr key={property.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-4 px-4">
-                      <p className="font-semibold text-gray-900">{property.name}</p>
-                      <p className="text-xs text-gray-500 font-mono">{property.property_id}</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                        property.property_type === 'gated_community' || property.entry_type === 'GC' ? 'bg-blue-100 text-blue-700' :
-                        property.property_type === 'apartment' || property.entry_type === 'APT' ? 'bg-purple-100 text-purple-700' :
-                        property.property_type === 'villa' || property.entry_type === 'VILLA' ? 'bg-green-100 text-green-700' :
-                        property.property_type === 'flat' || property.entry_type === 'FLAT' ? 'bg-orange-100 text-orange-700' :
-                        property.property_type === 'plot' || property.entry_type === 'PLOT' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-teal-100 text-teal-700'
-                      }`}>
-                        {property.entry_type === 'GC' ? 'Gated Community' : 
-                         property.entry_type === 'APT' ? 'Apartment' :
-                         property.entry_type === 'VILLA' ? 'Villa' :
-                         property.entry_type === 'FLAT' ? 'Flat' :
-                         property.entry_type === 'PLOT' ? 'Plot' :
-                         property.property_type?.replace('_', ' ') || 'Residential'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-start gap-1.5">
-                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-700">{property.city}{property.state ? `, ${property.state}` : ''}</p>
-                          <p className="text-xs text-gray-400">{property.zone_name || 'No zone'}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <p className="text-sm text-gray-700">{property.contact_person || '-'}</p>
-                      {property.contact_phone && (
-                        <p className="text-xs text-gray-400 flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          {property.contact_phone}
-                        </p>
-                      )}
-                    </td>
-                    <td className="py-4 px-4">
-                      <p className="text-sm text-gray-600">{property.created_by_name || 'System'}</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center justify-end">
-                        <button
-                          onClick={() => { setViewProperty(property); setShowViewModal(true); }}
-                          className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b border-gray-100">
+                  <tr>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Name</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">ID</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Type</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Zone</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Area</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Division</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Units</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Address</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">City</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contacts</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created By</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        
-        {/* Footer */}
-        {!loading && filteredProperties.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
-            Showing {filteredProperties.length} of {properties.length} properties
-          </div>
+                </thead>
+                <tbody>
+                  {filteredProperties.map((property) => (
+                    <tr key={property.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <span className="text-sm font-medium text-gray-900">{property.name}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-500">{property.property_id}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getTypeBadgeColor(property.property_type)}`}>
+                          {property.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">{property.zone_name || '-'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">{property.area || '-'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">{property.division || '-'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">{property.units || '-'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600 max-w-[150px] truncate block">{property.address || '-'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">{property.city || '-'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">{property.contact_phone || '-'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">{property.created_by_name || 'System'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-500">{formatDate(property.created_at)}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                          property.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {property.is_active !== false ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              setSelectedProperty(property);
+                              setShowDetailsModal(true);
+                            }}
+                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4 text-gray-500" />
+                          </button>
+                          <button
+                            onClick={() => exportSingleProperty(property)}
+                            className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Export to CSV"
+                          >
+                            <Download className="w-4 h-4 text-gray-400 hover:text-emerald-600" />
+                          </button>
+                          {!isFPCoordinator && (
+                            <>
+                              <button
+                                onClick={() => openEditModal(property)}
+                                className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Edit Property"
+                              >
+                                <Edit2 className="w-4 h-4 text-blue-500" />
+                              </button>
+                              <button
+                                onClick={() => openAssignModal(property, 'vendor')}
+                                className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
+                                title="Assign Vendor"
+                              >
+                                <Truck className="w-4 h-4 text-purple-500" />
+                              </button>
+                              <button
+                                onClick={() => openAssignModal(property, 'employee')}
+                                className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Assign Employee"
+                              >
+                                <UserPlus className="w-4 h-4 text-green-500" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProperty(property.id)}
+                                className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-3 border-t border-gray-100">
+              <p className="text-sm text-gray-500">
+                Showing {filteredProperties.length} of {properties.length} properties
+              </p>
+            </div>
+          </>
         )}
       </div>
 
-      {/* Add/Edit Modal */}
-      {showModal && (
+      {/* View Details Modal */}
+      {showDetailsModal && selectedProperty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {editingProperty ? 'Edit Property' : 'Add New Property'}
-                </h2>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-gray-900">{selectedProperty.name}</h2>
+                  <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                    {selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Property'}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">{selectedProperty.property_id}</p>
               </div>
+              <button
+                onClick={() => { setShowDetailsModal(false); setSelectedProperty(null); }}
+                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
-                  <select
-                    value={formData.propertyType}
-                    onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                  >
-                    <option value="residential">Residential</option>
-                    <option value="commercial">Commercial</option>
-                    <option value="industrial">Industrial</option>
-                    <option value="mixed">Mixed</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                  <select
-                    value={formData.zoneId}
-                    onChange={(e) => setFormData({ ...formData, zoneId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                  >
-                    <option value="">Select Zone</option>
-                    {zones.map((zone) => (
-                      <option key={zone.id} value={zone.id}>{zone.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
-                  <textarea
-                    required
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                    rows={2}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                  <input
-                    type="text"
-                    value={formData.zipCode}
-                    onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-                  <input
-                    type="text"
-                    value={formData.contactPerson}
-                    onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
-                  <input
-                    type="tel"
-                    value={formData.contactPhone}
-                    onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
-                  <input
-                    type="email"
-                    value={formData.contactEmail}
-                    onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
+            <div className="p-6 space-y-6 overflow-y-auto">
+              {/* Property Information */}
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Zone</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.zone_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Area Name</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.area || selectedProperty.area_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Division</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.division || selectedProperty.division_id || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Property Type</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.units || selectedProperty.number_of_units || selectedProperty.number_of_blocks || '1'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Created Date</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {selectedProperty.created_at ? new Date(selectedProperty.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{editingProperty ? 'Update' : 'Create'} Property</span>
-                </button>
+              {/* Block Details */}
+              {(selectedProperty.block_names || selectedProperty.units_per_block) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
+                  <div className="space-y-2">
+                    {(() => {
+                      try {
+                        const blockNames = typeof selectedProperty.block_names === 'string' 
+                          ? JSON.parse(selectedProperty.block_names) 
+                          : selectedProperty.block_names || {};
+                        const unitsPerBlock = typeof selectedProperty.units_per_block === 'string'
+                          ? JSON.parse(selectedProperty.units_per_block)
+                          : selectedProperty.units_per_block || {};
+                        return Object.keys(blockNames).map(key => (
+                          <div key={key}>
+                            <p className="text-xs text-gray-500">{blockNames[key] || `Block ${key}`}</p>
+                            <p className="text-sm font-medium text-gray-900">{unitsPerBlock[key] || 0} units</p>
+                          </div>
+                        ));
+                      } catch {
+                        return <p className="text-sm text-gray-500">No block details available</p>;
+                      }
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Address */}
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Address</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <p className="text-xs text-gray-500 mb-1">Street Address</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.address || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Apt/Suite</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.villa_plot_number || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">City</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.city || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">State/Province</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.state || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">ZIP/Postal Code</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.zip_code || '-'}</p>
+                  </div>
+                </div>
               </div>
-            </form>
+
+              {/* Map Location */}
+              {(selectedProperty.latitude || selectedProperty.longitude || selectedProperty.landmark) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Map Location</h3>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-700 mb-3">
+                      {selectedProperty.landmark || `${selectedProperty.address}, ${selectedProperty.city}, ${selectedProperty.state}, ${selectedProperty.zip_code}`}
+                    </p>
+                    {(selectedProperty.latitude && selectedProperty.longitude) && (
+                      <>
+                        <a
+                          href={`https://www.google.com/maps?q=${selectedProperty.latitude},${selectedProperty.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          Open in Maps
+                        </a>
+                        <p className="text-xs text-blue-600 mt-3 font-mono">
+                          {selectedProperty.latitude}, {selectedProperty.longitude}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Contact Information */}
+              {(selectedProperty.contact_person || selectedProperty.contact_email || selectedProperty.contact_phone) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Contact Information</h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-500 mb-1">Name</p>
+                        <p className="text-sm font-medium text-gray-900">{selectedProperty.contact_person || '-'}</p>
+                      </div>
+                      <div className="min-w-0 sm:col-span-2">
+                        <p className="text-xs text-gray-500 mb-1">Email</p>
+                        <p className="text-sm font-medium text-gray-900 break-all">{selectedProperty.contact_email || '-'}</p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-500 mb-1">Phone</p>
+                        <p className="text-sm font-medium text-gray-900 whitespace-nowrap">{selectedProperty.contact_phone || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Estimates Section */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="w-4 h-4 text-gray-500" />
+                  <h3 className="text-base font-semibold text-gray-900">Estimates (0)</h3>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-8 text-center">
+                  <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm text-gray-500">No estimates for this property</p>
+                  <p className="text-xs text-gray-400 mt-1">Create an estimate from the Estimates section</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -724,151 +889,156 @@ const CoordinatorProperties = ({ user }) => {
             </div>
 
             <div className="p-6">
-              {(assignType === 'vendor' ? vendors : employees).length === 0 ? (
-                <p className="text-gray-500 text-center py-4">
-                  No {assignType === 'vendor' ? 'vendors' : 'employees'} available
-                </p>
-              ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {(assignType === 'vendor' ? vendors : employees).map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleAssign(item.id)}
-                      className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-teal-50 hover:border-teal-300 transition-colors text-left"
-                    >
-                      <div className={`w-10 h-10 ${assignType === 'vendor' ? 'bg-purple-100' : 'bg-green-100'} rounded-full flex items-center justify-center`}>
-                        {assignType === 'vendor' ? (
-                          <Store className="w-5 h-5 text-purple-600" />
-                        ) : (
-                          <User className="w-5 h-5 text-green-600" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {assignType === 'vendor' ? item.company_name : `${item.first_name} ${item.last_name}`}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {assignType === 'vendor' ? (item.contact_person || item.email) : item.role}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              {(() => {
+                // Filter vendors by property zone - zone is required
+                const propertyZone = (selectedProperty?.zone_name || selectedProperty?.zone || selectedProperty?.zone_id || '').toString().toLowerCase().trim();
+                
+                // If property has NO zone, don't show any vendors
+                if (assignType === 'vendor' && !propertyZone) {
+                  return (
+                    <div className="text-center py-4">
+                      <p className="text-gray-500">This property has no zone assigned</p>
+                      <p className="text-xs text-gray-400 mt-1">Please assign a zone to this property first to see matching vendors</p>
+                    </div>
+                  );
+                }
+                
+                // Filter vendors by EXACT zone match only
+                const zoneFilteredVendors = assignType === 'vendor' 
+                  ? vendors.filter(v => {
+                      const vendorZone = (v.zone_name || v.zone || v.zone_id || '').toString().toLowerCase().trim();
+                      if (!vendorZone) return false;
+                      // Exact zone match - extract numbers for comparison
+                      const propZoneNum = propertyZone.replace(/[^0-9]/g, '');
+                      const vendorZoneNum = vendorZone.replace(/[^0-9]/g, '');
+                      // Match exactly: "Zone 43" === "Zone 43" OR "43" === "43"
+                      return vendorZone === propertyZone || (propZoneNum && vendorZoneNum && propZoneNum === vendorZoneNum);
+                    })
+                  : employees;
+                
+                return zoneFilteredVendors.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-gray-500">
+                      No {assignType === 'vendor' ? 'vendors' : 'employees'} available for {selectedProperty?.zone_name || selectedProperty?.zone || selectedProperty?.zone_id}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">Add vendors with matching zone to assign them to this property</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {zoneFilteredVendors.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleAssign(item.id)}
+                        className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
+                      >
+                        <div className={`w-10 h-10 ${assignType === 'vendor' ? 'bg-purple-100' : 'bg-green-100'} rounded-full flex items-center justify-center`}>
+                          {assignType === 'vendor' ? (
+                            <Store className="w-5 h-5 text-purple-600" />
+                          ) : (
+                            <User className="w-5 h-5 text-green-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {assignType === 'vendor' 
+                              ? (item.ownerName || item.owner_name || item.company_name || 'Unknown Vendor')
+                              : (`${item.first_name || ''} ${item.last_name || ''}`.trim() || item.name || 'Unknown Employee')}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {assignType === 'vendor' 
+                              ? (item.serviceType || item.service_type || item.email || '-')
+                              : (item.role || item.email || '-')}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
       )}
 
-      {/* View Details Modal */}
-      {showViewModal && viewProperty && (
+      {/* Edit Property Modal */}
+      {showEditModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Property Details</h2>
-                <button onClick={() => { setShowViewModal(false); setViewProperty(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Edit Property</h2>
+              <button onClick={() => { setShowEditModal(false); setEditFormData({}); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
             </div>
-
-            <div className="p-6 space-y-6">
-              {/* Property Info Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Name</p>
-                  <p className="font-medium text-gray-900">{viewProperty.name}</p>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Name *</label>
+                  <input type="text" value={editFormData.name || ''} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">ID</p>
-                  <p className="font-mono text-gray-900">{viewProperty.property_id}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                  <input type="text" value={editFormData.zone || ''} onChange={(e) => setEditFormData({ ...editFormData, zone: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Type</p>
-                  <span className="inline-block px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium capitalize">
-                    {viewProperty.property_type}
-                  </span>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Area</label>
+                  <input type="text" value={editFormData.area || ''} onChange={(e) => setEditFormData({ ...editFormData, area: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Zone</p>
-                  <p className="text-gray-900">{viewProperty.zone_name || '-'}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Division</label>
+                  <input type="text" value={editFormData.division || ''} onChange={(e) => setEditFormData({ ...editFormData, division: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Area</p>
-                  <p className="text-gray-900">{viewProperty.area || viewProperty.city || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Division</p>
-                  <p className="text-gray-900">{viewProperty.division || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Units</p>
-                  <p className="text-gray-900">{viewProperty.units || viewProperty.total_units || 1}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
+                  <select value={editFormData.propertyType || ''} onChange={(e) => setEditFormData({ ...editFormData, propertyType: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="residential">Residential</option>
+                    <option value="gated_community">Gated Community</option>
+                    <option value="apartment">Apartment</option>
+                    <option value="villa">Villa</option>
+                    <option value="plot">Plot</option>
+                    <option value="flat">Flat</option>
+                  </select>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-sm text-gray-500">Address</p>
-                  <p className="text-gray-900">{viewProperty.address || `${viewProperty.city}, ${viewProperty.state}`}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                  <textarea value={editFormData.address || ''} onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" rows={2} />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Contacts</p>
-                  <p className="text-gray-900">{viewProperty.contacts || viewProperty.contact_person || '-'}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <input type="text" value={editFormData.city || ''} onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Created By</p>
-                  <p className="text-gray-900">{viewProperty.created_by_name || 'System'}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                  <input type="text" value={editFormData.state || ''} onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Created</p>
-                  <p className="text-gray-900">
-                    {viewProperty.created_at ? new Date(viewProperty.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                  </p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                  <input type="text" value={editFormData.zipCode || ''} onChange={(e) => setEditFormData({ ...editFormData, zipCode: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Status</p>
-                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                    viewProperty.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {viewProperty.status || 'active'}
-                  </span>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                  <input type="text" value={editFormData.contactPerson || ''} onChange={(e) => setEditFormData({ ...editFormData, contactPerson: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+                  <input type="tel" value={editFormData.contactPhone || ''} onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+                  <input type="email" value={editFormData.contactEmail || ''} onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select value={editFormData.isActive ? 'active' : 'inactive'} onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.value === 'active' })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
                 </div>
               </div>
-
-              {/* Contact Details */}
-              {(viewProperty.contact_person || viewProperty.contact_phone || viewProperty.contact_email) && (
-                <div className="border-t border-gray-100 pt-4">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Contact Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {viewProperty.contact_person && (
-                      <div className="min-w-0">
-                        <p className="text-sm text-gray-500">Contact Person</p>
-                        <p className="text-gray-900">{viewProperty.contact_person}</p>
-                      </div>
-                    )}
-                    {viewProperty.contact_email && (
-                      <div className="min-w-0 md:col-span-2">
-                        <p className="text-sm text-gray-500">Email</p>
-                        <p className="text-gray-900 break-all">{viewProperty.contact_email}</p>
-                      </div>
-                    )}
-                    {viewProperty.contact_phone && (
-                      <div className="min-w-0">
-                        <p className="text-sm text-gray-500">Phone</p>
-                        <p className="text-gray-900 whitespace-nowrap">{viewProperty.contact_phone}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
-
-            <div className="p-6 border-t border-gray-100 flex justify-end">
-              <button
-                onClick={() => { setShowViewModal(false); setViewProperty(null); }}
-                className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
-              >
-                Close
-              </button>
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+              <button onClick={() => { setShowEditModal(false); setEditFormData({}); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
+              <button onClick={handleSaveEdit} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><Save className="w-4 h-4" />Save Changes</button>
             </div>
           </div>
         </div>
@@ -878,3 +1048,4 @@ const CoordinatorProperties = ({ user }) => {
 };
 
 export default CoordinatorProperties;
+
