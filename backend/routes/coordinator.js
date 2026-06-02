@@ -231,6 +231,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
          ORDER BY p.created_at DESC`;
       propParams = [coordinatorId, franchisePartnerId];
     } else {
+      // Standalone coordinator - check coordinator_id OR created_by matches
       propQuery = `SELECT p.*, 
           COALESCE(z.name, p.zone_id, p.zone) as zone_name,
           COALESCE(p.area_name, p.city) as area,
@@ -242,9 +243,9 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
          FROM properties p
          LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
-         WHERE p.coordinator_id = ?
+         WHERE (p.coordinator_id = ? OR p.created_by = ? OR p.created_by = ?)
          ORDER BY p.created_at DESC`;
-      propParams = [coordinatorId];
+      propParams = [coordinatorId, coordinatorId, req.user?.username || req.user?.email || ''];
     }
     
     const [regularProperties] = await pool.query(propQuery, propParams);
@@ -277,9 +278,9 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
                   'onboarded_properties' as source_table
            FROM onboarded_properties op
            LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR CAST(op.created_by AS UNSIGNED) = u.id
-           WHERE op.coordinator_id = ?
+           WHERE (op.coordinator_id = ? OR op.created_by = ? OR op.created_by = ?)
            ORDER BY op.created_at DESC`;
-        onbParams = [coordinatorId];
+        onbParams = [coordinatorId, coordinatorId, req.user?.username || req.user?.email || ''];
       }
       const [rows] = await pool.execute(onbQuery, onbParams);
       onboardedProperties = rows;
