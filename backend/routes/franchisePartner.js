@@ -1176,30 +1176,33 @@ router.post('/customer-accounts/:id/resend-activation', requireFPScope, async (r
 // VENDOR MANAGEMENT
 // ============================================
 
-// Get all FP vendors (own + assigned)
+// Get all FP vendors (own + assigned) - fetch from onboarded_vendors
 router.get('/vendors', requireFPScope, async (req, res) => {
   try {
-    const [ownVendors] = await pool.execute(
-      `SELECT v.*, 'own' as vendor_type
-       FROM vendors v
-       WHERE v.franchise_partner_id = ?`,
-      [req.fpId]
-    );
-
-    const [assignedVendors] = await pool.execute(
-      `SELECT v.*, 'assigned' as vendor_type, fav.assigned_at
-       FROM vendors v
-       INNER JOIN fp_assigned_vendors fav ON v.id = fav.vendor_id
-       WHERE fav.franchise_partner_id = ? AND fav.is_active = TRUE`,
-      [req.fpId]
+    // Fetch ALL vendors from onboarded_vendors (shared across FP)
+    const [vendors] = await pool.execute(
+      `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
+              ov.zone as zone_name, ov.area_name as area, ov.division,
+              ov.owner_name as company_name, ov.owner_name as contact_person,
+              ov.owner_mobile as phone, ov.owner_email as email,
+              ov.owner_aadhar, ov.owner_country_code,
+              ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
+              ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
+              ov.rate_per_visit, ov.coverage_per_day,
+              ov.created_by, ov.created_by as created_by_name, ov.status,
+              ov.created_at, ov.updated_at,
+              CASE WHEN ov.status = 'active' THEN 1 ELSE 0 END as is_active,
+              'own' as vendor_type
+       FROM onboarded_vendors ov
+       ORDER BY ov.created_at DESC`
     );
 
     res.json({
       success: true,
       data: {
-        own: ownVendors,
-        assigned: assignedVendors,
-        all: [...ownVendors, ...assignedVendors]
+        own: vendors,
+        assigned: [],
+        all: vendors
       }
     });
   } catch (error) {
