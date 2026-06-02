@@ -217,7 +217,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     if (isFPCoordinator) {
       // FP Coordinators see: properties they created OR properties from their FP
       propQuery = `SELECT p.*, 
-          z.name as zone_name,
+          COALESCE(z.name, p.zone_id, p.zone) as zone_name,
           COALESCE(p.area_name, p.city) as area,
           COALESCE(p.division, 'General') as division,
           1 as units,
@@ -225,14 +225,14 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
           'properties' as source_table
          FROM properties p
-         LEFT JOIN zones z ON p.zone_id = z.id
+         LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
          WHERE (p.coordinator_id = ? OR p.franchise_partner_id = ?)
          ORDER BY p.created_at DESC`;
       propParams = [coordinatorId, franchisePartnerId];
     } else {
       propQuery = `SELECT p.*, 
-          z.name as zone_name,
+          COALESCE(z.name, p.zone_id, p.zone) as zone_name,
           COALESCE(p.area_name, p.city) as area,
           COALESCE(p.division, 'General') as division,
           1 as units,
@@ -240,7 +240,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
           'properties' as source_table
          FROM properties p
-         LEFT JOIN zones z ON p.zone_id = z.id
+         LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
          WHERE p.coordinator_id = ?
          ORDER BY p.created_at DESC`;
