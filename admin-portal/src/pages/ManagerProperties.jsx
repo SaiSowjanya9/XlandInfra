@@ -513,26 +513,22 @@ const ManagerProperties = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Assign Vendor - Hidden for FP Manager */}
-                        {!isFPManager && (
-                          <button
-                            onClick={() => openAssignModal(property, 'vendor')}
-                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
-                            title="Assign Vendor"
-                          >
-                            <Store className="w-4 h-4" />
-                          </button>
-                        )}
-                        {/* Assign Employee - Hidden for FP Manager */}
-                        {!isFPManager && (
-                          <button
-                            onClick={() => openAssignModal(property, 'employee')}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
-                            title="Assign Employee"
-                          >
-                            <Users className="w-4 h-4" />
-                          </button>
-                        )}
+                        {/* Assign Vendor */}
+                        <button
+                          onClick={() => openAssignModal(property, 'vendor')}
+                          className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
+                          title="Assign Vendor"
+                        >
+                          <Store className="w-4 h-4" />
+                        </button>
+                        {/* Assign Employee */}
+                        <button
+                          onClick={() => openAssignModal(property, 'employee')}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                          title="Assign Employee"
+                        >
+                          <Users className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>

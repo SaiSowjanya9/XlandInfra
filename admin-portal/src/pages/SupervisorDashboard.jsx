@@ -107,31 +107,6 @@ const SupervisorDashboard = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-amber-600 to-orange-700 rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">
-              Welcome back, {user?.firstName || 'Supervisor'}!
-            </h1>
-            <p className="text-amber-100 mt-1">
-              Here's your view-only field operations overview.
-            </p>
-          </div>
-          <div className="hidden md:flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm text-amber-200">Pending Work Orders</p>
-              <p className="text-3xl font-bold">{stats?.pendingWorkOrders || 0}</p>
-            </div>
-            <div className="w-px h-12 bg-white/20" />
-            <div className="text-right">
-              <p className="text-sm text-amber-200">Completed Today</p>
-              <p className="text-3xl font-bold">{stats?.completedWorkOrders || 0}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {statCards.map((stat) => (

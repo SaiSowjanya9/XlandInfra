@@ -255,7 +255,24 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
 router.get('/properties', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
-    const franchisePartnerId = req.franchisePartnerId;
+    
+    // Get FP ID from multiple sources
+    let franchisePartnerId = req.franchisePartnerId || req.fpId || req.user?.franchisePartnerId || req.user?.fpId;
+    
+    // If still no fpId, try to get it from fp_employees table
+    if (!franchisePartnerId && req.user?.id) {
+      try {
+        const [fpEmp] = await pool.execute(
+          'SELECT franchise_partner_id FROM fp_employees WHERE id = ? OR user_id = ?',
+          [req.user.id, req.user.id]
+        );
+        if (fpEmp.length > 0) {
+          franchisePartnerId = fpEmp[0].franchise_partner_id;
+        }
+      } catch (e) { /* ignore */ }
+    }
+    
+    console.log('[Supervisor Properties] supervisorId:', supervisorId, 'franchisePartnerId:', franchisePartnerId);
 
     // Get own, assigned, and FP properties with creator name
     const query = `SELECT p.*, z.name as zone_name, 
