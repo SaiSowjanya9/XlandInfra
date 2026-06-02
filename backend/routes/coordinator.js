@@ -871,7 +871,7 @@ router.post('/vendors', requireCoordinatorScope, async (req, res) => {
 
     // Get employee ID for proper creator tracking
     const employeeId = req.user?.id || coordinatorId;
-    const employeeEmail = req.user?.email || req.user?.username || '';
+    const employeeUsername = req.user?.username || '';
 
     const [result] = await pool.query(
       `INSERT INTO onboarded_vendors (
@@ -888,7 +888,7 @@ router.post('/vendors', requireCoordinatorScope, async (req, res) => {
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
         parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0,
         franchisePartnerId, coordinatorId,
-        employeeEmail, employeeId
+        employeeUsername, employeeId
       ]
     );
 
