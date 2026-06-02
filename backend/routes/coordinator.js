@@ -215,7 +215,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     let propQuery, propParams;
     
     if (isFPCoordinator) {
-      // FP Coordinators see: properties they created OR properties from their FP
+      // FP Coordinators see: ALL properties from their FP (created by any employee)
       propQuery = `SELECT p.*, 
           COALESCE(z.name, zn.name, p.zone_id) as zone_name,
           COALESCE(p.area_name, p.city) as area,
@@ -228,9 +228,9 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
          LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id
          LEFT JOIN zones zn ON p.zone_id = zn.name
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
-         WHERE (p.coordinator_id = ? OR p.franchise_partner_id = ?)
+         WHERE p.franchise_partner_id = ?
          ORDER BY p.created_at DESC`;
-      propParams = [coordinatorId, franchisePartnerId];
+      propParams = [franchisePartnerId];
     } else {
       // Standalone coordinator - check coordinator_id OR created_by matches
       propQuery = `SELECT p.*, 
@@ -258,6 +258,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     try {
       let onbQuery, onbParams;
       if (isFPCoordinator) {
+        // FP Coordinators see: ALL onboarded properties from their FP
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                   op.zone_id as zone_name, op.division, op.total_units as units,
                   op.address, op.city, op.state, op.pincode as zip_code,
@@ -267,9 +268,9 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
                   'onboarded_properties' as source_table
            FROM onboarded_properties op
            LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR CAST(op.created_by AS UNSIGNED) = u.id
-           WHERE (op.coordinator_id = ? OR op.franchise_partner_id = ?)
+           WHERE op.franchise_partner_id = ?
            ORDER BY op.created_at DESC`;
-        onbParams = [coordinatorId, franchisePartnerId];
+        onbParams = [franchisePartnerId];
       } else {
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                   op.zone_id as zone_name, op.division, op.total_units as units,
