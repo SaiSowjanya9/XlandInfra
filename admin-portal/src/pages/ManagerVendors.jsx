@@ -367,7 +367,6 @@ const ManagerVendors = ({ user }) => {
                 <tr>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor ID</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Service Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
                   {!isFPManager && <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Rate/Visit</th>}
@@ -400,9 +399,6 @@ const ManagerVendors = ({ user }) => {
                         <span className={`inline-block px-2.5 py-1 rounded text-xs font-medium ${getServiceTypeBadge(vendor.service_type)}`}>
                           {vendor.service_type || '-'}
                         </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-sm text-gray-900">{vendor.owner_name || vendor.contact_person || vendor.company_name || '-'}</span>
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-sm text-gray-600">{vendor.zone_name || vendor.zone || '-'}</span>
