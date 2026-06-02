@@ -217,7 +217,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     if (isFPCoordinator) {
       // FP Coordinators see: properties they created OR properties from their FP
       propQuery = `SELECT p.*, 
-          COALESCE(z.name, p.zone_id, p.zone) as zone_name,
+          COALESCE(z.name, zn.name, p.zone_id) as zone_name,
           COALESCE(p.area_name, p.city) as area,
           COALESCE(p.division, 'General') as division,
           1 as units,
@@ -225,7 +225,8 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
           'properties' as source_table
          FROM properties p
-         LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
+         LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id
+         LEFT JOIN zones zn ON p.zone_id = zn.name
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
          WHERE (p.coordinator_id = ? OR p.franchise_partner_id = ?)
          ORDER BY p.created_at DESC`;
@@ -233,7 +234,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     } else {
       // Standalone coordinator - check coordinator_id OR created_by matches
       propQuery = `SELECT p.*, 
-          COALESCE(z.name, p.zone_id, p.zone) as zone_name,
+          COALESCE(z.name, zn.name, p.zone_id) as zone_name,
           COALESCE(p.area_name, p.city) as area,
           COALESCE(p.division, 'General') as division,
           1 as units,
@@ -241,7 +242,8 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
           'properties' as source_table
          FROM properties p
-         LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
+         LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id
+         LEFT JOIN zones zn ON p.zone_id = zn.name
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
          WHERE (p.coordinator_id = ? OR p.created_by = ? OR p.created_by = ?)
          ORDER BY p.created_at DESC`;
