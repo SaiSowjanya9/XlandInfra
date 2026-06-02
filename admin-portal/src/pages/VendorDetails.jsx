@@ -589,17 +589,17 @@ const VendorDetails = () => {
       {/* View Vendor Modal */}
       {viewVendor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setViewVendor(null)}>
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-6 bg-gray-50 rounded-t-xl flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">{viewVendor.ownerName}</h2>
                 <p className="text-sm text-gray-500 font-mono">{viewVendor.vendorId}</p>
               </div>
-              <button onClick={() => setViewVendor(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <button onClick={() => setViewVendor(null)} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 overflow-y-auto">
               {/* Service Info */}
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Service Information</h3>
