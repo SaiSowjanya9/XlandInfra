@@ -788,15 +788,15 @@ router.post('/vendors', requireCoordinatorScope, async (req, res) => {
         owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
-        rate_per_visit, coverage_per_day, coordinator_id, franchise_partner_id, created_by, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+        rate_per_visit, coverage_per_day, created_by, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
       [
         vendorId, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '',
         ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
         parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0,
-        coordinatorId, franchisePartnerId, createdBy || req.user?.email || 'Coordinator'
+        createdBy || req.user?.email || 'Coordinator'
       ]
     );
 
