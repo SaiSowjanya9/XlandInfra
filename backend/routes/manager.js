@@ -764,14 +764,12 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
     
     let params = [req.franchisePartnerId];
     
-    // Strictly filter by assigned zones only
+    // Filter by assigned zones - if zones assigned, filter by them; if none assigned (all access), show all
     if (assignedZones.length > 0) {
       query += ` AND ov.zone IN (${assignedZones.map(() => '?').join(',')})`;
       params.push(...assignedZones);
-    } else {
-      // If no zones assigned, show no vendors (strict zone-centric)
-      return res.json({ success: true, data: { own: [], assigned: [], all: [] } });
     }
+    // If no zones assigned, employee has access to all zones (all FP data)
     
     query += ` ORDER BY ov.created_at DESC`;
     
