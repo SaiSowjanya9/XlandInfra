@@ -9,11 +9,28 @@ const { pool } = require('../config/database');
  * Attach supervisor scope to request
  * Extracts supervisor ID and franchise partner ID from authenticated user
  */
-const attachSupervisorScope = (req, res, next) => {
+const attachSupervisorScope = async (req, res, next) => {
   if (req.user && (req.user.role === 'supervisor' || req.user.supervisorId)) {
     req.supervisorId = req.user.supervisorId || req.user.id;
     // Check both req.user.franchisePartnerId AND req.fpId (set by auth middleware)
     req.franchisePartnerId = req.user.franchisePartnerId || req.fpId || null;
+    
+    // If no FP ID yet, try to get it from fp_employees table
+    if (!req.franchisePartnerId && req.user?.id) {
+      try {
+        const [fpEmp] = await pool.execute(
+          'SELECT franchise_partner_id FROM fp_employees WHERE id = ? OR user_id = ?',
+          [req.user.id, req.user.id]
+        );
+        if (fpEmp.length > 0 && fpEmp[0].franchise_partner_id) {
+          req.franchisePartnerId = fpEmp[0].franchise_partner_id;
+          req.fpId = fpEmp[0].franchise_partner_id;
+        }
+      } catch (e) {
+        console.log('FP lookup error:', e.message);
+      }
+    }
+    
     req.supervisorScope = true;
     req.isFPSupervisor = !!req.franchisePartnerId;
   }
