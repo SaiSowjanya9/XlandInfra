@@ -704,9 +704,10 @@ const CoordinatorVendors = ({ user }) => {
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-sm text-gray-500">Address</p>
+                  <p className="text-sm text-gray-500">Address / Location</p>
                   <p className="font-medium text-gray-900">
-                    {selectedVendor.address ? `${selectedVendor.address}, ${selectedVendor.city || ''}, ${selectedVendor.state || ''}` : '-'}
+                    {[selectedVendor.area_name || selectedVendor.area, selectedVendor.zone_name || selectedVendor.zone, selectedVendor.division].filter(Boolean).join(', ') || 
+                     (selectedVendor.address ? `${selectedVendor.address}, ${selectedVendor.city || ''}, ${selectedVendor.state || ''}`.replace(/,\s*$/, '') : '-')}
                   </p>
                 </div>
               </div>

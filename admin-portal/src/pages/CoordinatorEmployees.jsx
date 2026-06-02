@@ -111,13 +111,23 @@ const CoordinatorEmployees = ({ user }) => {
 
   const fetchEmployeeDetails = async (id) => {
     try {
-      const response = await fetch(`/api/coordinator/employees/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success) {
-        setSelectedEmployee(result.data);
-        setShowDetailsModal(true);
+      if (isFPCoordinator) {
+        // For FP Coordinator, use the already loaded employee data
+        const employee = employees.find(emp => emp.id === id);
+        if (employee) {
+          setSelectedEmployee(employee);
+          setShowDetailsModal(true);
+        }
+      } else {
+        // For standalone coordinator, fetch from API
+        const response = await fetch(`/api/coordinator/employees/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+          setSelectedEmployee(result.data);
+          setShowDetailsModal(true);
+        }
       }
     } catch (error) {
       console.error('Fetch employee details error:', error);
@@ -247,8 +257,12 @@ const CoordinatorEmployees = ({ user }) => {
 
   const getRoleColor = (role) => {
     const colors = {
+      manager: 'bg-blue-100 text-blue-700',
+      supervisor: 'bg-purple-100 text-purple-700',
+      coordinator: 'bg-amber-100 text-amber-700',
+      executive: 'bg-teal-100 text-teal-700',
       coord_supervisor: 'bg-purple-100 text-purple-700',
-      coord_executive: 'bg-gray-100 text-gray-700'
+      coord_executive: 'bg-teal-100 text-teal-700'
     };
     return colors[role] || 'bg-gray-100 text-gray-700';
   };
@@ -607,17 +621,27 @@ const CoordinatorEmployees = ({ user }) => {
 
             <div className="p-6 space-y-4">
               <div className="text-center">
-                <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <span className="text-2xl font-bold text-teal-700">
-                    {selectedEmployee.first_name?.[0]}{selectedEmployee.last_name?.[0]}
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                  selectedEmployee.role === 'manager' ? 'bg-blue-100' :
+                  selectedEmployee.role === 'supervisor' ? 'bg-purple-100' :
+                  selectedEmployee.role === 'coordinator' ? 'bg-amber-100' :
+                  selectedEmployee.role === 'executive' ? 'bg-teal-100' : 'bg-teal-100'
+                }`}>
+                  <span className={`text-2xl font-bold ${
+                    selectedEmployee.role === 'manager' ? 'text-blue-700' :
+                    selectedEmployee.role === 'supervisor' ? 'text-purple-700' :
+                    selectedEmployee.role === 'coordinator' ? 'text-amber-700' :
+                    selectedEmployee.role === 'executive' ? 'text-teal-700' : 'text-teal-700'
+                  }`}>
+                    {(selectedEmployee.name || selectedEmployee.first_name || 'E')[0].toUpperCase()}
                   </span>
                 </div>
                 <h3 className="font-semibold text-lg text-gray-900">
-                  {selectedEmployee.first_name} {selectedEmployee.last_name}
+                  {selectedEmployee.name || `${selectedEmployee.first_name || ''} ${selectedEmployee.last_name || ''}`.trim()}
                 </h3>
-                <p className="text-sm text-gray-500">{selectedEmployee.employee_code}</p>
-                <span className={`inline-block mt-2 px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(selectedEmployee.role)}`}>
-                  {getRoleLabel(selectedEmployee.role)}
+                <p className="text-sm text-gray-500">ID: {selectedEmployee.id}</p>
+                <span className={`inline-block mt-2 px-2 py-1 rounded-full text-xs font-medium capitalize ${getRoleColor(selectedEmployee.role)}`}>
+                  {selectedEmployee.role || 'Employee'}
                 </span>
               </div>
 
@@ -638,7 +662,11 @@ const CoordinatorEmployees = ({ user }) => {
                   <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Assigned Zones</p>
-                    <span className="text-gray-700">{selectedEmployee.zone_names || 'No zones assigned'}</span>
+                    <span className="text-gray-700">
+                      {selectedEmployee.zone_names && selectedEmployee.zone_names !== 'No zones assigned' 
+                        ? selectedEmployee.zone_names 
+                        : 'No zones assigned'}
+                    </span>
                   </div>
                 </div>
               </div>
