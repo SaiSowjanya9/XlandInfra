@@ -408,16 +408,6 @@ const ManagerProperties = ({ user }) => {
         {/* Filters */}
         <div className="flex gap-2">
           <select
-            value={divisionFilter}
-            onChange={(e) => setDivisionFilter(e.target.value)}
-            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Divisions</option>
-            {divisions.map(d => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </select>
-          <select
             value={zoneFilter}
             onChange={(e) => setZoneFilter(e.target.value)}
             className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-blue-500"
