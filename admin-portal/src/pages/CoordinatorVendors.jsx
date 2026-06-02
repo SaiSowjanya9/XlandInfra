@@ -703,14 +703,7 @@ const CoordinatorVendors = ({ user }) => {
                     {selectedVendor.created_at ? new Date(selectedVendor.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
                   </p>
                 </div>
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-500">Address / Location</p>
-                  <p className="font-medium text-gray-900">
-                    {[selectedVendor.area_name || selectedVendor.area, selectedVendor.zone_name || selectedVendor.zone, selectedVendor.division].filter(Boolean).join(', ') || 
-                     (selectedVendor.address ? `${selectedVendor.address}, ${selectedVendor.city || ''}, ${selectedVendor.state || ''}`.replace(/,\s*$/, '') : '-')}
-                  </p>
                 </div>
-              </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
                 <button
