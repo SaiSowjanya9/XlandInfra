@@ -261,7 +261,6 @@ const FPVendors = ({ user }) => {
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Vendor ID</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Service Type</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Owner</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Zone</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Area</th>
                   {/* Rate/Coverage columns - Hidden for FP Manager */}
@@ -288,9 +287,6 @@ const FPVendors = ({ user }) => {
                         {vendor.serviceType || vendor.service_type}
                         {vendor.serviceVerified && <FileCheck className="w-3 h-3 text-emerald-500" />}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
-                      {vendor.ownerName || vendor.owner_name || '-'}
                     </td>
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                       {vendor.zone_name || vendor.zone || '-'}
