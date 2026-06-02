@@ -1414,6 +1414,13 @@ router.get('/fp-employee-zones', requireCoordinatorScope, async (req, res) => {
     
     // Use fpId for queries
     req.franchisePartnerId = fpId;
+    
+    // Debug: Check how many employees exist for this FP
+    const [countCheck] = await pool.execute(
+      'SELECT COUNT(*) as total, SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active FROM fp_employees WHERE franchise_partner_id = ?',
+      [fpId]
+    );
+    console.log('[Coordinator fp-employee-zones] FP:', fpId, 'Total employees:', countCheck[0]?.total, 'Active:', countCheck[0]?.active);
 
     const [employees] = await pool.execute(
       `SELECT e.id, e.first_name, e.last_name, CONCAT(e.first_name, ' ', e.last_name) as name,
@@ -1426,6 +1433,8 @@ router.get('/fp-employee-zones', requireCoordinatorScope, async (req, res) => {
        ORDER BY e.first_name, e.last_name`,
       [req.franchisePartnerId, req.franchisePartnerId]
     );
+    
+    console.log('[Coordinator fp-employee-zones] Found employees:', employees.length);
 
     const [zones] = await pool.execute(
       `SELECT DISTINCT ez.zone_name as name FROM fp_employee_zones ez 
