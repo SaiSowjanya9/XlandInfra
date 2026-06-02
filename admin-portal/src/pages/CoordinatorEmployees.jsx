@@ -67,9 +67,9 @@ const CoordinatorEmployees = ({ user }) => {
         const result = await response.json();
         if (result.success) {
           // Transform data to match expected format
-          const transformedEmployees = result.data.employees.map(emp => ({
+          const transformedEmployees = (result.data.employees || []).map(emp => ({
             ...emp,
-            assigned_zones: emp.zone_names !== 'No zones assigned' 
+            assigned_zones: emp.zone_names && emp.zone_names !== 'No zones assigned' 
               ? emp.zone_names.split(',').map(z => z.trim()) 
               : []
           }));
