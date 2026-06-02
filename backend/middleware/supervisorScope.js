@@ -16,15 +16,17 @@ const attachSupervisorScope = async (req, res, next) => {
     req.franchisePartnerId = req.user.franchisePartnerId || req.fpId || null;
     
     // If no FP ID yet, try to get it from fp_employees table
-    if (!req.franchisePartnerId && req.user?.id) {
+    if (!req.franchisePartnerId) {
       try {
         const [fpEmp] = await pool.execute(
-          'SELECT franchise_partner_id FROM fp_employees WHERE id = ? OR user_id = ?',
-          [req.user.id, req.user.id]
+          `SELECT franchise_partner_id FROM fp_employees 
+           WHERE id = ? OR user_id = ? OR email = ? OR username = ?`,
+          [req.user?.id || 0, req.user?.id || 0, req.user?.email || '', req.user?.username || '']
         );
         if (fpEmp.length > 0 && fpEmp[0].franchise_partner_id) {
           req.franchisePartnerId = fpEmp[0].franchise_partner_id;
           req.fpId = fpEmp[0].franchise_partner_id;
+          console.log('[SupervisorScope] Found FP ID:', fpEmp[0].franchise_partner_id);
         }
       } catch (e) {
         console.log('FP lookup error:', e.message);
