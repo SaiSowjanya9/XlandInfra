@@ -46,11 +46,14 @@ const ExecutiveDashboard = ({ user }) => {
   }, []);
 
   const statCards = [
-    { label: 'Properties', value: stats?.properties || 0, icon: Building2, color: 'indigo', path: '/executive/properties' },
-    { label: 'Vendors', value: stats?.vendors || 0, icon: Store, color: 'purple', path: '/executive/vendors' },
-    { label: 'Customers', value: stats?.customers || 0, icon: Users, color: 'green', path: '/executive/customers' },
-    { label: 'Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, color: 'orange', path: '/executive/work-orders' },
-    { label: 'Estimates', value: stats?.estimates || 0, icon: FileText, color: 'pink', path: '/executive/estimates' }
+    { label: 'Properties', value: stats?.properties || 0, icon: Building2, bgColor: 'bg-blue-50', textColor: 'text-blue-600', path: '/executive/properties' },
+    { label: 'Vendors', value: stats?.vendors || 0, icon: Store, bgColor: 'bg-purple-50', textColor: 'text-purple-600', path: '/executive/vendors' },
+    { label: 'Customers', value: stats?.customers || 0, icon: Users, bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/executive/customers' },
+    { label: 'Employees', value: stats?.employees || 0, icon: Users, bgColor: 'bg-orange-50', textColor: 'text-orange-600', path: '/executive/employees/zones' },
+    { label: 'Total Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, bgColor: 'bg-indigo-50', textColor: 'text-indigo-600', path: '/executive/work-orders' },
+    { label: 'Pending Work Orders', value: stats?.pendingWorkOrders || 0, icon: Clock, bgColor: 'bg-amber-50', textColor: 'text-amber-600', path: '/executive/work-orders' },
+    { label: 'Completed Work Orders', value: stats?.completedWorkOrders || 0, icon: CheckCircle, bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/executive/work-orders' },
+    { label: 'Estimates', value: stats?.estimates || 0, icon: FileText, bgColor: 'bg-teal-50', textColor: 'text-teal-600', path: '/executive/estimates' }
   ];
 
   const getColorClasses = (color) => {
@@ -106,127 +109,86 @@ const ExecutiveDashboard = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Welcome back, {user?.firstName || 'Executive'}!
+            Welcome, {user?.firstName || user?.name?.split(' ')[0] || 'Executive'}!
           </h1>
-          <p className="text-gray-500 mt-1">
-            Here's your data entry overview for today.
-          </p>
+          <p className="text-gray-500 mt-1">Here's your dashboard overview</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Pending</p>
-            <p className="text-2xl font-bold text-orange-600">{stats?.pendingWorkOrders || 0}</p>
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Completed</p>
-            <p className="text-2xl font-bold text-green-600">{stats?.completedWorkOrders || 0}</p>
-          </div>
-        </div>
+        <button
+          onClick={fetchDashboard}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>Refresh</span>
+        </button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {statCards.map((stat) => (
+      {/* Stats Grid - 4 columns like Manager */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map((stat, index) => (
           <button
-            key={stat.label}
+            key={index}
             onClick={() => navigate(stat.path)}
-            className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all text-left group"
+            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left"
           >
-            <div className={`w-10 h-10 rounded-lg ${getColorClasses(stat.color)} flex items-center justify-center mb-3`}>
-              <stat.icon className="w-5 h-5" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+              </div>
+              <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
+              </div>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-            <p className="text-sm text-gray-500">{stat.label}</p>
           </button>
         ))}
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg border border-gray-200 p-5">
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {quickActions.map((action) => (
-            <button
-              key={action.label}
-              onClick={() => navigate(action.path)}
-              className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all group"
-            >
-              <div className={`w-10 h-10 rounded-lg bg-${action.color}-100 flex items-center justify-center`}>
-                <action.icon className={`w-5 h-5 text-${action.color}-600`} />
-              </div>
-              <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-700">
-                {action.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Work Orders Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pending Work Orders */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-orange-500" />
-              <h3 className="font-semibold text-gray-900">Pending</h3>
-            </div>
-            <span className="text-2xl font-bold text-orange-600">{stats?.pendingWorkOrders || 0}</span>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <button
-            onClick={() => navigate('/executive/work-orders/pending')}
-            className="w-full py-2 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+            onClick={() => navigate('/executive/work-orders')}
+            className="flex flex-col items-center p-4 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
           >
-            View All Pending
+            <ClipboardList className="w-8 h-8 text-indigo-600 mb-2" />
+            <span className="text-sm font-medium text-indigo-700">Create Work Order</span>
           </button>
-        </div>
-
-        {/* Completed Work Orders */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <h3 className="font-semibold text-gray-900">Completed</h3>
-            </div>
-            <span className="text-2xl font-bold text-green-600">{stats?.completedWorkOrders || 0}</span>
-          </div>
           <button
-            onClick={() => navigate('/executive/work-orders/completed')}
-            className="w-full py-2 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+            onClick={() => navigate('/executive/estimates/create')}
+            className="flex flex-col items-center p-4 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors"
           >
-            View All Completed
+            <FileText className="w-8 h-8 text-teal-600 mb-2" />
+            <span className="text-sm font-medium text-teal-700">Create Estimate</span>
           </button>
-        </div>
-
-        {/* Total Estimates */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-purple-500" />
-              <h3 className="font-semibold text-gray-900">Estimates</h3>
-            </div>
-            <span className="text-2xl font-bold text-purple-600">{stats?.estimates || 0}</span>
-          </div>
           <button
-            onClick={() => navigate('/executive/estimates')}
-            className="w-full py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+            onClick={() => navigate('/executive/properties')}
+            className="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
           >
-            Manage Estimates
+            <Building2 className="w-8 h-8 text-blue-600 mb-2" />
+            <span className="text-sm font-medium text-blue-700">View Properties</span>
+          </button>
+          <button
+            onClick={() => navigate('/executive/employees/zones')}
+            className="flex flex-col items-center p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
+          >
+            <Users className="w-8 h-8 text-orange-600 mb-2" />
+            <span className="text-sm font-medium text-orange-700">Manage Zones</span>
           </button>
         </div>
       </div>
 
       {/* Recent Work Orders Table */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Recent Work Orders</h2>
           <button
             onClick={() => navigate('/executive/work-orders')}
-            className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+            className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
           >
             View All <ArrowRight className="w-4 h-4" />
           </button>
@@ -246,13 +208,13 @@ const ExecutiveDashboard = ({ user }) => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Work Order</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Category</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Work Order ID</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Property</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Category</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Created</th>
                 </tr>
               </thead>
               <tbody>

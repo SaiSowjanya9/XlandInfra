@@ -140,7 +140,7 @@ const SupervisorDashboard = ({ user }) => {
                 <p className="text-sm font-medium text-gray-500">{stat.label}</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
               </div>
-              <div className={`w-12 h-12 ${stat.bgColor} rounded-full flex items-center justify-center`}>
+              <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
                 <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
               </div>
             </div>
@@ -149,23 +149,37 @@ const SupervisorDashboard = ({ user }) => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {quickActions.map((action) => (
-            <button
-              key={action.label}
-              onClick={() => navigate(action.path)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all group"
-            >
-              <div className={`w-12 h-12 rounded-lg ${action.bgColor} flex items-center justify-center`}>
-                <action.icon className={`w-6 h-6 ${action.textColor}`} />
-              </div>
-              <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700">
-                {action.label}
-              </span>
-            </button>
-          ))}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <button
+            onClick={() => navigate('/supervisor/work-orders')}
+            className="flex flex-col items-center p-4 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+          >
+            <ClipboardList className="w-8 h-8 text-indigo-600 mb-2" />
+            <span className="text-sm font-medium text-indigo-700">Create Work Order</span>
+          </button>
+          <button
+            onClick={() => navigate('/supervisor/estimates/create')}
+            className="flex flex-col items-center p-4 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors"
+          >
+            <FileText className="w-8 h-8 text-teal-600 mb-2" />
+            <span className="text-sm font-medium text-teal-700">Create Estimate</span>
+          </button>
+          <button
+            onClick={() => navigate('/supervisor/properties')}
+            className="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+          >
+            <Building2 className="w-8 h-8 text-blue-600 mb-2" />
+            <span className="text-sm font-medium text-blue-700">View Properties</span>
+          </button>
+          <button
+            onClick={() => navigate('/supervisor/employees/zones')}
+            className="flex flex-col items-center p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
+          >
+            <MapPin className="w-8 h-8 text-orange-600 mb-2" />
+            <span className="text-sm font-medium text-orange-700">Manage Zones</span>
+          </button>
         </div>
       </div>
 
@@ -175,7 +189,7 @@ const SupervisorDashboard = ({ user }) => {
           <h2 className="text-lg font-semibold text-gray-900">Recent Work Orders</h2>
           <button
             onClick={() => navigate('/supervisor/work-orders')}
-            className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1"
+            className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
           >
             View All <ArrowRight className="w-4 h-4" />
           </button>
