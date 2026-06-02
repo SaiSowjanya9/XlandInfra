@@ -1061,32 +1061,68 @@ router.delete('/employees/:id', requireCoordinatorScope, async (req, res) => {
 });
 
 // =====================================================
-// ESTIMATES - Coordinator sees their own + linked FP estimates
+// ESTIMATES - Coordinator sees FP estimates from fp_estimates table
 // =====================================================
 router.get('/estimates', requireCoordinatorScope, async (req, res) => {
   try {
+    const { archived } = req.query;
+    const isArchived = archived === 'true';
     const coordinatorId = req.coordinatorId;
     const franchisePartnerId = req.franchisePartnerId;
-    const { archived } = req.query;
-
-    let query = `
-      SELECT e.*, c.name as client_name, p.name as property_name
-      FROM estimates e
-      LEFT JOIN clients c ON e.client_id = c.id
-      LEFT JOIN properties p ON e.property_id = p.id
-      WHERE (e.coordinator_id = ?${franchisePartnerId ? ' OR e.franchise_partner_id = ?' : ''})
-    `;
-    const params = franchisePartnerId ? [coordinatorId, franchisePartnerId] : [coordinatorId];
-
-    if (archived === 'true') {
-      query += ` AND e.status = 'archived'`;
-    } else {
-      query += ` AND e.status != 'archived'`;
+    
+    let estimates = [];
+    
+    // If coordinator is linked to an FP, fetch from fp_estimates table
+    if (franchisePartnerId) {
+      const [fpEstimates] = await pool.query(
+        `SELECT * FROM fp_estimates 
+         WHERE franchise_partner_id = ? AND (is_archived = ? OR is_archived IS NULL OR is_archived = 0)
+         ORDER BY created_at DESC`,
+        [franchisePartnerId, isArchived ? 1 : 0]
+      );
+      
+      // Enrich estimates with property_code and parse addons
+      estimates = await Promise.all(fpEstimates.map(async (est) => {
+        // Parse addons JSON
+        let addons = [];
+        if (est.addons_data) {
+          try { addons = JSON.parse(est.addons_data); } catch(e) {}
+        }
+        
+        // Get original property_code from onboarded_properties or properties table
+        let property_code = est.property_code;
+        const propId = est.property_id;
+        const propName = est.property_name || '';
+        
+        // Always try to fetch the original property_id from the property tables
+        if (propId || propName) {
+          try {
+            // Try onboarded_properties first (admin-created properties visible to FP)
+            let [props] = await pool.query(
+              `SELECT property_id as orig_code FROM onboarded_properties 
+               WHERE (id = ? OR community_name = ?) LIMIT 1`,
+              [propId || 0, propName]
+            );
+            if (props.length > 0 && props[0].orig_code) {
+              property_code = props[0].orig_code;
+            } else {
+              // Try properties table (FP-created properties)
+              [props] = await pool.query(
+                `SELECT property_id as orig_code FROM properties 
+                 WHERE (id = ? OR name = ?) AND franchise_partner_id = ? LIMIT 1`,
+                [propId || 0, propName, franchisePartnerId]
+              );
+              if (props.length > 0 && props[0].orig_code) property_code = props[0].orig_code;
+            }
+          } catch (e) { console.log('Property lookup error:', e.message); }
+        }
+        
+        return { ...est, addons, property_code, created_by_name: est.created_by_name || 'Franchise Partner' };
+      }));
+      
+      console.log(`Coordinator ${coordinatorId} (FP: ${franchisePartnerId}) - Found ${estimates.length} FP estimates`);
     }
-
-    query += ' ORDER BY e.created_at DESC';
-
-    const [estimates] = await pool.query(query, params);
+    
     res.json({ success: true, data: estimates });
   } catch (error) {
     console.error('Estimates fetch error:', error);
@@ -1153,11 +1189,11 @@ router.get('/amc-packages', requireCoordinatorScope, async (req, res) => {
     const scopeColumn = req.isFPCoordinator ? 'franchise_partner_id' : 'coordinator_id';
     
     const [packages] = await pool.query(
-      `SELECT * FROM ${table} WHERE ${scopeColumn} = ? AND is_active = 1 ORDER BY created_at DESC`,
+      `SELECT * FROM ${table} WHERE ${scopeColumn} = ? ORDER BY created_at DESC`,
       [scopeId]
     );
 
-    res.json({ success: true, data: filterPricing(packages, true) });
+    res.json({ success: true, data: packages });
   } catch (error) {
     console.error('AMC packages fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch AMC packages' });
@@ -1205,15 +1241,11 @@ router.get('/addons', requireCoordinatorScope, async (req, res) => {
     const scopeColumn = req.isFPCoordinator ? 'franchise_partner_id' : 'coordinator_id';
     
     const [addons] = await pool.query(
-      `SELECT a.*, c.name as category_name
-       FROM ${table} a
-       LEFT JOIN categories c ON a.category_id = c.id
-       WHERE a.${scopeColumn} = ? AND a.is_active = 1
-       ORDER BY a.created_at DESC`,
+      `SELECT * FROM ${table} WHERE ${scopeColumn} = ? ORDER BY created_at DESC`,
       [scopeId]
     );
 
-    res.json({ success: true, data: filterPricing(addons, true) });
+    res.json({ success: true, data: addons });
   } catch (error) {
     console.error('Addons fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch addons' });
