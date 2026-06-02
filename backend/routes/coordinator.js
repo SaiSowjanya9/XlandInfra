@@ -219,7 +219,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
       propQuery = `SELECT p.*, 
           COALESCE(z.name, zn.name, p.zone_id) as zone_name,
           COALESCE(p.area_name, p.city) as area,
-          COALESCE(p.division, 'General') as division,
+          COALESCE(p.division_id, p.division, 'General') as division,
           1 as units,
           COALESCE(p.status, 'active') as status,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
@@ -236,7 +236,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
       propQuery = `SELECT p.*, 
           COALESCE(z.name, zn.name, p.zone_id) as zone_name,
           COALESCE(p.area_name, p.city) as area,
-          COALESCE(p.division, 'General') as division,
+          COALESCE(p.division_id, p.division, 'General') as division,
           1 as units,
           COALESCE(p.status, 'active') as status,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
@@ -389,17 +389,37 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
     const franchisePartnerId = req.franchisePartnerId;
     const isFPCoordinator = !!franchisePartnerId;
     const { status } = req.query;
+    const creatorEmail = req.user?.username || req.user?.email || '';
 
-    // FP Coordinators see: their created work orders OR FP work orders
-    let query = `
-      SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
-      FROM work_orders wo
-      LEFT JOIN properties p ON wo.property_id = p.id
-      LEFT JOIN categories c ON wo.category_id = c.id
-      LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-      WHERE ${isFPCoordinator ? '(wo.coordinator_id = ? OR wo.franchise_partner_id = ?)' : 'wo.coordinator_id = ?'}
-    `;
-    const params = isFPCoordinator ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+    // FP Coordinators: see all work orders from their FP
+    // Standalone Coordinators: see work orders they created
+    let query, params;
+    
+    if (isFPCoordinator) {
+      query = `
+        SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
+          COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
+        FROM work_orders wo
+        LEFT JOIN properties p ON wo.property_id = p.id
+        LEFT JOIN categories c ON wo.category_id = c.id
+        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+        LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
+        WHERE wo.franchise_partner_id = ?
+      `;
+      params = [franchisePartnerId];
+    } else {
+      query = `
+        SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
+          COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
+        FROM work_orders wo
+        LEFT JOIN properties p ON wo.property_id = p.id
+        LEFT JOIN categories c ON wo.category_id = c.id
+        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+        LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
+        WHERE (wo.coordinator_id = ? OR wo.created_by = ? OR wo.created_by = ?)
+      `;
+      params = [coordinatorId, coordinatorId, creatorEmail];
+    }
 
     if (status) {
       query += ' AND wo.status = ?';
@@ -421,16 +441,35 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
     const coordinatorId = req.coordinatorId;
     const franchisePartnerId = req.franchisePartnerId;
     const isFPCoordinator = !!franchisePartnerId;
+    const creatorEmail = req.user?.username || req.user?.email || '';
 
-    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
-       FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN categories c ON wo.category_id = c.id
-       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       WHERE ${isFPCoordinator ? '(wo.coordinator_id = ? OR wo.franchise_partner_id = ?)' : 'wo.coordinator_id = ?'} 
-         AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')
-       ORDER BY wo.created_at DESC`;
-    const params = isFPCoordinator ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+    let query, params;
+    
+    if (isFPCoordinator) {
+      query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
+          COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
+         FROM work_orders wo
+         LEFT JOIN properties p ON wo.property_id = p.id
+         LEFT JOIN categories c ON wo.category_id = c.id
+         LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+         LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
+         WHERE wo.franchise_partner_id = ?
+           AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')
+         ORDER BY wo.created_at DESC`;
+      params = [franchisePartnerId];
+    } else {
+      query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
+          COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
+         FROM work_orders wo
+         LEFT JOIN properties p ON wo.property_id = p.id
+         LEFT JOIN categories c ON wo.category_id = c.id
+         LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+         LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
+         WHERE (wo.coordinator_id = ? OR wo.created_by = ? OR wo.created_by = ?)
+           AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')
+         ORDER BY wo.created_at DESC`;
+      params = [coordinatorId, coordinatorId, creatorEmail];
+    }
 
     const [workOrders] = await pool.query(query, params);
 
@@ -446,16 +485,35 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
     const coordinatorId = req.coordinatorId;
     const franchisePartnerId = req.franchisePartnerId;
     const isFPCoordinator = !!franchisePartnerId;
+    const creatorEmail = req.user?.username || req.user?.email || '';
 
-    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
-       FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id
-       LEFT JOIN categories c ON wo.category_id = c.id
-       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-       WHERE ${isFPCoordinator ? '(wo.coordinator_id = ? OR wo.franchise_partner_id = ?)' : 'wo.coordinator_id = ?'} 
-         AND wo.status IN ('completed', 'closed')
-       ORDER BY wo.created_at DESC`;
-    const params = isFPCoordinator ? [coordinatorId, franchisePartnerId] : [coordinatorId];
+    let query, params;
+    
+    if (isFPCoordinator) {
+      query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
+          COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
+         FROM work_orders wo
+         LEFT JOIN properties p ON wo.property_id = p.id
+         LEFT JOIN categories c ON wo.category_id = c.id
+         LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+         LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
+         WHERE wo.franchise_partner_id = ?
+           AND wo.status IN ('completed', 'closed')
+         ORDER BY wo.created_at DESC`;
+      params = [franchisePartnerId];
+    } else {
+      query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
+          COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
+         FROM work_orders wo
+         LEFT JOIN properties p ON wo.property_id = p.id
+         LEFT JOIN categories c ON wo.category_id = c.id
+         LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+         LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
+         WHERE (wo.coordinator_id = ? OR wo.created_by = ? OR wo.created_by = ?)
+           AND wo.status IN ('completed', 'closed')
+         ORDER BY wo.created_at DESC`;
+      params = [coordinatorId, coordinatorId, creatorEmail];
+    }
 
     const [workOrders] = await pool.query(query, params);
 

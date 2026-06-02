@@ -448,17 +448,6 @@ const CoordinatorProperties = ({ user }) => {
           {/* Filter Dropdowns */}
           <div className="flex flex-wrap gap-3">
             <select
-              value={divisionFilter}
-              onChange={(e) => setDivisionFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Divisions</option>
-              {divisions.map(div => (
-                <option key={div} value={div}>{div}</option>
-              ))}
-            </select>
-
-            <select
               value={zoneFilter}
               onChange={(e) => setZoneFilter(e.target.value)}
               className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
