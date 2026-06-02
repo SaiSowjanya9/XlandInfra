@@ -742,16 +742,22 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
 // =====================================================
 router.get('/vendors', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
-
-    // Get vendors scoped to FP or Coordinator
+    // Fetch from onboarded_vendors table with proper field mapping
     const [vendors] = await pool.query(
-      `SELECT v.*, 'own' as vendor_type
-       FROM vendors v
-       WHERE v.${scopeColumn} = ?
-       ORDER BY v.created_at DESC`,
-      [scopeId]
+      `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
+              ov.zone as zone_name, ov.area_name as area, ov.division,
+              ov.owner_name as company_name, ov.owner_name as contact_person,
+              ov.owner_mobile as phone, ov.owner_email as email,
+              ov.owner_aadhar, ov.owner_country_code,
+              ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
+              ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
+              ov.rate_per_visit, ov.coverage_per_day,
+              ov.created_by, ov.created_by as created_by_name, ov.status,
+              ov.created_at, ov.updated_at,
+              CASE WHEN ov.status = 'active' THEN 1 ELSE 0 END as is_active,
+              'own' as vendor_type
+       FROM onboarded_vendors ov
+       ORDER BY ov.created_at DESC`
     );
 
     res.json({
@@ -765,6 +771,59 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
   } catch (error) {
     console.error('Vendors fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch vendors' });
+  }
+});
+
+// Get vendor assignments (view-only for coordinators)
+router.get('/vendors/assignments', requireCoordinatorScope, async (req, res) => {
+  try {
+    const { status } = req.query;
+    
+    // Fetch vendor assignments - all service vendor assignments
+    const [assignments] = await pool.query(
+      `SELECT va.id, va.vendor_id, va.property_id, va.service_type, va.zone,
+              va.status, va.created_at, va.updated_at,
+              ov.owner_name as vendor_name, ov.owner_mobile as vendor_phone,
+              ov.owner_email as vendor_email, ov.rate_per_visit, ov.coverage_per_day,
+              p.name as property_name, p.property_id as property_code
+       FROM vendor_assignments va
+       LEFT JOIN onboarded_vendors ov ON va.vendor_id = ov.id
+       LEFT JOIN properties p ON va.property_id = p.id
+       WHERE va.status = ?
+       ORDER BY va.created_at DESC`,
+      [status || 'active']
+    );
+
+    // Also get service-based assignments
+    const [serviceAssignments] = await pool.query(
+      `SELECT sva.id, sva.vendor_id, sva.service_type, sva.zone_id, sva.zone_name,
+              sva.status, sva.created_at,
+              ov.owner_name as vendor_name, ov.owner_mobile as vendor_phone,
+              ov.owner_email as vendor_email, ov.rate_per_visit, ov.coverage_per_day
+       FROM service_vendor_assignments sva
+       LEFT JOIN onboarded_vendors ov ON sva.vendor_id = ov.id
+       WHERE sva.status = ?
+       ORDER BY sva.created_at DESC`,
+      [status || 'active']
+    );
+
+    res.json({
+      success: true,
+      data: {
+        propertyAssignments: assignments,
+        serviceAssignments: serviceAssignments
+      }
+    });
+  } catch (error) {
+    console.error('Vendor assignments fetch error:', error);
+    // Return empty arrays if tables don't exist
+    res.json({
+      success: true,
+      data: {
+        propertyAssignments: [],
+        serviceAssignments: []
+      }
+    });
   }
 });
 
