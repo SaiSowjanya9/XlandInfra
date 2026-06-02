@@ -710,9 +710,9 @@ const FPProperties = ({ user }) => {
       {/* View Details Modal */}
       {showDetailsModal && selectedProperty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-bold text-gray-900">{selectedProperty.name}</h2>
@@ -724,13 +724,13 @@ const FPProperties = ({ user }) => {
               </div>
               <button
                 onClick={() => { setShowDetailsModal(false); setSelectedProperty(null); }}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 overflow-y-auto">
               {/* Property Information */}
               <div>
                 <h3 className="text-base font-semibold text-gray-900 mb-4">Property Information</h3>
