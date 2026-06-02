@@ -1016,32 +1016,44 @@ router.delete('/employees/:id', requireSupervisorScope, async (req, res) => {
 });
 
 // =====================================================
-// ESTIMATES
+// ESTIMATES - Supervisor sees FP estimates from fp_estimates table
 // =====================================================
 router.get('/estimates', requireSupervisorScope, async (req, res) => {
   try {
+    const { archived } = req.query;
+    const isArchived = archived === 'true';
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
-    const { archived } = req.query;
-
-    let query = `
-      SELECT e.*, c.name as client_name, p.name as property_name
-      FROM estimates e
-      LEFT JOIN clients c ON e.client_id = c.id
-      LEFT JOIN properties p ON e.property_id = p.id
-      WHERE (e.supervisor_id = ?${franchisePartnerId ? ' OR e.franchise_partner_id = ?' : ''})
-    `;
-    const params = franchisePartnerId ? [supervisorId, franchisePartnerId] : [supervisorId];
-
-    if (archived === 'true') {
-      query += ` AND e.status = 'archived'`;
-    } else {
-      query += ` AND e.status != 'archived'`;
+    
+    let estimates = [];
+    
+    // If supervisor is linked to an FP, fetch from fp_estimates table
+    if (franchisePartnerId) {
+      const [fpEstimates] = await pool.query(
+        `SELECT e.*, 
+                COALESCE(
+                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                  CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+                  e.created_by_name
+                ) as created_by_name
+         FROM fp_estimates e
+         LEFT JOIN fp_employees fpe ON e.created_by_name = fpe.email OR e.created_by_name = fpe.username
+         LEFT JOIN users u ON e.created_by_name = u.email
+         WHERE e.franchise_partner_id = ? AND (e.is_archived = ? OR e.is_archived IS NULL OR e.is_archived = 0)
+         ORDER BY e.created_at DESC`,
+        [franchisePartnerId, isArchived ? 1 : 0]
+      );
+      
+      // Enrich estimates with property_code and parse addons
+      estimates = await Promise.all(fpEstimates.map(async (est) => {
+        let addons = [];
+        if (est.addons_data) {
+          try { addons = JSON.parse(est.addons_data); } catch(e) {}
+        }
+        return { ...est, addons };
+      }));
     }
-
-    query += ' ORDER BY e.created_at DESC';
-
-    const [estimates] = await pool.query(query, params);
+    
     res.json({ success: true, data: estimates });
   } catch (error) {
     console.error('Estimates fetch error:', error);
@@ -1097,31 +1109,22 @@ router.post('/estimates', requireSupervisorScope, async (req, res) => {
 });
 
 // =====================================================
-// AMC PACKAGES
+// AMC PACKAGES - FP Supervisors use FP packages
 // =====================================================
 router.get('/amc-packages', requireSupervisorScope, async (req, res) => {
   try {
-    const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
-    const canView = await canViewPricing(supervisorId, 'amc_packages');
-
-    // Get supervisor's own packages + FP packages if linked to FP
-    let packages = [];
-    const [ownPackages] = await pool.query(
-      `SELECT *, 'supervisor' as source FROM supervisor_amc_packages WHERE supervisor_id = ? ORDER BY created_at DESC`,
-      [supervisorId]
-    );
-    packages = [...ownPackages];
     
+    // FP Supervisors read from fp_amc_packages
     if (franchisePartnerId) {
-      const [fpPackages] = await pool.query(
-        `SELECT *, 'fp' as source FROM fp_amc_packages WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY created_at DESC`,
+      const [packages] = await pool.query(
+        `SELECT * FROM fp_amc_packages WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
         [franchisePartnerId]
       );
-      packages = [...packages, ...fpPackages];
+      return res.json({ success: true, data: packages });
     }
-
-    res.json({ success: true, data: filterPricing(packages, canView) });
+    
+    res.json({ success: true, data: [] });
   } catch (error) {
     console.error('AMC packages fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch AMC packages' });
@@ -1153,39 +1156,22 @@ router.post('/amc-packages', requireSupervisorScope, async (req, res) => {
 });
 
 // =====================================================
-// ADD-ONS
+// ADD-ONS - FP Supervisors use FP addons
 // =====================================================
 router.get('/addons', requireSupervisorScope, async (req, res) => {
   try {
-    const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
-    const canView = await canViewPricing(supervisorId, 'addons');
-
-    // Get supervisor's own addons + FP addons if linked to FP
-    let addons = [];
-    const [ownAddons] = await pool.query(
-      `SELECT sa.*, c.name as category_name, 'supervisor' as source
-       FROM supervisor_addons sa
-       LEFT JOIN categories c ON sa.category_id = c.id
-       WHERE sa.supervisor_id = ?
-       ORDER BY sa.created_at DESC`,
-      [supervisorId]
-    );
-    addons = [...ownAddons];
     
+    // FP Supervisors read from fp_addons
     if (franchisePartnerId) {
-      const [fpAddons] = await pool.query(
-        `SELECT fa.*, c.name as category_name, 'fp' as source
-         FROM fp_addons fa
-         LEFT JOIN categories c ON fa.category_id = c.id
-         WHERE fa.franchise_partner_id = ? AND fa.is_active = 1
-         ORDER BY fa.created_at DESC`,
+      const [addons] = await pool.query(
+        `SELECT * FROM fp_addons WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
         [franchisePartnerId]
       );
-      addons = [...addons, ...fpAddons];
+      return res.json({ success: true, data: addons });
     }
-
-    res.json({ success: true, data: filterPricing(addons, canView) });
+    
+    res.json({ success: true, data: [] });
   } catch (error) {
     console.error('Addons fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch addons' });

@@ -1075,9 +1075,17 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
     // If coordinator is linked to an FP, fetch from fp_estimates table
     if (franchisePartnerId) {
       const [fpEstimates] = await pool.query(
-        `SELECT * FROM fp_estimates 
-         WHERE franchise_partner_id = ? AND (is_archived = ? OR is_archived IS NULL OR is_archived = 0)
-         ORDER BY created_at DESC`,
+        `SELECT e.*, 
+                COALESCE(
+                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                  CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+                  e.created_by_name
+                ) as created_by_name
+         FROM fp_estimates e
+         LEFT JOIN fp_employees fpe ON e.created_by_name = fpe.email OR e.created_by_name = fpe.username
+         LEFT JOIN users u ON e.created_by_name = u.email
+         WHERE e.franchise_partner_id = ? AND (e.is_archived = ? OR e.is_archived IS NULL OR e.is_archived = 0)
+         ORDER BY e.created_at DESC`,
         [franchisePartnerId, isArchived ? 1 : 0]
       );
       
@@ -1174,6 +1182,54 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
   } catch (error) {
     console.error('Estimate create error:', error);
     res.status(500).json({ success: false, message: 'Failed to create estimate' });
+  }
+});
+
+// Archive estimate
+router.put('/estimates/:id/archive', requireCoordinatorScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.franchisePartnerId;
+    if (franchisePartnerId) {
+      await pool.query(
+        `UPDATE fp_estimates SET is_archived = 1, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+        [req.params.id, franchisePartnerId]
+      );
+    }
+    res.json({ success: true, message: 'Estimate archived' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Restore estimate
+router.put('/estimates/:id/restore', requireCoordinatorScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.franchisePartnerId;
+    if (franchisePartnerId) {
+      await pool.query(
+        `UPDATE fp_estimates SET is_archived = 0, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+        [req.params.id, franchisePartnerId]
+      );
+    }
+    res.json({ success: true, message: 'Estimate restored' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete estimate permanently
+router.delete('/estimates/:id', requireCoordinatorScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.franchisePartnerId;
+    if (franchisePartnerId) {
+      await pool.query(
+        `DELETE FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?`,
+        [req.params.id, franchisePartnerId]
+      );
+    }
+    res.json({ success: true, message: 'Estimate deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
