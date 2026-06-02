@@ -271,9 +271,14 @@ router.get('/properties', requireFPScope, async (req, res) => {
         p.landmark,
         p.latitude,
         p.longitude,
-        COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+        COALESCE(
+          CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+          CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+          p.created_by, 'System'
+        ) as created_by_name,
         'properties' as source_table
        FROM properties p
+       LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS UNSIGNED) = fpe.id
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE p.franchise_partner_id = ?
        ORDER BY p.created_at DESC`,
@@ -288,10 +293,15 @@ router.get('/properties', requireFPScope, async (req, res) => {
                 op.zone_id as zone_name, op.division, op.total_units as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
-                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
+                COALESCE(
+                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                  CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+                  op.created_by, 'System'
+                ) as created_by_name,
                 op.created_at, op.status,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
+         LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR CAST(op.created_by AS UNSIGNED) = fpe.id
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
          WHERE op.franchise_partner_id = ? AND op.status = 'active'
          ORDER BY op.created_at DESC`,
@@ -616,13 +626,20 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
         v.company_name as vendor_name,
         wo.customer_name,
         wo.customer_email,
-        wo.customer_phone
+        wo.customer_phone,
+        COALESCE(
+          CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+          CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+          wo.created_by, 'System'
+        ) as created_by_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
-      WHERE (wo.franchise_partner_id = ? OR wo.franchise_partner_id IS NULL)
+      LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR CAST(wo.created_by AS UNSIGNED) = fpe.id
+      LEFT JOIN users u ON wo.created_by = u.email OR wo.created_by = u.user_id OR CAST(wo.created_by AS UNSIGNED) = u.id
+      WHERE wo.franchise_partner_id = ?
     `;
     const params = [req.fpId];
 
@@ -1189,11 +1206,17 @@ router.get('/vendors', requireFPScope, async (req, res) => {
               ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
               ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
               ov.rate_per_visit, ov.coverage_per_day,
-              ov.created_by, ov.created_by as created_by_name, ov.status,
+              ov.created_by,
+              COALESCE(
+                CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                ov.created_by, 'System'
+              ) as created_by_name,
+              ov.status,
               ov.created_at, ov.updated_at,
               CASE WHEN ov.status = 'active' THEN 1 ELSE 0 END as is_active,
               'own' as vendor_type
        FROM onboarded_vendors ov
+       LEFT JOIN fp_employees fpe ON ov.created_by = fpe.email OR ov.created_by = CONCAT(fpe.first_name, ' ', fpe.last_name)
        ORDER BY ov.created_at DESC`
     );
 
