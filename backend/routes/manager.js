@@ -723,12 +723,25 @@ router.post('/customers', requireManagerScope, async (req, res) => {
 // VENDOR MANAGEMENT
 // ============================================
 
-// Get all manager vendors (FP-scoped or Manager-scoped)
+// Get all manager vendors (ZONE-CENTRIC - employees see data from their assigned zones)
 router.get('/vendors', requireManagerScope, async (req, res) => {
   try {
-    // Fetch from onboarded_vendors table with proper field mapping
-    const [vendors] = await pool.execute(
-      `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
+    const employeeId = req.user?.id || req.managerId;
+    
+    // Get employee's assigned zones
+    let assignedZones = [];
+    try {
+      const [zones] = await pool.execute(
+        `SELECT zone_name FROM fp_employee_zones WHERE fp_employee_id = ?`,
+        [employeeId]
+      );
+      assignedZones = zones.map(z => z.zone_name);
+    } catch (e) {
+      console.log('Zone fetch error:', e.message);
+    }
+
+    // Fetch vendors filtered by assigned zones
+    let query = `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
               ov.zone as zone_name, ov.area_name as area, ov.division,
               ov.owner_name as company_name, ov.owner_name as contact_person,
               ov.owner_mobile as phone, ov.owner_email as email,
@@ -747,10 +760,19 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
               'own' as vendor_type
        FROM onboarded_vendors ov
        LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
-       WHERE (ov.franchise_partner_id = ? OR ov.franchise_partner_id IS NULL)
-       ORDER BY ov.created_at DESC`,
-      [req.franchisePartnerId]
-    );
+       WHERE ov.franchise_partner_id = ?`;
+    
+    let params = [req.franchisePartnerId];
+    
+    // Filter by zones if employee has assigned zones
+    if (assignedZones.length > 0) {
+      query += ` AND ov.zone IN (${assignedZones.map(() => '?').join(',')})`;
+      params.push(...assignedZones);
+    }
+    
+    query += ` ORDER BY ov.created_at DESC`;
+    
+    const [vendors] = await pool.execute(query, params);
 
     res.json({
       success: true,
