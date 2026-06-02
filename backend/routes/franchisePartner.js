@@ -754,6 +754,26 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       }
     }
 
+    // Send email notification for new work order
+    const { sendWorkOrderCreatedNotification } = require('../services/emailService');
+    sendWorkOrderCreatedNotification({
+      orderId: result.insertId,
+      orderNumber: workOrderId,
+      title,
+      propertyName: property[0]?.name,
+      propertyId,
+      customerName,
+      customerEmail,
+      customerPhone,
+      categoryName,
+      subcategoryName,
+      priority,
+      description,
+      createdBy: req.user?.username || req.user?.email || 'FP Admin',
+      createdByRole: 'Franchise Partner',
+      createdFromPortal: 'FP Portal'
+    }).catch(err => console.error('Email notification error:', err));
+
     res.status(201).json({
       success: true,
       message: 'Work order created successfully',
@@ -786,6 +806,31 @@ router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_
        VALUES (?, ?, ?, ?, ?)`,
       [id, status, req.user.id, req.user.role, notes || null]
     );
+
+    // Send completion email if status is completed
+    if (status === 'completed') {
+      const [workOrder] = await pool.execute(
+        `SELECT work_order_id, title, property_name, property_id, customer_name, customer_email, customer_phone, category_name, subcategory_name 
+         FROM work_orders WHERE id = ?`, [id]
+      );
+      if (workOrder.length > 0) {
+        const { sendWorkOrderCompletedNotification } = require('../services/emailService');
+        sendWorkOrderCompletedNotification({
+          orderId: id,
+          orderNumber: workOrder[0].work_order_id,
+          title: workOrder[0].title,
+          propertyName: workOrder[0].property_name,
+          propertyId: workOrder[0].property_id,
+          customerName: workOrder[0].customer_name,
+          customerEmail: workOrder[0].customer_email,
+          customerPhone: workOrder[0].customer_phone,
+          categoryName: workOrder[0].category_name,
+          subcategoryName: workOrder[0].subcategory_name,
+          completedBy: req.user?.username || req.user?.email || 'FP Admin',
+          completedByRole: 'Franchise Partner'
+        }).catch(err => console.error('Completion email error:', err));
+      }
+    }
 
     res.json({
       success: true,

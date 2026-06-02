@@ -549,7 +549,8 @@ router.post('/work-orders', requireCoordinatorScope, async (req, res) => {
   try {
     const coordinatorId = req.coordinatorId;
     const franchisePartnerId = req.franchisePartnerId;
-    const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate } = req.body;
+    const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate,
+            propertyName, categoryName, subcategoryName, customerName, customerEmail, customerPhone } = req.body;
 
     const workOrderId = `WO-COORD-${Date.now()}`;
 
@@ -560,6 +561,26 @@ router.post('/work-orders', requireCoordinatorScope, async (req, res) => {
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
         priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, coordinatorId, franchisePartnerId]
     );
+
+    // Send email notification for new work order
+    const { sendWorkOrderCreatedNotification } = require('../services/emailService');
+    sendWorkOrderCreatedNotification({
+      orderId: result.insertId,
+      orderNumber: workOrderId,
+      title,
+      propertyName,
+      propertyId,
+      customerName,
+      customerEmail,
+      customerPhone,
+      categoryName,
+      subcategoryName,
+      priority,
+      description,
+      createdBy: req.user?.username || req.user?.email || 'Coordinator',
+      createdByRole: 'Coordinator',
+      createdFromPortal: 'Coordinator Portal'
+    }).catch(err => console.error('Email notification error:', err));
 
     res.json({
       success: true,
@@ -585,6 +606,31 @@ router.patch('/work-orders/:id/status', requireCoordinatorScope, validateOwnersh
       );
     } else {
       await pool.query('UPDATE work_orders SET status = ? WHERE id = ?', [status, id]);
+    }
+
+    // Send completion email if status is completed
+    if (status === 'completed') {
+      const [workOrder] = await pool.query(
+        `SELECT work_order_id, title, property_name, property_id, customer_name, customer_email, customer_phone, category_name, subcategory_name 
+         FROM work_orders WHERE id = ?`, [id]
+      );
+      if (workOrder.length > 0) {
+        const { sendWorkOrderCompletedNotification } = require('../services/emailService');
+        sendWorkOrderCompletedNotification({
+          orderId: id,
+          orderNumber: workOrder[0].work_order_id,
+          title: workOrder[0].title,
+          propertyName: workOrder[0].property_name,
+          propertyId: workOrder[0].property_id,
+          customerName: workOrder[0].customer_name,
+          customerEmail: workOrder[0].customer_email,
+          customerPhone: workOrder[0].customer_phone,
+          categoryName: workOrder[0].category_name,
+          subcategoryName: workOrder[0].subcategory_name,
+          completedBy: req.user?.username || req.user?.email || 'Coordinator',
+          completedByRole: 'Coordinator'
+        }).catch(err => console.error('Completion email error:', err));
+      }
     }
     
     res.json({ success: true, message: 'Status updated successfully' });

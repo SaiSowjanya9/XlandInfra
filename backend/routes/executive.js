@@ -429,7 +429,8 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
-    const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate } = req.body;
+    const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate,
+            propertyName, categoryName, subcategoryName, customerName, customerEmail, customerPhone } = req.body;
 
     const workOrderId = `WO-EXEC-${Date.now()}`;
 
@@ -441,6 +442,26 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
         priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, executiveId, franchisePartnerId]
     );
 
+    // Send email notification for new work order
+    const { sendWorkOrderCreatedNotification } = require('../services/emailService');
+    sendWorkOrderCreatedNotification({
+      orderId: result.insertId,
+      orderNumber: workOrderId,
+      title,
+      propertyName,
+      propertyId,
+      customerName,
+      customerEmail,
+      customerPhone,
+      categoryName,
+      subcategoryName,
+      priority,
+      description,
+      createdBy: req.user?.username || req.user?.email || 'Executive',
+      createdByRole: 'Executive',
+      createdFromPortal: 'Executive Portal'
+    }).catch(err => console.error('Email notification error:', err));
+
     res.json({
       success: true,
       message: 'Work order created successfully',
@@ -449,6 +470,51 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
   } catch (error) {
     console.error('Work order create error:', error);
     res.status(500).json({ success: false, message: 'Failed to create work order' });
+  }
+});
+
+// Update work order status
+router.patch('/work-orders/:id/status', requireExecutiveScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = ['draft', 'requested', 'in_progress', 'completed', 'cancelled'];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status value' });
+    }
+
+    await pool.query('UPDATE work_orders SET status = ?, updated_at = NOW() WHERE id = ?', [status, id]);
+
+    // Send completion email if status is completed
+    if (status === 'completed') {
+      const [workOrder] = await pool.query(
+        `SELECT work_order_id, title, property_name, property_id, customer_name, customer_email, customer_phone, category_name, subcategory_name 
+         FROM work_orders WHERE id = ?`, [id]
+      );
+      if (workOrder.length > 0) {
+        const { sendWorkOrderCompletedNotification } = require('../services/emailService');
+        sendWorkOrderCompletedNotification({
+          orderId: id,
+          orderNumber: workOrder[0].work_order_id,
+          title: workOrder[0].title,
+          propertyName: workOrder[0].property_name,
+          propertyId: workOrder[0].property_id,
+          customerName: workOrder[0].customer_name,
+          customerEmail: workOrder[0].customer_email,
+          customerPhone: workOrder[0].customer_phone,
+          categoryName: workOrder[0].category_name,
+          subcategoryName: workOrder[0].subcategory_name,
+          completedBy: req.user?.username || req.user?.email || 'Executive',
+          completedByRole: 'Executive'
+        }).catch(err => console.error('Completion email error:', err));
+      }
+    }
+
+    res.json({ success: true, message: 'Status updated successfully' });
+  } catch (error) {
+    console.error('Status update error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update status' });
   }
 });
 
