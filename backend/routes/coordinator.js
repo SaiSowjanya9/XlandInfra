@@ -752,11 +752,17 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
               ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
               ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
               ov.rate_per_visit, ov.coverage_per_day,
-              ov.created_by, ov.created_by as created_by_name, ov.status,
+              ov.created_by,
+              COALESCE(
+                CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                ov.created_by, 'System'
+              ) as created_by_name,
+              ov.status,
               ov.created_at, ov.updated_at,
               CASE WHEN ov.status = 'active' THEN 1 ELSE 0 END as is_active,
               'own' as vendor_type
        FROM onboarded_vendors ov
+       LEFT JOIN fp_employees fpe ON ov.created_by = fpe.email OR ov.created_by = CONCAT(fpe.first_name, ' ', fpe.last_name)
        ORDER BY ov.created_at DESC`
     );
 
