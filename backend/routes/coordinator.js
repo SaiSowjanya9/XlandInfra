@@ -1287,6 +1287,10 @@ router.get('/export/work-orders', requireCoordinatorScope, async (req, res) => {
 // View FP employee zone assignments (READ-ONLY for coordinators under FP)
 router.get('/fp-employee-zones', requireCoordinatorScope, async (req, res) => {
   try {
+    console.log('FP Employee Zones - Request user:', req.user);
+    console.log('FP Employee Zones - franchisePartnerId:', req.franchisePartnerId);
+    console.log('FP Employee Zones - isFPCoordinator:', req.isFPCoordinator);
+    
     if (!req.franchisePartnerId) {
       return res.status(403).json({ success: false, message: 'This feature is only available for FP employees' });
     }

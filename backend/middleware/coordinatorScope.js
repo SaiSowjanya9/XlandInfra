@@ -15,10 +15,11 @@ const { pool } = require('../config/database');
 const attachCoordinatorScope = (req, res, next) => {
   if (req.user && (req.user.role === 'coordinator' || req.user.coordinatorId)) {
     req.coordinatorId = req.user.coordinatorId || req.user.id;
-    req.franchisePartnerId = req.user.franchisePartnerId || null;
+    // Check both req.user.franchisePartnerId AND req.fpId (set by auth middleware)
+    req.franchisePartnerId = req.user.franchisePartnerId || req.fpId || null;
     req.coordinatorScope = true;
     // Flag to indicate if this coordinator belongs to an FP
-    req.isFPCoordinator = !!req.user.franchisePartnerId;
+    req.isFPCoordinator = !!req.franchisePartnerId;
   }
   next();
 };
