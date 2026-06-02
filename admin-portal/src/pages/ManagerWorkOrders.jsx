@@ -478,6 +478,16 @@ const ManagerWorkOrders = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        {/* Revert to Pending - Only for Completed work orders */}
+                        {activeTab === 'completed' && (
+                          <button
+                            onClick={() => handleStatusUpdate(wo.id, 'pending')}
+                            className="p-2 text-orange-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            title="Revert to Pending"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

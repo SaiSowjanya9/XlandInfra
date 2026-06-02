@@ -503,13 +503,11 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
-    // Verify vendor belongs to this FP (handle both numeric id and string vendor_id)
+    // Verify vendor belongs to this FP (check onboarded_vendors table)
     const [vendor] = await pool.execute(
-      `SELECT id, owner_name, owner_email, owner_mobile, service_type FROM vendors 
-       WHERE (id = ? OR vendor_id = ?) AND (franchise_partner_id = ? OR id IN (
-        SELECT vendor_id FROM fp_assigned_vendors WHERE franchise_partner_id = ? AND is_active = TRUE
-      ))`,
-      [vendorId, vendorId, req.fpId, req.fpId]
+      `SELECT id, owner_name, owner_email, owner_mobile, service_type FROM onboarded_vendors 
+       WHERE (id = ? OR vendor_id = ?) AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
+      [vendorId, vendorId, req.fpId]
     );
 
     if (vendor.length === 0) {
@@ -809,12 +807,10 @@ router.patch('/work-orders/:id/assign-vendor', requireFPScope, validateOwnership
     const { id } = req.params;
     const { vendorId } = req.body;
 
-    // Validate vendor belongs to FP or is assigned to FP
+    // Validate vendor belongs to FP (check onboarded_vendors table)
     const [vendor] = await pool.execute(
-      `SELECT id FROM vendors WHERE id = ? AND (franchise_partner_id = ? OR id IN (
-        SELECT vendor_id FROM fp_assigned_vendors WHERE franchise_partner_id = ? AND is_active = TRUE
-      ))`,
-      [vendorId, req.fpId, req.fpId]
+      `SELECT id FROM onboarded_vendors WHERE (id = ? OR vendor_id = ?) AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
+      [vendorId, vendorId, req.fpId]
     );
 
     if (vendor.length === 0) {
@@ -1199,9 +1195,9 @@ router.get('/vendors', requireFPScope, async (req, res) => {
     // Fetch ALL vendors from onboarded_vendors (shared across FP)
     const [vendors] = await pool.execute(
       `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
-              ov.zone as zone_name, ov.area_name as area, ov.division,
-              ov.owner_name as company_name, ov.owner_name as contact_person,
-              ov.owner_mobile as phone, ov.owner_email as email,
+              ov.zone, ov.zone as zone_name, ov.area_name, ov.area_name as area, ov.division,
+              ov.owner_name, ov.owner_name as company_name, ov.owner_name as contact_person,
+              ov.owner_mobile, ov.owner_mobile as phone, ov.owner_email, ov.owner_email as email,
               ov.owner_aadhar, ov.owner_country_code,
               ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
               ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,

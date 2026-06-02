@@ -986,14 +986,6 @@ const CoordinatorWorkOrders = ({ user }) => {
                         {/* COMPLETED TAB ACTIONS */}
                         {viewType === 'completed' && (
                           <div className="flex items-center gap-1">
-                            {/* Revert to Pending */}
-                            <button
-                              onClick={() => handleStatusUpdate(wo.id, 'pending')}
-                              className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                              title="Revert to Pending"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </button>
                           </div>
                         )}
                         
@@ -1348,11 +1340,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                   <p className="text-sm text-gray-500">Created</p>
                   <p className="text-gray-900">{formatDate(selectedWorkOrder.created_at)}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Scheduled Date</p>
-                  <p className="text-gray-900">{selectedWorkOrder.scheduled_date ? formatDate(selectedWorkOrder.scheduled_date) : '-'}</p>
-                </div>
-              </div>
+                              </div>
 
               {/* Description */}
               {selectedWorkOrder.description && (

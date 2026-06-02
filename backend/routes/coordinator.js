@@ -778,9 +778,9 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
 
     // Fetch vendors filtered by assigned zones (or all if no zones assigned)
     let query = `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
-              ov.zone as zone_name, ov.area_name as area, ov.division,
-              ov.owner_name as company_name, ov.owner_name as contact_person,
-              ov.owner_mobile as phone, ov.owner_email as email,
+              ov.zone, ov.zone as zone_name, ov.area_name, ov.area_name as area, ov.division,
+              ov.owner_name, ov.owner_name as company_name, ov.owner_name as contact_person,
+              ov.owner_mobile, ov.owner_mobile as phone, ov.owner_email, ov.owner_email as email,
               ov.owner_aadhar, ov.owner_country_code,
               ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
               ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
@@ -940,17 +940,20 @@ router.delete('/vendors/:id', requireCoordinatorScope, validateOwnership('vendor
 // =====================================================
 router.get('/employees', requireCoordinatorScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
+    const fpId = req.franchisePartnerId || req.fpId;
     
-    // FP Coordinators get FP employees, standalone coordinators get coordinator employees
-    if (req.isFPCoordinator) {
+    console.log('[Coordinator Employees] fpId:', fpId, 'isFPCoordinator:', req.isFPCoordinator, 'coordinatorId:', req.coordinatorId);
+    
+    // FP Coordinators get FP employees
+    if (fpId) {
       const [employees] = await pool.query(
         `SELECT id, first_name, last_name, email, role, is_active 
          FROM fp_employees 
          WHERE franchise_partner_id = ? AND is_active = 1
          ORDER BY first_name, last_name`,
-        [scopeId]
+        [fpId]
       );
+      console.log('[Coordinator Employees] Found:', employees.length, 'employees');
       return res.json({ success: true, data: employees });
     }
     
@@ -960,7 +963,7 @@ router.get('/employees', requireCoordinatorScope, async (req, res) => {
        FROM coordinator_employees 
        WHERE coordinator_id = ? AND is_active = 1
        ORDER BY first_name, last_name`,
-      [scopeId]
+      [req.coordinatorId]
     );
     res.json({ success: true, data: employees });
   } catch (error) {

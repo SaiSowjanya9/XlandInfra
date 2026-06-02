@@ -742,9 +742,9 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
 
     // Fetch vendors filtered by assigned zones
     let query = `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
-              ov.zone as zone_name, ov.area_name as area, ov.division,
-              ov.owner_name as company_name, ov.owner_name as contact_person,
-              ov.owner_mobile as phone, ov.owner_email as email,
+              ov.zone, ov.zone as zone_name, ov.area_name, ov.area_name as area, ov.division,
+              ov.owner_name, ov.owner_name as company_name, ov.owner_name as contact_person,
+              ov.owner_mobile, ov.owner_mobile as phone, ov.owner_email, ov.owner_email as email,
               ov.owner_aadhar, ov.owner_country_code,
               ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
               ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,

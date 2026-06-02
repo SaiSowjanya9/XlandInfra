@@ -421,7 +421,6 @@ const CoordinatorVendors = ({ user }) => {
                 <tr>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor ID</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Service Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
                   <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
@@ -444,9 +443,6 @@ const CoordinatorVendors = ({ user }) => {
                       <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-700">
                         {vendor.service_type || '-'}
                       </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="text-sm text-gray-600">{vendor.contact_person || vendor.company_name}</span>
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-600">{vendor.zone_name || vendor.zone || '-'}</span>
@@ -683,11 +679,15 @@ const CoordinatorVendors = ({ user }) => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Zone</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.zone || '-'}</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.zone_name || selectedVendor.zone || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Area</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.area || '-'}</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.area || selectedVendor.area_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Rate/Visit</p>
+                  <p className="font-medium text-gray-900">₹{selectedVendor.rate_per_visit || '0'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Coverage/Day</p>
