@@ -18,18 +18,30 @@ const attachCoordinatorScope = async (req, res, next) => {
     // Check both req.user.franchisePartnerId AND req.fpId (set by auth middleware)
     req.franchisePartnerId = req.user.franchisePartnerId || req.fpId || null;
     
-    // If no FP ID yet, try to get it from fp_employees table
+    // If no FP ID yet, try to get it from users table first, then fp_employees
     if (!req.franchisePartnerId) {
       try {
-        const [fpEmp] = await pool.execute(
-          `SELECT franchise_partner_id FROM fp_employees 
-           WHERE id = ? OR user_id = ? OR email = ? OR username = ?`,
-          [req.user?.id || 0, req.user?.id || 0, req.user?.email || '', req.user?.username || '']
+        // First check users table
+        const [userRows] = await pool.execute(
+          `SELECT franchise_partner_id FROM users WHERE id = ? OR email = ?`,
+          [req.user?.id || 0, req.user?.email || '']
         );
-        if (fpEmp.length > 0 && fpEmp[0].franchise_partner_id) {
-          req.franchisePartnerId = fpEmp[0].franchise_partner_id;
-          req.fpId = fpEmp[0].franchise_partner_id;
-          console.log('[CoordinatorScope] Found FP ID:', fpEmp[0].franchise_partner_id);
+        if (userRows.length > 0 && userRows[0].franchise_partner_id) {
+          req.franchisePartnerId = userRows[0].franchise_partner_id;
+          req.fpId = userRows[0].franchise_partner_id;
+          console.log('[CoordinatorScope] Found FP ID from users:', userRows[0].franchise_partner_id);
+        } else {
+          // Then check fp_employees table
+          const [fpEmp] = await pool.execute(
+            `SELECT franchise_partner_id FROM fp_employees 
+             WHERE id = ? OR user_id = ? OR email = ? OR username = ?`,
+            [req.user?.id || 0, req.user?.id || 0, req.user?.email || '', req.user?.username || '']
+          );
+          if (fpEmp.length > 0 && fpEmp[0].franchise_partner_id) {
+            req.franchisePartnerId = fpEmp[0].franchise_partner_id;
+            req.fpId = fpEmp[0].franchise_partner_id;
+            console.log('[CoordinatorScope] Found FP ID from fp_employees:', fpEmp[0].franchise_partner_id);
+          }
         }
       } catch (e) {
         console.log('FP lookup error:', e.message);
