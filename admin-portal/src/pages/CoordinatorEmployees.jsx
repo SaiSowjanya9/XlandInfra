@@ -61,11 +61,13 @@ const CoordinatorEmployees = ({ user }) => {
     try {
       if (isFPCoordinator) {
         // FP Coordinator: Fetch all FP employees with zones (view-only)
+        console.log('[CoordinatorEmployees] Fetching FP employees...');
         const response = await fetch('/api/coordinator/fp-employee-zones', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await response.json();
-        if (result.success) {
+        console.log('[CoordinatorEmployees] API Response:', result);
+        if (result.success && result.data) {
           // Transform data to match expected format
           const transformedEmployees = (result.data.employees || []).map(emp => ({
             ...emp,
@@ -73,8 +75,12 @@ const CoordinatorEmployees = ({ user }) => {
               ? emp.zone_names.split(',').map(z => z.trim()) 
               : []
           }));
+          console.log('[CoordinatorEmployees] Transformed employees:', transformedEmployees.length);
           setEmployees(transformedEmployees);
           setZones(result.data.zones || []);
+        } else {
+          console.error('[CoordinatorEmployees] API Error:', result);
+          setMessage({ type: 'error', text: result.message || 'Failed to load employees' });
         }
       } else {
         // Standalone Coordinator: Fetch own employees
