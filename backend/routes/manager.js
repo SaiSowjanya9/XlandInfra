@@ -821,33 +821,32 @@ router.get('/vendors/assignments', requireManagerScope, async (req, res) => {
 router.post('/vendors', requireManagerScope, async (req, res) => {
   try {
     const { 
-      serviceType, zone, areaName,
+      serviceType, serviceVerified, zone, areaName,
       ownerName, ownerMobile, ownerEmail, ownerAadhar, ownerCountryCode,
       managerName, managerMobile, managerEmail, managerCountryCode,
       pocName, pocMobile, pocEmail, pocCountryCode,
       ratePerVisit, coveragePerDay, createdBy
     } = req.body;
     
-    const vendorId = `FP2-VND-${Date.now()}`;
+    const vendorId = `MGR-${serviceType?.substring(0, 3).toUpperCase() || 'VND'}-${Date.now()}`;
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId || null;
     
     const [result] = await pool.execute(
-      `INSERT INTO vendors (
-        vendor_id, service_type, zone, area, 
+      `INSERT INTO onboarded_vendors (
+        vendor_id, service_type, service_verified, zone, area_name,
         owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
-        rate_per_visit, coverage_per_day, created_by,
-        manager_id, franchise_partner_id, is_active, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
+        rate_per_visit, coverage_per_day, manager_id, franchise_partner_id, created_by, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
       [
-        vendorId, serviceType, zone, areaName,
-        ownerName, ownerMobile, ownerEmail, ownerAadhar, ownerCountryCode || '+91',
-        managerName || null, managerMobile || null, managerEmail || null, managerCountryCode || '+91',
-        pocName || null, pocMobile || null, pocEmail || null, pocCountryCode || '+91',
-        parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0, createdBy,
-        managerId, franchisePartnerId
+        vendorId, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '',
+        ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
+        managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
+        pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
+        parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0,
+        managerId, franchisePartnerId, createdBy || req.user?.email || 'Manager'
       ]
     );
 

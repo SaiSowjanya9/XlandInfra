@@ -772,15 +772,32 @@ router.post('/vendors', requireCoordinatorScope, async (req, res) => {
   try {
     const coordinatorId = req.coordinatorId;
     const franchisePartnerId = req.franchisePartnerId;
-    const { companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber } = req.body;
+    const {
+      serviceType, serviceVerified, zone, areaName,
+      ownerName, ownerMobile, ownerEmail, ownerAadhar, ownerCountryCode,
+      managerName, managerMobile, managerEmail, managerCountryCode,
+      pocName, pocMobile, pocEmail, pocCountryCode,
+      ratePerVisit, coveragePerDay, createdBy
+    } = req.body;
 
-    const vendorId = `VND-COORD-${Date.now()}`;
+    const vendorId = `COORD-${serviceType?.substring(0, 3).toUpperCase() || 'VND'}-${Date.now()}`;
 
     const [result] = await pool.query(
-      `INSERT INTO vendors (vendor_id, company_name, contact_person, email, phone, alternate_phone, 
-        address, city, state, zip_code, gst_number, pan_number, coordinator_id, franchise_partner_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [vendorId, companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber, coordinatorId, franchisePartnerId]
+      `INSERT INTO onboarded_vendors (
+        vendor_id, service_type, service_verified, zone, area_name,
+        owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
+        manager_name, manager_mobile, manager_email, manager_country_code,
+        poc_name, poc_mobile, poc_email, poc_country_code,
+        rate_per_visit, coverage_per_day, coordinator_id, franchise_partner_id, created_by, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+      [
+        vendorId, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '',
+        ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
+        managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
+        pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
+        parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0,
+        coordinatorId, franchisePartnerId, createdBy || req.user?.email || 'Coordinator'
+      ]
     );
 
     res.json({
