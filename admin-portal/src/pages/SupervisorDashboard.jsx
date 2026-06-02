@@ -169,60 +169,6 @@ const SupervisorDashboard = ({ user }) => {
         </div>
       </div>
 
-      {/* Work Orders Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pending Work Orders */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-orange-500" />
-              <h3 className="font-semibold text-gray-900">Pending</h3>
-            </div>
-            <span className="text-2xl font-bold text-orange-600">{stats?.pendingWorkOrders || 0}</span>
-          </div>
-          <button
-            onClick={() => navigate('/supervisor/work-orders/pending')}
-            className="w-full py-2 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-          >
-            View All Pending
-          </button>
-        </div>
-
-        {/* Completed Work Orders */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <h3 className="font-semibold text-gray-900">Completed</h3>
-            </div>
-            <span className="text-2xl font-bold text-green-600">{stats?.completedWorkOrders || 0}</span>
-          </div>
-          <button
-            onClick={() => navigate('/supervisor/work-orders/completed')}
-            className="w-full py-2 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-          >
-            View All Completed
-          </button>
-        </div>
-
-        {/* Total Estimates */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-purple-500" />
-              <h3 className="font-semibold text-gray-900">Estimates</h3>
-            </div>
-            <span className="text-2xl font-bold text-purple-600">{stats?.estimates || 0}</span>
-          </div>
-          <button
-            onClick={() => navigate('/supervisor/estimates')}
-            className="w-full py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-          >
-            Manage Estimates
-          </button>
-        </div>
-      </div>
-
       {/* Recent Work Orders Table */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
