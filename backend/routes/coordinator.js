@@ -1392,13 +1392,21 @@ router.get('/export/work-orders', requireCoordinatorScope, async (req, res) => {
 // View FP employee zone assignments (READ-ONLY for coordinators under FP)
 router.get('/fp-employee-zones', requireCoordinatorScope, async (req, res) => {
   try {
-    console.log('FP Employee Zones - Request user:', req.user);
-    console.log('FP Employee Zones - franchisePartnerId:', req.franchisePartnerId);
-    console.log('FP Employee Zones - isFPCoordinator:', req.isFPCoordinator);
+    // Get FP ID from multiple sources
+    const fpId = req.franchisePartnerId || req.fpId || req.user?.franchisePartnerId || req.user?.fpId;
     
-    if (!req.franchisePartnerId) {
+    console.log('FP Employee Zones - fpId:', fpId, 'from sources:', {
+      franchisePartnerId: req.franchisePartnerId,
+      fpId: req.fpId,
+      userFpId: req.user?.franchisePartnerId || req.user?.fpId
+    });
+    
+    if (!fpId) {
       return res.status(403).json({ success: false, message: 'This feature is only available for FP employees' });
     }
+    
+    // Use fpId for queries
+    req.franchisePartnerId = fpId;
 
     const [employees] = await pool.execute(
       `SELECT e.id, e.first_name, e.last_name, CONCAT(e.first_name, ' ', e.last_name) as name,
