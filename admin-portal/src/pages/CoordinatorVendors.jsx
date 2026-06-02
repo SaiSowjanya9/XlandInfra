@@ -424,8 +424,8 @@ const CoordinatorVendors = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
@@ -454,10 +454,10 @@ const CoordinatorVendors = ({ user }) => {
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-600">{vendor.area || '-'}</span>
                     </td>
-                    <td className="py-4 px-4">
+                    <td className="py-4 px-4 text-center">
                       <span className="text-sm text-gray-600">{vendor.coverage_per_day || '-'}</span>
                     </td>
-                    <td className="py-4 px-4">
+                    <td className="py-4 px-4 text-center">
                       <span className="text-sm text-gray-600">{vendor.created_by_name || '-'}</span>
                     </td>
                     <td className="py-4 px-4">
