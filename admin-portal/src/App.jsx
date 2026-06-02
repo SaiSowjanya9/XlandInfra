@@ -384,7 +384,7 @@ function App() {
             <Route path="/coordinator/vendors" element={<CoordinatorVendors user={user} />} />
             <Route path="/coordinator/vendors/add" element={<CoordinatorAddVendor user={user} />} />
             <Route path="/coordinator/vendors/assigned" element={<AssignedVendors user={user} />} />
-            <Route path="/coordinator/employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
+            <Route path="/coordinator/employees/zones" element={<CoordinatorEmployees user={user} />} />
             <Route path="/coordinator/estimates" element={<CoordinatorEstimates user={user} defaultTab="list" />} />
             <Route path="/coordinator/estimates/create" element={<CoordinatorEstimates user={user} defaultTab="create" />} />
             <Route path="/coordinator/estimates/archived" element={<CoordinatorEstimates user={user} defaultTab="archived" />} />
