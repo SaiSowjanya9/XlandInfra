@@ -16,10 +16,11 @@ const { ROLES, isManager } = require('../config/roles');
 const attachManagerScope = (req, res, next) => {
   if (req.user && isManager(req.user.role)) {
     req.managerId = req.user.id;
-    req.franchisePartnerId = req.user.franchisePartnerId || null;
+    // Check both req.user.franchisePartnerId AND req.fpId (set by auth middleware)
+    req.franchisePartnerId = req.user.franchisePartnerId || req.fpId || null;
     req.isManager = true;
     // Flag to indicate if this manager belongs to an FP
-    req.isFPManager = !!req.user.franchisePartnerId;
+    req.isFPManager = !!req.franchisePartnerId;
   }
   next();
 };

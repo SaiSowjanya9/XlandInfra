@@ -12,8 +12,10 @@ const { pool } = require('../config/database');
 const attachExecutiveScope = (req, res, next) => {
   if (req.user && (req.user.role === 'executive' || req.user.executiveId)) {
     req.executiveId = req.user.executiveId || req.user.id;
-    req.franchisePartnerId = req.user.franchisePartnerId || null;
+    // Check both req.user.franchisePartnerId AND req.fpId (set by auth middleware)
+    req.franchisePartnerId = req.user.franchisePartnerId || req.fpId || null;
     req.executiveScope = true;
+    req.isFPExecutive = !!req.franchisePartnerId;
   }
   next();
 };

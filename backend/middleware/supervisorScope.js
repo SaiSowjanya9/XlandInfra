@@ -12,8 +12,10 @@ const { pool } = require('../config/database');
 const attachSupervisorScope = (req, res, next) => {
   if (req.user && (req.user.role === 'supervisor' || req.user.supervisorId)) {
     req.supervisorId = req.user.supervisorId || req.user.id;
-    req.franchisePartnerId = req.user.franchisePartnerId || null;
+    // Check both req.user.franchisePartnerId AND req.fpId (set by auth middleware)
+    req.franchisePartnerId = req.user.franchisePartnerId || req.fpId || null;
     req.supervisorScope = true;
+    req.isFPSupervisor = !!req.franchisePartnerId;
   }
   next();
 };
