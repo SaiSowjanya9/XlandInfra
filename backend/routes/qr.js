@@ -258,6 +258,7 @@ router.get('/r/:slug', async (req, res) => {
     const redirectLatency = Date.now() - startTime;
     
     try {
+      console.log(`[QR Scan] Logging scan for QR ID: ${qr.id}, Slug: ${slug}`);
       await pool.execute(
         `INSERT INTO qr_scans (
           qr_id, scan_id, visitor_id, session_id, ip_address, ip_hash,
@@ -319,8 +320,9 @@ router.get('/r/:slug', async (req, res) => {
         [qr.id, sessionId, visitorId, ip, uaData.device, uaData.browserName, uaData.osName, geoData.country, geoData.city]
       );
       
+    console.log(`[QR Scan] Successfully logged scan for QR ID: ${qr.id}`);
     } catch (e) {
-      console.error('Error logging scan:', e);
+      console.error('[QR Scan] Error logging scan:', e.message);
     }
     
     // Set cookies for visitor tracking
