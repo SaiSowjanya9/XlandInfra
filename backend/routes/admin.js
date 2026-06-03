@@ -611,7 +611,7 @@ router.get('/work-orders', authenticate, supervisorOrAbove, async (req, res) => 
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
       LEFT JOIN categories c ON wo.category_id = c.id
-      LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+      LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
     `;
     
     const params = [];
@@ -725,7 +725,7 @@ router.get('/dashboard/stats', async (req, res) => {
       // Vendors count
       pool.execute(`SELECT COUNT(*) as count FROM onboarded_vendors WHERE status = 'active'`)
         .then(([[r]]) => r.count)
-        .catch(() => pool.execute(`SELECT COUNT(*) as count FROM vendors WHERE is_active = TRUE`)
+        .catch(() => pool.execute(`SELECT COUNT(*) as count FROM onboarded_vendors WHERE is_active = TRUE`)
           .then(([[r]]) => r.count)
           .catch(() => 0)),
       

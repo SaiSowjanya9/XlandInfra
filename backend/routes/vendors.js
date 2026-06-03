@@ -51,16 +51,16 @@ router.post('/login', async (req, res) => {
 
     let vendor = null;
 
-    // Try database first
+    // Try database first - use onboarded_vendors table
     try {
       const [vendors] = await pool.execute(
-        `SELECT * FROM vendors WHERE (username = ? OR email = ?) AND is_active = TRUE`,
-        [username, username]
+        `SELECT * FROM onboarded_vendors WHERE (username = ? OR email = ? OR owner_email = ?) AND (is_active = TRUE OR is_active IS NULL)`,
+        [username, username, username]
       );
       if (vendors.length > 0) {
         vendor = vendors[0];
         
-        const isValidPassword = await bcrypt.compare(password, vendor.password_hash);
+        const isValidPassword = await bcrypt.compare(password, vendor.password_hash || '');
         if (!isValidPassword) {
           const demoVendor = DEMO_VENDORS.find(v => v.username === username || v.email === username);
           if (!demoVendor || demoVendor.password !== password) {
@@ -72,12 +72,12 @@ router.post('/login', async (req, res) => {
         }
 
         await pool.execute(
-          `UPDATE vendors SET last_login = NOW() WHERE id = ?`,
+          `UPDATE onboarded_vendors SET last_login = NOW() WHERE id = ?`,
           [vendor.id]
         );
       }
     } catch (dbError) {
-      console.log('Database not available, using demo mode');
+      console.log('Database not available, using demo mode:', dbError.message);
     }
 
     // Fallback to demo vendors
@@ -122,10 +122,10 @@ router.post('/login', async (req, res) => {
       id: vendor.id,
       vendorId: vendor.vendor_id,
       username: vendor.username,
-      email: vendor.email,
+      email: vendor.email || vendor.owner_email,
       role: ROLES.VENDOR,
-      firstName: vendor.contact_person?.split(' ')[0] || vendor.company_name,
-      lastName: vendor.contact_person?.split(' ')[1] || ''
+      firstName: vendor.owner_name?.split(' ')[0] || vendor.company_name || vendor.contact_person,
+      lastName: vendor.owner_name?.split(' ')[1] || ''
     });
 
     res.json({
@@ -137,9 +137,9 @@ router.post('/login', async (req, res) => {
           id: vendor.id,
           vendorId: vendor.vendor_id,
           username: vendor.username,
-          email: vendor.email,
-          companyName: vendor.company_name,
-          contactPerson: vendor.contact_person,
+          email: vendor.email || vendor.owner_email,
+          companyName: vendor.company_name || vendor.owner_name,
+          contactPerson: vendor.contact_person || vendor.owner_name,
           role: 'vendor'
         }
       }
@@ -394,9 +394,9 @@ router.get('/:id', authenticate, requireModuleAccess(MODULES.VENDOR_MANAGEMENT),
 
     const [vendors] = await pool.execute(
       `SELECT v.*, 
-              CONCAT(u.first_name, ' ', u.last_name) as created_by_name
-       FROM vendors v
-       LEFT JOIN users u ON v.created_by = u.id
+              COALESCE(v.created_by_name, CONCAT(u.first_name, ' ', u.last_name)) as created_by_name
+       FROM onboarded_vendors v
+       LEFT JOIN users u ON v.created_by_id = u.id
        WHERE v.id = ?`,
       [id]
     );
@@ -415,19 +415,33 @@ router.get('/:id', authenticate, requireModuleAccess(MODULES.VENDOR_MANAGEMENT),
         id: v.id,
         vendorId: v.vendor_id,
         username: v.username,
-        email: v.email,
-        companyName: v.company_name,
-        contactPerson: v.contact_person,
-        phone: v.phone,
+        email: v.email || v.owner_email,
+        companyName: v.company_name || v.owner_name,
+        contactPerson: v.contact_person || v.owner_name,
+        ownerName: v.owner_name,
+        ownerMobile: v.owner_mobile,
+        ownerEmail: v.owner_email,
+        phone: v.phone || v.owner_mobile,
         alternatePhone: v.alternate_phone,
         address: v.address,
         city: v.city,
         state: v.state,
         zipCode: v.zip_code,
+        zone: v.zone,
+        areaName: v.area_name,
+        serviceType: v.service_type,
         serviceCategories: v.service_categories,
         gstNumber: v.gst_number,
         panNumber: v.pan_number,
         licenseNumber: v.license_number,
+        managerName: v.manager_name,
+        managerMobile: v.manager_mobile,
+        managerEmail: v.manager_email,
+        pocName: v.poc_name,
+        pocMobile: v.poc_mobile,
+        pocEmail: v.poc_email,
+        ratePerVisit: v.rate_per_visit,
+        coveragePerDay: v.coverage_per_day,
         isActive: v.is_active,
         isVerified: v.is_verified,
         rating: v.rating,
@@ -466,8 +480,8 @@ router.post('/', authenticate, managerOrAdmin, async (req, res) => {
 
     // Check if username or email already exists
     const [existing] = await pool.execute(
-      `SELECT id FROM vendors WHERE username = ? OR email = ?`,
-      [username, email]
+      `SELECT id FROM onboarded_vendors WHERE username = ? OR email = ? OR owner_email = ?`,
+      [username, email, email]
     );
 
     if (existing.length > 0) {
@@ -483,20 +497,22 @@ router.post('/', authenticate, managerOrAdmin, async (req, res) => {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Insert vendor
+    // Insert vendor into onboarded_vendors
     const [result] = await pool.execute(
-      `INSERT INTO vendors (
+      `INSERT INTO onboarded_vendors (
         vendor_id, username, email, password_hash, company_name, contact_person,
+        owner_name, owner_email, owner_mobile,
         phone, alternate_phone, address, city, state, zip_code,
-        service_categories, gst_number, pan_number, license_number,
-        created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        service_type, service_categories, gst_number, pan_number, license_number,
+        is_active, created_by_id, created_by_name, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?, ?, 'active')`,
       [
-        vendorId, username, email, passwordHash, companyName, contactPerson || null,
+        vendorId, username, email, passwordHash, companyName, contactPerson || companyName,
+        companyName, email, phone,
         phone, alternatePhone || null, address || null, city || null, state || null, zipCode || null,
-        serviceCategories ? JSON.stringify(serviceCategories) : null,
+        'General', serviceCategories ? JSON.stringify(serviceCategories) : null,
         gstNumber || null, panNumber || null, licenseNumber || null,
-        req.user.id
+        req.user.id, req.user.username || req.user.email
       ]
     );
 
@@ -534,7 +550,7 @@ router.put('/:id', authenticate, managerOrAdmin, async (req, res) => {
 
     // Check if vendor exists
     const [existing] = await pool.execute(
-      `SELECT id FROM vendors WHERE id = ?`,
+      `SELECT id FROM onboarded_vendors WHERE id = ?`,
       [id]
     );
 
@@ -585,7 +601,7 @@ router.put('/:id', authenticate, managerOrAdmin, async (req, res) => {
     params.push(id);
 
     await pool.execute(
-      `UPDATE vendors SET ${updateFields.join(', ')} WHERE id = ?`,
+      `UPDATE onboarded_vendors SET ${updateFields.join(', ')} WHERE id = ?`,
       params
     );
 
@@ -609,7 +625,7 @@ router.delete('/:id', authenticate, managerOrAdmin, async (req, res) => {
     const { id } = req.params;
 
     const [result] = await pool.execute(
-      `UPDATE vendors SET is_active = FALSE WHERE id = ?`,
+      `UPDATE onboarded_vendors SET is_active = FALSE, status = 'inactive' WHERE id = ?`,
       [id]
     );
 
@@ -640,7 +656,7 @@ router.put('/:id/restore', authenticate, managerOrAdmin, async (req, res) => {
     const { id } = req.params;
 
     const [result] = await pool.execute(
-      `UPDATE vendors SET is_active = TRUE, updated_at = NOW() WHERE id = ?`,
+      `UPDATE onboarded_vendors SET is_active = TRUE, status = 'active', updated_at = NOW() WHERE id = ?`,
       [id]
     );
 
@@ -671,9 +687,11 @@ router.get('/list/active', authenticate, managerOrAdmin, async (req, res) => {
     const { categoryId } = req.query;
     
     let query = `
-      SELECT id, vendor_id, company_name, contact_person, phone, rating
-      FROM vendors
-      WHERE is_active = TRUE AND is_verified = TRUE
+      SELECT id, vendor_id, COALESCE(company_name, owner_name) as company_name, 
+             COALESCE(contact_person, owner_name) as contact_person, 
+             COALESCE(phone, owner_mobile) as phone, rating
+      FROM onboarded_vendors
+      WHERE (is_active = TRUE OR is_active IS NULL) AND (is_verified = TRUE OR is_verified IS NULL OR status = 'active')
     `;
     const params = [];
 
@@ -718,9 +736,9 @@ router.get('/dashboard', authenticate, vendorOnly, async (req, res) => {
       return res.status(401).json({ success: false, message: 'Vendor ID not found' });
     }
 
-    // Get vendor details
+    // Get vendor details from onboarded_vendors
     const [vendor] = await pool.execute(
-      `SELECT * FROM vendors WHERE id = ? OR vendor_id = ?`,
+      `SELECT * FROM onboarded_vendors WHERE id = ? OR vendor_id = ?`,
       [vendorId, vendorId]
     );
 
@@ -763,10 +781,10 @@ router.get('/dashboard', authenticate, vendorOnly, async (req, res) => {
         vendor: {
           id: vendor[0].id,
           vendorId: vendor[0].vendor_id,
-          companyName: vendor[0].company_name,
-          contactPerson: vendor[0].contact_person,
-          email: vendor[0].email,
-          phone: vendor[0].phone,
+          companyName: vendor[0].company_name || vendor[0].owner_name,
+          contactPerson: vendor[0].contact_person || vendor[0].owner_name,
+          email: vendor[0].email || vendor[0].owner_email,
+          phone: vendor[0].phone || vendor[0].owner_mobile,
           rating: vendor[0].rating
         },
         recentWorkOrders: workOrders,
@@ -787,7 +805,7 @@ router.get('/dashboard', authenticate, vendorOnly, async (req, res) => {
 // VENDOR PROPERTY ASSIGNMENTS (Admin Portal)
 // ============================================
 
-// Get vendor assignments for properties (fetch from onboarded_vendors)
+// Get vendor assignments for properties (unified - uses onboarded_vendors)
 router.get('/assignments', authenticate, managerOrAdmin, async (req, res) => {
   try {
     const { status } = req.query;
@@ -795,49 +813,23 @@ router.get('/assignments', authenticate, managerOrAdmin, async (req, res) => {
     let whereClause = status === 'removed' ? 'pva.is_active = FALSE' : 'pva.is_active = TRUE';
     if (status === 'all') whereClause = '1=1';
     
-    // Try onboarded_vendors first (FP-created vendors with full details)
-    let propertyAssignments = [];
-    try {
-      const [ovAssignments] = await pool.execute(
-        `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
-          p.name as property_name, p.property_id as property_code, p.property_type, p.address, p.city, p.zone_id as property_zone,
-          ov.owner_name as vendor_name, ov.vendor_id as vendor_code, ov.service_type,
-          ov.owner_mobile as vendor_phone, ov.owner_email as vendor_email, ov.owner_aadhar,
-          ov.zone as zone_name, ov.area_name as area, ov.rate_per_visit, ov.coverage_per_day,
-          ov.manager_name, ov.manager_mobile, ov.manager_email,
-          ov.poc_name, ov.poc_mobile, ov.poc_email,
-          CASE WHEN pva.is_active = 1 THEN 'active' ELSE 'removed' END as status
-         FROM property_vendor_assignments pva
-         JOIN properties p ON pva.property_id = p.id
-         JOIN onboarded_vendors ov ON pva.vendor_id = ov.id
-         WHERE ${whereClause}
-         ORDER BY pva.assigned_at DESC`
-      );
-      propertyAssignments = ovAssignments;
-    } catch (e) {
-      console.log('Onboarded vendors assignments fetch:', e.message);
-    }
-
-    // Also fetch from legacy vendors table if needed
-    try {
-      const [legacyAssignments] = await pool.execute(
-        `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
-          p.name as property_name, p.property_id as property_code, p.property_type, p.address, p.city, p.zone_id as property_zone,
-          v.company_name as vendor_name, v.vendor_id as vendor_code, v.service_categories as service_type,
-          v.phone as vendor_phone, v.email as vendor_email,
-          v.city as zone_name, v.address as area, 0 as rate_per_visit, 0 as coverage_per_day,
-          CASE WHEN pva.is_active = 1 THEN 'active' ELSE 'removed' END as status
-         FROM property_vendor_assignments pva
-         JOIN properties p ON pva.property_id = p.id
-         JOIN vendors v ON pva.vendor_id = v.id
-         WHERE ${whereClause} AND pva.id NOT IN (SELECT id FROM property_vendor_assignments pva2 
-           JOIN onboarded_vendors ov2 ON pva2.vendor_id = ov2.id WHERE ${whereClause})
-         ORDER BY pva.assigned_at DESC`
-      );
-      propertyAssignments = [...propertyAssignments, ...legacyAssignments];
-    } catch (e) {
-      console.log('Legacy vendors assignments fetch:', e.message);
-    }
+    // Fetch from onboarded_vendors (unified table after migration)
+    const [propertyAssignments] = await pool.execute(
+      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+        p.name as property_name, p.property_id as property_code, p.property_type, p.address, p.city, p.zone_id as property_zone,
+        COALESCE(ov.company_name, ov.owner_name) as vendor_name, ov.vendor_id as vendor_code, ov.service_type,
+        COALESCE(ov.phone, ov.owner_mobile) as vendor_phone, COALESCE(ov.email, ov.owner_email) as vendor_email, ov.owner_aadhar,
+        ov.owner_name, ov.owner_mobile, ov.owner_email,
+        COALESCE(ov.zone_name, ov.zone) as zone_name, COALESCE(ov.area, ov.area_name) as area, ov.rate_per_visit, ov.coverage_per_day,
+        ov.manager_name, ov.manager_mobile, ov.manager_email,
+        ov.poc_name, ov.poc_mobile, ov.poc_email,
+        CASE WHEN pva.is_active = 1 THEN 'active' ELSE 'removed' END as status
+       FROM property_vendor_assignments pva
+       JOIN properties p ON pva.property_id = p.id
+       JOIN onboarded_vendors ov ON pva.vendor_id = ov.id
+       WHERE ${whereClause}
+       ORDER BY pva.assigned_at DESC`
+    );
 
     // Format for frontend - create flat service assignments list
     const serviceAssignments = propertyAssignments.map(a => ({
@@ -902,9 +894,9 @@ router.post('/assignments', authenticate, managerOrAdmin, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
-    // Get vendor details
+    // Get vendor details from onboarded_vendors
     const [vendor] = await pool.execute(
-      `SELECT id, owner_name, owner_email, owner_mobile, service_type FROM vendors 
+      `SELECT id, owner_name, owner_email, owner_mobile, service_type FROM onboarded_vendors 
        WHERE id = ? OR vendor_id = ?`,
       [vendorId, vendorId]
     );
@@ -970,9 +962,9 @@ router.put('/assignments/:id', authenticate, managerOrAdmin, async (req, res) =>
       return res.status(404).json({ success: false, message: 'Assignment not found' });
     }
 
-    // Get vendor
+    // Get vendor from onboarded_vendors
     const [vendor] = await pool.execute(
-      `SELECT id FROM vendors WHERE id = ? OR vendor_id = ?`,
+      `SELECT id FROM onboarded_vendors WHERE id = ? OR vendor_id = ?`,
       [newVendorId, newVendorId]
     );
 

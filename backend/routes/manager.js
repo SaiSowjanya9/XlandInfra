@@ -139,7 +139,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         .then(([r]) => r[0].count).catch(() => 0),
       
       // Vendors count
-      pool.execute(`SELECT COUNT(*) as count FROM vendors WHERE ${scopeColumn} = ?`, [scopeId])
+      pool.execute(`SELECT COUNT(*) as count FROM onboarded_vendors WHERE ${scopeColumn} = ?`, [scopeId])
         .then(([r]) => r[0].count).catch(() => 0),
       
       // Customers count
@@ -174,7 +174,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN categories c ON wo.category_id = c.id
-         LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+         LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN clients cl ON wo.client_id = cl.id
          WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : '1=0'}
          ORDER BY wo.created_at DESC
@@ -446,7 +446,7 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
                  FROM work_orders wo
                  LEFT JOIN properties p ON wo.property_id = p.id
                  LEFT JOIN categories c ON wo.category_id = c.id
-                 LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+                 LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
                  LEFT JOIN clients cl ON wo.client_id = cl.id
                  LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username
                  WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'}`;
@@ -482,7 +482,7 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
-       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status NOT IN ('completed', 'closed', 'cancelled')
        ORDER BY wo.created_at DESC`;
@@ -506,7 +506,7 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
-       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`;
@@ -855,7 +855,7 @@ router.get('/vendors/assignments', requireManagerScope, async (req, res) => {
         v.poc_name, v.poc_mobile, v.poc_email
        FROM property_vendor_assignments pva
        JOIN properties p ON pva.property_id = p.id
-       JOIN vendors v ON pva.vendor_id = v.id
+       JOIN onboarded_vendors v ON pva.vendor_id = v.id
        WHERE p.${scopeColumn} = ? AND pva.is_active = TRUE
        ORDER BY pva.assigned_at DESC`,
       [scopeId]
@@ -957,12 +957,12 @@ router.post('/vendors', requireManagerScope, async (req, res) => {
 });
 
 // Update vendor - DISABLED for Manager role
-router.put('/vendors/:id', requireManagerScope, validateOwnership('vendors'), async (req, res) => {
+router.put('/vendors/:id', requireManagerScope, validateOwnership('onboarded_vendors'), async (req, res) => {
   return res.status(403).json({ success: false, message: 'Modify vendor not allowed for this role' });
 });
 
 // Delete vendor - DISABLED for Manager role
-router.delete('/vendors/:id', requireManagerScope, validateOwnership('vendors'), async (req, res) => {
+router.delete('/vendors/:id', requireManagerScope, validateOwnership('onboarded_vendors'), async (req, res) => {
   return res.status(403).json({ success: false, message: 'Delete operation not allowed for this role' });
 });
 

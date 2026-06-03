@@ -492,8 +492,9 @@ const FPWorkOrders = ({ user }) => {
     await handleStatusChange(workOrderId, 'pending');
   };
 
-  // Check if user is FP Manager (restricted)
-  const isFPManager = user?.role === 'manager';
+  // Check if user is FP Manager (restricted) - Admin users get full access
+  const isAdmin = user?.role === 'admin' || !user?.role;
+  const isFPManager = user?.role === 'manager' && !isAdmin;
 
   return (
     <div className="space-y-6">
@@ -1046,12 +1047,15 @@ const FPWorkOrders = ({ user }) => {
                           <span className="text-sm text-gray-900">{wo.work_order_id}</span>
                         </td>
                         <td className="py-4 px-4">
-                          <span className="text-sm text-gray-600">{wo.property_name || 'N/A'}</span>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{wo.customer_name || 'N/A'}</p>
+                            <p className="text-xs text-gray-500">{wo.property_name || ''}</p>
+                          </div>
                         </td>
                         <td className="py-4 px-4">
                           <div>
                             <p className="text-sm font-medium text-gray-900">{wo.category_name || '-'}</p>
-                            {wo.title && <p className="text-xs text-gray-500">{wo.title}</p>}
+                            {wo.subcategory_name && <p className="text-xs text-gray-500">{wo.subcategory_name}</p>}
                           </div>
                         </td>
                         <td className="py-4 px-4">

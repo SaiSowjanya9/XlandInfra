@@ -126,7 +126,7 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
     );
 
     const [vendorsCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM vendors WHERE ${scopeColumn} = ?`,
+      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE ${scopeColumn} = ?`,
       [scopeId]
     );
 
@@ -417,7 +417,7 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
         FROM work_orders wo
         LEFT JOIN properties p ON wo.property_id = p.id
         LEFT JOIN categories c ON wo.category_id = c.id
-        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
         LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username
         LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
         WHERE wo.franchise_partner_id = ?
@@ -434,7 +434,7 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
         FROM work_orders wo
         LEFT JOIN properties p ON wo.property_id = p.id
         LEFT JOIN categories c ON wo.category_id = c.id
-        LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
         LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username
         LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
         WHERE (wo.coordinator_id = ? OR wo.created_by = ? OR wo.created_by = ?)
@@ -472,7 +472,7 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN categories c ON wo.category_id = c.id
-         LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+         LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
          WHERE wo.franchise_partner_id = ?
            AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')
@@ -484,7 +484,7 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN categories c ON wo.category_id = c.id
-         LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+         LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
          WHERE (wo.coordinator_id = ? OR wo.created_by = ? OR wo.created_by = ?)
            AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')
@@ -516,7 +516,7 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN categories c ON wo.category_id = c.id
-         LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+         LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
          WHERE wo.franchise_partner_id = ?
            AND wo.status IN ('completed', 'closed')
@@ -528,7 +528,7 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN categories c ON wo.category_id = c.id
-         LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+         LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
          WHERE (wo.coordinator_id = ? OR wo.created_by = ? OR wo.created_by = ?)
            AND wo.status IN ('completed', 'closed')
@@ -893,7 +893,7 @@ router.get('/vendors/assignments', requireCoordinatorScope, async (req, res) => 
         v.poc_name, v.poc_mobile, v.poc_email
        FROM property_vendor_assignments pva
        JOIN properties p ON pva.property_id = p.id
-       JOIN vendors v ON pva.vendor_id = v.id
+       JOIN onboarded_vendors v ON pva.vendor_id = v.id
        WHERE p.franchise_partner_id = ? AND pva.is_active = TRUE
        ORDER BY pva.assigned_at DESC`,
       [franchisePartnerId]
@@ -1004,12 +1004,12 @@ router.post('/vendors', requireCoordinatorScope, async (req, res) => {
 });
 
 // Update vendor - DISABLED for Coordinator role
-router.put('/vendors/:id', requireCoordinatorScope, validateOwnership('vendors', 'id', true), async (req, res) => {
+router.put('/vendors/:id', requireCoordinatorScope, validateOwnership('onboarded_vendors', 'id', true), async (req, res) => {
   return res.status(403).json({ success: false, message: 'Modify vendor not allowed for this role' });
 });
 
 // Delete vendor - DISABLED for Coordinator role
-router.delete('/vendors/:id', requireCoordinatorScope, validateOwnership('vendors', 'id', true), async (req, res) => {
+router.delete('/vendors/:id', requireCoordinatorScope, validateOwnership('onboarded_vendors', 'id', true), async (req, res) => {
   return res.status(403).json({ success: false, message: 'Delete vendor not allowed for this role' });
 });
 

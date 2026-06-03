@@ -177,7 +177,7 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
     );
 
     const [vendorsCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM vendors WHERE supervisor_id = ?
+      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE supervisor_id = ?
        UNION ALL
        SELECT COUNT(*) FROM supervisor_assigned_vendors WHERE supervisor_id = ?`,
       [supervisorId, supervisorId]
@@ -490,7 +490,7 @@ router.get('/work-orders', requireSupervisorScope, async (req, res) => {
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN categories c ON wo.category_id = c.id
-      LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+      LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'}
     `;
     const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
@@ -519,7 +519,7 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
-       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')
        ORDER BY wo.created_at DESC`;
     const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
@@ -542,7 +542,7 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
-       LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`;
     const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
@@ -769,18 +769,26 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
 
-    // Get own vendors
+    // Get own vendors from onboarded_vendors
     const [ownVendors] = await pool.query(
-      `SELECT v.*, 'own' as vendor_type, TRUE as can_modify, TRUE as can_delete
-       FROM vendors v
+      `SELECT v.*, COALESCE(v.company_name, v.owner_name) as company_name, 
+              COALESCE(v.contact_person, v.owner_name) as contact_person,
+              COALESCE(v.phone, v.owner_mobile) as phone,
+              COALESCE(v.email, v.owner_email) as email,
+              'own' as vendor_type, TRUE as can_modify, TRUE as can_delete
+       FROM onboarded_vendors v
        WHERE v.supervisor_id = ?`,
       [supervisorId]
     );
 
-    // Get assigned vendors
+    // Get assigned vendors from onboarded_vendors
     const [assignedVendors] = await pool.query(
-      `SELECT v.*, 'assigned' as vendor_type, sav.can_modify, sav.can_delete
-       FROM vendors v
+      `SELECT v.*, COALESCE(v.company_name, v.owner_name) as company_name,
+              COALESCE(v.contact_person, v.owner_name) as contact_person,
+              COALESCE(v.phone, v.owner_mobile) as phone,
+              COALESCE(v.email, v.owner_email) as email,
+              'assigned' as vendor_type, sav.can_modify, sav.can_delete
+       FROM onboarded_vendors v
        INNER JOIN supervisor_assigned_vendors sav ON v.id = sav.vendor_id
        WHERE sav.supervisor_id = ? AND sav.is_active = TRUE`,
       [supervisorId]
@@ -809,10 +817,10 @@ router.post('/vendors', requireSupervisorScope, async (req, res) => {
     const vendorId = `VND-SUP-${Date.now()}`;
 
     const [result] = await pool.query(
-      `INSERT INTO vendors (vendor_id, company_name, contact_person, email, phone, alternate_phone, 
-        address, city, state, zip_code, gst_number, pan_number, supervisor_id, franchise_partner_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [vendorId, companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber, supervisorId, franchisePartnerId]
+      `INSERT INTO onboarded_vendors (vendor_id, company_name, contact_person, owner_name, email, owner_email, phone, owner_mobile, alternate_phone, 
+        address, city, state, zip_code, gst_number, pan_number, supervisor_id, franchise_partner_id, service_type, is_active, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'General', TRUE, 'active')`,
+      [vendorId, companyName, contactPerson || companyName, companyName, email, email, phone, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber, supervisorId, franchisePartnerId]
     );
 
     res.json({
@@ -826,7 +834,7 @@ router.post('/vendors', requireSupervisorScope, async (req, res) => {
   }
 });
 
-router.put('/vendors/:id', requireSupervisorScope, validateOwnership('vendors', 'id', true), async (req, res) => {
+router.put('/vendors/:id', requireSupervisorScope, validateOwnership('onboarded_vendors', 'id', true), async (req, res) => {
   try {
     if (!req.canModify) {
       return res.status(403).json({ success: false, message: 'You do not have permission to modify this vendor' });
@@ -836,10 +844,10 @@ router.put('/vendors/:id', requireSupervisorScope, validateOwnership('vendors', 
     const { companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber } = req.body;
 
     await pool.query(
-      `UPDATE vendors SET company_name = ?, contact_person = ?, email = ?, phone = ?, 
-        alternate_phone = ?, address = ?, city = ?, state = ?, zip_code = ?, gst_number = ?, pan_number = ?
+      `UPDATE onboarded_vendors SET company_name = ?, contact_person = ?, owner_name = ?, email = ?, owner_email = ?, 
+        phone = ?, owner_mobile = ?, alternate_phone = ?, address = ?, city = ?, state = ?, zip_code = ?, gst_number = ?, pan_number = ?
        WHERE id = ?`,
-      [companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber, id]
+      [companyName, contactPerson || companyName, companyName, email, email, phone, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber, id]
     );
 
     res.json({ success: true, message: 'Vendor updated successfully' });
@@ -849,14 +857,14 @@ router.put('/vendors/:id', requireSupervisorScope, validateOwnership('vendors', 
   }
 });
 
-router.delete('/vendors/:id', requireSupervisorScope, validateOwnership('vendors', 'id', true), async (req, res) => {
+router.delete('/vendors/:id', requireSupervisorScope, validateOwnership('onboarded_vendors', 'id', true), async (req, res) => {
   try {
     if (!req.canDelete) {
       return res.status(403).json({ success: false, message: 'You do not have permission to delete this vendor' });
     }
 
     const { id } = req.params;
-    await pool.query('DELETE FROM vendors WHERE id = ?', [id]);
+    await pool.query('UPDATE onboarded_vendors SET is_active = FALSE, status = \'inactive\' WHERE id = ?', [id]);
     res.json({ success: true, message: 'Vendor deleted successfully' });
   } catch (error) {
     console.error('Vendor delete error:', error);
@@ -1390,7 +1398,7 @@ router.get('/export/vendors', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
 
     const [vendors] = await pool.query(
-      `SELECT * FROM vendors WHERE supervisor_id = ?`,
+      `SELECT * FROM onboarded_vendors WHERE supervisor_id = ?`,
       [supervisorId]
     );
 
