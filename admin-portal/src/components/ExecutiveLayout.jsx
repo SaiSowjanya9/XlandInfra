@@ -110,7 +110,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
           </button>
           <div className="flex items-center space-x-2">
             <Briefcase className="w-6 h-6 text-primary-600" />
-            <span className="font-bold text-gray-900">Data Entry Executive</span>
+            <span className="font-bold text-gray-900">Executive</span>
           </div>
           <div className="w-10" />
         </div>
@@ -132,7 +132,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
           <div className="flex items-center justify-between px-6 h-16 border-b border-gray-200">
             <div className="flex items-center space-x-2">
               <Briefcase className="w-8 h-8 text-primary-600" />
-              <span className="font-bold text-lg text-gray-900">Data Entry Executive</span>
+              <span className="font-bold text-lg text-gray-900">Executive</span>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
               <X className="w-5 h-5" />
@@ -146,7 +146,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
               {admin?.firstName} {admin?.lastName}
             </p>
             <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700">
-              Data Entry Executive
+              Executive
             </span>
           </div>
 
