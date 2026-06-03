@@ -1053,9 +1053,9 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
          FROM fp_estimates e
          LEFT JOIN fp_employees fpe ON e.created_by_name = fpe.email OR e.created_by_name = fpe.username
          LEFT JOIN users u ON e.created_by_name = u.email
-         WHERE e.franchise_partner_id = ? AND (e.is_archived = ? OR e.is_archived IS NULL OR e.is_archived = 0)
+         WHERE e.franchise_partner_id = ? AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}
          ORDER BY e.created_at DESC`,
-        [franchisePartnerId, isArchived ? 1 : 0]
+        [franchisePartnerId]
       );
       
       // Enrich estimates with property_code and parse addons
@@ -1147,15 +1147,22 @@ router.post('/estimates', requireManagerScope, async (req, res) => {
 });
 
 // Archive estimate
-router.patch('/estimates/:id/archive', requireManagerScope, validateOwnership('estimates'), async (req, res) => {
+router.patch('/estimates/:id/archive', requireManagerScope, async (req, res) => {
   try {
     const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
     
-    await pool.execute(
-      `UPDATE estimates SET is_archived = 1, updated_at = NOW() WHERE id = ? AND ${scopeColumn} = ?`,
-      [req.params.id, scopeId]
-    );
+    // FP Managers update fp_estimates, standalone update estimates
+    if (req.isFPManager) {
+      await pool.execute(
+        `UPDATE fp_estimates SET is_archived = 1, archived_at = NOW(), updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+        [req.params.id, scopeId]
+      );
+    } else {
+      await pool.execute(
+        `UPDATE estimates SET is_archived = 1, updated_at = NOW() WHERE id = ? AND manager_id = ?`,
+        [req.params.id, scopeId]
+      );
+    }
     res.json({ success: true, message: 'Estimate archived' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -27,8 +27,7 @@ import {
   ExternalLink,
   FileText,
   MapPin,
-  Calendar,
-  Download
+  Calendar
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -591,10 +590,10 @@ const SupervisorProperties = ({ user }) => {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-sm text-gray-600">{property.zone_name || '-'}</span>
+                        <span className="text-sm text-gray-600">{property.zone_name || property.zone || property.area || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-sm text-gray-600">{property.area || '-'}</span>
+                        <span className="text-sm text-gray-600">{property.area_name || property.area || property.city || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600">{property.division || '-'}</span>
@@ -635,13 +634,6 @@ const SupervisorProperties = ({ user }) => {
                             title="View Details"
                           >
                             <Eye className="w-4 h-4 text-gray-500" />
-                          </button>
-                          <button
-                            onClick={() => exportSingleProperty(property)}
-                            className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors"
-                            title="Export to CSV"
-                          >
-                            <Download className="w-4 h-4 text-gray-400 hover:text-emerald-600" />
                           </button>
                           {!isFPSupervisor && (
                             <>
@@ -723,11 +715,11 @@ const SupervisorProperties = ({ user }) => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Zone</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.zone_name || '-'}</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.zone_name || selectedProperty.zone || selectedProperty.area || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Area Name</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.area || selectedProperty.area_name || '-'}</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.area_name || selectedProperty.area || selectedProperty.city || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Division</p>

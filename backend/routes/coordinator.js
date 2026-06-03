@@ -1084,9 +1084,9 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
          FROM fp_estimates e
          LEFT JOIN fp_employees fpe ON e.created_by_name = fpe.email OR e.created_by_name = fpe.username
          LEFT JOIN users u ON e.created_by_name = u.email
-         WHERE e.franchise_partner_id = ? AND (e.is_archived = ? OR e.is_archived IS NULL OR e.is_archived = 0)
+         WHERE e.franchise_partner_id = ? AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}
          ORDER BY e.created_at DESC`,
-        [franchisePartnerId, isArchived ? 1 : 0]
+        [franchisePartnerId]
       );
       
       // Enrich estimates with property_code and parse addons

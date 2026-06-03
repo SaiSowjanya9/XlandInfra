@@ -9,12 +9,22 @@ import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
-  { id: 'GC', label: 'Gated Community' },
-  { id: 'Apt', label: 'Apartment' },
-  { id: 'Villa', label: 'Villa' },
-  { id: 'Flat', label: 'Flat' },
-  { id: 'Plot', label: 'Plot' },
+  { id: 'gated_community', label: 'Gated Community' },
+  { id: 'apartment', label: 'Apartment' },
+  { id: 'villa', label: 'Villa' },
+  { id: 'flat', label: 'Flat' },
+  { id: 'plot', label: 'Plot' },
 ];
+
+// Helper to match property types (handles different formats)
+const matchPropertyType = (value, filterId) => {
+  if (!value || !filterId) return false;
+  const normalize = (str) => str.toLowerCase().replace(/[_\s-]/g, '');
+  const filterOption = PROPERTY_TYPE_OPTIONS.find(t => t.id === filterId);
+  const normalizedValue = normalize(value);
+  return normalize(filterId) === normalizedValue || 
+         (filterOption && normalize(filterOption.label) === normalizedValue);
+};
 
 const BILLING_DURATIONS = [
   { value: 'monthly', label: 'Monthly' },
@@ -531,7 +541,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
   );
 
   // AMC PACKAGES
-  const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => p.property_type === filterPropertyType);
+  const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType));
   const handleSaveAmcPackage = async () => {
     if (!amcForm.packageName.trim()) { showToast('Enter package name', 'error'); return; }
     if (!selectedPropertyType) { showToast('Select property type', 'error'); return; }
@@ -936,7 +946,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
   );
 
   // ADDONS
-  const filteredAddons = addonFilterPropertyType === 'all' ? addons : addons.filter(a => a.property_type === addonFilterPropertyType);
+  const filteredAddons = addonFilterPropertyType === 'all' ? addons : addons.filter(a => matchPropertyType(a.property_type, addonFilterPropertyType));
   const handleSaveAddon = async () => {
     if (!addonSelectedPropertyType) { showToast('Select property type', 'error'); return; }
     if (!addonForm.serviceName.trim()) { showToast('Enter service name', 'error'); return; }
