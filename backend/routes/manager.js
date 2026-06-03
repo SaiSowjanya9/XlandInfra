@@ -909,11 +909,12 @@ router.get('/vendors/assignments', requireManagerScope, async (req, res) => {
 router.post('/vendors', requireManagerScope, async (req, res) => {
   try {
     const { 
-      serviceType, serviceVerified, zone, areaName,
+      serviceType, serviceVerified, zone, areaName, division,
       ownerName, ownerMobile, ownerEmail, ownerAadhar, ownerCountryCode,
       managerName, managerMobile, managerEmail, managerCountryCode,
       pocName, pocMobile, pocEmail, pocCountryCode,
-      ratePerVisit, coveragePerDay, createdBy
+      ratePerVisit, coveragePerDay,
+      gstNumber, panNumber, licenseNumber
     } = req.body;
     
     const vendorId = `MGR-${serviceType?.substring(0, 3).toUpperCase() || 'VND'}-${Date.now()}`;
@@ -923,20 +924,25 @@ router.post('/vendors', requireManagerScope, async (req, res) => {
     // Get employee ID for proper creator tracking
     const employeeId = req.user?.id || managerId;
     const employeeUsername = req.user?.username || '';
+    // Generate username from email
+    const username = ownerEmail ? ownerEmail.split('@')[0] + '_' + Date.now() : `vendor_${Date.now()}`;
     
     const [result] = await pool.execute(
       `INSERT INTO onboarded_vendors (
-        vendor_id, service_type, service_verified, zone, area_name,
+        vendor_id, username, service_type, service_verified, zone, area_name, division,
         owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
-        rate_per_visit, coverage_per_day, franchise_partner_id, manager_id, created_by, created_by_id, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+        gst_number, pan_number, license_number,
+        rate_per_visit, coverage_per_day, rating, total_jobs_completed,
+        franchise_partner_id, manager_id, created_by, created_by_id, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, 'active')`,
       [
-        vendorId, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '',
+        vendorId, username, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
         ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
+        gstNumber || '', panNumber || '', licenseNumber || '',
         parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0,
         franchisePartnerId, managerId,
         employeeUsername, employeeId
