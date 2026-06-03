@@ -21,6 +21,10 @@ import {
   Phone,
   Mail,
   Loader2,
+  Pencil,
+  Truck,
+  UserPlus,
+  Trash2,
 } from 'lucide-react';
 import SelectWithAdd from '../components/SelectWithAdd';
 import { getCategories, addCategory, getSubcategories, addSubcategory } from '../utils/fieldOptionsStore';
@@ -37,6 +41,23 @@ const EmployeeWorkOrders = ({ admin }) => {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [counts, setCounts] = useState({ pending: 0, completed: 0, total: 0 });
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    categoryId: '',
+    subcategoryId: '',
+    description: '',
+    permissionToEnter: '',
+    hasPet: '',
+    entryNotes: '',
+    priority: 'medium',
+    status: ''
+  });
+  const [vendors, setVendors] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignType, setAssignType] = useState('vendor');
+  const [selectedAssignee, setSelectedAssignee] = useState('');
 
   // Create form state
   const [categories, setCategories] = useState([]);
@@ -223,7 +244,8 @@ const EmployeeWorkOrders = ({ admin }) => {
       wo.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       wo.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       wo.category_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    const matchesStatus = statusFilter === 'all' || wo.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   // Get selected category for form
@@ -334,6 +356,135 @@ const EmployeeWorkOrders = ({ admin }) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  // Handle status change
+  const handleStatusChange = async (workOrderId, newStatus) => {
+    try {
+      const response = await fetch(`${API_BASE}/admin/work-orders/${workOrderId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSuccess('Status updated successfully');
+        fetchWorkOrders();
+      } else {
+        setError(result.message || 'Failed to update status');
+      }
+    } catch (err) {
+      setError('Failed to update status');
+    }
+  };
+
+  // Handle edit work order
+  const handleEditWorkOrder = (wo) => {
+    setSelectedOrder(wo);
+    setEditFormData({
+      categoryId: wo.category_id || '',
+      subcategoryId: wo.subcategory_id || '',
+      description: wo.description || '',
+      permissionToEnter: wo.permission_to_enter || '',
+      hasPet: wo.has_pet || '',
+      entryNotes: wo.entry_notes || '',
+      priority: wo.priority || 'medium',
+      status: wo.status || 'pending'
+    });
+    setShowEditModal(true);
+  };
+
+  // Save edit
+  const handleSaveEdit = async () => {
+    if (!selectedOrder) return;
+    try {
+      const response = await fetch(`${API_BASE}/admin/work-orders/${selectedOrder.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category_id: editFormData.categoryId,
+          subcategory_id: editFormData.subcategoryId,
+          description: editFormData.description,
+          permission_to_enter: editFormData.permissionToEnter,
+          has_pet: editFormData.hasPet,
+          entry_notes: editFormData.entryNotes,
+          priority: editFormData.priority,
+          status: editFormData.status
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSuccess('Work order updated successfully');
+        setShowEditModal(false);
+        fetchWorkOrders();
+      } else {
+        setError(result.message || 'Failed to update work order');
+      }
+    } catch (err) {
+      setError('Failed to update work order');
+    }
+  };
+
+  // Handle delete
+  const handleDeleteWorkOrder = async (workOrderId) => {
+    if (!window.confirm('Are you sure you want to delete this work order?')) return;
+    try {
+      const response = await fetch(`${API_BASE}/admin/work-orders/${workOrderId}`, {
+        method: 'DELETE'
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSuccess('Work order deleted successfully');
+        fetchWorkOrders();
+      } else {
+        setError(result.message || 'Failed to delete work order');
+      }
+    } catch (err) {
+      setError('Failed to delete work order');
+    }
+  };
+
+  // Open assign modal
+  const openAssignModal = (wo, type) => {
+    setSelectedOrder(wo);
+    setAssignType(type);
+    setSelectedAssignee('');
+    setShowAssignModal(true);
+    // Fetch vendors or employees
+    if (type === 'vendor') {
+      fetch(`${API_BASE}/admin/vendors`).then(r => r.json()).then(data => {
+        if (data.success) setVendors(data.vendors || data.data || []);
+      });
+    } else {
+      fetch(`${API_BASE}/admin/employees`).then(r => r.json()).then(data => {
+        if (data.success) setEmployees(data.employees || data.data || []);
+      });
+    }
+  };
+
+  // Handle assign
+  const handleAssign = async () => {
+    if (!selectedAssignee || !selectedOrder) return;
+    try {
+      const response = await fetch(`${API_BASE}/admin/work-orders/${selectedOrder.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignedTo: selectedAssignee,
+          status: 'assigned'
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSuccess(`${assignType === 'vendor' ? 'Vendor' : 'Employee'} assigned successfully`);
+        setShowAssignModal(false);
+        fetchWorkOrders();
+      } else {
+        setError(result.message || 'Failed to assign');
+      }
+    } catch (err) {
+      setError('Failed to assign');
+    }
   };
 
   const validateForm = () => {
@@ -508,8 +659,21 @@ const EmployeeWorkOrders = ({ admin }) => {
                 <Search className="w-4 h-4" />
                 <span>Search</span>
               </button>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="assigned">Assigned</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="closed">Closed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
               <button
-                onClick={() => { setSearchTerm(''); fetchWorkOrders(); }}
+                onClick={() => { setSearchTerm(''); setStatusFilter('all'); fetchWorkOrders(); }}
                 className="flex items-center space-x-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -576,20 +740,63 @@ const EmployeeWorkOrders = ({ admin }) => {
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full border ${getStatusColor(wo.status)}`}>
-                            {wo.status?.replace('_', ' ')}
-                          </span>
+                          <div className="relative inline-block">
+                            <select
+                              value={wo.status}
+                              onChange={(e) => handleStatusChange(wo.id, e.target.value)}
+                              className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-semibold border cursor-pointer ${getStatusColor(wo.status)}`}
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="assigned">Assigned</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="completed">Completed</option>
+                              <option value="closed">Closed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600">
                           {new Date(wo.created_at).toLocaleDateString()}
                         </td>
                         <td className="py-3 px-4">
-                          <button
-                            onClick={() => setSelectedOrder(wo)}
-                            className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          >
-                            <Eye className="w-5 h-5" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setSelectedOrder(wo)}
+                              className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleEditWorkOrder(wo)}
+                              className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openAssignModal(wo, 'vendor')}
+                              className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg transition-colors"
+                              title="Assign Vendor"
+                            >
+                              <Truck className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openAssignModal(wo, 'employee')}
+                              className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Assign Employee"
+                            >
+                              <UserPlus className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteWorkOrder(wo.id)}
+                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -1235,6 +1442,160 @@ const EmployeeWorkOrders = ({ admin }) => {
             setShowSubcategoryDropdown(false);
           }}
         />
+      )}
+
+      {/* Edit Work Order Modal */}
+      {showEditModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Edit Work Order</h2>
+                  <p className="text-sm text-gray-500">{selectedOrder.work_order_id}</p>
+                </div>
+                <button onClick={() => setShowEditModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select
+                    value={editFormData.priority}
+                    onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    value={editFormData.status}
+                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="closed">Closed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Permission to Enter</label>
+                  <select
+                    value={editFormData.permissionToEnter}
+                    onChange={(e) => setEditFormData({ ...editFormData, permissionToEnter: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  >
+                    <option value="">Select</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Has Pet</label>
+                  <select
+                    value={editFormData.hasPet}
+                    onChange={(e) => setEditFormData({ ...editFormData, hasPet: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  >
+                    <option value="">Select</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Entry Notes</label>
+                <textarea
+                  value={editFormData.entryNotes}
+                  onChange={(e) => setEditFormData({ ...editFormData, entryNotes: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button onClick={() => setShowEditModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                Cancel
+              </button>
+              <button onClick={handleSaveEdit} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Modal */}
+      {showAssignModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Assign {assignType === 'vendor' ? 'Vendor' : 'Employee'}
+                </h2>
+                <button onClick={() => setShowAssignModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select {assignType === 'vendor' ? 'Vendor' : 'Employee'}
+              </label>
+              <select
+                value={selectedAssignee}
+                onChange={(e) => setSelectedAssignee(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+              >
+                <option value="">Select...</option>
+                {assignType === 'vendor' ? (
+                  vendors.map(v => (
+                    <option key={v.id} value={v.id}>{v.company_name || v.owner_name || v.name}</option>
+                  ))
+                ) : (
+                  employees.map(e => (
+                    <option key={e.id} value={e.id}>{e.firstName || e.first_name} {e.lastName || e.last_name}</option>
+                  ))
+                )}
+              </select>
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button onClick={() => setShowAssignModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                Cancel
+              </button>
+              <button 
+                onClick={handleAssign} 
+                disabled={!selectedAssignee}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                Assign
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
