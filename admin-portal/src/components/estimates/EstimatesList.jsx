@@ -537,7 +537,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
           <div className="bg-white rounded-xl p-6 max-w-md m-4">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Archive Estimate?</h3>
             <p className="text-gray-600 mb-4">
-              Are you sure you want to archive estimate <strong>{deleteConfirm.estimateId}</strong>? 
+              Are you sure you want to archive estimate <strong>{deleteConfirm.estimateId || deleteConfirm.estimate_id}</strong>? 
               You can restore it later from the Archived tab.
             </p>
             <div className="flex gap-3 justify-end">
@@ -548,7 +548,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                 Cancel
               </button>
               <button
-                onClick={() => handleArchiveEstimate(deleteConfirm.estimateId)}
+                onClick={() => handleArchiveEstimate(deleteConfirm.estimateId || deleteConfirm.estimate_id)}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 Archive

@@ -1148,7 +1148,7 @@ router.post('/estimates', requireManagerScope, async (req, res) => {
 });
 
 // Archive estimate
-router.patch('/estimates/:id/archive', requireManagerScope, async (req, res) => {
+router.put('/estimates/:id/archive', requireManagerScope, async (req, res) => {
   try {
     const scopeId = getScopeId(req);
     
