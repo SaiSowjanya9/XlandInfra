@@ -591,8 +591,8 @@ router.delete('/units/:id', authenticate, adminOnly, async (req, res) => {
 // WORK ORDERS MANAGEMENT
 // ============================================
 
-// Get all work orders (Admin, Manager full access; Supervisor view only)
-router.get('/work-orders', authenticate, supervisorOrAbove, async (req, res) => {
+// Get all work orders (Public for admin portal)
+router.get('/work-orders', async (req, res) => {
   try {
     const { status, search } = req.query;
     

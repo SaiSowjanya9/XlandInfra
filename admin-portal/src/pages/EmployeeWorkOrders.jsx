@@ -96,6 +96,8 @@ const EmployeeWorkOrders = ({ admin }) => {
     fetchProperties();
   }, [activeTab]);
 
+  const token = sessionStorage.getItem('pm_auth_token');
+
   const fetchWorkOrders = async (searchQuery = '') => {
     setLoading(true);
     try {
@@ -105,7 +107,9 @@ const EmployeeWorkOrders = ({ admin }) => {
       if (searchQuery.trim()) {
         url += `&search=${encodeURIComponent(searchQuery.trim())}`;
       }
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const result = await response.json();
       if (result.success) {
         setWorkOrders(result.data || result.workOrders || []);
