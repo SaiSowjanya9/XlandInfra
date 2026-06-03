@@ -312,7 +312,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
       const scopeId = franchisePartnerId || supervisorId;
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
-                op.zone_id as zone_name, op.division, COALESCE(op.total_units, 1) as units,
+                op.zone_id as zone_name, op.area_name as area, op.division, COALESCE(op.total_units, 1) as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
                 COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,

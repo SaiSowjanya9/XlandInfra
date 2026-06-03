@@ -246,7 +246,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     let onboardedProperties = [];
     try {
       const onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
-                op.zone_id as zone_name, op.division, op.total_units as units,
+                op.zone_id as zone_name, op.area_name as area, op.division, op.total_units as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
                 COALESCE(
