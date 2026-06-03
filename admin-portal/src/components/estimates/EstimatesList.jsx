@@ -403,21 +403,21 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
               {/* Basic Info */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                <div><p className="text-xs text-gray-500">Estimate ID</p><p className="font-medium text-sm">{viewEstimate.estimateId}</p></div>
+                <div><p className="text-xs text-gray-500">Estimate ID</p><p className="font-medium text-sm">{viewEstimate.estimateId || viewEstimate.estimate_id}</p></div>
                 <div><p className="text-xs text-gray-500">Status</p>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[viewEstimate.status]}`}>{viewEstimate.status}</span>
                 </div>
-                <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{viewEstimate.estimateType?.replace('_', ' ') || viewEstimate.estimateType}</p></div>
-                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{new Date(viewEstimate.createdAt).toLocaleDateString()}</p></div>
+                <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{(viewEstimate.estimateType || viewEstimate.estimate_type)?.replace('_', ' ') || '-'}</p></div>
+                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{new Date(viewEstimate.createdAt || viewEstimate.created_at).toLocaleDateString()}</p></div>
               </div>
 
               {/* Property Details */}
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p>
                 <div className="bg-slate-50 p-4 rounded-lg grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Property ID</p><p className="font-medium text-sm">{viewEstimate.propertyId || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Property Name</p><p className="font-medium text-sm">{viewEstimate.propertyName || viewEstimate.communityName || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Property Type</p><p className="font-medium text-sm">{viewEstimate.propertyType || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Property ID</p><p className="font-medium text-sm">{viewEstimate.propertyId || viewEstimate.property_code || viewEstimate.property_id || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Property Name</p><p className="font-medium text-sm">{viewEstimate.propertyName || viewEstimate.property_name || viewEstimate.communityName || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Property Type</p><p className="font-medium text-sm">{viewEstimate.propertyType || viewEstimate.property_type || '-'}</p></div>
                   <div><p className="text-xs text-gray-500">Zone</p><p className="font-medium text-sm">{viewEstimate.zone || '-'}</p></div>
                   <div><p className="text-xs text-gray-500">Division</p><p className="font-medium text-sm">{viewEstimate.division || '-'}</p></div>
                   <div><p className="text-xs text-gray-500">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
@@ -429,22 +429,22 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p>
                 <div className="bg-blue-50 p-4 rounded-lg grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Contact Name</p><p className="font-medium text-sm">{viewEstimate.customerName || viewEstimate.clientName || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium text-sm">{viewEstimate.customerPhone || viewEstimate.phone || '-'}</p></div>
-                  <div className="col-span-2"><p className="text-xs text-gray-500">Email</p><p className="font-medium text-sm">{viewEstimate.customerEmail || viewEstimate.email || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Contact Name</p><p className="font-medium text-sm">{viewEstimate.customerName || viewEstimate.clientName || viewEstimate.client_name || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium text-sm">{viewEstimate.customerPhone || viewEstimate.phone || viewEstimate.client_phone || '-'}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-gray-500">Email</p><p className="font-medium text-sm">{viewEstimate.customerEmail || viewEstimate.email || viewEstimate.client_email || '-'}</p></div>
                 </div>
               </div>
 
               {/* AMC Package */}
-              {(viewEstimate.amcPackage || viewEstimate.packageName) && (
+              {(viewEstimate.amcPackage || viewEstimate.packageName || viewEstimate.package_name) && (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
                   <div className="flex justify-between items-center bg-indigo-50 p-4 rounded-lg border border-indigo-100">
                     <div>
-                      <p className="font-semibold text-indigo-900">{viewEstimate.amcPackage?.packageName || viewEstimate.amcPackage?.name || viewEstimate.packageName || 'AMC Package'}</p>
+                      <p className="font-semibold text-indigo-900">{viewEstimate.amcPackage?.packageName || viewEstimate.amcPackage?.name || viewEstimate.packageName || viewEstimate.package_name || 'AMC Package'}</p>
                       <p className="text-xs text-indigo-600">{viewEstimate.amcPackage?.billingDuration || viewEstimate.billingDuration || 'Yearly'} Billing</p>
                     </div>
-                    <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.amcPackage?.rate || viewEstimate.amcPackage?.totalRate || viewEstimate.amcPrice || viewEstimate.packagePrice || 0).toLocaleString()}</p>
+                    <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.amcPackage?.rate || viewEstimate.amcPackage?.totalRate || viewEstimate.amcPrice || viewEstimate.packagePrice || viewEstimate.package_price || viewEstimate.subtotal || 0).toLocaleString()}</p>
                   </div>
                   {viewEstimate.amcPackage?.serviceRows?.length > 0 && (
                     <div className="mt-3 space-y-1">
@@ -511,12 +511,12 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>₹{Number(viewEstimate.subtotal || 0).toLocaleString()}</span></div>
-                  {viewEstimate.discount > 0 && <div className="flex justify-between text-sm text-green-600"><span>Discount</span><span>-₹{Number(viewEstimate.discount).toLocaleString()}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST (18%)</span><span>₹{Number(viewEstimate.tax || viewEstimate.gst || Math.round((viewEstimate.subtotal || 0) * 0.18)).toLocaleString()}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>₹{Number(viewEstimate.subtotal || viewEstimate.package_price || 0).toLocaleString()}</span></div>
+                  {(viewEstimate.discount > 0 || viewEstimate.discount_amount > 0) && <div className="flex justify-between text-sm text-green-600"><span>Discount</span><span>-₹{Number(viewEstimate.discount || viewEstimate.discount_amount || 0).toLocaleString()}</span></div>}
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST (18%)</span><span>₹{Number(viewEstimate.tax || viewEstimate.gst || viewEstimate.gst_amount || Math.round((viewEstimate.subtotal || viewEstimate.package_price || 0) * 0.18)).toLocaleString()}</span></div>
                   <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                     <p className="text-lg font-semibold">Total</p>
-                    <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total || viewEstimate.totalPrice || calculateEstimateTotal(viewEstimate) || 0).toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total || viewEstimate.totalPrice || viewEstimate.total_amount || calculateEstimateTotal(viewEstimate) || 0).toLocaleString()}</p>
                   </div>
                 </div>
               </div>

@@ -20,48 +20,94 @@ router.get('/', async (req, res) => {
       [isArchived ? 1 : 0]
     );
     
+    // Also fetch from fp_estimates table (where FP creates estimates)
+    let fpEstimates = [];
+    try {
+      const [fpEst] = await pool.execute(
+        `SELECT * FROM fp_estimates WHERE (is_archived = ? OR is_archived IS NULL) ORDER BY created_at DESC`,
+        [isArchived ? 1 : 0]
+      );
+      fpEstimates = fpEst;
+    } catch (e) { console.log('FP estimates fetch:', e.message); }
+    
+    // Combine both tables
+    const allEstimates = [...estimates, ...fpEstimates];
+    
     // Transform to match frontend format
-    const formattedEstimates = estimates.map(est => {
+    const formattedEstimates = allEstimates.map(est => {
       // Handle JSON fields - MySQL may return object or string
       let services = [];
       let addons = [];
       if (est.services) {
         services = typeof est.services === 'string' ? JSON.parse(est.services) : est.services;
       }
-      if (est.addons) {
-        addons = typeof est.addons === 'string' ? JSON.parse(est.addons) : est.addons;
+      if (est.addons || est.addons_data) {
+        try {
+          const addonData = est.addons || est.addons_data;
+          addons = typeof addonData === 'string' ? JSON.parse(addonData) : addonData;
+        } catch (e) {}
       }
       return {
+        // IDs
         estimateId: est.estimate_id,
+        estimate_id: est.estimate_id,
         estimateType: est.estimate_type || (est.property_type ? 'property-based' : 'direct'),
-        customerName: est.customer_name,
-        customerEmail: est.customer_email,
-        customerPhone: est.customer_phone,
+        estimate_type: est.estimate_type || (est.property_type ? 'property_based' : 'direct'),
+        // Customer info (both camelCase and snake_case)
+        customerName: est.customer_name || est.client_name,
+        client_name: est.client_name || est.customer_name,
+        customerEmail: est.customer_email || est.client_email,
+        client_email: est.client_email || est.customer_email,
+        customerPhone: est.customer_phone || est.client_phone,
+        client_phone: est.client_phone || est.customer_phone,
+        // Property info
         propertyType: est.property_type,
+        property_type: est.property_type,
         propertyName: est.property_name,
-        propertyAddress: est.property_address,
-        propertyId: est.property_id,
-        communityName: est.community_name,
+        property_name: est.property_name,
+        propertyAddress: est.property_address || est.address,
+        propertyId: est.property_id || est.property_code,
+        property_id: est.property_id,
+        property_code: est.property_code || est.property_id,
+        communityName: est.community_name || est.property_name,
         zone: est.zone,
         division: est.division,
-        address: est.property_address,
+        city: est.city,
+        address: est.property_address || est.address,
+        // Package info
+        packageName: est.package_name,
+        package_name: est.package_name,
+        packageId: est.package_id,
+        packagePrice: parseFloat(est.package_price || 0),
+        package_price: parseFloat(est.package_price || 0),
+        // Other details
         noOfVisits: est.no_of_visits,
         description: est.description,
-        packageName: est.package_name,
-        packageId: est.package_id,
         services: services,
         addons: addons,
-        subtotal: parseFloat(est.subtotal || 0),
-        discount: parseFloat(est.discount || 0),
-        tax: parseFloat(est.tax || 0),
-        total: parseFloat(est.total || 0),
-        notes: est.notes,
+        // Pricing
+        subtotal: parseFloat(est.subtotal || est.package_price || 0),
+        discount: parseFloat(est.discount || est.discount_amount || 0),
+        discount_amount: parseFloat(est.discount_amount || est.discount || 0),
+        discount_percent: parseFloat(est.discount_percent || 0),
+        tax: parseFloat(est.tax || est.gst_amount || 0),
+        gst_amount: parseFloat(est.gst_amount || est.tax || 0),
+        gst_percent: parseFloat(est.gst_percent || 18),
+        total: parseFloat(est.total || est.total_amount || 0),
+        total_amount: parseFloat(est.total_amount || est.total || 0),
+        // Notes and status
+        notes: est.notes || est.description,
         status: est.status,
         isArchived: est.is_archived,
         archivedAt: est.archived_at,
         validUntil: est.valid_until,
+        // Timestamps
         createdAt: est.created_at,
-        updatedAt: est.updated_at
+        created_at: est.created_at,
+        updatedAt: est.updated_at,
+        // Creator info
+        created_by_name: est.created_by_name,
+        created_by_role: est.created_by_role
       };
     });
     
