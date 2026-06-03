@@ -262,14 +262,28 @@ router.put('/:estimateId/archive', async (req, res) => {
     }
     
     const { estimateId } = req.params;
-    
     const pool = db.pool;
-    await pool.execute(
+    
+    // Try to archive in estimates table first
+    const [result1] = await pool.execute(
       `UPDATE estimates SET is_archived = TRUE, archived_at = NOW() WHERE estimate_id = ?`,
       [estimateId]
     );
     
-    res.json({ success: true, message: 'Estimate archived' });
+    // Also try to archive in fp_estimates table
+    let result2 = { affectedRows: 0 };
+    try {
+      [result2] = await pool.execute(
+        `UPDATE fp_estimates SET is_archived = TRUE, archived_at = NOW() WHERE estimate_id = ?`,
+        [estimateId]
+      );
+    } catch (e) { console.log('FP archive attempt:', e.message); }
+    
+    if (result1.affectedRows > 0 || result2.affectedRows > 0) {
+      res.json({ success: true, message: 'Estimate archived' });
+    } else {
+      res.status(404).json({ success: false, message: 'Estimate not found' });
+    }
   } catch (error) {
     console.error('Archive estimate error:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -284,14 +298,28 @@ router.put('/:estimateId/restore', async (req, res) => {
     }
     
     const { estimateId } = req.params;
-    
     const pool = db.pool;
-    await pool.execute(
+    
+    // Try to restore in estimates table
+    const [result1] = await pool.execute(
       `UPDATE estimates SET is_archived = FALSE, archived_at = NULL WHERE estimate_id = ?`,
       [estimateId]
     );
     
-    res.json({ success: true, message: 'Estimate restored' });
+    // Also try to restore in fp_estimates table
+    let result2 = { affectedRows: 0 };
+    try {
+      [result2] = await pool.execute(
+        `UPDATE fp_estimates SET is_archived = FALSE, archived_at = NULL WHERE estimate_id = ?`,
+        [estimateId]
+      );
+    } catch (e) { console.log('FP restore attempt:', e.message); }
+    
+    if (result1.affectedRows > 0 || result2.affectedRows > 0) {
+      res.json({ success: true, message: 'Estimate restored' });
+    } else {
+      res.status(404).json({ success: false, message: 'Estimate not found' });
+    }
   } catch (error) {
     console.error('Restore estimate error:', error);
     res.status(500).json({ success: false, message: error.message });

@@ -1104,6 +1104,57 @@ router.post('/estimates', requireSupervisorScope, async (req, res) => {
   }
 });
 
+// Archive estimate
+router.put('/estimates/:id/archive', requireSupervisorScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.franchisePartnerId;
+    if (franchisePartnerId) {
+      await pool.query(
+        `UPDATE fp_estimates SET is_archived = 1, archived_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+        [req.params.id, franchisePartnerId]
+      );
+    }
+    res.json({ success: true, message: 'Estimate archived' });
+  } catch (error) {
+    console.error('Archive estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Restore estimate
+router.put('/estimates/:id/restore', requireSupervisorScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.franchisePartnerId;
+    if (franchisePartnerId) {
+      await pool.query(
+        `UPDATE fp_estimates SET is_archived = 0, archived_at = NULL WHERE id = ? AND franchise_partner_id = ?`,
+        [req.params.id, franchisePartnerId]
+      );
+    }
+    res.json({ success: true, message: 'Estimate restored' });
+  } catch (error) {
+    console.error('Restore estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete estimate permanently
+router.delete('/estimates/:id', requireSupervisorScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.franchisePartnerId;
+    if (franchisePartnerId) {
+      await pool.query(
+        `DELETE FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?`,
+        [req.params.id, franchisePartnerId]
+      );
+    }
+    res.json({ success: true, message: 'Estimate deleted' });
+  } catch (error) {
+    console.error('Delete estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // =====================================================
 // AMC PACKAGES - FP Supervisors use FP packages
 // =====================================================
