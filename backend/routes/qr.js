@@ -757,7 +757,7 @@ router.get('/analytics/:qrId/export', async (req, res) => {
 // Page visit tracking (for printed QR codes that go directly to pages)
 router.post('/track-visit', async (req, res) => {
   try {
-    const { page, source } = req.body; // page = 'main' or 'customer'
+    const { page, source, timezone, language, screenWidth, screenHeight } = req.body;
     const userAgent = req.headers['user-agent'] || '';
     const ip = getClientIP(req);
     const ipHash = hashIP(ip);
@@ -775,20 +775,35 @@ router.post('/track-visit', async (req, res) => {
       return res.json({ success: true, tracked: false, reason: 'QR not found' });
     }
     
-    // Check if already tracked recently (within 1 hour from same IP)
-    const [[existing]] = await pool.execute(
-      'SELECT id FROM qr_scans WHERE qr_id = ? AND ip_hash = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)',
+    // Check if this is a unique user (first time from this IP)
+    const [[existingUser]] = await pool.execute(
+      'SELECT id FROM qr_scans WHERE qr_id = ? AND ip_hash = ?',
       [qr.id, ipHash]
     );
-    
-    if (existing) {
-      return res.json({ success: true, tracked: false, reason: 'Already tracked' });
-    }
+    const isUniqueUser = !existingUser; // First time = unique
+    const isRepeatScan = !!existingUser; // Has scanned before = repeat
     
     const uaData = parseUserAgent(userAgent);
     const scanId = generateScanId();
     const visitorId = req.cookies?.qr_visitor || generateVisitorId();
     const sessionId = req.cookies?.qr_session || generateSessionId();
+    
+    // Try to get geo data from IP (using free API)
+    let geoData = { country: 'India', countryCode: 'IN', state: 'Unknown', city: 'Unknown' };
+    try {
+      const geoResponse = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city`);
+      const geo = await geoResponse.json();
+      if (geo.status === 'success') {
+        geoData = {
+          country: geo.country || 'Unknown',
+          countryCode: geo.countryCode || 'XX',
+          state: geo.regionName || 'Unknown',
+          city: geo.city || 'Unknown'
+        };
+      }
+    } catch (e) {
+      console.log('[QR Track] Geo lookup failed:', e.message);
+    }
     
     // Log the visit as a scan
     await pool.execute(
@@ -796,21 +811,47 @@ router.post('/track-visit', async (req, res) => {
         qr_id, scan_id, visitor_id, session_id, ip_address, ip_hash,
         is_unique_user, is_repeat_scan, user_agent, device_type, device_brand, device_model,
         os_name, os_version, browser_name, browser_version,
-        country, country_code, state, city,
+        country, country_code, state, city, timezone, language,
         redirect_url, redirect_success, redirect_latency_ms
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         qr.id, scanId, visitorId, sessionId, ip, ipHash,
-        true, false, userAgent.substring(0, 500), uaData.device, uaData.deviceBrand, uaData.deviceModel,
+        isUniqueUser, isRepeatScan, userAgent.substring(0, 500), uaData.device, uaData.deviceBrand, uaData.deviceModel,
         uaData.osName, uaData.osVersion, uaData.browserName, uaData.browserVersion,
-        'Unknown', null, null, 'Unknown',
+        geoData.country, geoData.countryCode, geoData.state, geoData.city, timezone || null, language || null,
         qr.current_url, true, 0
       ]
     );
     
-    console.log(`[QR Track] Page visit tracked for ${slug} from ${source || 'direct'}`);
+    // Update daily analytics - total_scans always +1, unique_users only if new user
+    await pool.execute(
+      `INSERT INTO qr_analytics_daily (qr_id, date, total_scans, unique_users, repeat_users, mobile_scans, tablet_scans, desktop_scans)
+       VALUES (?, CURDATE(), 1, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE 
+         total_scans = total_scans + 1,
+         unique_users = unique_users + ?,
+         repeat_users = repeat_users + ?,
+         mobile_scans = mobile_scans + ?,
+         tablet_scans = tablet_scans + ?,
+         desktop_scans = desktop_scans + ?`,
+      [
+        qr.id,
+        isUniqueUser ? 1 : 0,
+        isRepeatScan ? 1 : 0,
+        uaData.device === 'mobile' ? 1 : 0,
+        uaData.device === 'tablet' ? 1 : 0,
+        uaData.device === 'desktop' ? 1 : 0,
+        isUniqueUser ? 1 : 0,
+        isRepeatScan ? 1 : 0,
+        uaData.device === 'mobile' ? 1 : 0,
+        uaData.device === 'tablet' ? 1 : 0,
+        uaData.device === 'desktop' ? 1 : 0
+      ]
+    );
     
-    res.json({ success: true, tracked: true });
+    console.log(`[QR Track] Page visit tracked for ${slug} - ${geoData.city}, ${geoData.state}, ${geoData.country}`);
+    
+    res.json({ success: true, tracked: true, location: geoData });
   } catch (error) {
     console.error('Track visit error:', error);
     res.json({ success: true, tracked: false });

@@ -37,14 +37,15 @@ const QRManagement = () => {
     }
   }, [selectedQR, period]);
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 10 seconds for real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
       if (selectedQR) {
         fetchAnalytics(selectedQR.id, true);
       }
       fetchOverview(true);
-    }, 30000);
+      fetchQRCodes(); // Also refresh QR list for scan counts
+    }, 10000);
     return () => clearInterval(interval);
   }, [selectedQR]);
 
