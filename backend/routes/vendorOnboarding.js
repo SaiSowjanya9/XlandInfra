@@ -63,21 +63,32 @@ router.post('/', async (req, res) => {
       // Rate & Coverage
       ratePerVisit,
       coveragePerDay,
-      createdBy
+      // Business Documents
+      gstNumber,
+      panNumber,
+      licenseNumber,
+      createdBy,
+      createdById,
+      franchisePartnerId
     } = req.body;
 
     const vendorId = generateVendorId(serviceType);
+    // Generate username from email or name
+    const username = ownerEmail ? ownerEmail.split('@')[0] + '_' + Date.now() : `vendor_${Date.now()}`;
 
     const [result] = await conn.execute(
       `INSERT INTO onboarded_vendors
-        (vendor_id, service_type, service_verified, zone, area_name, division,
+        (vendor_id, username, service_type, service_verified, zone, area_name, division,
          owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
          manager_name, manager_mobile, manager_email, manager_country_code,
          poc_name, poc_mobile, poc_email, poc_country_code,
-         rate_per_visit, coverage_per_day, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         gst_number, pan_number, license_number,
+         rate_per_visit, coverage_per_day, rating, total_jobs_completed,
+         created_by, created_by_id, franchise_partner_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, 'active')`,
       [
         vendorId,
+        username,
         serviceType || 'General',
         serviceVerified ? 1 : 0,
         toNull(zone),
@@ -96,9 +107,14 @@ router.post('/', async (req, res) => {
         toNull(pocMobile),
         toNull(pocEmail),
         pocCountryCode || '+91',
+        toNull(gstNumber),
+        toNull(panNumber),
+        toNull(licenseNumber),
         parseFloat(ratePerVisit) || 0,
         parseInt(coveragePerDay) || 0,
-        createdBy || 'Manager'
+        createdBy || 'Manager',
+        toNull(createdById),
+        toNull(franchisePartnerId)
       ]
     );
 

@@ -1416,42 +1416,44 @@ router.delete('/vendors/assignments/:id', requireFPScope, async (req, res) => {
   }
 });
 
-// Create vendor
+// Create vendor (uses onboarded_vendors table)
 router.post('/vendors', requireFPScope, async (req, res) => {
   try {
     const {
-      serviceType, zone, areaName,
+      serviceType, serviceVerified, zone, areaName, division,
       ownerName, ownerMobile, ownerEmail, ownerAadhar, ownerCountryCode,
       managerName, managerMobile, managerEmail, managerCountryCode,
       pocName, pocMobile, pocEmail, pocCountryCode,
-      ratePerVisit, coveragePerDay
+      ratePerVisit, coveragePerDay,
+      gstNumber, panNumber, licenseNumber
     } = req.body;
 
     const vendorId = `FP${req.fpId}-VND-${Date.now()}`;
-    const username = `vendor_${Date.now()}`;
+    const username = ownerEmail ? ownerEmail.split('@')[0] + '_' + Date.now() : `vendor_${Date.now()}`;
     const tempPassword = await bcrypt.hash('temp123', 10);
 
     const creatorName = req.user.name || req.user.username || req.user.full_name || 'Franchise Partner';
     
     const [result] = await pool.execute(
-      `INSERT INTO vendors (
-        vendor_id, username, email, password_hash, company_name, contact_person,
-        phone, service_type, zone_name, area,
+      `INSERT INTO onboarded_vendors (
+        vendor_id, username, password_hash,
+        service_type, service_verified, zone, area_name, division,
         owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
+        gst_number, pan_number, license_number,
         rate_per_visit, coverage_per_day,
-        franchise_partner_id, created_by, created_by_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        franchise_partner_id, created_by, created_by_id, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
       [
-        vendorId, username, ownerEmail || '', tempPassword, 
-        ownerName || '', ownerName || '',
-        ownerMobile || '', serviceType || '', zone || '', areaName || '',
+        vendorId, username, tempPassword,
+        serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
         ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
+        gstNumber || '', panNumber || '', licenseNumber || '',
         parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0,
-        req.fpId, req.user.id, creatorName
+        req.fpId, creatorName, req.user.id
       ]
     );
 
@@ -1470,15 +1472,15 @@ router.post('/vendors', requireFPScope, async (req, res) => {
   }
 });
 
-// Update/Modify vendor
+// Update/Modify vendor (uses onboarded_vendors table)
 router.put('/vendors/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
     const body = req.body;
 
-    // Verify vendor belongs to this FP
+    // Verify vendor exists in onboarded_vendors
     const [existing] = await pool.execute(
-      'SELECT id FROM vendors WHERE id = ? AND franchise_partner_id = ?',
+      'SELECT id FROM onboarded_vendors WHERE id = ? AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)',
       [id, req.fpId]
     );
 
@@ -1494,29 +1496,30 @@ router.put('/vendors/:id', requireFPScope, async (req, res) => {
     const values = [];
 
     const fields = {
-      service_type: body.service_type,
-      zone_name: body.zone_name,
-      area: body.area,
-      rate_per_visit: body.rate_per_visit,
-      coverage_per_day: body.coverage_per_day,
-      owner_name: body.owner_name,
-      owner_mobile: body.owner_mobile,
-      owner_email: body.owner_email,
-      owner_aadhar: body.owner_aadhar,
-      company_name: body.owner_name,
-      contact_person: body.owner_name,
-      email: body.owner_email,
-      phone: body.owner_mobile,
-      manager_name: body.manager_name,
-      manager_mobile: body.manager_mobile,
-      manager_email: body.manager_email,
-      poc_name: body.poc_name,
-      poc_mobile: body.poc_mobile,
-      poc_email: body.poc_email
+      service_type: body.service_type || body.serviceType,
+      service_verified: body.service_verified !== undefined ? body.service_verified : body.serviceVerified,
+      zone: body.zone || body.zone_name,
+      area_name: body.area_name || body.areaName || body.area,
+      division: body.division,
+      rate_per_visit: body.rate_per_visit || body.ratePerVisit,
+      coverage_per_day: body.coverage_per_day || body.coveragePerDay,
+      owner_name: body.owner_name || body.ownerName,
+      owner_mobile: body.owner_mobile || body.ownerMobile,
+      owner_email: body.owner_email || body.ownerEmail,
+      owner_aadhar: body.owner_aadhar || body.ownerAadhar,
+      manager_name: body.manager_name || body.managerName,
+      manager_mobile: body.manager_mobile || body.managerMobile,
+      manager_email: body.manager_email || body.managerEmail,
+      poc_name: body.poc_name || body.pocName,
+      poc_mobile: body.poc_mobile || body.pocMobile,
+      poc_email: body.poc_email || body.pocEmail,
+      gst_number: body.gst_number || body.gstNumber,
+      pan_number: body.pan_number || body.panNumber,
+      license_number: body.license_number || body.licenseNumber
     };
 
     for (const [key, value] of Object.entries(fields)) {
-      if (value !== undefined && value !== null && value !== '') {
+      if (value !== undefined && value !== null) {
         updates.push(`${key} = ?`);
         values.push(value);
       }
@@ -1527,10 +1530,10 @@ router.put('/vendors/:id', requireFPScope, async (req, res) => {
     }
 
     updates.push('updated_at = NOW()');
-    values.push(id, req.fpId);
+    values.push(id);
 
     await pool.execute(
-      `UPDATE vendors SET ${updates.join(', ')} WHERE id = ? AND franchise_partner_id = ?`,
+      `UPDATE onboarded_vendors SET ${updates.join(', ')} WHERE id = ?`,
       values
     );
 

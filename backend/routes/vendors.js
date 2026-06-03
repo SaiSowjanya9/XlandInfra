@@ -290,22 +290,26 @@ router.get('/', authenticate, requireModuleAccess(MODULES.VENDOR_MANAGEMENT), as
     
     // First, fetch from onboarded_vendors (FP-created vendors with full details)
     let onboardedQuery = `
-      SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
+      SELECT ov.id, ov.vendor_id, ov.username, ov.service_type, ov.service_verified,
              ov.zone, ov.zone as zone_name, ov.area_name, ov.division,
              ov.owner_name, ov.owner_mobile, ov.owner_email, ov.owner_aadhar,
              ov.owner_country_code,
              ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
              ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
-             ov.rate_per_visit, ov.coverage_per_day,
+             ov.gst_number, ov.pan_number, ov.license_number,
+             ov.rate_per_visit, ov.coverage_per_day, ov.rating, ov.total_jobs_completed,
              ov.created_by, ov.created_by_id, ov.status, ov.created_at, ov.updated_at,
              COALESCE(
                CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
-               ov.created_by, 'System'
+               CONCAT(fpe2.first_name, ' ', COALESCE(fpe2.last_name, '')),
+               SUBSTRING_INDEX(ov.created_by, '@', 1),
+               'System'
              ) as created_by_name,
              CASE WHEN ov.status = 'active' THEN 1 ELSE 0 END as is_active,
              'onboarded' as source
       FROM onboarded_vendors ov
-      LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email
+      LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id
+      LEFT JOIN fp_employees fpe2 ON ov.created_by = fpe2.email OR ov.created_by = fpe2.username
       WHERE 1=1
     `;
 
@@ -328,6 +332,7 @@ router.get('/', authenticate, requireModuleAccess(MODULES.VENDOR_MANAGEMENT), as
     const mappedOnboarded = onboardedVendors.map(v => ({
       id: v.id,
       vendorId: v.vendor_id,
+      username: v.username,
       serviceType: v.service_type,
       serviceVerified: v.service_verified,
       zone: v.zone,
@@ -346,8 +351,16 @@ router.get('/', authenticate, requireModuleAccess(MODULES.VENDOR_MANAGEMENT), as
       pocMobile: v.poc_mobile,
       pocEmail: v.poc_email,
       pocCountryCode: v.poc_country_code || '+91',
+      // Business Documents
+      gstNumber: v.gst_number,
+      panNumber: v.pan_number,
+      licenseNumber: v.license_number,
+      // Rate & Performance
       ratePerVisit: v.rate_per_visit || 0,
       coveragePerDay: v.coverage_per_day || 0,
+      rating: v.rating || 0,
+      totalJobsCompleted: v.total_jobs_completed || 0,
+      // Metadata
       created_by_name: v.created_by_name,
       createdBy: v.created_by_name,
       status: v.status,
@@ -356,50 +369,9 @@ router.get('/', authenticate, requireModuleAccess(MODULES.VENDOR_MANAGEMENT), as
       source: 'onboarded'
     }));
 
-    // Also fetch from legacy vendors table
-    let legacyQuery = `
-      SELECT v.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name
-      FROM vendors v
-      LEFT JOIN users u ON v.created_by = u.id
-      WHERE 1=1
-    `;
-
-    if (status === 'active') {
-      legacyQuery += ` AND v.is_active = TRUE`;
-    } else if (status === 'deleted') {
-      legacyQuery += ` AND v.is_active = FALSE`;
-    }
-
-    legacyQuery += ` ORDER BY v.created_at DESC`;
-
-    let legacyVendors = [];
-    try {
-      const [result] = await pool.execute(legacyQuery);
-      legacyVendors = result;
-    } catch (e) { console.log('Legacy vendors fetch:', e.message); }
-
-    const mappedLegacy = legacyVendors.map(v => ({
-      id: v.id,
-      vendorId: v.vendor_id,
-      username: v.username,
-      email: v.email,
-      ownerName: v.company_name || v.contact_person,
-      ownerMobile: v.phone,
-      ownerEmail: v.email,
-      serviceType: v.service_categories,
-      zone: v.city,
-      areaName: v.address,
-      ratePerVisit: 0,
-      coveragePerDay: 0,
-      is_active: v.is_active,
-      createdBy: v.created_by_name,
-      created_by_name: v.created_by_name,
-      createdAt: v.created_at,
-      source: 'legacy'
-    }));
-
-    // Combine both sources, prioritizing onboarded vendors
-    const allVendors = [...mappedOnboarded, ...mappedLegacy];
+    // Only use onboarded_vendors - skip legacy vendors table to avoid duplicates
+    // Legacy vendors don't have service_type and other required fields
+    const allVendors = mappedOnboarded;
 
     res.json({
       success: true,
