@@ -165,7 +165,7 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       safeCount('SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ?', [fpId]),
       
       // Vendors count
-      safeCount('SELECT COUNT(*) as count FROM vendors WHERE franchise_partner_id = ?', [fpId]),
+      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ?', [fpId]),
       
       // Customers count
       safeCount('SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?', [fpId]),
@@ -634,7 +634,7 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
       LEFT JOIN categories c ON wo.category_id = c.id
-      LEFT JOIN vendors v ON wo.assigned_vendor_id = v.id
+      LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR CAST(wo.created_by AS UNSIGNED) = fpe.id
       LEFT JOIN users u ON wo.created_by = u.email OR wo.created_by = u.user_id OR CAST(wo.created_by AS UNSIGNED) = u.id
       WHERE wo.franchise_partner_id = ?
@@ -1296,7 +1296,7 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
         v.zone_name, v.area, v.rate_per_visit, v.coverage_per_day
        FROM property_vendor_assignments pva
        JOIN properties p ON pva.property_id = p.id
-       JOIN vendors v ON pva.vendor_id = v.id
+       JOIN onboarded_vendors v ON pva.vendor_id = v.id
        WHERE p.franchise_partner_id = ? AND pva.is_active = TRUE
        ORDER BY pva.assigned_at DESC`,
       [req.fpId]
@@ -1364,7 +1364,7 @@ router.put('/vendors/assignments/:id', requireFPScope, async (req, res) => {
 
     // Verify new vendor belongs to this FP
     const [vendor] = await pool.execute(
-      `SELECT id FROM vendors WHERE id = ? AND (franchise_partner_id = ? OR id IN (
+      `SELECT id FROM onboarded_vendors WHERE id = ? AND (franchise_partner_id = ? OR id IN (
         SELECT vendor_id FROM fp_assigned_vendors WHERE franchise_partner_id = ? AND is_active = TRUE
       ))`,
       [newVendorId, req.fpId, req.fpId]
@@ -1558,7 +1558,7 @@ router.delete('/vendors/:id', requireFPScope, async (req, res) => {
 
     // Verify vendor belongs to this FP
     const [existing] = await pool.execute(
-      'SELECT id FROM vendors WHERE id = ? AND franchise_partner_id = ?',
+      'SELECT id FROM onboarded_vendors WHERE id = ? AND franchise_partner_id = ?',
       [id, req.fpId]
     );
 
@@ -1571,7 +1571,7 @@ router.delete('/vendors/:id', requireFPScope, async (req, res) => {
 
     // Soft delete - set is_active to 0
     await pool.execute(
-      `UPDATE vendors SET is_active = 0, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+      `UPDATE onboarded_vendors SET is_active = FALSE, status = 'inactive', updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
       [id, req.fpId]
     );
 
@@ -1596,7 +1596,7 @@ router.put('/vendors/:id/restore', requireFPScope, async (req, res) => {
 
     // Verify vendor belongs to this FP
     const [existing] = await pool.execute(
-      'SELECT id FROM vendors WHERE id = ? AND franchise_partner_id = ?',
+      'SELECT id FROM onboarded_vendors WHERE id = ? AND franchise_partner_id = ?',
       [id, req.fpId]
     );
 
@@ -1608,7 +1608,7 @@ router.put('/vendors/:id/restore', requireFPScope, async (req, res) => {
     }
 
     await pool.execute(
-      `UPDATE vendors SET is_active = 1, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+      `UPDATE onboarded_vendors SET is_active = TRUE, status = 'active', updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
       [id, req.fpId]
     );
 
