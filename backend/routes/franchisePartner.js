@@ -886,6 +886,61 @@ router.patch('/work-orders/:id/assign-vendor', requireFPScope, validateOwnership
   }
 });
 
+// Update work order (full edit)
+router.put('/work-orders/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      category_id, subcategory_id, description, 
+      permission_to_enter, has_pet, entry_notes, priority, status 
+    } = req.body;
+
+    // Build dynamic update query
+    const updates = [];
+    const params = [];
+
+    if (category_id !== undefined) { updates.push('category_id = ?'); params.push(category_id || null); }
+    if (subcategory_id !== undefined) { updates.push('subcategory_id = ?'); params.push(subcategory_id || null); }
+    if (description !== undefined) { updates.push('description = ?'); params.push(description); }
+    if (permission_to_enter !== undefined) { updates.push('permission_to_enter = ?'); params.push(permission_to_enter); }
+    if (has_pet !== undefined) { updates.push('has_pet = ?'); params.push(has_pet); }
+    if (entry_notes !== undefined) { updates.push('entry_notes = ?'); params.push(entry_notes); }
+    if (priority !== undefined) { updates.push('priority = ?'); params.push(priority); }
+    if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+
+    updates.push('updated_at = NOW()');
+    params.push(id, req.fpId);
+
+    await pool.execute(
+      `UPDATE work_orders SET ${updates.join(', ')} WHERE id = ? AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
+      params
+    );
+
+    // Get category and subcategory names for response
+    if (category_id) {
+      const [cats] = await pool.execute('SELECT name FROM categories WHERE id = ?', [category_id]);
+      if (cats.length > 0) {
+        await pool.execute('UPDATE work_orders SET category_name = ? WHERE id = ?', [cats[0].name, id]);
+      }
+    }
+    if (subcategory_id) {
+      const [subs] = await pool.execute('SELECT name FROM subcategories WHERE id = ?', [subcategory_id]);
+      if (subs.length > 0) {
+        await pool.execute('UPDATE work_orders SET subcategory_name = ? WHERE id = ?', [subs[0].name, id]);
+      }
+    }
+
+    res.json({ success: true, message: 'Work order updated successfully' });
+  } catch (error) {
+    console.error('Update work order error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Update work order status (PUT)
 router.put('/work-orders/:id/status', requireFPScope, async (req, res) => {
   try {
