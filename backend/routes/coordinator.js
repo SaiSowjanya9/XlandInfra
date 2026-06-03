@@ -150,7 +150,7 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
 
     const [pendingWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
-       WHERE ${scopeColumn} = ? AND status IN ('requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
+       WHERE ${scopeColumn} = ? AND status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
       [scopeId]
     );
 
