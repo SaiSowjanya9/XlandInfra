@@ -733,6 +733,64 @@ router.put('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) =>
   }
 });
 
+// Get vendors list for admin
+router.get('/vendors', async (req, res) => {
+  try {
+    const [vendors] = await pool.execute(
+      `SELECT id, vendor_id, company_name, owner_name, service_type, phone, email, status 
+       FROM onboarded_vendors WHERE status = 'active' OR is_active = TRUE ORDER BY company_name`
+    );
+    res.json({ success: true, vendors });
+  } catch (error) {
+    console.error('Error fetching vendors:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get employees list for admin
+router.get('/employees', async (req, res) => {
+  try {
+    const [employees] = await pool.execute(
+      `SELECT id, first_name, last_name, email, phone, role FROM admins WHERE is_active = TRUE ORDER BY first_name`
+    );
+    res.json({ success: true, employees });
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete work order (Admin only)
+router.delete('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const [result] = await pool.execute(
+      `DELETE FROM work_orders WHERE id = ?`,
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Work order not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Work order deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting work order:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting work order',
+      error: error.message
+    });
+  }
+});
+
 // ============================================
 // DASHBOARD STATS (Public - no auth required)
 // ============================================
