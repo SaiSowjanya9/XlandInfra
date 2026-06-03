@@ -1342,19 +1342,24 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
     console.log('[Vendor Assignments] FP ID:', req.fpId, 'User:', req.user?.email);
     
     // Get property-vendor assignments for this FP's properties with full vendor details
+    // Join with both properties and onboarded_properties to handle both cases
     const [propertyAssignments] = await pool.execute(
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
-        p.name as property_name, p.property_type, p.address, p.city, 
-        p.zone_id as property_zone,
+        COALESCE(p.name, op.community_name) as property_name, 
+        COALESCE(p.property_type, op.property_type) as property_type, 
+        COALESCE(p.address, op.address) as address, 
+        COALESCE(p.city, op.city) as city, 
+        COALESCE(p.zone_id, op.zone) as property_zone,
         v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone_name, v.area, v.rate_per_visit, v.coverage_per_day
        FROM property_vendor_assignments pva
-       JOIN properties p ON pva.property_id = p.id
+       LEFT JOIN properties p ON pva.property_id = p.id
+       LEFT JOIN onboarded_properties op ON pva.property_id = op.id
        JOIN onboarded_vendors v ON pva.vendor_id = v.id
-       WHERE p.franchise_partner_id = ? AND pva.is_active = TRUE
+       WHERE (p.franchise_partner_id = ? OR op.franchise_partner_id = ?) AND pva.is_active = TRUE
        ORDER BY pva.assigned_at DESC`,
-      [req.fpId]
+      [req.fpId, req.fpId]
     );
 
     // Map property assignments to service assignments format (flat list for table display)
