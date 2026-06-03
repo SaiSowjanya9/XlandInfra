@@ -102,12 +102,59 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
     e.stopPropagation();
     e.preventDefault();
     if (exportingId) return;
-    setExportingId(estimate.estimateId);
+    setExportingId(estimate.estimateId || estimate.estimate_id);
     showToast('Generating PDF...');
     
     setTimeout(() => {
       try {
-        const success = exportEstimateToPDF(estimate);
+        // Parse addons from multiple possible sources (same as FP portal)
+        let addonsArray = [];
+        if (estimate.addons && Array.isArray(estimate.addons) && estimate.addons.length > 0) {
+          addonsArray = estimate.addons;
+        } else if (estimate.addons_data) {
+          try {
+            const parsed = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
+            if (Array.isArray(parsed)) addonsArray = parsed;
+          } catch (e) { console.log('Addon parse error:', e); }
+        }
+        
+        // Prepare estimate data for PDF (same mapping as FP portal)
+        const pdfData = {
+          ...estimate,
+          estimateId: estimate.estimateId || estimate.estimate_id,
+          estimateType: estimate.estimateType || estimate.estimate_type,
+          propertyId: estimate.propertyId || estimate.property_code || estimate.property_id,
+          propertyType: estimate.propertyType || estimate.property_type,
+          propertyName: estimate.propertyName || estimate.property_name,
+          communityName: estimate.communityName || estimate.property_name,
+          zone: estimate.zone,
+          division: estimate.division || '',
+          city: estimate.city,
+          customerName: estimate.customerName || estimate.clientName || estimate.client_name,
+          customerPhone: estimate.customerPhone || estimate.phone || estimate.client_phone,
+          customerEmail: estimate.customerEmail || estimate.email || estimate.client_email,
+          address: estimate.address || estimate.propertyAddress,
+          packageName: estimate.packageName || estimate.package_name,
+          billingDuration: estimate.billingDuration || 'Yearly',
+          subtotal: parseFloat(estimate.subtotal) || 0,
+          totalPrice: parseFloat(estimate.totalPrice || estimate.total || estimate.total_amount) || 0,
+          discount: parseFloat(estimate.discount || estimate.discount_percent) || 0,
+          description: estimate.description || estimate.notes || '',
+          services: estimate.services || (estimate.packageName || estimate.package_name ? [{
+            name: estimate.packageName || estimate.package_name,
+            frequencyCount: 1,
+            frequencyType: 'Yearly',
+            price: parseFloat(estimate.packagePrice || estimate.package_price || estimate.subtotal) || 0
+          }] : []),
+          addons: addonsArray.map(a => ({
+            name: a.name || a.service_name || a.serviceName || 'Add-on',
+            price: parseFloat(a.price) || 0,
+            frequencyType: a.frequency_type || a.frequencyType || 'One-time',
+            frequency: a.frequency_count || a.frequencyCount || 1
+          }))
+        };
+        
+        const success = exportEstimateToPDF(pdfData);
         if (success) {
           showToast('PDF downloaded successfully!');
         }

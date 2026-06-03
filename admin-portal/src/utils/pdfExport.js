@@ -103,162 +103,85 @@ const generatePDF = (data, type, filename) => {
       y += 20;
     }
 
-    // ===== TWO COLUMN INFO SECTION (Skip for AMC Package PDFs) =====
+    // ===== STACKED SECTIONS LAYOUT (Clean FP Portal Style) =====
     if (type !== 'package') {
-    const colWidth = (pageWidth - margin * 2 - 10) / 2;
-    // Dynamic box height based on property fields available
-    let extraFields = 0;
-    if (data.areaName) extraFields++;
-    if (data.numberOfBlocks) extraFields++;
-    if (data.unitsPerBlock) extraFields++;
-    if (data.totalUnits || data.numberOfUnits) extraFields++;
-    if (data.villaPlotNumber) extraFields++;
-    const boxHeight = 60 + (extraFields * 7);
+    const fullWidth = pageWidth - margin * 2;
     
-    // Property Details Box
-    doc.setDrawColor(...borderColor);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(margin, y, colWidth, boxHeight, 3, 3, 'S');
+    // Property Details Section
+    doc.setFillColor(241, 245, 249); // Slate-100 background
+    doc.roundedRect(margin, y, fullWidth, 45, 3, 3, 'F');
     
-    doc.setFillColor(...primaryColor);
-    doc.roundedRect(margin, y, colWidth, 12, 3, 3, 'F');
-    doc.rect(margin, y + 8, colWidth, 4, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
+    doc.setTextColor(...primaryColor);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('PROPERTY DETAILS', margin + 5, y + 8);
+    doc.text('Property Details', margin + 5, y + 8);
     
-    let infoY = y + 18;
+    let infoY = y + 16;
     doc.setTextColor(...darkText);
     doc.setFontSize(8);
+    const col1X = margin + 5;
+    const col2X = margin + fullWidth/2;
     
-    // Property ID - always show
-    doc.setFont('helvetica', 'bold');
-    doc.text('Property ID:', margin + 5, infoY);
+    // Row 1
     doc.setFont('helvetica', 'normal');
-    doc.text(String(data.propertyId || data.property_code || data.property_id || '-'), margin + 32, infoY);
-    infoY += 7;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Property Type:', margin + 5, infoY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(String(data.propertyType || data.property_type || '-'), margin + 32, infoY);
-    infoY += 7;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Zone:', margin + 5, infoY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(String(data.zone || '-'), margin + 32, infoY);
-    infoY += 7;
-    
-    // Division - always show
-    doc.setFont('helvetica', 'bold');
-    doc.text('Division:', margin + 5, infoY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(String(data.division || '-'), margin + 32, infoY);
-    infoY += 7;
-    
-    // Area Name
-    if (data.areaName) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Area:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.areaName).substring(0, 15), margin + 32, infoY);
-      infoY += 7;
-    }
-    
-    // GC/APT specific: Number of Blocks
-    if (data.numberOfBlocks) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('No. of Blocks:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.numberOfBlocks), margin + 32, infoY);
-      infoY += 7;
-    }
-    
-    // Units per Block
-    if (data.unitsPerBlock) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Units/Block:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.unitsPerBlock), margin + 32, infoY);
-      infoY += 7;
-    }
-    
-    // Total Units
-    if (data.totalUnits || data.numberOfUnits) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Total Units:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.totalUnits || data.numberOfUnits), margin + 32, infoY);
-      infoY += 7;
-    }
-    
-    // PLOT/VILLA specific: Plot Number
-    if (data.villaPlotNumber) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Plot/Villa No:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(data.villaPlotNumber), margin + 32, infoY);
-      infoY += 7;
-    }
-    
-    // Customer Details Box
-    doc.setDrawColor(...borderColor);
-    doc.roundedRect(margin + colWidth + 10, y, colWidth, boxHeight, 3, 3, 'S');
-    
-    doc.setFillColor(...primaryColor);
-    doc.roundedRect(margin + colWidth + 10, y, colWidth, 12, 3, 3, 'F');
-    doc.rect(margin + colWidth + 10, y + 8, colWidth, 4, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('CUSTOMER DETAILS', margin + colWidth + 15, y + 8);
-    
-    infoY = y + 18;
+    doc.setTextColor(...grayText);
+    doc.text('Property ID', col1X, infoY);
+    doc.text('Property Type', col2X, infoY);
+    infoY += 5;
     doc.setTextColor(...darkText);
-    doc.setFontSize(8);
-    
-    // Always show all customer fields
-    const custX = margin + colWidth + 15;
-    const custValX = margin + colWidth + 42;
-    
     doc.setFont('helvetica', 'bold');
-    doc.text('Contact Name:', custX, infoY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(String(data.customerName || '-').substring(0, 20), custValX, infoY);
-    infoY += 7;
+    doc.text(String(data.propertyId || data.property_code || '-'), col1X, infoY);
+    doc.text(String(data.propertyType || '-'), col2X, infoY);
+    infoY += 8;
     
-    doc.setFont('helvetica', 'bold');
-    doc.text('Community:', custX, infoY);
+    // Row 2
     doc.setFont('helvetica', 'normal');
-    doc.text(String(data.communityName || data.propertyName || '-').substring(0, 20), custValX, infoY);
-    infoY += 7;
+    doc.setTextColor(...grayText);
+    doc.text('Zone', col1X, infoY);
+    doc.text('Division', col2X, infoY);
+    infoY += 5;
+    doc.setTextColor(...darkText);
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(data.zone || '-'), col1X, infoY);
+    doc.text(String(data.division || '-'), col2X, infoY);
     
-    doc.setFont('helvetica', 'bold');
-    doc.text('Phone:', custX, infoY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(String(data.customerPhone || data.phone || '-'), custValX, infoY);
-    infoY += 7;
+    y += 50;
     
+    // Customer Details Section
+    doc.setFillColor(239, 246, 255); // Blue-50 background
+    doc.roundedRect(margin, y, fullWidth, 35, 3, 3, 'F');
+    
+    doc.setTextColor(30, 64, 175); // Blue-800
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('Email:', custX, infoY);
+    doc.text('Customer Details', margin + 5, y + 8);
+    
+    infoY = y + 16;
+    
+    // Row 1
     doc.setFont('helvetica', 'normal');
-    const email = String(data.customerEmail || data.email || '-');
+    doc.setTextColor(...grayText);
+    doc.text('Contact Name', col1X, infoY);
+    doc.text('Phone', col2X, infoY);
+    infoY += 5;
+    doc.setTextColor(...darkText);
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(data.customerName || '-'), col1X, infoY);
+    doc.text(String(data.customerPhone || '-'), col2X, infoY);
+    infoY += 8;
+    
+    // Row 2
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...grayText);
+    doc.text('Email', col1X, infoY);
+    infoY += 5;
+    doc.setTextColor(...darkText);
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
-    doc.text(email, custValX, infoY);
-    doc.setFontSize(8);
-    infoY += 7;
-    
-    // Address inside Customer Details box
-    doc.setFont('helvetica', 'bold');
-    doc.text('Address:', custX, infoY);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.text(String(data.address || '-').substring(0, 25), custValX, infoY);
+    doc.text(String(data.customerEmail || '-'), col1X, infoY);
     doc.setFontSize(8);
     
-    y += boxHeight + 8;
+    y += 40;
     } // End of property/customer details section (skipped for package type)
 
     // ===== NO OF VISITS =====
