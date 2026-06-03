@@ -312,7 +312,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
       const scopeId = franchisePartnerId || supervisorId;
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
-                COALESCE(op.zone, op.area) as zone_name, 
+                COALESCE(z.name, op.zone, op.area) as zone_name, 
                 op.area as area_name,
                 op.division, COALESCE(op.total_units, 1) as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
@@ -323,6 +323,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
                 TRUE as can_assign_vendor, TRUE as can_assign_employee,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
+         LEFT JOIN zones z ON op.zone_id = z.id
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
          WHERE op.${scopeColumn} = ? AND op.status = 'active'
          ORDER BY op.created_at DESC`,

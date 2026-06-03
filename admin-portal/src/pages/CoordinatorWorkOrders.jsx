@@ -1362,12 +1362,10 @@ const CoordinatorWorkOrders = ({ user }) => {
                     <p className="text-sm text-gray-500">Has Pet</p>
                     <p className="text-gray-900 capitalize">{selectedWorkOrder.has_pet || 'No'}</p>
                   </div>
-                  {selectedWorkOrder.vendor_name && (
-                    <div>
+                  <div>
                       <p className="text-sm text-gray-500">Assigned Vendor</p>
-                      <p className="text-gray-900">{selectedWorkOrder.vendor_name}</p>
+                      <p className="text-gray-900">{selectedWorkOrder.vendor_name || 'Not Assigned'}</p>
                     </div>
-                  )}
                 </div>
               </div>
             </div>

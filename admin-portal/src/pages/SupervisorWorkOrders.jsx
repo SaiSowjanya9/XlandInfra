@@ -647,7 +647,6 @@ const SupervisorWorkOrders = ({ user }) => {
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Order ID</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Resident</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Category</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                       <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                     </tr>
@@ -661,20 +660,6 @@ const SupervisorWorkOrders = ({ user }) => {
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-600">{wo.customer_name || wo.client_name || '-'}</td>
                         <td className="py-4 px-4 text-sm text-gray-600">{wo.category_name || '-'}</td>
-                        <td className="py-4 px-4">
-                          <select
-                            value={wo.status}
-                            onChange={(e) => handleStatusChange(wo, e.target.value)}
-                            className={`px-3 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="assigned">Assigned</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="closed">Closed</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
-                        </td>
                         <td className="py-4 px-4 text-sm text-gray-500">{formatDate(wo.created_at)}</td>
                         <td className="py-4 px-4">
                           <div className="flex items-center justify-end gap-2">
@@ -709,15 +694,17 @@ const SupervisorWorkOrders = ({ user }) => {
             </div>
             <div className="p-6">
               <div className="grid grid-cols-2 gap-4">
-                <div><p className="text-sm text-gray-500">Order ID</p><p className="font-mono text-gray-900">{selectedWorkOrder.work_order_id}</p></div>
+                <div><p className="text-sm text-gray-500">Work Order ID</p><p className="font-medium text-gray-900">{selectedWorkOrder.work_order_id}</p></div>
                 <div><p className="text-sm text-gray-500">Status</p><span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedWorkOrder.status)}`}>{selectedWorkOrder.status?.replace(/_/g, ' ').toUpperCase()}</span></div>
-                <div><p className="text-sm text-gray-500">Property</p><p className="text-gray-900">{selectedWorkOrder.property_name || '-'}</p></div>
-                <div><p className="text-sm text-gray-500">Category</p><p className="text-gray-900">{selectedWorkOrder.category_name || '-'}</p></div>
-                <div><p className="text-sm text-gray-500">Customer</p><p className="text-gray-900">{selectedWorkOrder.customer_name || selectedWorkOrder.client_name || '-'}</p></div>
-                <div><p className="text-sm text-gray-500">Priority</p><p className="text-gray-900 capitalize">{selectedWorkOrder.priority || '-'}</p></div>
-                <div><p className="text-sm text-gray-500">Created</p><p className="text-gray-900">{formatDate(selectedWorkOrder.created_at)}</p></div>
-                <div><p className="text-sm text-gray-500">Permission to Enter</p><p className="text-gray-900 capitalize">{selectedWorkOrder.permission_to_enter || '-'}</p></div>
-                <div className="col-span-2"><p className="text-sm text-gray-500">Description</p><p className="text-gray-900">{selectedWorkOrder.description || '-'}</p></div>
+                <div><p className="text-sm text-gray-500">Title</p><p className="font-medium text-gray-900">{selectedWorkOrder.title || '-'}</p></div>
+                <div><p className="text-sm text-gray-500">Priority</p><span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${selectedWorkOrder.priority === 'high' ? 'bg-red-100 text-red-700' : selectedWorkOrder.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{selectedWorkOrder.priority?.toUpperCase() || '-'}</span></div>
+                <div><p className="text-sm text-gray-500">Property</p><p className="font-medium text-gray-900">{selectedWorkOrder.property_name || '-'}</p></div>
+                <div><p className="text-sm text-gray-500">Category</p><p className="font-medium text-gray-900">{selectedWorkOrder.category_name || '-'}</p></div>
+                <div><p className="text-sm text-gray-500">Customer</p><p className="font-medium text-gray-900">{selectedWorkOrder.customer_name || selectedWorkOrder.client_name || '-'}</p></div>
+                <div><p className="text-sm text-gray-500">Vendor</p><p className="font-medium text-gray-900">{selectedWorkOrder.vendor_name || 'Not Assigned'}</p></div>
+                <div><p className="text-sm text-gray-500">Created</p><p className="font-medium text-gray-900">{formatDate(selectedWorkOrder.created_at)}</p></div>
+                <div><p className="text-sm text-gray-500">Permission to Enter</p><p className="font-medium text-gray-900 capitalize">{selectedWorkOrder.permission_to_enter || '-'}</p></div>
+                <div className="col-span-2"><p className="text-sm text-gray-500">Description</p><p className="font-medium text-gray-900">{selectedWorkOrder.description || '-'}</p></div>
               </div>
             </div>
             <div className="p-6 border-t border-gray-100 flex justify-end">
