@@ -376,7 +376,6 @@ const AssignedVendors = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
-                    {!isFPManager && <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Rate/Visit</th>}
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Assigned</th>
@@ -404,9 +403,6 @@ const AssignedVendors = ({ user }) => {
                       <td className="py-4 px-4">
                         <span className="text-sm text-gray-600">{assignment.area || '-'}</span>
                       </td>
-                      {!isFPManager && <td className="py-4 px-4">
-                        <span className="text-sm text-gray-900">₹{assignment.rate_per_visit || '0.00'}</span>
-                      </td>}
                       <td className="py-4 px-4 text-center">
                         <span className="text-sm text-gray-900">{assignment.coverage_per_day || '0'}</span>
                       </td>
@@ -482,16 +478,10 @@ const AssignedVendors = ({ user }) => {
 
               {/* Rate & Coverage */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate & Coverage</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-400">Rate Per Visit</p>
-                    <p className="text-sm font-medium text-gray-900">₹{viewAssignment.rate_per_visit || viewAssignment.ratePerVisit || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Coverage Per Day</p>
-                    <p className="text-sm font-medium text-gray-900">{viewAssignment.coverage_per_day || viewAssignment.coveragePerDay || 0}</p>
-                  </div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Coverage</h3>
+                <div>
+                  <p className="text-xs text-gray-400">Coverage Per Day</p>
+                  <p className="text-sm font-medium text-gray-900">{viewAssignment.coverage_per_day || viewAssignment.coveragePerDay || 0}</p>
                 </div>
               </div>
 

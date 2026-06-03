@@ -621,21 +621,6 @@ const CoordinatorEmployees = ({ user }) => {
 
             <div className="p-6 space-y-4">
               <div className="text-center">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 ${
-                  selectedEmployee.role === 'manager' ? 'bg-blue-100' :
-                  selectedEmployee.role === 'supervisor' ? 'bg-purple-100' :
-                  selectedEmployee.role === 'coordinator' ? 'bg-amber-100' :
-                  selectedEmployee.role === 'executive' ? 'bg-teal-100' : 'bg-teal-100'
-                }`}>
-                  <span className={`text-2xl font-bold ${
-                    selectedEmployee.role === 'manager' ? 'text-blue-700' :
-                    selectedEmployee.role === 'supervisor' ? 'text-purple-700' :
-                    selectedEmployee.role === 'coordinator' ? 'text-amber-700' :
-                    selectedEmployee.role === 'executive' ? 'text-teal-700' : 'text-teal-700'
-                  }`}>
-                    {(selectedEmployee.name || selectedEmployee.first_name || 'E')[0].toUpperCase()}
-                  </span>
-                </div>
                 <h3 className="font-semibold text-lg text-gray-900">
                   {selectedEmployee.name || `${selectedEmployee.first_name || ''} ${selectedEmployee.last_name || ''}`.trim()}
                 </h3>

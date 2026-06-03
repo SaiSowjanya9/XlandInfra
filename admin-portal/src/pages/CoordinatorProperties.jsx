@@ -27,8 +27,7 @@ import {
   ExternalLink,
   FileText,
   MapPin,
-  Calendar,
-  Download
+  Calendar
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -635,13 +634,6 @@ const CoordinatorProperties = ({ user }) => {
                             title="View Details"
                           >
                             <Eye className="w-4 h-4 text-gray-500" />
-                          </button>
-                          <button
-                            onClick={() => exportSingleProperty(property)}
-                            className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors"
-                            title="Export to CSV"
-                          >
-                            <Download className="w-4 h-4 text-gray-400 hover:text-emerald-600" />
                           </button>
                           {!isFPCoordinator && (
                             <>

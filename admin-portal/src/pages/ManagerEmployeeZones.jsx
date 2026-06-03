@@ -267,14 +267,9 @@ const ManagerEmployeeZones = ({ user, viewOnly = false }) => {
                   return (
                   <tr key={emp.id} className={`border-b border-gray-50 hover:bg-gray-50 ${color.bg}/30`}>
                     <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 ${color.avatar} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
-                          {(emp.name || emp.first_name || 'E')[0].toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{emp.name || `${emp.first_name} ${emp.last_name}`}</p>
-                          <p className="text-xs text-gray-500">ID: {emp.user_id || emp.id} • {zoneCount} zone{zoneCount !== 1 ? 's' : ''}</p>
-                        </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{emp.name || `${emp.first_name} ${emp.last_name}`}</p>
+                        <p className="text-xs text-gray-500">ID: {emp.user_id || emp.id} • {zoneCount} zone{zoneCount !== 1 ? 's' : ''}</p>
                       </div>
                     </td>
                     <td className="py-4 px-4">
