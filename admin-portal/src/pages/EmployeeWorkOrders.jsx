@@ -99,15 +99,16 @@ const EmployeeWorkOrders = ({ admin }) => {
   const fetchWorkOrders = async (searchQuery = '') => {
     setLoading(true);
     try {
-      const status = activeTab === 'pending' ? 'pending' : activeTab === 'completed' ? 'closed' : 'all';
-      let url = `${API_BASE}/work-orders?status=${status}`;
+      // Map tab to status - 'completed' tab shows both completed and closed
+      const status = activeTab === 'pending' ? 'pending' : activeTab === 'completed' ? 'completed,closed' : 'all';
+      let url = `${API_BASE}/admin/work-orders?status=${status}`;
       if (searchQuery.trim()) {
         url += `&search=${encodeURIComponent(searchQuery.trim())}`;
       }
       const response = await fetch(url);
       const result = await response.json();
       if (result.success) {
-        setWorkOrders(result.data || []);
+        setWorkOrders(result.data || result.workOrders || []);
         setCounts(result.counts || { pending: 0, completed: 0, total: 0 });
       }
     } catch (error) {
@@ -380,18 +381,27 @@ const EmployeeWorkOrders = ({ admin }) => {
 
   // Handle edit work order
   const handleEditWorkOrder = (wo) => {
-    setSelectedOrder(wo);
-    setEditFormData({
-      categoryId: wo.category_id || '',
-      subcategoryId: wo.subcategory_id || '',
-      description: wo.description || '',
-      permissionToEnter: wo.permission_to_enter || '',
-      hasPet: wo.has_pet || '',
-      entryNotes: wo.entry_notes || '',
-      priority: wo.priority || 'medium',
-      status: wo.status || 'pending'
-    });
-    setShowEditModal(true);
+    // Close view modal first
+    setSelectedOrder(null);
+    
+    // Set edit data
+    setTimeout(() => {
+      setSelectedOrder(wo);
+      setEditFormData({
+        categoryId: wo.category_id || '',
+        subcategoryId: wo.subcategory_id || '',
+        description: wo.description || '',
+        permissionToEnter: wo.permission_to_enter || wo.permissionToEnter || '',
+        hasPet: wo.has_pet || wo.hasPet || '',
+        entryNotes: wo.entry_notes || wo.entryNotes || '',
+        priority: wo.priority || 'medium',
+        status: wo.status || 'pending',
+        customerName: wo.customer_name || wo.first_name + ' ' + wo.last_name || '',
+        customerPhone: wo.customer_phone || wo.phone || '',
+        customerEmail: wo.customer_email || wo.email || ''
+      });
+      setShowEditModal(true);
+    }, 100);
   };
 
   // Save edit
@@ -729,8 +739,12 @@ const EmployeeWorkOrders = ({ admin }) => {
                         </td>
                         <td className="py-3 px-4">
                           <div>
-                            <p className="font-medium text-gray-900">{wo.first_name} {wo.last_name}</p>
-                            <p className="text-sm text-gray-500">{wo.unit_number ? `Unit ${wo.unit_number}` : 'N/A'}</p>
+                            <p className="font-medium text-gray-900">
+                              {wo.customer_name || wo.resident_first_name 
+                                ? `${wo.customer_name || ''} ${wo.resident_first_name || ''} ${wo.resident_last_name || ''}`.trim() 
+                                : (wo.first_name ? `${wo.first_name} ${wo.last_name || ''}`.trim() : 'N/A')}
+                            </p>
+                            <p className="text-sm text-gray-500">{wo.unit_number ? `Unit ${wo.unit_number}` : (wo.property_name || 'N/A')}</p>
                           </div>
                         </td>
                         <td className="py-3 px-4">
@@ -1447,8 +1461,8 @@ const EmployeeWorkOrders = ({ admin }) => {
       {/* Edit Work Order Modal */}
       {showEditModal && selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100 sticky top-0 bg-white">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">Edit Work Order</h2>
@@ -1459,23 +1473,66 @@ const EmployeeWorkOrders = ({ admin }) => {
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-6">
+              {/* Property Info (Read Only) */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Property Information</h3>
+                <p className="text-sm text-gray-600">
+                  {selectedOrder.property_name || selectedOrder.community_name || 'N/A'} 
+                  {selectedOrder.unit_number && ` - Unit ${selectedOrder.unit_number}`}
+                </p>
+              </div>
+
+              {/* Category & Subcategory */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    value={editFormData.categoryId}
+                    onChange={(e) => setEditFormData({ ...editFormData, categoryId: e.target.value, subcategoryId: '' })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                  <select
+                    value={editFormData.subcategoryId}
+                    onChange={(e) => setEditFormData({ ...editFormData, subcategoryId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">Select Subcategory</option>
+                    {(categories.find(c => c.id === parseInt(editFormData.categoryId))?.subcategories || []).map(sub => (
+                      <option key={sub.id || sub} value={sub.id || sub}>{sub.name || sub}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
                   value={editFormData.description}
                   onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
                   rows={3}
+                  placeholder="Describe the issue in detail..."
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
+
+              {/* Priority & Status */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                   <select
                     value={editFormData.priority}
                     onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -1488,7 +1545,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                   <select
                     value={editFormData.status}
                     onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="pending">Pending</option>
                     <option value="assigned">Assigned</option>
@@ -1499,13 +1556,15 @@ const EmployeeWorkOrders = ({ admin }) => {
                   </select>
                 </div>
               </div>
+
+              {/* Permission & Pet */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Permission to Enter</label>
                   <select
                     value={editFormData.permissionToEnter}
                     onChange={(e) => setEditFormData({ ...editFormData, permissionToEnter: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="">Select</option>
                     <option value="yes">Yes</option>
@@ -1517,7 +1576,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                   <select
                     value={editFormData.hasPet}
                     onChange={(e) => setEditFormData({ ...editFormData, hasPet: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="">Select</option>
                     <option value="yes">Yes</option>
@@ -1525,17 +1584,20 @@ const EmployeeWorkOrders = ({ admin }) => {
                   </select>
                 </div>
               </div>
+
+              {/* Entry Notes */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Entry Notes</label>
                 <textarea
                   value={editFormData.entryNotes}
                   onChange={(e) => setEditFormData({ ...editFormData, entryNotes: e.target.value })}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  placeholder="Special instructions for entry..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
             </div>
-            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white">
               <button onClick={() => setShowEditModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
                 Cancel
               </button>

@@ -598,20 +598,25 @@ router.get('/work-orders', authenticate, supervisorOrAbove, async (req, res) => 
     
     let query = `
       SELECT wo.*,
-             wo.customer_name as customer_first_name,
-             '' as customer_last_name,
-             wo.customer_email,
-             wo.customer_phone,
+             wo.customer_name as first_name,
+             '' as last_name,
+             wo.customer_email as email,
+             wo.customer_phone as phone,
              COALESCE(p.name, wo.property_name, op.community_name) as property_name,
              COALESCE(p.property_id, wo.property_id) as property_code,
              COALESCE(c.name, wo.category_name) as category_name,
              wo.subcategory_name,
-             v.company_name as vendor_name
+             v.company_name as vendor_name,
+             r.first_name as resident_first_name,
+             r.last_name as resident_last_name,
+             r.phone as resident_phone,
+             r.email as resident_email
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
+      LEFT JOIN residents r ON wo.resident_id = r.id
     `;
     
     const params = [];
@@ -620,8 +625,12 @@ router.get('/work-orders', authenticate, supervisorOrAbove, async (req, res) => 
     if (status && status !== 'all') {
       if (status === 'pending') {
         conditions.push(`wo.status IN ('pending', 'assigned', 'in_progress')`);
-      } else if (status === 'completed') {
+      } else if (status === 'completed' || status === 'completed,closed') {
         conditions.push(`wo.status IN ('completed', 'closed')`);
+      } else if (status.includes(',')) {
+        // Handle comma-separated statuses
+        const statuses = status.split(',').map(s => `'${s.trim()}'`).join(',');
+        conditions.push(`wo.status IN (${statuses})`);
       } else {
         conditions.push(`wo.status = ?`);
         params.push(status);
@@ -757,6 +766,64 @@ router.get('/employees', async (req, res) => {
   } catch (error) {
     console.error('Error fetching employees:', error);
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get vendor assignments for admin
+router.get('/vendors/assignments', async (req, res) => {
+  try {
+    const { status } = req.query;
+    
+    let query = `
+      SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+        COALESCE(p.name, op.community_name) as property_name, 
+        COALESCE(p.property_type, op.property_type) as property_type, 
+        COALESCE(p.address, op.address) as address, 
+        COALESCE(p.city, op.city) as city,
+        v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
+        v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
+        v.zone_name, v.area, v.rate_per_visit
+      FROM property_vendor_assignments pva
+      LEFT JOIN properties p ON pva.property_id = p.id
+      LEFT JOIN onboarded_properties op ON pva.property_id = op.id
+      JOIN onboarded_vendors v ON pva.vendor_id = v.id
+    `;
+    
+    if (status === 'active') {
+      query += ` WHERE pva.is_active = TRUE`;
+    } else if (status === 'removed') {
+      query += ` WHERE pva.is_active = FALSE`;
+    }
+    
+    query += ` ORDER BY pva.assigned_at DESC`;
+    
+    const [assignments] = await pool.execute(query);
+    
+    res.json({
+      success: true,
+      data: assignments.map(a => ({
+        id: a.id,
+        propertyId: a.property_id,
+        propertyName: a.property_name || 'Unknown Property',
+        propertyType: a.property_type,
+        address: a.address,
+        city: a.city,
+        vendorId: a.vendor_id,
+        vendorCode: a.vendor_code,
+        vendorName: a.vendor_name,
+        serviceType: a.service_type,
+        vendorPhone: a.vendor_phone,
+        vendorEmail: a.vendor_email,
+        zoneName: a.zone_name,
+        area: a.area,
+        ratePerVisit: a.rate_per_visit,
+        assignedAt: a.assigned_at,
+        status: a.is_active ? 'active' : 'removed'
+      }))
+    });
+  } catch (error) {
+    console.error('Get vendor assignments error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch assignments', error: error.message });
   }
 });
 
