@@ -21,11 +21,17 @@ const PROPERTY_ICONS = {
 
 const STATUS_STYLES = {
   Draft: 'bg-gray-100 text-gray-700',
+  draft: 'bg-gray-100 text-gray-700',
   Sent: 'bg-blue-100 text-blue-700',
+  sent: 'bg-blue-100 text-blue-700',
   Approved: 'bg-green-100 text-green-700',
+  approved: 'bg-green-100 text-green-700',
   Rejected: 'bg-red-100 text-red-700',
+  rejected: 'bg-red-100 text-red-700',
   Expired: 'bg-orange-100 text-orange-700',
-  Archived: 'bg-slate-100 text-slate-700'
+  expired: 'bg-orange-100 text-orange-700',
+  Archived: 'bg-slate-100 text-slate-700',
+  archived: 'bg-slate-100 text-slate-700'
 };
 
 const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
@@ -339,8 +345,8 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                       </span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 hidden lg:table-cell">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_STYLES[estimate.status]}`}>
-                        {estimate.status}
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_STYLES[estimate.status] || 'bg-gray-100 text-gray-700'}`}>
+                        {estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}
                       </span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
@@ -405,7 +411,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <div><p className="text-xs text-gray-500">Estimate ID</p><p className="font-medium text-sm">{viewEstimate.estimateId || viewEstimate.estimate_id}</p></div>
                 <div><p className="text-xs text-gray-500">Status</p>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[viewEstimate.status]}`}>{viewEstimate.status}</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[viewEstimate.status] || 'bg-gray-100 text-gray-700'}`}>{viewEstimate.status?.charAt(0).toUpperCase() + viewEstimate.status?.slice(1) || 'Draft'}</span>
                 </div>
                 <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{(viewEstimate.estimateType || viewEstimate.estimate_type)?.replace('_', ' ') || '-'}</p></div>
                 <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{new Date(viewEstimate.createdAt || viewEstimate.created_at).toLocaleDateString()}</p></div>
