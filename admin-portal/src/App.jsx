@@ -387,6 +387,8 @@ function App() {
             <Route path="/coordinator/employees/zones" element={<CoordinatorEmployees user={user} />} />
             <Route path="/coordinator/estimates" element={<CoordinatorEstimates user={user} defaultTab="list" />} />
             <Route path="/coordinator/estimates/create" element={<CoordinatorEstimates user={user} defaultTab="create" />} />
+            <Route path="/coordinator/estimates/amc" element={<CoordinatorEstimates user={user} defaultTab="amc" />} />
+            <Route path="/coordinator/estimates/addons" element={<CoordinatorEstimates user={user} defaultTab="addons" />} />
             <Route path="/coordinator/estimates/archived" element={<CoordinatorEstimates user={user} defaultTab="archived" />} />
             <Route path="*" element={<Navigate to="/coordinator" replace />} />
           </Routes>
