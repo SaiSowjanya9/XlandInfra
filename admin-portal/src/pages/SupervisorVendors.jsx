@@ -160,83 +160,12 @@ const SupervisorVendors = ({ user }) => {
               </div>
               <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Company Name</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.company_name || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Service Type</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.service_type || selectedVendor.vendor_type || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Owner/Contact Person</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.contact_person || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Zone</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.zone_name || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Area</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.city || selectedVendor.area || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Coverage/Day</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Status</p>
-                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedVendor.status || 'active')}`}>
-                    {selectedVendor.status || 'Active'}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Created By</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.created_by_name || '-'}</p>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-100 pt-4">
-                <h3 className="font-semibold text-gray-900 mb-3">Contact Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-700">{selectedVendor.phone || '-'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-700">{selectedVendor.email || '-'}</span>
-                  </div>
-                  <div className="col-span-2 flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                    <span className="text-gray-700">
-                      {[selectedVendor.address, selectedVendor.city, selectedVendor.state, selectedVendor.zip_code].filter(Boolean).join(', ') || '-'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-100 pt-4">
-                <h3 className="font-semibold text-gray-900 mb-3">Additional Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">GST Number</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.gst_number || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">PAN Number</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.pan_number || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Created Date</p>
-                    <p className="font-medium text-gray-900 flex items-center gap-1">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      {formatDate(selectedVendor.created_at)}
-                    </p>
-                  </div>
-                </div>
+            <div className="p-6">
+              <div>
+                <p className="text-sm text-gray-500">Status</p>
+                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedVendor.status || 'active')}`}>
+                  {selectedVendor.status || 'Active'}
+                </span>
               </div>
             </div>
             <div className="p-6 border-t border-gray-100">
