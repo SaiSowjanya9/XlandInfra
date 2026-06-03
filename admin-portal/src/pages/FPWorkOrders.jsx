@@ -19,7 +19,9 @@ import {
   Truck,
   UserPlus,
   RotateCcw,
-  Store
+  Store,
+  ChevronDown,
+  Pencil
 } from 'lucide-react';
 
 const FPWorkOrders = ({ user }) => {
@@ -35,8 +37,19 @@ const FPWorkOrders = ({ user }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [assignType, setAssignType] = useState('vendor');
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    categoryId: '',
+    subcategoryId: '',
+    description: '',
+    permissionToEnter: '',
+    hasPet: '',
+    entryNotes: '',
+    priority: 'medium',
+    status: ''
+  });
   const [employees, setEmployees] = useState([]);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [propertySearch, setPropertySearch] = useState('');
@@ -492,9 +505,65 @@ const FPWorkOrders = ({ user }) => {
     await handleStatusChange(workOrderId, 'pending');
   };
 
+  // Open edit modal with work order data
+  const handleEditWorkOrder = (wo) => {
+    setSelectedWorkOrder(wo);
+    setEditFormData({
+      categoryId: wo.category_id || '',
+      subcategoryId: wo.subcategory_id || '',
+      description: wo.description || '',
+      permissionToEnter: wo.permission_to_enter || '',
+      hasPet: wo.has_pet || '',
+      entryNotes: wo.entry_notes || '',
+      priority: wo.priority || 'medium',
+      status: wo.status || 'pending'
+    });
+    // Load subcategories for the selected category
+    if (wo.category_id) {
+      fetchSubcategories(wo.category_id);
+    }
+    setShowEditModal(true);
+  };
+
+  // Save edited work order
+  const handleSaveEdit = async () => {
+    if (!selectedWorkOrder) return;
+    
+    try {
+      const response = await fetch(`/api/fp/work-orders/${selectedWorkOrder.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          category_id: editFormData.categoryId,
+          subcategory_id: editFormData.subcategoryId,
+          description: editFormData.description,
+          permission_to_enter: editFormData.permissionToEnter,
+          has_pet: editFormData.hasPet,
+          entry_notes: editFormData.entryNotes,
+          priority: editFormData.priority,
+          status: editFormData.status
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Work order updated successfully' });
+        setShowEditModal(false);
+        fetchWorkOrders();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Failed to update work order' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to update work order' });
+    }
+  };
+
   // Check if user is FP Manager (restricted) - Admin users get full access
-  const isAdmin = user?.role === 'admin' || !user?.role;
-  const isFPManager = user?.role === 'manager' && !isAdmin;
+  // Admin portal users always get full access (dropdown status, action buttons)
+  const isFPManager = false; // Always show full controls in admin portal
 
   return (
     <div className="space-y-6">
@@ -1059,11 +1128,11 @@ const FPWorkOrders = ({ user }) => {
                           </div>
                         </td>
                         <td className="py-4 px-4">
-                          {!isFPManager ? (
+                          <div className="relative inline-block">
                             <select
                               value={wo.status}
                               onChange={(e) => handleStatusChange(wo.id, e.target.value)}
-                              className={`px-3 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
+                              className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
                             >
                               <option value="pending">Pending</option>
                               <option value="assigned">Assigned</option>
@@ -1072,11 +1141,8 @@ const FPWorkOrders = ({ user }) => {
                               <option value="closed">Closed</option>
                               <option value="cancelled">Cancelled</option>
                             </select>
-                          ) : (
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
-                              {wo.status?.replace(/_/g, ' ')}
-                            </span>
-                          )}
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
+                          </div>
                         </td>
                         <td className="py-4 px-4">
                           <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
@@ -1090,31 +1156,34 @@ const FPWorkOrders = ({ user }) => {
                             >
                               <Eye className="w-4 h-4 text-gray-500" />
                             </button>
-                            {activeTab === 'pending' && !isFPManager && (
-                              <>
-                                <button
-                                  onClick={() => openAssignModal(wo, 'vendor')}
-                                  className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
-                                  title="Assign Vendor"
-                                >
-                                  <Truck className="w-4 h-4 text-purple-500" />
-                                </button>
-                                <button
-                                  onClick={() => openAssignModal(wo, 'employee')}
-                                  className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
-                                  title="Assign Employee"
-                                >
-                                  <UserPlus className="w-4 h-4 text-green-500" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteWorkOrder(wo.id)}
-                                  className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-4 h-4 text-red-500" />
-                                </button>
-                              </>
-                            )}
+                            <button
+                              onClick={() => handleEditWorkOrder(wo)}
+                              className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Edit Work Order"
+                            >
+                              <Pencil className="w-4 h-4 text-blue-500" />
+                            </button>
+                            <button
+                              onClick={() => openAssignModal(wo, 'vendor')}
+                              className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
+                              title="Assign Vendor"
+                            >
+                              <Truck className="w-4 h-4 text-purple-500" />
+                            </button>
+                            <button
+                              onClick={() => openAssignModal(wo, 'employee')}
+                              className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Assign Employee"
+                            >
+                              <UserPlus className="w-4 h-4 text-green-500" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteWorkOrder(wo.id)}
+                              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </button>
                             {activeTab === 'completed' && (
                               <>
                                 <button
@@ -1368,6 +1437,158 @@ const FPWorkOrders = ({ user }) => {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Category
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Work Order Modal */}
+      {showEditModal && selectedWorkOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Edit Work Order</h2>
+                  <p className="text-sm text-gray-500">{selectedWorkOrder.work_order_id}</p>
+                </div>
+                <button onClick={() => setShowEditModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={editFormData.categoryId}
+                  onChange={(e) => {
+                    setEditFormData({ ...editFormData, categoryId: e.target.value, subcategoryId: '' });
+                    fetchSubcategories(e.target.value);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subcategory */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                <select
+                  value={editFormData.subcategoryId}
+                  onChange={(e) => setEditFormData({ ...editFormData, subcategoryId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Subcategory</option>
+                  {subcategories.map(sub => (
+                    <option key={sub.id} value={sub.id}>{sub.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Describe the issue..."
+                />
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                <select
+                  value={editFormData.priority}
+                  onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={editFormData.status}
+                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="assigned">Assigned</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="closed">Closed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {/* Permission to Enter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Permission to Enter</label>
+                <select
+                  value={editFormData.permissionToEnter}
+                  onChange={(e) => setEditFormData({ ...editFormData, permissionToEnter: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                  <option value="accompanied">Accompanied Only</option>
+                </select>
+              </div>
+
+              {/* Has Pet */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Has Pet</label>
+                <select
+                  value={editFormData.hasPet}
+                  onChange={(e) => setEditFormData({ ...editFormData, hasPet: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+
+              {/* Entry Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Entry Notes</label>
+                <textarea
+                  value={editFormData.entryNotes}
+                  onChange={(e) => setEditFormData({ ...editFormData, entryNotes: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Any special instructions for entry..."
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Save Changes
               </button>
             </div>
           </div>

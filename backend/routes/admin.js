@@ -660,24 +660,57 @@ router.get('/work-orders', authenticate, supervisorOrAbove, async (req, res) => 
 router.put('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, priority, assignedTo, scheduledDate, notes } = req.body;
+    const { 
+      status, priority, assignedTo, scheduledDate, notes,
+      category_id, subcategory_id, description,
+      permission_to_enter, has_pet, entry_notes
+    } = req.body;
 
-    let completedDate = null;
+    // Build dynamic update query
+    const updates = [];
+    const params = [];
+
+    if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+    if (priority !== undefined) { updates.push('priority = ?'); params.push(priority); }
+    if (assignedTo !== undefined) { updates.push('assigned_to = ?'); params.push(assignedTo); }
+    if (scheduledDate !== undefined) { updates.push('scheduled_date = ?'); params.push(scheduledDate); }
+    if (notes !== undefined) { updates.push('notes = ?'); params.push(notes); }
+    if (category_id !== undefined) { updates.push('category_id = ?'); params.push(category_id || null); }
+    if (subcategory_id !== undefined) { updates.push('subcategory_id = ?'); params.push(subcategory_id || null); }
+    if (description !== undefined) { updates.push('description = ?'); params.push(description); }
+    if (permission_to_enter !== undefined) { updates.push('permission_to_enter = ?'); params.push(permission_to_enter); }
+    if (has_pet !== undefined) { updates.push('has_pet = ?'); params.push(has_pet); }
+    if (entry_notes !== undefined) { updates.push('entry_notes = ?'); params.push(entry_notes); }
+
     if (status === 'completed') {
-      completedDate = new Date();
+      updates.push('completed_date = NOW()');
     }
 
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+
+    updates.push('updated_at = NOW()');
+    params.push(id);
+
     const [result] = await pool.execute(
-      `UPDATE work_orders SET 
-        status = COALESCE(?, status),
-        priority = COALESCE(?, priority),
-        assigned_to = ?,
-        scheduled_date = ?,
-        completed_date = ?,
-        notes = ?
-       WHERE id = ?`,
-      [status, priority, assignedTo, scheduledDate, completedDate, notes, id]
+      `UPDATE work_orders SET ${updates.join(', ')} WHERE id = ?`,
+      params
     );
+
+    // Update category and subcategory names
+    if (category_id) {
+      const [cats] = await pool.execute('SELECT name FROM categories WHERE id = ?', [category_id]);
+      if (cats.length > 0) {
+        await pool.execute('UPDATE work_orders SET category_name = ? WHERE id = ?', [cats[0].name, id]);
+      }
+    }
+    if (subcategory_id) {
+      const [subs] = await pool.execute('SELECT name FROM subcategories WHERE id = ?', [subcategory_id]);
+      if (subs.length > 0) {
+        await pool.execute('UPDATE work_orders SET subcategory_name = ? WHERE id = ?', [subs[0].name, id]);
+      }
+    }
 
     if (result.affectedRows === 0) {
       return res.status(404).json({
