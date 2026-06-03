@@ -223,6 +223,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     
     // Fetch from properties table with creator name - filter by FP for FP employees
     const propQuery = `SELECT p.*, 
+        p.zone_id as zone_name,
         COALESCE(p.area_name, p.city) as area,
         COALESCE(p.division, 'General') as division,
         COALESCE(p.number_of_units, 1) as units,

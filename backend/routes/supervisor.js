@@ -275,7 +275,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
     console.log('[Supervisor Properties] supervisorId:', supervisorId, 'franchisePartnerId:', franchisePartnerId);
 
     // Get own, assigned, and FP properties with creator name
-    const query = `SELECT p.*, z.name as zone_name, 
+    const query = `SELECT p.*, p.zone_id as zone_name, 
               COALESCE(p.area_name, p.city) as area,
               COALESCE(p.division_id, p.division, 'General') as division,
               COALESCE(p.number_of_units, 1) as units,
@@ -284,11 +284,10 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
               TRUE as can_assign_vendor, TRUE as can_assign_employee,
               'properties' as source_table
        FROM properties p
-       LEFT JOIN zones z ON p.zone_id = z.id
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE (p.supervisor_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})
        UNION
-       SELECT p.*, z.name as zone_name,
+       SELECT p.*, p.zone_id as zone_name,
               COALESCE(p.area_name, p.city) as area,
               COALESCE(p.division_id, p.division, 'General') as division,
               COALESCE(p.number_of_units, 1) as units,
@@ -298,7 +297,6 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
               'properties' as source_table
        FROM properties p
        INNER JOIN supervisor_assigned_properties sap ON p.id = sap.property_id
-       LEFT JOIN zones z ON p.zone_id = z.id
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE sap.supervisor_id = ?
        ORDER BY created_at DESC`;
