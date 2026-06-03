@@ -24,7 +24,7 @@ const QRManagement = () => {
   // Base URL for QR redirects
   const QR_BASE_URL = window.location.hostname === 'localhost' 
     ? `http://localhost:5000/api/qr/r`
-    : `https://qr.xlandinfra.com`;
+    : `https://admin.xlandinfra.com/api/qr/r`;
 
   useEffect(() => {
     fetchQRCodes();
