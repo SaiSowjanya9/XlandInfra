@@ -283,69 +283,127 @@ router.put('/work-orders/:id/status', authenticate, vendorOnly, async (req, res)
 // VENDOR MANAGEMENT ROUTES (For Staff)
 // ============================================
 
-// Get all vendors
+// Get all vendors (from both vendors and onboarded_vendors tables)
 router.get('/', authenticate, requireModuleAccess(MODULES.VENDOR_MANAGEMENT), async (req, res) => {
   try {
     const { isActive, isVerified, status } = req.query;
     
-    let query = `
-      SELECT v.*, 
-             CONCAT(u.first_name, ' ', u.last_name) as created_by_name
+    // First, fetch from onboarded_vendors (FP-created vendors with full details)
+    let onboardedQuery = `
+      SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
+             ov.zone, ov.zone as zone_name, ov.area_name, ov.division,
+             ov.owner_name, ov.owner_mobile, ov.owner_email, ov.owner_aadhar,
+             ov.owner_country_code,
+             ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
+             ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
+             ov.rate_per_visit, ov.coverage_per_day,
+             ov.created_by, ov.created_by_id, ov.status, ov.created_at, ov.updated_at,
+             COALESCE(
+               CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+               ov.created_by, 'System'
+             ) as created_by_name,
+             CASE WHEN ov.status = 'active' THEN 1 ELSE 0 END as is_active,
+             'onboarded' as source
+      FROM onboarded_vendors ov
+      LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email
+      WHERE 1=1
+    `;
+
+    // Handle status filter
+    if (status === 'active') {
+      onboardedQuery += ` AND ov.status = 'active'`;
+    } else if (status === 'deleted') {
+      onboardedQuery += ` AND ov.status != 'active'`;
+    }
+
+    onboardedQuery += ` ORDER BY ov.created_at DESC`;
+
+    let onboardedVendors = [];
+    try {
+      const [result] = await pool.execute(onboardedQuery);
+      onboardedVendors = result;
+    } catch (e) { console.log('Onboarded vendors fetch:', e.message); }
+
+    // Map onboarded vendors to standard format
+    const mappedOnboarded = onboardedVendors.map(v => ({
+      id: v.id,
+      vendorId: v.vendor_id,
+      serviceType: v.service_type,
+      serviceVerified: v.service_verified,
+      zone: v.zone,
+      areaName: v.area_name,
+      division: v.division,
+      ownerName: v.owner_name,
+      ownerMobile: v.owner_mobile,
+      ownerEmail: v.owner_email,
+      ownerAadhar: v.owner_aadhar,
+      ownerCountryCode: v.owner_country_code || '+91',
+      managerName: v.manager_name,
+      managerMobile: v.manager_mobile,
+      managerEmail: v.manager_email,
+      managerCountryCode: v.manager_country_code || '+91',
+      pocName: v.poc_name,
+      pocMobile: v.poc_mobile,
+      pocEmail: v.poc_email,
+      pocCountryCode: v.poc_country_code || '+91',
+      ratePerVisit: v.rate_per_visit || 0,
+      coveragePerDay: v.coverage_per_day || 0,
+      created_by_name: v.created_by_name,
+      createdBy: v.created_by_name,
+      status: v.status,
+      is_active: v.is_active,
+      createdAt: v.created_at,
+      source: 'onboarded'
+    }));
+
+    // Also fetch from legacy vendors table
+    let legacyQuery = `
+      SELECT v.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name
       FROM vendors v
       LEFT JOIN users u ON v.created_by = u.id
       WHERE 1=1
     `;
-    const params = [];
 
-    // Handle status filter (active, deleted, all)
     if (status === 'active') {
-      query += ` AND v.is_active = TRUE`;
+      legacyQuery += ` AND v.is_active = TRUE`;
     } else if (status === 'deleted') {
-      query += ` AND v.is_active = FALSE`;
-    }
-    // 'all' returns everything
-
-    if (isActive !== undefined) {
-      query += ` AND v.is_active = ?`;
-      params.push(isActive === 'true');
+      legacyQuery += ` AND v.is_active = FALSE`;
     }
 
-    if (isVerified !== undefined) {
-      query += ` AND v.is_verified = ?`;
-      params.push(isVerified === 'true');
-    }
+    legacyQuery += ` ORDER BY v.created_at DESC`;
 
-    query += ` ORDER BY v.created_at DESC`;
+    let legacyVendors = [];
+    try {
+      const [result] = await pool.execute(legacyQuery);
+      legacyVendors = result;
+    } catch (e) { console.log('Legacy vendors fetch:', e.message); }
 
-    const [vendors] = await pool.execute(query, params);
+    const mappedLegacy = legacyVendors.map(v => ({
+      id: v.id,
+      vendorId: v.vendor_id,
+      username: v.username,
+      email: v.email,
+      ownerName: v.company_name || v.contact_person,
+      ownerMobile: v.phone,
+      ownerEmail: v.email,
+      serviceType: v.service_categories,
+      zone: v.city,
+      areaName: v.address,
+      ratePerVisit: 0,
+      coveragePerDay: 0,
+      is_active: v.is_active,
+      createdBy: v.created_by_name,
+      created_by_name: v.created_by_name,
+      createdAt: v.created_at,
+      source: 'legacy'
+    }));
+
+    // Combine both sources, prioritizing onboarded vendors
+    const allVendors = [...mappedOnboarded, ...mappedLegacy];
 
     res.json({
       success: true,
-      data: vendors.map(v => ({
-        id: v.id,
-        vendorId: v.vendor_id,
-        username: v.username,
-        email: v.email,
-        companyName: v.company_name,
-        contactPerson: v.contact_person,
-        phone: v.phone,
-        alternatePhone: v.alternate_phone,
-        address: v.address,
-        city: v.city,
-        state: v.state,
-        zipCode: v.zip_code,
-        serviceCategories: v.service_categories,
-        gstNumber: v.gst_number,
-        panNumber: v.pan_number,
-        licenseNumber: v.license_number,
-        isActive: v.is_active,
-        isVerified: v.is_verified,
-        rating: v.rating,
-        totalJobsCompleted: v.total_jobs_completed,
-        lastLogin: v.last_login,
-        createdBy: v.created_by_name,
-        createdAt: v.created_at
-      }))
+      data: allVendors
     });
   } catch (error) {
     console.error('Error fetching vendors:', error);
@@ -757,43 +815,86 @@ router.get('/dashboard', authenticate, vendorOnly, async (req, res) => {
 // VENDOR PROPERTY ASSIGNMENTS (Admin Portal)
 // ============================================
 
-// Get vendor assignments for properties
+// Get vendor assignments for properties (fetch from onboarded_vendors)
 router.get('/assignments', authenticate, managerOrAdmin, async (req, res) => {
   try {
     const { status } = req.query;
     
     let whereClause = status === 'removed' ? 'pva.is_active = FALSE' : 'pva.is_active = TRUE';
+    if (status === 'all') whereClause = '1=1';
     
-    const [propertyAssignments] = await pool.execute(
-      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
-        p.name as property_name, p.property_id as property_code, p.property_type, p.address, p.city, p.zone_id as property_zone,
-        v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
-        v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
-        v.zone_name, v.area, v.rate_per_visit, v.coverage_per_day
-       FROM property_vendor_assignments pva
-       JOIN properties p ON pva.property_id = p.id
-       JOIN vendors v ON pva.vendor_id = v.id
-       WHERE ${whereClause}
-       ORDER BY pva.assigned_at DESC`
-    );
+    // Try onboarded_vendors first (FP-created vendors with full details)
+    let propertyAssignments = [];
+    try {
+      const [ovAssignments] = await pool.execute(
+        `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+          p.name as property_name, p.property_id as property_code, p.property_type, p.address, p.city, p.zone_id as property_zone,
+          ov.owner_name as vendor_name, ov.vendor_id as vendor_code, ov.service_type,
+          ov.owner_mobile as vendor_phone, ov.owner_email as vendor_email, ov.owner_aadhar,
+          ov.zone as zone_name, ov.area_name as area, ov.rate_per_visit, ov.coverage_per_day,
+          ov.manager_name, ov.manager_mobile, ov.manager_email,
+          ov.poc_name, ov.poc_mobile, ov.poc_email,
+          CASE WHEN pva.is_active = 1 THEN 'active' ELSE 'removed' END as status
+         FROM property_vendor_assignments pva
+         JOIN properties p ON pva.property_id = p.id
+         JOIN onboarded_vendors ov ON pva.vendor_id = ov.id
+         WHERE ${whereClause}
+         ORDER BY pva.assigned_at DESC`
+      );
+      propertyAssignments = ovAssignments;
+    } catch (e) {
+      console.log('Onboarded vendors assignments fetch:', e.message);
+    }
 
-    // Group by property for service assignments view
-    const serviceAssignments = propertyAssignments.reduce((acc, assignment) => {
-      const existing = acc.find(g => g.property_id === assignment.property_id);
-      if (existing) {
-        existing.assignments.push(assignment);
-      } else {
-        acc.push({
-          property_id: assignment.property_id,
-          propertyName: assignment.property_name,
-          propertyType: assignment.property_type,
-          address: assignment.address,
-          city: assignment.city,
-          assignments: [assignment]
-        });
-      }
-      return acc;
-    }, []);
+    // Also fetch from legacy vendors table if needed
+    try {
+      const [legacyAssignments] = await pool.execute(
+        `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+          p.name as property_name, p.property_id as property_code, p.property_type, p.address, p.city, p.zone_id as property_zone,
+          v.company_name as vendor_name, v.vendor_id as vendor_code, v.service_categories as service_type,
+          v.phone as vendor_phone, v.email as vendor_email,
+          v.city as zone_name, v.address as area, 0 as rate_per_visit, 0 as coverage_per_day,
+          CASE WHEN pva.is_active = 1 THEN 'active' ELSE 'removed' END as status
+         FROM property_vendor_assignments pva
+         JOIN properties p ON pva.property_id = p.id
+         JOIN vendors v ON pva.vendor_id = v.id
+         WHERE ${whereClause} AND pva.id NOT IN (SELECT id FROM property_vendor_assignments pva2 
+           JOIN onboarded_vendors ov2 ON pva2.vendor_id = ov2.id WHERE ${whereClause})
+         ORDER BY pva.assigned_at DESC`
+      );
+      propertyAssignments = [...propertyAssignments, ...legacyAssignments];
+    } catch (e) {
+      console.log('Legacy vendors assignments fetch:', e.message);
+    }
+
+    // Format for frontend - create flat service assignments list
+    const serviceAssignments = propertyAssignments.map(a => ({
+      id: a.id,
+      vendorId: a.vendor_code,
+      vendorName: a.vendor_name,
+      serviceType: a.service_type,
+      vendor_phone: a.vendor_phone,
+      vendor_email: a.vendor_email,
+      owner_aadhar: a.owner_aadhar,
+      zone_name: a.zone_name,
+      area: a.area,
+      rate_per_visit: a.rate_per_visit,
+      coverage_per_day: a.coverage_per_day,
+      manager_name: a.manager_name,
+      manager_mobile: a.manager_mobile,
+      manager_email: a.manager_email,
+      poc_name: a.poc_name,
+      poc_mobile: a.poc_mobile,
+      poc_email: a.poc_email,
+      propertyId: a.property_id,
+      propertyName: a.property_name,
+      property_type: a.property_type,
+      propertyZone: a.property_zone,
+      city: a.city,
+      assignedDate: a.assigned_at,
+      is_active: a.is_active,
+      status: a.status
+    }));
 
     res.json({
       success: true,

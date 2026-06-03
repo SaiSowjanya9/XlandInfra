@@ -99,26 +99,26 @@ const VendorDetails = () => {
   const handleOpenEdit = (vendor) => {
     setEditVendor(vendor);
     setEditForm({
-      serviceType: vendor.serviceType || '',
-      serviceVerified: vendor.serviceVerified || false,
-      zone: vendor.zone || '',
-      areaName: vendor.areaName || '',
+      serviceType: vendor.serviceType || vendor.service_type || '',
+      serviceVerified: vendor.serviceVerified || vendor.service_verified || false,
+      zone: vendor.zone || vendor.zone_name || '',
+      areaName: vendor.areaName || vendor.area_name || vendor.area || '',
       division: vendor.division || '',
-      ownerName: vendor.ownerName || '',
-      ownerMobile: vendor.ownerMobile || '',
-      ownerEmail: vendor.ownerEmail || '',
-      ownerAadhar: vendor.ownerAadhar || '',
-      ownerCountryCode: vendor.ownerCountryCode || '+91',
-      managerName: vendor.managerName || '',
-      managerMobile: vendor.managerMobile || '',
-      managerEmail: vendor.managerEmail || '',
-      managerCountryCode: vendor.managerCountryCode || '+91',
-      pocName: vendor.pocName || '',
-      pocMobile: vendor.pocMobile || '',
-      pocEmail: vendor.pocEmail || '',
-      pocCountryCode: vendor.pocCountryCode || '+91',
-      ratePerVisit: vendor.ratePerVisit || 0,
-      coveragePerDay: vendor.coveragePerDay || 0,
+      ownerName: vendor.ownerName || vendor.owner_name || vendor.company_name || '',
+      ownerMobile: vendor.ownerMobile || vendor.owner_mobile || vendor.phone || '',
+      ownerEmail: vendor.ownerEmail || vendor.owner_email || vendor.email || '',
+      ownerAadhar: vendor.ownerAadhar || vendor.owner_aadhar || '',
+      ownerCountryCode: vendor.ownerCountryCode || vendor.owner_country_code || '+91',
+      managerName: vendor.managerName || vendor.manager_name || '',
+      managerMobile: vendor.managerMobile || vendor.manager_mobile || '',
+      managerEmail: vendor.managerEmail || vendor.manager_email || '',
+      managerCountryCode: vendor.managerCountryCode || vendor.manager_country_code || '+91',
+      pocName: vendor.pocName || vendor.poc_name || '',
+      pocMobile: vendor.pocMobile || vendor.poc_mobile || '',
+      pocEmail: vendor.pocEmail || vendor.poc_email || '',
+      pocCountryCode: vendor.pocCountryCode || vendor.poc_country_code || '+91',
+      ratePerVisit: vendor.ratePerVisit || vendor.rate_per_visit || 0,
+      coveragePerDay: vendor.coveragePerDay || vendor.coverage_per_day || 0,
     });
   };
 
@@ -156,50 +156,50 @@ const VendorDetails = () => {
 
   const handleExportVendor = (vendor) => {
     const exportData = [{
-      'Vendor ID': vendor.vendorId,
-      'Service Type': vendor.serviceType,
-      'Verified': vendor.serviceVerified ? 'Yes' : 'No',
-      'Zone': vendor.zone,
-      'Area': vendor.areaName,
-      'Division': vendor.division,
-      'Owner Name': vendor.ownerName,
-      'Owner Mobile': `${vendor.ownerCountryCode} ${vendor.ownerMobile}`,
-      'Owner Email': vendor.ownerEmail,
-      'Owner Aadhar': vendor.ownerAadhar,
-      'Manager Name': vendor.managerName || '-',
-      'Manager Mobile': vendor.managerMobile ? `${vendor.managerCountryCode} ${vendor.managerMobile}` : '-',
-      'Manager Email': vendor.managerEmail || '-',
-      'POC Name': vendor.pocName || '-',
-      'POC Mobile': vendor.pocMobile ? `${vendor.pocCountryCode} ${vendor.pocMobile}` : '-',
-      'POC Email': vendor.pocEmail || '-',
-      'Rate Per Visit': `₹${vendor.ratePerVisit}`,
-      'Coverage Per Day': vendor.coveragePerDay,
-      'Created By': vendor.createdBy || 'Manager',
+      'Vendor ID': vendor.vendorId || vendor.vendor_id,
+      'Service Type': vendor.serviceType || vendor.service_type,
+      'Verified': (vendor.serviceVerified || vendor.service_verified) ? 'Yes' : 'No',
+      'Zone': vendor.zone || vendor.zone_name || '-',
+      'Area': vendor.areaName || vendor.area_name || vendor.area || '-',
+      'Division': vendor.division || '-',
+      'Owner Name': vendor.ownerName || vendor.owner_name || vendor.company_name,
+      'Owner Mobile': `${vendor.ownerCountryCode || vendor.owner_country_code || '+91'} ${vendor.ownerMobile || vendor.owner_mobile || vendor.phone || '-'}`,
+      'Owner Email': vendor.ownerEmail || vendor.owner_email || vendor.email || '-',
+      'Owner Aadhar': vendor.ownerAadhar || vendor.owner_aadhar || '-',
+      'Manager Name': vendor.managerName || vendor.manager_name || '-',
+      'Manager Mobile': (vendor.managerMobile || vendor.manager_mobile) ? `${vendor.managerCountryCode || vendor.manager_country_code || '+91'} ${vendor.managerMobile || vendor.manager_mobile}` : '-',
+      'Manager Email': vendor.managerEmail || vendor.manager_email || '-',
+      'POC Name': vendor.pocName || vendor.poc_name || '-',
+      'POC Mobile': (vendor.pocMobile || vendor.poc_mobile) ? `${vendor.pocCountryCode || vendor.poc_country_code || '+91'} ${vendor.pocMobile || vendor.poc_mobile}` : '-',
+      'POC Email': vendor.pocEmail || vendor.poc_email || '-',
+      'Rate Per Visit': `₹${vendor.ratePerVisit || vendor.rate_per_visit || 0}`,
+      'Coverage Per Day': vendor.coveragePerDay || vendor.coverage_per_day || 0,
+      'Created By': vendor.created_by_name || vendor.createdBy || 'System',
       'Status': vendor.status || 'active',
-      'Created': new Date(vendor.createdAt).toLocaleDateString()
+      'Created': new Date(vendor.createdAt || vendor.created_at).toLocaleDateString()
     }];
     
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Vendor');
-    XLSX.writeFile(wb, `Vendor_${vendor.vendorId}.xlsx`);
+    XLSX.writeFile(wb, `Vendor_${vendor.vendorId || vendor.vendor_id}.xlsx`);
     showToast('Vendor exported successfully');
   };
 
   const handleExportAll = () => {
     const exportData = filteredVendors.map(v => ({
-      'Vendor ID': v.vendorId,
-      'Service Type': v.serviceType,
-      'Zone': v.zone,
-      'Area': v.areaName,
-      'Division': v.division,
-      'Owner Name': v.ownerName,
-      'Owner Mobile': `${v.ownerCountryCode} ${v.ownerMobile}`,
-      'Rate Per Visit': `₹${v.ratePerVisit}`,
-      'Coverage Per Day': v.coveragePerDay,
-      'Created By': v.createdBy || 'Manager',
+      'Vendor ID': v.vendorId || v.vendor_id,
+      'Service Type': v.serviceType || v.service_type,
+      'Zone': v.zone || v.zone_name || '-',
+      'Area': v.areaName || v.area_name || v.area || '-',
+      'Division': v.division || '-',
+      'Owner Name': v.ownerName || v.owner_name || v.company_name,
+      'Owner Mobile': `${v.ownerCountryCode || v.owner_country_code || '+91'} ${v.ownerMobile || v.owner_mobile || v.phone || '-'}`,
+      'Rate Per Visit': `₹${v.ratePerVisit || v.rate_per_visit || 0}`,
+      'Coverage Per Day': v.coveragePerDay || v.coverage_per_day || 0,
+      'Created By': v.created_by_name || v.createdBy || 'System',
       'Status': v.status || 'active',
-      'Created': new Date(v.createdAt).toLocaleDateString()
+      'Created': new Date(v.createdAt || v.created_at).toLocaleDateString()
     }));
     
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -211,21 +211,26 @@ const VendorDetails = () => {
 
   // Derived data
   const divisions = [...new Set(vendors.map(v => v.division).filter(Boolean))];
-  const zones = [...new Set(vendors.map(v => v.zone).filter(Boolean))];
+  const zones = [...new Set(vendors.map(v => v.zone || v.zone_name).filter(Boolean))];
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredVendors = vendors.filter(v => {
-    if (activeTab !== 'all' && v.serviceType !== activeTab) return false;
+    const serviceType = v.serviceType || v.service_type;
+    if (activeTab !== 'all' && serviceType !== activeTab) return false;
     if (divisionFilter && v.division !== divisionFilter) return false;
-    if (zoneFilter && v.zone !== zoneFilter) return false;
+    const zone = v.zone || v.zone_name;
+    if (zoneFilter && zone !== zoneFilter) return false;
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
+      const ownerName = v.ownerName || v.owner_name || v.company_name || '';
+      const vendorId = v.vendorId || v.vendor_id || '';
+      const areaName = v.areaName || v.area_name || v.area || '';
       return (
-        v.ownerName?.toLowerCase().includes(q) ||
-        v.vendorId?.toLowerCase().includes(q) ||
-        v.serviceType?.toLowerCase().includes(q) ||
-        v.zone?.toLowerCase().includes(q) ||
-        v.areaName?.toLowerCase().includes(q)
+        ownerName.toLowerCase().includes(q) ||
+        vendorId.toLowerCase().includes(q) ||
+        (serviceType || '').toLowerCase().includes(q) ||
+        (zone || '').toLowerCase().includes(q) ||
+        areaName.toLowerCase().includes(q)
       );
     }
     return true;
@@ -234,7 +239,7 @@ const VendorDetails = () => {
   // Stats per service type
   const statsByType = TABS.filter(t => t.id !== 'all').map(tab => ({
     ...tab,
-    count: vendors.filter(v => v.serviceType === tab.id).length,
+    count: vendors.filter(v => (v.serviceType || v.service_type) === tab.id).length,
   }));
 
   const formatDate = (dateString) => {
@@ -335,7 +340,7 @@ const VendorDetails = () => {
           {TABS.map(tab => {
             const TabIcon = tab.icon;
             const isActive = activeTab === tab.id;
-            const count = tab.id === 'all' ? vendors.length : vendors.filter(v => v.serviceType === tab.id).length;
+            const count = tab.id === 'all' ? vendors.length : vendors.filter(v => (v.serviceType || v.service_type) === tab.id).length;
             return (
               <button
                 key={tab.id}
@@ -466,34 +471,34 @@ const VendorDetails = () => {
                 {filteredVendors.map((vendor) => (
                   <tr key={vendor.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-3 py-3 font-mono text-xs text-gray-600 whitespace-nowrap">
-                      {vendor.vendorId}
+                      {vendor.vendorId || vendor.vendor_id}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
-                        {vendor.serviceType}
-                        {vendor.serviceVerified && <FileCheck className="w-3 h-3 text-emerald-500" />}
+                        {vendor.serviceType || vendor.service_type || '-'}
+                        {(vendor.serviceVerified || vendor.service_verified) && <FileCheck className="w-3 h-3 text-emerald-500" />}
                       </span>
                     </td>
                     <td className="px-3 py-3 font-medium text-gray-900 whitespace-nowrap text-sm truncate max-w-[100px]">
-                      {vendor.ownerName}
+                      {vendor.ownerName || vendor.owner_name || vendor.company_name || '-'}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden lg:table-cell">
-                      {vendor.zone || '-'}
+                      {vendor.zone || vendor.zone_name || '-'}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden xl:table-cell">
-                      {vendor.areaName || '-'}
+                      {vendor.areaName || vendor.area_name || vendor.area || '-'}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden md:table-cell">
-                      ₹{vendor.ratePerVisit}
+                      ₹{vendor.ratePerVisit || vendor.rate_per_visit || 0}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap text-center hidden lg:table-cell">
-                      {vendor.coveragePerDay}
+                      {vendor.coveragePerDay || vendor.coverage_per_day || 0}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden xl:table-cell">
                       {vendor.created_by_name || vendor.createdBy || '-'}
                     </td>
                     <td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden sm:table-cell">
-                      {formatDate(vendor.createdAt)}
+                      {formatDate(vendor.createdAt || vendor.created_at)}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
@@ -592,8 +597,8 @@ const VendorDetails = () => {
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="p-6 bg-gray-50 rounded-t-xl flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">{viewVendor.ownerName}</h2>
-                <p className="text-sm text-gray-500 font-mono">{viewVendor.vendorId}</p>
+                <h2 className="text-lg font-semibold text-gray-900">{viewVendor.ownerName || viewVendor.owner_name || viewVendor.company_name}</h2>
+                <p className="text-sm text-gray-500 font-mono">{viewVendor.vendorId || viewVendor.vendor_id}</p>
               </div>
               <button onClick={() => setViewVendor(null)} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-gray-500" />
@@ -604,26 +609,27 @@ const VendorDetails = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Service Information</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><span className="text-xs text-gray-400">Service Type</span><p className="text-sm font-medium text-gray-900">{viewVendor.serviceType}</p></div>
-                  <div><span className="text-xs text-gray-400">Verified</span><p className="text-sm font-medium text-gray-900">{viewVendor.serviceVerified ? 'Yes' : 'No'}</p></div>
+                  <div><span className="text-xs text-gray-400">Service Type</span><p className="text-sm font-medium text-gray-900">{viewVendor.serviceType || viewVendor.service_type || '-'}</p></div>
+                  <div><span className="text-xs text-gray-400">Verified</span><p className="text-sm font-medium text-gray-900">{(viewVendor.serviceVerified || viewVendor.service_verified) ? 'Yes' : 'No'}</p></div>
                 </div>
               </div>
               {/* Location */}
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Location</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><span className="text-xs text-gray-400">Zone</span><p className="text-sm font-medium text-gray-900">{viewVendor.zone || '-'}</p></div>
-                  <div><span className="text-xs text-gray-400">Area</span><p className="text-sm font-medium text-gray-900">{viewVendor.areaName || '-'}</p></div>
+                  <div><span className="text-xs text-gray-400">Zone</span><p className="text-sm font-medium text-gray-900">{viewVendor.zone || viewVendor.zone_name || '-'}</p></div>
+                  <div><span className="text-xs text-gray-400">Area</span><p className="text-sm font-medium text-gray-900">{viewVendor.areaName || viewVendor.area_name || viewVendor.area || '-'}</p></div>
+                  <div><span className="text-xs text-gray-400">Division</span><p className="text-sm font-medium text-gray-900">{viewVendor.division || '-'}</p></div>
                 </div>
               </div>
               {/* Owner */}
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Owner Details</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><span className="text-xs text-gray-400">Name</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerName}</p></div>
-                  <div><span className="text-xs text-gray-400">Mobile</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerCountryCode} {viewVendor.ownerMobile}</p></div>
-                  <div><span className="text-xs text-gray-400">Email</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerEmail || '-'}</p></div>
-                  <div><span className="text-xs text-gray-400">Aadhar</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerAadhar || '-'}</p></div>
+                  <div><span className="text-xs text-gray-400">Name</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerName || viewVendor.owner_name || viewVendor.company_name || '-'}</p></div>
+                  <div><span className="text-xs text-gray-400">Mobile</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerCountryCode || viewVendor.owner_country_code || '+91'} {viewVendor.ownerMobile || viewVendor.owner_mobile || viewVendor.phone || '-'}</p></div>
+                  <div><span className="text-xs text-gray-400">Email</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerEmail || viewVendor.owner_email || viewVendor.email || '-'}</p></div>
+                  <div><span className="text-xs text-gray-400">Aadhar</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerAadhar || viewVendor.owner_aadhar || '-'}</p></div>
                 </div>
               </div>
               {/* Rate & Coverage */}

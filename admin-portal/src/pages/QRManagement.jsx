@@ -196,22 +196,22 @@ const QRManagement = () => {
 
   if (loading && !qrCodes.length) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-amber-500/70 text-sm">Loading QR Management...</p>
+          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500 text-sm">Loading QR Management...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 text-gray-800">
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in ${
-          notification.type === 'success' ? 'bg-emerald-500/90' :
-          notification.type === 'error' ? 'bg-red-500/90' : 'bg-amber-500/90'
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-slide-in text-white ${
+          notification.type === 'success' ? 'bg-emerald-500' :
+          notification.type === 'error' ? 'bg-red-500' : 'bg-indigo-500'
         }`}>
           {notification.type === 'success' ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
           <span className="text-sm font-medium">{notification.message}</span>
@@ -219,30 +219,30 @@ const QRManagement = () => {
       )}
 
       {/* Header */}
-      <div className="border-b border-amber-500/20 bg-black/40 backdrop-blur-xl sticky top-0 z-40">
+      <div className="border-b border-gray-200 bg-white/80 backdrop-blur-xl sticky top-0 z-40 shadow-sm">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-2 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg shadow-amber-500/20">
-                <QrCode className="w-6 h-6 text-black" />
+              <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-md">
+                <QrCode className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
+                <h1 className="text-xl font-bold text-gray-800">
                   QR Management System
                 </h1>
-                <p className="text-gray-400 text-sm">XLAND INFRA Dynamic QR Ecosystem</p>
+                <p className="text-gray-500 text-sm">XLAND INFRA Dynamic QR Ecosystem</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => fetchOverview()}
-                className={`p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all ${refreshing ? 'animate-spin' : ''}`}
+                className={`p-2.5 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-all ${refreshing ? 'animate-spin' : ''}`}
               >
-                <RefreshCw className="w-4 h-4 text-gray-400" />
+                <RefreshCw className="w-4 h-4 text-gray-500" />
               </button>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg text-black font-medium hover:from-amber-400 hover:to-amber-500 transition-all shadow-lg shadow-amber-500/20"
+                className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 rounded-xl text-white font-medium hover:bg-indigo-700 transition-all shadow-md"
               >
                 <Plus className="w-4 h-4" />
                 Create QR
@@ -258,8 +258,8 @@ const QRManagement = () => {
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   activeTab === tab
-                    ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -280,7 +280,7 @@ const QRManagement = () => {
                 label="Total QR Codes"
                 value={overview?.totals?.total_qr_codes || qrCodes.length}
                 subtext="Active codes"
-                color="amber"
+                color="indigo"
               />
               <StatCard
                 icon={BarChart3}
@@ -308,44 +308,44 @@ const QRManagement = () => {
 
             {/* Today's Stats */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-amber-500" />
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800">
+                  <Calendar className="w-5 h-5 text-indigo-500" />
                   Today's Activity
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-black/30 rounded-xl p-4">
-                    <p className="text-3xl font-bold text-amber-500">{overview?.totals?.scans_today || 0}</p>
-                    <p className="text-gray-400 text-sm mt-1">Scans Today</p>
+                  <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
+                    <p className="text-3xl font-bold text-indigo-600">{overview?.totals?.scans_today || 0}</p>
+                    <p className="text-gray-500 text-sm mt-1">Scans Today</p>
                   </div>
-                  <div className="bg-black/30 rounded-xl p-4">
-                    <p className="text-3xl font-bold text-emerald-500">{overview?.totals?.unique_today || 0}</p>
-                    <p className="text-gray-400 text-sm mt-1">New Users</p>
+                  <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+                    <p className="text-3xl font-bold text-emerald-600">{overview?.totals?.unique_today || 0}</p>
+                    <p className="text-gray-500 text-sm mt-1">New Users</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-amber-500" />
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800">
+                  <TrendingUp className="w-5 h-5 text-indigo-500" />
                   Per QR Performance
                 </h3>
                 <div className="space-y-3 max-h-40 overflow-y-auto custom-scrollbar">
                   {overview?.per_qr?.map((qr) => (
-                    <div key={qr.id} className="flex items-center justify-between p-3 bg-black/30 rounded-xl hover:bg-black/40 transition-all cursor-pointer"
+                    <div key={qr.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all cursor-pointer border border-gray-100"
                       onClick={() => { setSelectedQR(qr); setActiveTab('analytics'); }}>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center">
-                          <QrCode className="w-4 h-4 text-amber-500" />
+                        <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                          <QrCode className="w-4 h-4 text-indigo-600" />
                         </div>
                         <div>
-                          <p className="font-medium text-sm">{qr.label}</p>
-                          <p className="text-gray-500 text-xs">/{qr.slug}</p>
+                          <p className="font-medium text-sm text-gray-800">{qr.label}</p>
+                          <p className="text-gray-400 text-xs">/{qr.slug}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-amber-500">{formatNumber(qr.total_scans)}</p>
-                        <p className="text-gray-500 text-xs">{qr.active_now || 0} active</p>
+                        <p className="font-semibold text-indigo-600">{formatNumber(qr.total_scans)}</p>
+                        <p className="text-gray-400 text-xs">{qr.active_now || 0} active</p>
                       </div>
                     </div>
                   ))}
@@ -386,15 +386,15 @@ const QRManagement = () => {
                     const qr = qrCodes.find(q => q.id === parseInt(e.target.value));
                     setSelectedQR(qr);
                   }}
-                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-amber-500/50"
+                  className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 focus:outline-none focus:border-indigo-400 shadow-sm"
                 >
                   {qrCodes.map((qr) => (
-                    <option key={qr.id} value={qr.id} className="bg-gray-900">{qr.label}</option>
+                    <option key={qr.id} value={qr.id}>{qr.label}</option>
                   ))}
                 </select>
                 {selectedQR && (
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    selectedQR.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                    selectedQR.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
                   }`}>
                     {selectedQR.is_active ? 'Active' : 'Inactive'}
                   </span>
@@ -407,8 +407,8 @@ const QRManagement = () => {
                     onClick={() => setPeriod(p)}
                     className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
                       period === p
-                        ? 'bg-amber-500 text-black font-medium'
-                        : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                        ? 'bg-indigo-600 text-white font-medium'
+                        : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
                     }`}
                   >
                     {p}
@@ -426,7 +426,7 @@ const QRManagement = () => {
                     label="Total Scans"
                     value={formatNumber(analytics.stats?.total_scans || 0)}
                     subtext={`Last ${period}`}
-                    color="amber"
+                    color="indigo"
                   />
                   <StatCard
                     icon={Users}
@@ -455,9 +455,9 @@ const QRManagement = () => {
                 {/* Charts Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Daily Trend */}
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-amber-500" />
+                  <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800">
+                      <TrendingUp className="w-5 h-5 text-indigo-500" />
                       Scan Trends
                     </h3>
                     <div className="h-48">
@@ -466,9 +466,9 @@ const QRManagement = () => {
                   </div>
 
                   {/* Device Breakdown */}
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <Smartphone className="w-5 h-5 text-amber-500" />
+                  <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800">
+                      <Smartphone className="w-5 h-5 text-indigo-500" />
                       Device Distribution
                     </h3>
                     <DeviceChart devices={analytics.devices || []} />
@@ -478,55 +478,55 @@ const QRManagement = () => {
                 {/* Geography & Browser */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Geography */}
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <Globe className="w-5 h-5 text-amber-500" />
+                  <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800">
+                      <Globe className="w-5 h-5 text-indigo-500" />
                       Top Locations
                     </h3>
                     <div className="space-y-3">
                       {(analytics.geography || []).slice(0, 5).map((geo, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-black/30 rounded-xl">
+                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
                           <div className="flex items-center gap-3">
                             <span className="text-lg">{getCountryFlag(geo.country_code)}</span>
-                            <span className="font-medium">{geo.country || 'Unknown'}</span>
+                            <span className="font-medium text-gray-800">{geo.country || 'Unknown'}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-amber-500 font-semibold">{geo.count}</span>
-                            <span className="text-gray-500 text-sm">scans</span>
+                            <span className="text-indigo-600 font-semibold">{geo.count}</span>
+                            <span className="text-gray-400 text-sm">scans</span>
                           </div>
                         </div>
                       ))}
                       {(!analytics.geography || analytics.geography.length === 0) && (
-                        <p className="text-gray-500 text-center py-8">No location data yet</p>
+                        <p className="text-gray-400 text-center py-8">No location data yet</p>
                       )}
                     </div>
                   </div>
 
                   {/* Browser & OS */}
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <Monitor className="w-5 h-5 text-amber-500" />
+                  <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800">
+                      <Monitor className="w-5 h-5 text-indigo-500" />
                       Browsers & OS
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-gray-400 text-sm mb-2">Browsers</p>
+                        <p className="text-gray-500 text-sm mb-2">Browsers</p>
                         <div className="space-y-2">
                           {(analytics.browsers || []).slice(0, 4).map((b, idx) => (
                             <div key={idx} className="flex items-center justify-between text-sm">
-                              <span className="text-gray-300">{b.browser_name || 'Unknown'}</span>
-                              <span className="text-amber-500 font-medium">{b.count}</span>
+                              <span className="text-gray-700">{b.browser_name || 'Unknown'}</span>
+                              <span className="text-indigo-600 font-medium">{b.count}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                       <div>
-                        <p className="text-gray-400 text-sm mb-2">Operating Systems</p>
+                        <p className="text-gray-500 text-sm mb-2">Operating Systems</p>
                         <div className="space-y-2">
                           {(analytics.operating_systems || []).slice(0, 4).map((os, idx) => (
                             <div key={idx} className="flex items-center justify-between text-sm">
-                              <span className="text-gray-300">{os.os_name || 'Unknown'}</span>
-                              <span className="text-amber-500 font-medium">{os.count}</span>
+                              <span className="text-gray-700">{os.os_name || 'Unknown'}</span>
+                              <span className="text-indigo-600 font-medium">{os.count}</span>
                             </div>
                           ))}
                         </div>
@@ -536,15 +536,15 @@ const QRManagement = () => {
                 </div>
 
                 {/* Recent Scans */}
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-amber-500" />
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800">
+                    <Clock className="w-5 h-5 text-indigo-500" />
                     Recent Scans
                   </h3>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="text-left text-gray-400 text-sm border-b border-white/10">
+                        <tr className="text-left text-gray-500 text-sm border-b border-gray-200">
                           <th className="pb-3 font-medium">Time</th>
                           <th className="pb-3 font-medium">Device</th>
                           <th className="pb-3 font-medium">Browser</th>
@@ -554,22 +554,22 @@ const QRManagement = () => {
                       </thead>
                       <tbody className="text-sm">
                         {(analytics.recent_scans || []).slice(0, 10).map((scan, idx) => (
-                          <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
-                            <td className="py-3 text-gray-300">
+                          <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 text-gray-700">
                               {formatDate(scan.scanned_at)} {formatTime(scan.scanned_at)}
                             </td>
                             <td className="py-3">
                               <span className={`px-2 py-1 rounded-full text-xs ${
-                                scan.device_type === 'mobile' ? 'bg-blue-500/20 text-blue-400' :
-                                scan.device_type === 'tablet' ? 'bg-purple-500/20 text-purple-400' :
-                                'bg-gray-500/20 text-gray-400'
+                                scan.device_type === 'mobile' ? 'bg-blue-100 text-blue-700' :
+                                scan.device_type === 'tablet' ? 'bg-purple-100 text-purple-700' :
+                                'bg-gray-100 text-gray-700'
                               }`}>
                                 {scan.device_type || 'Unknown'}
                               </span>
                             </td>
-                            <td className="py-3 text-gray-300">{scan.browser_name || 'Unknown'}</td>
-                            <td className="py-3 text-gray-300">{scan.os_name || 'Unknown'}</td>
-                            <td className="py-3 text-gray-300">
+                            <td className="py-3 text-gray-700">{scan.browser_name || 'Unknown'}</td>
+                            <td className="py-3 text-gray-700">{scan.os_name || 'Unknown'}</td>
+                            <td className="py-3 text-gray-700">
                               {scan.city && scan.country ? `${scan.city}, ${scan.country}` : 'Unknown'}
                             </td>
                           </tr>
@@ -577,7 +577,7 @@ const QRManagement = () => {
                       </tbody>
                     </table>
                     {(!analytics.recent_scans || analytics.recent_scans.length === 0) && (
-                      <p className="text-gray-500 text-center py-8">No scan data yet</p>
+                      <p className="text-gray-400 text-center py-8">No scan data yet</p>
                     )}
                   </div>
                 </div>
@@ -590,20 +590,20 @@ const QRManagement = () => {
         {activeTab === 'management' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">QR Code Management</h2>
+              <h2 className="text-lg font-semibold text-gray-800">QR Code Management</h2>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg text-black font-medium hover:from-amber-400 hover:to-amber-500 transition-all"
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 rounded-xl text-white font-medium hover:bg-indigo-700 transition-all shadow-md"
               >
                 <Plus className="w-4 h-4" />
                 Create New QR
               </button>
             </div>
 
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
               <table className="w-full">
                 <thead>
-                  <tr className="text-left text-gray-400 text-sm bg-black/30">
+                  <tr className="text-left text-gray-500 text-sm bg-gray-50 border-b border-gray-200">
                     <th className="px-6 py-4 font-medium">QR Code</th>
                     <th className="px-6 py-4 font-medium">Redirect URL</th>
                     <th className="px-6 py-4 font-medium">Status</th>
@@ -614,24 +614,24 @@ const QRManagement = () => {
                 </thead>
                 <tbody>
                   {qrCodes.map((qr) => (
-                    <tr key={qr.id} className="border-t border-white/5 hover:bg-white/5 transition-all">
+                    <tr key={qr.id} className="border-t border-gray-100 hover:bg-gray-50 transition-all">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                            <QrCode className="w-6 h-6 text-black" />
+                          <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <QrCode className="w-6 h-6 text-indigo-600" />
                           </div>
                           <div>
-                            <p className="font-medium">{qr.label}</p>
-                            <p className="text-gray-500 text-sm">/{qr.slug}</p>
+                            <p className="font-medium text-gray-800">{qr.label}</p>
+                            <p className="text-gray-400 text-sm">/{qr.slug}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-300 text-sm truncate max-w-xs">{qr.current_url}</span>
+                          <span className="text-gray-600 text-sm truncate max-w-xs">{qr.current_url}</span>
                           <button
                             onClick={() => copyToClipboard(qr.current_url)}
-                            className="p-1 hover:bg-white/10 rounded"
+                            className="p-1 hover:bg-gray-100 rounded"
                           >
                             <Copy className="w-3 h-3 text-gray-400" />
                           </button>
@@ -642,8 +642,8 @@ const QRManagement = () => {
                           onClick={() => handleToggleActive(qr)}
                           className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium transition-all ${
                             qr.is_active
-                              ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
-                              : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                              ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
                           }`}
                         >
                           {qr.is_active ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
@@ -651,33 +651,33 @@ const QRManagement = () => {
                         </button>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-amber-500 font-semibold">{formatNumber(qr.total_scans || 0)}</span>
+                        <span className="text-indigo-600 font-semibold">{formatNumber(qr.total_scans || 0)}</span>
                       </td>
-                      <td className="px-6 py-4 text-gray-400 text-sm">
+                      <td className="px-6 py-4 text-gray-500 text-sm">
                         {formatDate(qr.created_at)}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => { setEditingQR(qr); setShowEditModal(true); }}
-                            className="p-2 hover:bg-white/10 rounded-lg transition-all"
+                            className="p-2 hover:bg-gray-100 rounded-lg transition-all"
                             title="Edit"
                           >
-                            <Edit3 className="w-4 h-4 text-gray-400" />
+                            <Edit3 className="w-4 h-4 text-gray-500" />
                           </button>
                           <button
                             onClick={() => downloadQR(qr, 'png')}
-                            className="p-2 hover:bg-white/10 rounded-lg transition-all"
+                            className="p-2 hover:bg-gray-100 rounded-lg transition-all"
                             title="Download PNG"
                           >
-                            <Download className="w-4 h-4 text-gray-400" />
+                            <Download className="w-4 h-4 text-gray-500" />
                           </button>
                           <button
                             onClick={() => { setSelectedQR(qr); setActiveTab('analytics'); }}
-                            className="p-2 hover:bg-white/10 rounded-lg transition-all"
+                            className="p-2 hover:bg-gray-100 rounded-lg transition-all"
                             title="View Analytics"
                           >
-                            <BarChart3 className="w-4 h-4 text-gray-400" />
+                            <BarChart3 className="w-4 h-4 text-gray-500" />
                           </button>
                         </div>
                       </td>
@@ -717,7 +717,8 @@ const QRManagement = () => {
         .animate-slide-in { animation: slide-in 0.3s ease-out; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
       `}</style>
     </div>
   );
@@ -725,28 +726,38 @@ const QRManagement = () => {
 
 // Sub-components
 
-const StatCard = ({ icon: Icon, label, value, subtext, color = 'amber', pulse = false }) => {
+const StatCard = ({ icon: Icon, label, value, subtext, color = 'indigo', pulse = false }) => {
   const colors = {
-    amber: 'from-amber-500/20 to-amber-600/20 border-amber-500/30 text-amber-500',
-    blue: 'from-blue-500/20 to-blue-600/20 border-blue-500/30 text-blue-500',
-    emerald: 'from-emerald-500/20 to-emerald-600/20 border-emerald-500/30 text-emerald-500',
-    rose: 'from-rose-500/20 to-rose-600/20 border-rose-500/30 text-rose-500',
-    purple: 'from-purple-500/20 to-purple-600/20 border-purple-500/30 text-purple-500',
+    amber: 'bg-amber-50 border-amber-200 text-amber-600',
+    indigo: 'bg-indigo-50 border-indigo-200 text-indigo-600',
+    blue: 'bg-blue-50 border-blue-200 text-blue-600',
+    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-600',
+    rose: 'bg-rose-50 border-rose-200 text-rose-600',
+    purple: 'bg-purple-50 border-purple-200 text-purple-600',
+  };
+
+  const iconColors = {
+    amber: 'bg-amber-100 text-amber-600',
+    indigo: 'bg-indigo-100 text-indigo-600',
+    blue: 'bg-blue-100 text-blue-600',
+    emerald: 'bg-emerald-100 text-emerald-600',
+    rose: 'bg-rose-100 text-rose-600',
+    purple: 'bg-purple-100 text-purple-600',
   };
 
   return (
-    <div className={`bg-gradient-to-br ${colors[color]} backdrop-blur-xl border rounded-2xl p-5 relative overflow-hidden`}>
+    <div className={`${colors[color]} border rounded-2xl p-5 relative overflow-hidden shadow-sm`}>
       {pulse && (
         <div className="absolute top-3 right-3 w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
       )}
       <div className="flex items-center gap-3 mb-3">
-        <div className={`p-2 rounded-xl bg-white/10`}>
+        <div className={`p-2 rounded-xl ${iconColors[color]}`}>
           <Icon className="w-5 h-5" />
         </div>
       </div>
-      <p className="text-3xl font-bold text-white">{value}</p>
+      <p className="text-3xl font-bold text-gray-800">{value}</p>
       <p className="text-sm mt-1">{label}</p>
-      <p className="text-gray-500 text-xs mt-0.5">{subtext}</p>
+      <p className="text-gray-400 text-xs mt-0.5">{subtext}</p>
     </div>
   );
 };
@@ -755,30 +766,30 @@ const QRCard = ({ qr, baseUrl, onSelect, onEdit, onToggle, onCopy, onDownload })
   const qrUrl = `${baseUrl}/${qr.slug}`;
 
   return (
-    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 hover:border-amber-500/30 transition-all group">
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-indigo-300 hover:shadow-md transition-all group shadow-sm">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
-            <QrCode className="w-7 h-7 text-black" />
+          <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+            <QrCode className="w-7 h-7 text-indigo-600" />
           </div>
           <div>
-            <h3 className="font-semibold">{qr.label}</h3>
-            <p className="text-gray-500 text-sm">/{qr.slug}</p>
+            <h3 className="font-semibold text-gray-800">{qr.label}</h3>
+            <p className="text-gray-400 text-sm">/{qr.slug}</p>
           </div>
         </div>
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          qr.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+          qr.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
         }`}>
           {qr.is_active ? 'Active' : 'Inactive'}
         </span>
       </div>
 
-      <div className="bg-black/30 rounded-xl p-3 mb-4">
+      <div className="bg-gray-50 rounded-xl p-3 mb-4 border border-gray-100">
         <p className="text-gray-400 text-xs mb-1">Redirect URL</p>
-        <p className="text-sm text-gray-200 truncate">{qr.current_url}</p>
+        <p className="text-sm text-gray-700 truncate">{qr.current_url}</p>
       </div>
 
-      <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
+      <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
         <span>{qr.total_scans || 0} scans</span>
         <span>{qr.active_users || 0} active now</span>
       </div>
@@ -786,31 +797,31 @@ const QRCard = ({ qr, baseUrl, onSelect, onEdit, onToggle, onCopy, onDownload })
       <div className="flex items-center gap-2">
         <button
           onClick={onSelect}
-          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500/20 transition-all text-sm font-medium"
+          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-all text-sm font-medium"
         >
           <BarChart3 className="w-4 h-4" />
           Analytics
         </button>
         <button
           onClick={() => onCopy(qrUrl)}
-          className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-all"
+          className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all"
           title="Copy URL"
         >
-          <Copy className="w-4 h-4 text-gray-400" />
+          <Copy className="w-4 h-4 text-gray-500" />
         </button>
         <button
           onClick={() => onDownload(qr, 'png')}
-          className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-all"
+          className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all"
           title="Download"
         >
-          <Download className="w-4 h-4 text-gray-400" />
+          <Download className="w-4 h-4 text-gray-500" />
         </button>
         <button
           onClick={onEdit}
-          className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-all"
+          className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all"
           title="Edit"
         >
-          <Edit3 className="w-4 h-4 text-gray-400" />
+          <Edit3 className="w-4 h-4 text-gray-500" />
         </button>
       </div>
     </div>
@@ -837,23 +848,23 @@ const QRModal = ({ title, qr, onClose, onSubmit }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="relative bg-gray-900 border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative bg-white border border-gray-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">{title}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-all">
-            <X className="w-5 h-5 text-gray-400" />
+          <h2 className="text-xl font-bold text-gray-800">{title}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+            <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Label</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Label</label>
             <input
               type="text"
               value={formData.label}
               onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white"
               placeholder="e.g., XLAND INFRA Website"
               required
             />
@@ -861,14 +872,14 @@ const QRModal = ({ title, qr, onClose, onSubmit }) => {
 
           {!qr && (
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Slug</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Slug</label>
               <div className="flex items-center gap-2">
-                <span className="text-gray-500 text-sm">qr.xlandinfra.com/</span>
+                <span className="text-gray-400 text-sm">qr.xlandinfra.com/</span>
                 <input
                   type="text"
                   value={formData.slug}
                   onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white"
                   placeholder="main"
                   required
                 />
@@ -877,51 +888,51 @@ const QRModal = ({ title, qr, onClose, onSubmit }) => {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Redirect URL</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Redirect URL</label>
             <input
               type="url"
               value={formData.current_url}
               onChange={(e) => setFormData({ ...formData, current_url: e.target.value })}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white"
               placeholder="https://www.xlandinfra.com"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 resize-none"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white resize-none"
               placeholder="Brief description of this QR code's purpose..."
               rows={3}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Type</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
             <select
               value={formData.qr_type}
               onChange={(e) => setFormData({ ...formData, qr_type: e.target.value })}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500/50"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:border-indigo-400"
             >
-              <option value="website" className="bg-gray-900">Website</option>
-              <option value="admin" className="bg-gray-900">Admin Portal</option>
-              <option value="campaign" className="bg-gray-900">Campaign</option>
-              <option value="event" className="bg-gray-900">Event</option>
-              <option value="custom" className="bg-gray-900">Custom</option>
+              <option value="website">Website</option>
+              <option value="admin">Admin Portal</option>
+              <option value="campaign">Campaign</option>
+              <option value="event">Event</option>
+              <option value="custom">Custom</option>
             </select>
           </div>
 
           {qr && formData.current_url !== qr.current_url && (
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Reason for URL Change</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Reason for URL Change</label>
               <input
                 type="text"
                 value={formData.change_reason}
                 onChange={(e) => setFormData({ ...formData, change_reason: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white"
                 placeholder="e.g., Updated landing page"
               />
             </div>
@@ -931,14 +942,14 @@ const QRModal = ({ title, qr, onClose, onSubmit }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-medium hover:bg-white/10 transition-all"
+              className="flex-1 px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-200 transition-all"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl text-black font-medium hover:from-amber-400 hover:to-amber-500 transition-all disabled:opacity-50"
+              className="flex-1 px-4 py-3 bg-indigo-600 rounded-xl text-white font-medium hover:bg-indigo-700 transition-all disabled:opacity-50"
             >
               {submitting ? 'Saving...' : (qr ? 'Update QR' : 'Create QR')}
             </button>
@@ -952,7 +963,7 @@ const QRModal = ({ title, qr, onClose, onSubmit }) => {
 const SimpleTrendChart = ({ data }) => {
   if (!data || data.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-500">
+      <div className="h-full flex items-center justify-center text-gray-400">
         No data available
       </div>
     );
@@ -969,7 +980,7 @@ const SimpleTrendChart = ({ data }) => {
           className="flex-1 flex flex-col items-center gap-1"
         >
           <div
-            className="w-full bg-gradient-to-t from-amber-500 to-amber-400 rounded-t-lg transition-all hover:from-amber-400 hover:to-amber-300"
+            className="w-full bg-gradient-to-t from-indigo-500 to-indigo-400 rounded-t-lg transition-all hover:from-indigo-400 hover:to-indigo-300"
             style={{ height: `${Math.max((item.scans / maxScans) * 100, 5)}%` }}
             title={`${item.scans} scans`}
           ></div>
@@ -995,7 +1006,21 @@ const DeviceChart = ({ devices }) => {
     mobile: 'bg-blue-500',
     tablet: 'bg-purple-500',
     desktop: 'bg-emerald-500',
-    unknown: 'bg-gray-500'
+    unknown: 'bg-gray-400'
+  };
+
+  const deviceBgColors = {
+    mobile: 'bg-blue-100',
+    tablet: 'bg-purple-100',
+    desktop: 'bg-emerald-100',
+    unknown: 'bg-gray-100'
+  };
+
+  const deviceTextColors = {
+    mobile: 'text-blue-600',
+    tablet: 'text-purple-600',
+    desktop: 'text-emerald-600',
+    unknown: 'text-gray-600'
   };
 
   return (
@@ -1006,27 +1031,27 @@ const DeviceChart = ({ devices }) => {
         
         return (
           <div key={idx} className="flex items-center gap-4">
-            <div className={`p-2 rounded-lg ${deviceColors[device.device_type]}/20`}>
-              <Icon className={`w-5 h-5 ${deviceColors[device.device_type]?.replace('bg-', 'text-')}`} />
+            <div className={`p-2 rounded-lg ${deviceBgColors[device.device_type] || deviceBgColors.unknown}`}>
+              <Icon className={`w-5 h-5 ${deviceTextColors[device.device_type] || deviceTextColors.unknown}`} />
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium capitalize">{device.device_type || 'Unknown'}</span>
-                <span className="text-sm text-gray-400">{percentage}%</span>
+                <span className="text-sm font-medium capitalize text-gray-700">{device.device_type || 'Unknown'}</span>
+                <span className="text-sm text-gray-500">{percentage}%</span>
               </div>
-              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${deviceColors[device.device_type]} rounded-full transition-all duration-500`}
+                  className={`h-full ${deviceColors[device.device_type] || deviceColors.unknown} rounded-full transition-all duration-500`}
                   style={{ width: `${percentage}%` }}
                 ></div>
               </div>
             </div>
-            <span className="text-amber-500 font-semibold min-w-[3rem] text-right">{device.count}</span>
+            <span className="text-indigo-600 font-semibold min-w-[3rem] text-right">{device.count}</span>
           </div>
         );
       })}
       {devices.length === 0 && (
-        <p className="text-gray-500 text-center py-8">No device data yet</p>
+        <p className="text-gray-400 text-center py-8">No device data yet</p>
       )}
     </div>
   );

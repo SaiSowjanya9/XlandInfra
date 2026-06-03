@@ -376,6 +376,7 @@ const AssignedVendors = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Rate</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Assigned</th>
@@ -402,6 +403,9 @@ const AssignedVendors = ({ user }) => {
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-sm text-gray-600">{assignment.area || '-'}</span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <span className="text-sm text-gray-900">₹{assignment.rate_per_visit || '0'}</span>
                       </td>
                       <td className="py-4 px-4 text-center">
                         <span className="text-sm text-gray-900">{assignment.coverage_per_day || '0'}</span>
@@ -447,24 +451,38 @@ const AssignedVendors = ({ user }) => {
       {/* View Assignment Modal */}
       {viewAssignment && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setViewAssignment(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-4 bg-gray-50 rounded-t-xl flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Assignment Details</h2>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">{viewAssignment.vendorName || viewAssignment.vendor_name || 'Vendor Details'}</h2>
+                <p className="text-sm text-gray-500 font-mono">{viewAssignment.vendorId || viewAssignment.vendor_code}</p>
+              </div>
               <button onClick={() => setViewAssignment(null)} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="p-6 space-y-5">
+            <div className="p-6 space-y-5 overflow-y-auto">
               {/* Service & Location */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Service & Location</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Service Information</h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-400">Service Type</p>
                     <span className="inline-flex items-center px-2 py-0.5 mt-1 bg-amber-100 text-amber-700 rounded text-xs font-medium">
                       {viewAssignment.serviceType || viewAssignment.service_type || '-'}
                     </span>
                   </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Verified</p>
+                    <p className="text-sm font-medium text-gray-900">{viewAssignment.service_verified ? 'Yes' : 'No'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Location</h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-400">Zone</p>
                     <p className="text-sm font-medium text-gray-900">{viewAssignment.zone_name || viewAssignment.zone || viewAssignment.propertyZone || '-'}</p>
@@ -476,22 +494,13 @@ const AssignedVendors = ({ user }) => {
                 </div>
               </div>
 
-              {/* Rate & Coverage */}
-              <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Coverage</h3>
-                <div>
-                  <p className="text-xs text-gray-400">Coverage Per Day</p>
-                  <p className="text-sm font-medium text-gray-900">{viewAssignment.coverage_per_day || viewAssignment.coveragePerDay || 0}</p>
-                </div>
-              </div>
-
               {/* Owner Details */}
               <div>
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Owner Details</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-400">Name</p>
-                    <p className="text-sm font-medium text-gray-900">{viewAssignment.vendor_name || viewAssignment.vendorName || viewAssignment.owner_name || '-'}</p>
+                    <p className="text-sm font-medium text-gray-900">{viewAssignment.vendorName || viewAssignment.vendor_name || viewAssignment.owner_name || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-400">Mobile</p>
@@ -502,11 +511,68 @@ const AssignedVendors = ({ user }) => {
                     <p className="text-sm font-medium text-gray-900">{viewAssignment.vendor_email || viewAssignment.vendorEmail || viewAssignment.owner_email || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400">Vendor ID</p>
-                    <p className="text-sm font-mono text-gray-600">{viewAssignment.vendor_code || viewAssignment.vendorId || '-'}</p>
+                    <p className="text-xs text-gray-400">Aadhar</p>
+                    <p className="text-sm font-medium text-gray-900">{viewAssignment.owner_aadhar || '-'}</p>
                   </div>
                 </div>
               </div>
+
+              {/* Rate & Coverage */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate & Coverage</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-400">Rate Per Visit</p>
+                    <p className="text-sm font-medium text-gray-900">₹{viewAssignment.rate_per_visit || viewAssignment.ratePerVisit || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Coverage Per Day</p>
+                    <p className="text-sm font-medium text-gray-900">{viewAssignment.coverage_per_day || viewAssignment.coveragePerDay || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Manager Details */}
+              {(viewAssignment.manager_name || viewAssignment.manager_mobile) && (
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Manager / Primary Contact</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-400">Name</p>
+                      <p className="text-sm font-medium text-gray-900">{viewAssignment.manager_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400">Mobile</p>
+                      <p className="text-sm font-medium text-gray-900">{viewAssignment.manager_mobile || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400">Email</p>
+                      <p className="text-sm font-medium text-gray-900">{viewAssignment.manager_email || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* POC Details */}
+              {(viewAssignment.poc_name || viewAssignment.poc_mobile) && (
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Point of Contact</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-400">Name</p>
+                      <p className="text-sm font-medium text-gray-900">{viewAssignment.poc_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400">Mobile</p>
+                      <p className="text-sm font-medium text-gray-900">{viewAssignment.poc_mobile || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400">Email</p>
+                      <p className="text-sm font-medium text-gray-900">{viewAssignment.poc_email || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Assigned Property */}
               <div>
@@ -530,7 +596,7 @@ const AssignedVendors = ({ user }) => {
               </div>
 
               {/* Assignment Info */}
-              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100">
+              <div className="grid grid-cols-3 gap-4 pt-3 border-t border-gray-100">
                 <div>
                   <p className="text-xs text-gray-400">Assigned Date</p>
                   <p className="text-sm font-medium text-gray-900">{formatDate(viewAssignment.assigned_at || viewAssignment.assignedDate)}</p>
@@ -544,6 +610,10 @@ const AssignedVendors = ({ user }) => {
                   }`}>
                     {viewAssignment.is_active !== false && viewAssignment.status !== 'removed' ? 'Active' : 'Removed'}
                   </span>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">Vendor ID</p>
+                  <p className="text-sm font-mono text-gray-600">{viewAssignment.vendorId || viewAssignment.vendor_code || '-'}</p>
                 </div>
               </div>
             </div>
