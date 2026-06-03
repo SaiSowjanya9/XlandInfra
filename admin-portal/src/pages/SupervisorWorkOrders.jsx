@@ -647,6 +647,7 @@ const SupervisorWorkOrders = ({ user }) => {
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Order ID</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Resident</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Category</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                       <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                     </tr>
@@ -660,6 +661,11 @@ const SupervisorWorkOrders = ({ user }) => {
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-600">{wo.customer_name || wo.client_name || '-'}</td>
                         <td className="py-4 px-4 text-sm text-gray-600">{wo.category_name || '-'}</td>
+                        <td className="py-4 px-4">
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
+                            {wo.status?.replace(/_/g, ' ').toUpperCase()}
+                          </span>
+                        </td>
                         <td className="py-4 px-4 text-sm text-gray-500">{formatDate(wo.created_at)}</td>
                         <td className="py-4 px-4">
                           <div className="flex items-center justify-end gap-2">
