@@ -882,21 +882,27 @@ router.get('/vendors/assignments', requireCoordinatorScope, async (req, res) => 
     
     console.log('Coordinator Vendor Assignments Query - FP:', franchisePartnerId);
     
-    // Get property-vendor assignments for this FP's properties (same as Manager)
+    // Get property-vendor assignments with full vendor details
+    // Join with both properties and onboarded_properties
     const [propertyAssignments] = await pool.execute(
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
-        p.name as property_name, p.property_id as propertyId, p.property_type, p.address, p.city,
+        COALESCE(p.name, op.community_name) as property_name, 
+        COALESCE(p.property_id, op.property_id) as propertyId, 
+        COALESCE(p.property_type, op.property_type) as property_type, 
+        COALESCE(p.address, op.address) as address, 
+        COALESCE(p.city, op.city) as city,
         v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone_name, v.area, v.rate_per_visit, v.coverage_per_day,
         v.owner_aadhar, v.manager_name, v.manager_mobile, v.manager_email,
         v.poc_name, v.poc_mobile, v.poc_email
        FROM property_vendor_assignments pva
-       JOIN properties p ON pva.property_id = p.id
+       LEFT JOIN properties p ON pva.property_id = p.id
+       LEFT JOIN onboarded_properties op ON pva.property_id = op.id
        JOIN onboarded_vendors v ON pva.vendor_id = v.id
-       WHERE p.franchise_partner_id = ? AND pva.is_active = TRUE
+       WHERE (p.franchise_partner_id = ? OR op.franchise_partner_id = ?) AND pva.is_active = TRUE
        ORDER BY pva.assigned_at DESC`,
-      [franchisePartnerId]
+      [franchisePartnerId, franchisePartnerId]
     );
 
     console.log('Coordinator Vendor assignments found:', propertyAssignments.length);

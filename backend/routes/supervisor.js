@@ -872,6 +872,61 @@ router.delete('/vendors/:id', requireSupervisorScope, validateOwnership('onboard
   }
 });
 
+// Get vendor assignments for supervisor
+router.get('/vendors/assignments', requireSupervisorScope, async (req, res) => {
+  try {
+    const supervisorId = req.supervisorId;
+    
+    // Get property-vendor assignments with full vendor details
+    const [propertyAssignments] = await pool.execute(
+      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+        COALESCE(p.name, op.community_name) as property_name, 
+        COALESCE(p.property_id, op.property_id) as propertyId, 
+        COALESCE(p.property_type, op.property_type) as property_type, 
+        COALESCE(p.address, op.address) as address, 
+        COALESCE(p.city, op.city) as city,
+        v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
+        v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
+        v.zone_name, v.area, v.rate_per_visit, v.coverage_per_day
+       FROM property_vendor_assignments pva
+       LEFT JOIN properties p ON pva.property_id = p.id
+       LEFT JOIN onboarded_properties op ON pva.property_id = op.id
+       JOIN onboarded_vendors v ON pva.vendor_id = v.id
+       WHERE (p.supervisor_id = ? OR op.supervisor_id = ?) AND pva.is_active = TRUE
+       ORDER BY pva.assigned_at DESC`,
+      [supervisorId, supervisorId]
+    );
+
+    const serviceAssignments = propertyAssignments.map(a => ({
+      id: a.id,
+      propertyId: a.propertyId || a.property_id,
+      propertyName: a.property_name,
+      propertyType: a.property_type,
+      city: a.city || '',
+      address: a.address || '',
+      vendorId: a.vendor_code,
+      vendorName: a.vendor_name,
+      vendorPhone: a.vendor_phone,
+      vendorEmail: a.vendor_email,
+      serviceType: a.service_type,
+      zone_name: a.zone_name,
+      area: a.area,
+      rate_per_visit: a.rate_per_visit,
+      coverage_per_day: a.coverage_per_day,
+      assignedDate: a.assigned_at,
+      status: a.is_active ? 'active' : 'removed'
+    }));
+
+    res.json({
+      success: true,
+      data: { propertyAssignments, serviceAssignments }
+    });
+  } catch (error) {
+    console.error('Supervisor vendor assignments error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch assignments', error: error.message });
+  }
+});
+
 // =====================================================
 // EMPLOYEES
 // =====================================================
