@@ -42,6 +42,7 @@ const initialFormState = {
   serviceVerified: false,
   zone: '',
   areaName: '',
+  division: '',
   ownerName: '',
   ownerMobile: '',
   ownerEmail: '',
@@ -56,7 +57,11 @@ const initialFormState = {
   pocEmail: '',
   pocCountryCode: '+91',
   ratePerVisit: '',
-  coveragePerDay: ''
+  coveragePerDay: '',
+  // Business Documents
+  gstNumber: '',
+  panNumber: '',
+  licenseNumber: ''
 };
 
 const FPAddVendor = ({ user }) => {
@@ -658,6 +663,61 @@ const FPAddVendor = ({ user }) => {
               />
               {errors.coveragePerDay && <p className="text-xs text-red-500 mt-1">{errors.coveragePerDay}</p>}
               <p className="text-xs text-gray-400 mt-1">Maximum visits/jobs vendor can handle per day</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Business Documents (Optional) */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <FileCheck className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Business Documents</h2>
+              <p className="text-sm text-gray-500">Optional registration and license details</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* GST Number */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">GST Number</label>
+              <input
+                type="text"
+                value={formData.gstNumber}
+                onChange={(e) => updateField('gstNumber', e.target.value.toUpperCase())}
+                placeholder="22AAAAA0000A1Z5"
+                maxLength={15}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-500 focus:outline-none"
+              />
+              <p className="text-xs text-gray-400 mt-1">15-digit GST identification number</p>
+            </div>
+
+            {/* PAN Number */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">PAN Number</label>
+              <input
+                type="text"
+                value={formData.panNumber}
+                onChange={(e) => updateField('panNumber', e.target.value.toUpperCase())}
+                placeholder="ABCDE1234F"
+                maxLength={10}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-500 focus:outline-none"
+              />
+              <p className="text-xs text-gray-400 mt-1">10-digit PAN card number</p>
+            </div>
+
+            {/* License Number */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">License Number</label>
+              <input
+                type="text"
+                value={formData.licenseNumber}
+                onChange={(e) => updateField('licenseNumber', e.target.value)}
+                placeholder="Enter license number"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-500 focus:outline-none"
+              />
+              <p className="text-xs text-gray-400 mt-1">Trade or service license number</p>
             </div>
           </div>
         </div>

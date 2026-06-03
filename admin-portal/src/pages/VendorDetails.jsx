@@ -119,6 +119,10 @@ const VendorDetails = () => {
       pocCountryCode: vendor.pocCountryCode || vendor.poc_country_code || '+91',
       ratePerVisit: vendor.ratePerVisit || vendor.rate_per_visit || 0,
       coveragePerDay: vendor.coveragePerDay || vendor.coverage_per_day || 0,
+      // Business Documents
+      gstNumber: vendor.gstNumber || vendor.gst_number || '',
+      panNumber: vendor.panNumber || vendor.pan_number || '',
+      licenseNumber: vendor.licenseNumber || vendor.license_number || '',
     });
   };
 
@@ -666,9 +670,20 @@ const VendorDetails = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Metadata</h3>
                 <div className="grid grid-cols-3 gap-4">
-                  <div><span className="text-xs text-gray-400">Created By</span><p className="text-sm font-medium text-gray-900">{viewVendor.created_by_name || viewVendor.createdBy || '-'}</p></div>
-                  <div><span className="text-xs text-gray-400">Created</span><p className="text-sm font-medium text-gray-900">{formatDate(viewVendor.createdAt)}</p></div>
-                  <div><span className="text-xs text-gray-400">Status</span><p className={`text-sm font-medium ${(viewVendor.status === 'deleted' || viewVendor.is_active === 0) ? 'text-red-600' : 'text-green-600'}`}>{(viewVendor.status === 'deleted' || viewVendor.is_active === 0) ? 'Inactive' : 'Active'}</p></div>
+                  <div>
+                    <span className="text-xs text-gray-400">Created By</span>
+                    <p className="text-sm font-medium text-gray-900">{viewVendor.created_by_name || viewVendor.createdBy || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-400">Created</span>
+                    <p className="text-sm font-medium text-gray-900">{formatDate(viewVendor.createdAt || viewVendor.created_at)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-400">Status</span>
+                    <p className={`text-sm font-medium ${(viewVendor.status === 'deleted' || viewVendor.is_active === 0) ? 'text-red-600' : 'text-green-600'}`}>
+                      {(viewVendor.status === 'deleted' || viewVendor.is_active === 0) ? 'Inactive' : 'Active'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -787,11 +802,10 @@ const VendorDetails = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
                     >
                       <option value="">Select Zone</option>
-                      <option value="North">North</option>
-                      <option value="South">South</option>
-                      <option value="East">East</option>
-                      <option value="West">West</option>
-                      <option value="Central">Central</option>
+                      {zones.map(z => <option key={z} value={z}>{z}</option>)}
+                      {!zones.includes(editForm.zone) && editForm.zone && (
+                        <option value={editForm.zone}>{editForm.zone}</option>
+                      )}
                     </select>
                   </div>
                   <div>
@@ -966,6 +980,45 @@ const VendorDetails = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
                       placeholder="Enter coverage per day"
                       min="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Business Documents */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">Business Documents (Optional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">GST Number</label>
+                    <input
+                      type="text"
+                      value={editForm.gstNumber || ''}
+                      onChange={(e) => handleEditFormChange('gstNumber', e.target.value.toUpperCase())}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="22AAAAA0000A1Z5"
+                      maxLength={15}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">PAN Number</label>
+                    <input
+                      type="text"
+                      value={editForm.panNumber || ''}
+                      onChange={(e) => handleEditFormChange('panNumber', e.target.value.toUpperCase())}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="ABCDE1234F"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">License Number</label>
+                    <input
+                      type="text"
+                      value={editForm.licenseNumber || ''}
+                      onChange={(e) => handleEditFormChange('licenseNumber', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                      placeholder="Enter license number"
                     />
                   </div>
                 </div>
