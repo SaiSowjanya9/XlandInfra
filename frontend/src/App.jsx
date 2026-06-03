@@ -150,8 +150,9 @@ function App() {
   // Track QR code visits (for printed QR codes) - every page load counts
   useEffect(() => {
     const trackVisit = async () => {
-      // This is the customer portal - track as 'customer' QR
-      const page = 'login'; // Maps to 'customer' slug in backend
+      // Detect which page: '/' or '/portal' = main website, '/login' = customer portal
+      const path = window.location.pathname;
+      const page = (path === '/' || path === '/portal' || path === '') ? 'main' : 'login';
       
       try {
         await fetch('https://admin.xlandinfra.com/api/qr/track-visit', {
