@@ -303,8 +303,8 @@ const ExecutiveWorkOrders = ({ user }) => {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-500">Order ID</p>
-                  <p className="font-mono text-gray-900">{selectedWorkOrder.work_order_id}</p>
+                  <p className="text-sm text-gray-500">Work Order ID</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.work_order_id}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Status</p>
@@ -314,33 +314,41 @@ const ExecutiveWorkOrders = ({ user }) => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Title</p>
-                  <p className="text-gray-900">{selectedWorkOrder.title || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Category</p>
-                  <p className="text-gray-900">{selectedWorkOrder.category_name || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Property</p>
-                  <p className="text-gray-900">{selectedWorkOrder.property_name || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Resident</p>
-                  <p className="text-gray-900">{selectedWorkOrder.client_name || '-'}</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.title || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Priority</p>
                   <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(selectedWorkOrder.priority)}`}>
-                    {selectedWorkOrder.priority?.toUpperCase()}
+                    {selectedWorkOrder.priority?.toUpperCase() || '-'}
                   </span>
                 </div>
                 <div>
+                  <p className="text-sm text-gray-500">Property</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.property_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Category</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.category_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Customer</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.client_name || selectedWorkOrder.customer_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Vendor</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.vendor_name || 'Not Assigned'}</p>
+                </div>
+                <div>
                   <p className="text-sm text-gray-500">Created</p>
-                  <p className="text-gray-900">{formatDate(selectedWorkOrder.created_at)}</p>
+                  <p className="font-medium text-gray-900">{formatDate(selectedWorkOrder.created_at)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Permission to Enter</p>
+                  <p className="font-medium text-gray-900 capitalize">{selectedWorkOrder.permission_to_enter || '-'}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-sm text-gray-500">Description</p>
-                  <p className="text-gray-900">{selectedWorkOrder.description || '-'}</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.description || '-'}</p>
                 </div>
               </div>
             </div>
