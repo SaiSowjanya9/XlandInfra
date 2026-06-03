@@ -692,23 +692,58 @@ const SupervisorWorkOrders = ({ user }) => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><p className="text-sm text-gray-500">Work Order ID</p><p className="font-medium text-gray-900">{selectedWorkOrder.work_order_id}</p></div>
-                <div><p className="text-sm text-gray-500">Status</p><span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedWorkOrder.status)}`}>{selectedWorkOrder.status?.replace(/_/g, ' ').toUpperCase()}</span></div>
-                <div><p className="text-sm text-gray-500">Title</p><p className="font-medium text-gray-900">{selectedWorkOrder.title || '-'}</p></div>
-                <div><p className="text-sm text-gray-500">Priority</p><span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${selectedWorkOrder.priority === 'high' ? 'bg-red-100 text-red-700' : selectedWorkOrder.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{selectedWorkOrder.priority?.toUpperCase() || '-'}</span></div>
-                <div><p className="text-sm text-gray-500">Property</p><p className="font-medium text-gray-900">{selectedWorkOrder.property_name || '-'}</p></div>
-                <div><p className="text-sm text-gray-500">Category</p><p className="font-medium text-gray-900">{selectedWorkOrder.category_name || '-'}</p></div>
-                <div><p className="text-sm text-gray-500">Customer</p><p className="font-medium text-gray-900">{selectedWorkOrder.customer_name || selectedWorkOrder.client_name || '-'}</p></div>
-                <div><p className="text-sm text-gray-500">Vendor</p><p className="font-medium text-gray-900">{selectedWorkOrder.vendor_name || 'Not Assigned'}</p></div>
-                <div><p className="text-sm text-gray-500">Created</p><p className="font-medium text-gray-900">{formatDate(selectedWorkOrder.created_at)}</p></div>
-                <div><p className="text-sm text-gray-500">Permission to Enter</p><p className="font-medium text-gray-900 capitalize">{selectedWorkOrder.permission_to_enter || '-'}</p></div>
-                <div className="col-span-2"><p className="text-sm text-gray-500">Description</p><p className="font-medium text-gray-900">{selectedWorkOrder.description || '-'}</p></div>
+                <div>
+                  <p className="text-sm text-gray-500">Work Order ID</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.work_order_id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedWorkOrder.status)}`}>
+                    {selectedWorkOrder.status?.replace(/_/g, ' ').toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Title</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.title || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Priority</p>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${selectedWorkOrder.priority === 'high' ? 'bg-red-100 text-red-700' : selectedWorkOrder.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+                    {selectedWorkOrder.priority?.toUpperCase() || '-'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Property</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.property_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Category</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.category_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Vendor</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.vendor_name || 'Not Assigned'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Created</p>
+                  <p className="font-medium text-gray-900">{formatDate(selectedWorkOrder.created_at)}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Description</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.description || '-'}</p>
+                </div>
               </div>
-            </div>
-            <div className="p-6 border-t border-gray-100 flex justify-end">
-              <button onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }} className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Close</button>
+
+              <div className="flex justify-end pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }}
+                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
