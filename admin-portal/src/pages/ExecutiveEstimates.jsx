@@ -3,12 +3,22 @@ import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, P
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
-  { id: 'GC', label: 'Gated Community' },
-  { id: 'Apt', label: 'Apartment' },
-  { id: 'Villa', label: 'Villa' },
-  { id: 'Flat', label: 'Flat' },
-  { id: 'Plot', label: 'Plot' },
+  { id: 'gated_community', label: 'Gated Community' },
+  { id: 'apartment', label: 'Apartment' },
+  { id: 'villa', label: 'Villa' },
+  { id: 'flat', label: 'Flat' },
+  { id: 'plot', label: 'Plot' },
 ];
+
+// Helper to match property types (handles different formats)
+const matchPropertyType = (value, filterId) => {
+  if (!value || !filterId) return false;
+  const normalize = (str) => str.toLowerCase().replace(/[_\s-]/g, '');
+  const filterOption = PROPERTY_TYPE_OPTIONS.find(t => t.id === filterId);
+  const normalizedValue = normalize(value);
+  return normalize(filterId) === normalizedValue || 
+         (filterOption && normalize(filterOption.label) === normalizedValue);
+};
 
 const BILLING_DURATIONS = [
   { value: 'monthly', label: 'Monthly' },
@@ -153,6 +163,14 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div><h1 className="text-2xl font-bold text-gray-900">Estimates / AMC Management</h1><p className="text-gray-500 mt-1">Create estimates and view AMC packages</p></div>
+        <div className="flex items-center gap-4">
+          <button onClick={fetchData} className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" title="Refresh">
+            <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <div className="text-center"><p className="text-xl font-bold text-gray-900">{estimates.filter(e => e.status !== 'archived').length}</p><p className="text-xs text-gray-500">Estimates</p></div>
+          <div className="text-center"><p className="text-xl font-bold text-gray-900">{amcPackages.length}</p><p className="text-xs text-gray-500">AMC Packages</p></div>
+          <div className="text-center"><p className="text-xl font-bold text-gray-900">{addons.length}</p><p className="text-xs text-gray-500">Add-ons</p></div>
+        </div>
       </div>
 
       {message.text && (
@@ -311,7 +329,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                       <p className="text-sm text-gray-500">
                         {filterPropertyType === 'all' 
                           ? `${amcPackages.length} package(s) available` 
-                          : `${amcPackages.filter(p => p.property_type === filterPropertyType).length} package(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
+                          : `${amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType)).length} package(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
                       </p>
                     </div>
                   </div>
@@ -327,7 +345,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
                 {amcPackages.length === 0 ? (
                   <div className="p-12 text-center"><Package className="w-12 h-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-500">No AMC packages available</p></div>
-                ) : (filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => p.property_type === filterPropertyType)).length === 0 ? (
+                ) : (filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType))).length === 0 ? (
                   <div className="p-8 text-center"><p className="text-gray-500">No packages found for this property type</p><button onClick={() => setFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">Show all packages</button></div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -343,7 +361,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {(filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => p.property_type === filterPropertyType)).map((pkg) => {
+                        {(filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType))).map((pkg) => {
                           const servicesText = pkg.services || (pkg.services_data ? pkg.services_data.map(s => s.name).join(', ') : '-');
                           const getBillingBadgeColor = (billing) => {
                             switch(billing) {
@@ -396,7 +414,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200">
                   <div className="flex items-center justify-between mb-4">
-                    <div><h3 className="text-lg font-semibold text-gray-800">All Add-ons</h3><p className="text-sm text-gray-500">{addonFilterPropertyType === 'all' ? `${addons.length} add-on(s) available` : `${addons.filter(a => a.property_type === addonFilterPropertyType).length} add-on(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === addonFilterPropertyType)?.label}`}</p></div>
+                    <div><h3 className="text-lg font-semibold text-gray-800">All Add-ons</h3><p className="text-sm text-gray-500">{addonFilterPropertyType === 'all' ? `${addons.length} add-on(s) available` : `${addons.filter(a => matchPropertyType(a.property_type, addonFilterPropertyType)).length} add-on(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === addonFilterPropertyType)?.label}`}</p></div>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <button onClick={() => setAddonFilterPropertyType('all')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${addonFilterPropertyType === 'all' ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>All</button>
@@ -404,7 +422,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   </div>
                 </div>
                 {addons.length === 0 ? (<div className="p-12 text-center"><PlusCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-500">No add-ons available</p></div>
-                ) : (addonFilterPropertyType === 'all' ? addons : addons.filter(a => a.property_type === addonFilterPropertyType)).length === 0 ? (<div className="p-8 text-center"><p className="text-gray-500">No add-ons found for this property type</p><button onClick={() => setAddonFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">Show all add-ons</button></div>
+                ) : (addonFilterPropertyType === 'all' ? addons : addons.filter(a => matchPropertyType(a.property_type, addonFilterPropertyType))).length === 0 ? (<div className="p-8 text-center"><p className="text-gray-500">No add-ons found for this property type</p><button onClick={() => setAddonFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">Show all add-ons</button></div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
@@ -419,7 +437,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {(addonFilterPropertyType === 'all' ? addons : addons.filter(a => a.property_type === addonFilterPropertyType)).map((addon) => {
+                        {(addonFilterPropertyType === 'all' ? addons : addons.filter(a => matchPropertyType(a.property_type, addonFilterPropertyType))).map((addon) => {
                           const getFrequencyBadgeColor = (freq) => { switch(freq?.toLowerCase()) { case 'monthly': return 'bg-blue-100 text-blue-700 border-blue-200'; case 'every 2 months': return 'bg-cyan-100 text-cyan-700 border-cyan-200'; case 'quarterly': return 'bg-purple-100 text-purple-700 border-purple-200'; default: return 'bg-gray-100 text-gray-700 border-gray-200'; } };
                           return (
                             <tr key={addon.id} className="hover:bg-gray-50 transition-colors">

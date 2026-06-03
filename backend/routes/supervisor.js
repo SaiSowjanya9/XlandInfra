@@ -312,7 +312,9 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
       const scopeId = franchisePartnerId || supervisorId;
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
-                op.zone as zone_name, op.division, COALESCE(op.total_units, 1) as units,
+                COALESCE(op.zone, op.area) as zone_name, 
+                op.area as area_name,
+                op.division, COALESCE(op.total_units, 1) as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
                 COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
@@ -1039,9 +1041,9 @@ router.get('/estimates', requireSupervisorScope, async (req, res) => {
          FROM fp_estimates e
          LEFT JOIN fp_employees fpe ON e.created_by_name = fpe.email OR e.created_by_name = fpe.username
          LEFT JOIN users u ON e.created_by_name = u.email
-         WHERE e.franchise_partner_id = ? AND (e.is_archived = ? OR e.is_archived IS NULL OR e.is_archived = 0)
+         WHERE e.franchise_partner_id = ? AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}
          ORDER BY e.created_at DESC`,
-        [franchisePartnerId, isArchived ? 1 : 0]
+        [franchisePartnerId]
       );
       
       // Enrich estimates with property_code and parse addons

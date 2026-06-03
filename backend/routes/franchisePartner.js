@@ -2726,7 +2726,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     if (archived === 'true') {
       query += ' AND is_archived = 1';
     } else {
-      query += ' AND is_archived = 0';
+      query += ' AND (is_archived = 0 OR is_archived IS NULL)';
     }
 
     query += ' ORDER BY created_at DESC';
