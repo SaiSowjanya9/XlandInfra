@@ -879,7 +879,7 @@ router.get('/notifications', async (req, res) => {
     
     // Check for pending work orders
     try {
-      const [[pendingCount]] = await pool.execute(`SELECT COUNT(*) as count FROM work_orders WHERE status IN ('pending', 'open')`);
+      const [[pendingCount]] = await pool.execute(`SELECT COUNT(*) as count FROM work_orders WHERE status IN ('pending', 'open', 'assigned', 'in_progress', 'requested', 'under_review', 'accepted')`);
       if (pendingCount.count > 0) {
         notifications.push({
           id: 'pending-wo',
