@@ -337,14 +337,14 @@ const Dashboard = () => {
               <QrCode className="w-5 h-5 text-amber-500" />
               <h3 className="font-medium text-gray-800">Quick Access QR Codes</h3>
             </div>
-            <span className="text-xs text-gray-400">Scan to access</span>
+            <span className="text-xs text-gray-400">Scan to access (tracked)</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Website QR */}
             <div className="flex flex-col items-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
               <div className="bg-white p-3 rounded-xl shadow-sm mb-3">
                 <img 
-                  src="/XLAND_INFRA_Website.png" 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('https://admin.xlandinfra.com/api/qr/r/main')}`}
                   alt="XLAND INFRA Website QR Code" 
                   className="w-32 h-32 object-contain"
                 />
@@ -352,7 +352,7 @@ const Dashboard = () => {
               <h4 className="font-semibold text-gray-800 mb-1">Main Website</h4>
               <p className="text-xs text-gray-500 mb-3">xlandinfra.com</p>
               <a 
-                href="/XLAND_INFRA_Website.png" 
+                href={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&format=png&data=${encodeURIComponent('https://admin.xlandinfra.com/api/qr/r/main')}`}
                 download="XLAND_INFRA_Website_QR.png"
                 className="flex items-center gap-1 px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-xs hover:bg-gray-300 transition-colors"
               >
@@ -365,7 +365,7 @@ const Dashboard = () => {
             <div className="flex flex-col items-center p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl border border-amber-200">
               <div className="bg-white p-3 rounded-xl shadow-sm mb-3">
                 <img 
-                  src="/XLAND_INFRA_Customer_Portal.png" 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('https://admin.xlandinfra.com/api/qr/r/customer')}`}
                   alt="XLAND INFRA Customer Portal QR Code" 
                   className="w-32 h-32 object-contain"
                 />
@@ -373,7 +373,7 @@ const Dashboard = () => {
               <h4 className="font-semibold text-gray-800 mb-1">Customer Portal</h4>
               <p className="text-xs text-gray-500 mb-3">xlandinfra.com/login</p>
               <a 
-                href="/XLAND_INFRA_Customer_Portal.png" 
+                href={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&format=png&data=${encodeURIComponent('https://admin.xlandinfra.com/api/qr/r/customer')}`}
                 download="XLAND_INFRA_Customer_Portal_QR.png"
                 className="flex items-center gap-1 px-3 py-1.5 bg-amber-200 text-amber-800 rounded-lg text-xs hover:bg-amber-300 transition-colors"
               >
