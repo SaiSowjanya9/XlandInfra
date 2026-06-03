@@ -147,6 +147,31 @@ function App() {
     setLoading(false);
   }, []);
 
+  // Track QR code visits (for printed QR codes)
+  useEffect(() => {
+    const trackVisit = async () => {
+      // Only track on initial page load, not on navigation
+      const hasTracked = sessionStorage.getItem('qr_tracked');
+      if (hasTracked) return;
+      
+      // This is the customer portal - track as 'customer' QR
+      const page = 'login'; // Maps to 'customer' slug in backend
+      
+      try {
+        await fetch('https://admin.xlandinfra.com/api/qr/track-visit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ page, source: 'direct' }),
+          credentials: 'include'
+        });
+        sessionStorage.setItem('qr_tracked', 'true');
+      } catch (e) {
+        // Silent fail
+      }
+    };
+    trackVisit();
+  }, []);
+
   // Track user activity to keep session alive
   useEffect(() => {
     if (!user) return;

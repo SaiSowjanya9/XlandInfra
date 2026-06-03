@@ -754,6 +754,69 @@ router.get('/analytics/:qrId/export', async (req, res) => {
   }
 });
 
+// Page visit tracking (for printed QR codes that go directly to pages)
+router.post('/track-visit', async (req, res) => {
+  try {
+    const { page, source } = req.body; // page = 'main' or 'customer'
+    const userAgent = req.headers['user-agent'] || '';
+    const ip = getClientIP(req);
+    const ipHash = hashIP(ip);
+    
+    // Skip bots
+    if (isBot(userAgent)) {
+      return res.json({ success: true, tracked: false });
+    }
+    
+    // Find QR code by slug
+    const slug = page === 'login' ? 'customer' : 'main';
+    const [[qr]] = await pool.execute('SELECT * FROM qr_codes WHERE slug = ?', [slug]);
+    
+    if (!qr) {
+      return res.json({ success: true, tracked: false, reason: 'QR not found' });
+    }
+    
+    // Check if already tracked recently (within 1 hour from same IP)
+    const [[existing]] = await pool.execute(
+      'SELECT id FROM qr_scans WHERE qr_id = ? AND ip_hash = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)',
+      [qr.id, ipHash]
+    );
+    
+    if (existing) {
+      return res.json({ success: true, tracked: false, reason: 'Already tracked' });
+    }
+    
+    const uaData = parseUserAgent(userAgent);
+    const scanId = generateScanId();
+    const visitorId = req.cookies?.qr_visitor || generateVisitorId();
+    const sessionId = req.cookies?.qr_session || generateSessionId();
+    
+    // Log the visit as a scan
+    await pool.execute(
+      `INSERT INTO qr_scans (
+        qr_id, scan_id, visitor_id, session_id, ip_address, ip_hash,
+        is_unique_user, is_repeat_scan, user_agent, device_type, device_brand, device_model,
+        os_name, os_version, browser_name, browser_version,
+        country, country_code, state, city,
+        redirect_url, redirect_success, redirect_latency_ms
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        qr.id, scanId, visitorId, sessionId, ip, ipHash,
+        true, false, userAgent.substring(0, 500), uaData.device, uaData.deviceBrand, uaData.deviceModel,
+        uaData.osName, uaData.osVersion, uaData.browserName, uaData.browserVersion,
+        'Unknown', null, null, 'Unknown',
+        qr.current_url, true, 0
+      ]
+    );
+    
+    console.log(`[QR Track] Page visit tracked for ${slug} from ${source || 'direct'}`);
+    
+    res.json({ success: true, tracked: true });
+  } catch (error) {
+    console.error('Track visit error:', error);
+    res.json({ success: true, tracked: false });
+  }
+});
+
 // Clean up old sessions
 router.post('/maintenance/cleanup-sessions', async (req, res) => {
   try {
