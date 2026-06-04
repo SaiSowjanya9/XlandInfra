@@ -153,13 +153,16 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
+      {/* Header - matches FP layout */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
             <FileText className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Create Estimate</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {activeTab === 'create' ? 'Create Estimate' : activeTab === 'list' ? 'All Estimates' : activeTab === 'amc' ? 'AMC Packages' : activeTab === 'addons' ? 'Add-ons' : 'Archived Estimates'}
+            </h1>
             <p className="text-gray-500">Create and manage estimates, AMC packages, and add-ons</p>
           </div>
         </div>
@@ -181,16 +184,6 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
           <button onClick={() => setMessage({ type: '', text: '' })} className="ml-auto"><X className="w-4 h-4" /></button>
         </div>
       )}
-
-      <div className="bg-white rounded-xl border border-gray-100 p-1">
-        <div className="flex gap-1 overflow-x-auto">
-          {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${activeTab === tab.id ? 'bg-amber-100 text-amber-700' : 'text-gray-600 hover:bg-gray-50'}`}>
-              <tab.icon className="w-4 h-4" />{tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-12"><RefreshCw className="w-6 h-6 text-amber-600 animate-spin" /></div>
@@ -220,23 +213,74 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimate ID</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th><th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th></tr>
+                      <thead className="border-b border-gray-100">
+                        <tr>
+                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Estimate ID</th>
+                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Type</th>
+                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Client</th>
+                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Date</th>
+                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Total</th>
+                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Created By</th>
+                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Status</th>
+                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {filteredEstimates.map((estimate) => {
-                          const TypeIcon = estimate.property_type === 'Apt' ? Home : Building2;
-                          return (
-                            <tr key={estimate.id} className="hover:bg-gray-50">
-                              <td className="py-4 px-4"><span className="font-medium text-gray-900">{estimate.estimate_id || `EST-${estimate.id}`}</span></td>
-                              <td className="py-4 px-4"><div className="flex items-center gap-2"><TypeIcon className="w-4 h-4 text-gray-400" /><span className={`px-2 py-0.5 text-xs font-medium rounded ${estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></div></td>
-                              <td className="py-4 px-4"><span className="text-gray-700">{estimate.client_name || '-'}</span></td>
-                              <td className="py-4 px-4"><div className="flex items-center gap-1.5 text-gray-600"><Calendar className="w-4 h-4" />{estimate.created_at ? new Date(estimate.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : '-'}</div></td>
-                              <td className="py-4 px-4"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(estimate.status)}`}>{estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}</span></td>
-                              <td className="py-4 px-4"><div className="flex items-center justify-center gap-1"><button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button><button onClick={() => exportEstimateToPDF(estimate)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Download PDF"><Download className="w-4 h-4" /></button></div></td>
-                            </tr>
-                          );
-                        })}
+                      <tbody className="divide-y divide-gray-50">
+                        {filteredEstimates.map((estimate) => (
+                          <tr key={estimate.id} className="hover:bg-gray-50">
+                            <td className="py-4 px-4">
+                              <span className="font-medium text-gray-900">{estimate.estimate_id || `EST-${estimate.id}`}</span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                                estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' 
+                                  ? 'bg-blue-50 text-blue-600' 
+                                  : 'bg-green-50 text-green-600'
+                              }`}>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                </svg>
+                                {estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'Property' : 'Direct'}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className="text-gray-700 font-medium">{estimate.client_name || '-'}</span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-1.5 text-gray-600">
+                                <Calendar className="w-4 h-4 text-gray-400" />
+                                {estimate.created_at ? new Date(estimate.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : '-'}
+                              </div>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className="font-semibold text-gray-900">{formatCurrency(estimate.total_amount || estimate.subtotal || 0)}</span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <div>
+                                <p className="font-medium text-gray-900">{estimate.created_by_name || 'System'}</p>
+                                <p className="text-xs text-blue-600">{estimate.created_by_role || 'Supervisor'}</p>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                                estimate.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                estimate.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                estimate.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {estimate.status || 'draft'}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <button 
+                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" 
+                                title="View"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>

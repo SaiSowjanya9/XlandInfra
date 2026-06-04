@@ -232,9 +232,9 @@ const SupervisorWorkOrders = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-          <ClipboardList className="w-6 h-6 text-blue-600" />
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+          <ClipboardList className="w-6 h-6 text-white" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
@@ -243,42 +243,38 @@ const SupervisorWorkOrders = ({ user }) => {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <div className="flex gap-6">
-          <button
-            onClick={() => setActiveTab('pending')}
-            className={`flex items-center gap-2 px-1 py-3 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'pending' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            Pending
-            <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'pending' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
-              {pendingCount}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('completed')}
-            className={`flex items-center gap-2 px-1 py-3 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'completed' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Completed
-            <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'completed' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
-              {completedCount}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('create')}
-            className={`flex items-center gap-2 px-1 py-3 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'create' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Plus className="w-4 h-4" />
-            Create New
-          </button>
-        </div>
+      <div className="flex items-center gap-2 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'pending' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Pending</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+            {pendingCount}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('completed')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'completed' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <CheckCircle className="w-4 h-4" />
+          <span>Completed</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+            {completedCount}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('create')}
+          className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Create Work Order</span>
+        </button>
       </div>
 
       {message.text && (
