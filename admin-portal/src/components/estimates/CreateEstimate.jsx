@@ -317,7 +317,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       return;
     }
     const addon = availableAddons.find(a => a.addonId === addonId);
-    if (addon && !selectedAddons.find(a => a.addonId === addonId)) {
+    if (addon) {
       setSelectedAddons([...selectedAddons, addon]);
     }
   };
@@ -483,7 +483,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       return;
     }
     const addon = availableAddons.find(a => a.addonId === addonId);
-    if (addon && !directSelectedAddons.find(a => a.addonId === addonId)) {
+    if (addon) {
       setDirectSelectedAddons([...directSelectedAddons, addon]);
     }
   };
