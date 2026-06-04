@@ -41,37 +41,37 @@ const PROPERTY_TYPES = {
   FLAT: ['Flat']
 };
 
-// Entry type configuration
+// Entry type configuration - Soft muted colors
 const ENTRY_TYPES = [
   { 
     id: 'GC', 
     name: 'Gated Community', 
     icon: Building2, 
-    color: 'bg-gradient-to-br from-blue-500 to-blue-600'
+    color: 'bg-gradient-to-br from-softslate-400 to-softslate-500'
   },
   { 
     id: 'APT', 
     name: 'Apartment', 
     icon: Home, 
-    color: 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+    color: 'bg-gradient-to-br from-sage-400 to-sage-500'
   },
   { 
     id: 'VILLA', 
     name: 'Villa', 
     icon: TreePine, 
-    color: 'bg-gradient-to-br from-amber-500 to-amber-600'
+    color: 'bg-gradient-to-br from-softgold-400 to-softgold-500'
   },
   { 
     id: 'FLAT', 
     name: 'Flat', 
     icon: LayoutGrid, 
-    color: 'bg-gradient-to-br from-cyan-500 to-cyan-600'
+    color: 'bg-gradient-to-br from-warmstone-400 to-warmstone-500'
   },
   { 
     id: 'PLOT', 
     name: 'Plot', 
     icon: Map, 
-    color: 'bg-gradient-to-br from-rose-500 to-rose-600'
+    color: 'bg-gradient-to-br from-dustyrose-400 to-dustyrose-500'
   }
 ];
 
@@ -484,16 +484,16 @@ const CreateCustomer = ({ admin }) => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-            <p className="text-gray-500 mt-1">Customer Creation Module</p>
+            <h1 className="text-2xl font-bold text-warmstone-700">Add Customer</h1>
+            <p className="text-warmstone-500 mt-1">Customer Creation Module</p>
           </div>
         </div>
 
         {/* Category Selection Card */}
-        <div className="bg-gray-50 rounded-2xl p-12">
+        <div className="bg-gradient-to-br from-cream-100 to-warmstone-50 rounded-2xl p-12 border border-warmstone-200/30">
           <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
-            <p className="text-gray-500 mt-2">Choose the customer category to proceed</p>
+            <h2 className="text-2xl font-bold text-warmstone-700">Select Category</h2>
+            <p className="text-warmstone-500 mt-2">Choose the customer category to proceed</p>
           </div>
 
           <div className="flex justify-center gap-8">
@@ -502,27 +502,27 @@ const CreateCustomer = ({ admin }) => {
               return category.locked ? (
                 <div
                   key={category.id}
-                  className="w-72 h-52 p-8 border border-gray-200 rounded-2xl bg-white relative cursor-not-allowed flex flex-col items-start justify-center"
+                  className="w-72 h-52 p-8 border border-warmstone-200 rounded-2xl bg-cream-50 relative cursor-not-allowed flex flex-col items-start justify-center"
                 >
-                  <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
-                    <Lock className="w-3.5 h-3.5 text-gray-400" />
-                    <span className="text-xs font-medium text-gray-500">Coming Soon</span>
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-warmstone-100 rounded-full border border-warmstone-200">
+                    <Lock className="w-3.5 h-3.5 text-warmstone-400" />
+                    <span className="text-xs font-medium text-warmstone-500">Coming Soon</span>
                   </div>
-                  <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mb-5">
-                    <Icon className="w-7 h-7 text-gray-400" />
+                  <div className="w-14 h-14 bg-warmstone-100 rounded-xl flex items-center justify-center mb-5">
+                    <Icon className="w-7 h-7 text-warmstone-400" />
                   </div>
-                  <p className="text-lg font-medium text-gray-400">{category.name}</p>
+                  <p className="text-lg font-medium text-warmstone-400">{category.name}</p>
                 </div>
               ) : (
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
+                  className="w-72 h-52 p-8 border-2 border-softgold-300 rounded-2xl hover:shadow-lg hover:shadow-softgold-100/50 transition-all duration-200 bg-gradient-to-br from-softgold-50 to-cream-100 group flex flex-col items-start justify-center"
                 >
-                  <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                  <div className="w-14 h-14 bg-gradient-to-br from-softgold-400 to-softgold-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md">
                     <Icon className="w-7 h-7 text-white" />
                   </div>
-                  <p className="text-lg font-semibold text-gray-900">{category.name}</p>
+                  <p className="text-lg font-semibold text-warmstone-700">{category.name}</p>
                 </button>
               );
             })}
@@ -538,21 +538,21 @@ const CreateCustomer = ({ admin }) => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-            <p className="text-gray-600 mt-1">Customer Creation Module</p>
+            <h1 className="text-2xl font-bold text-warmstone-700">Add Customer</h1>
+            <p className="text-warmstone-500 mt-1">Customer Creation Module</p>
           </div>
           <button
             onClick={() => setSelectedCategory(null)}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-4 py-2 text-warmstone-600 hover:text-softgold-700 hover:bg-softgold-50 rounded-lg transition-colors border border-warmstone-200"
           >
             ← Back to Categories
           </button>
         </div>
 
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-100 p-10">
+        <div className="bg-gradient-to-br from-cream-50 to-warmstone-50 rounded-2xl shadow-sm border border-warmstone-200/50 p-10">
           <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Entry Type</h2>
-            <p className="text-gray-500">Choose the type of customer data you want to enter</p>
+            <h2 className="text-2xl font-bold text-warmstone-700 mb-2">Select Entry Type</h2>
+            <p className="text-warmstone-500">Choose the type of customer data you want to enter</p>
           </div>
 
           <div className="grid grid-cols-5 gap-4">
@@ -562,12 +562,12 @@ const CreateCustomer = ({ admin }) => {
                 <button
                   key={type.id}
                   onClick={() => setSelectedEntryType(type.id)}
-                  className="group relative p-5 bg-white border-2 border-gray-100 rounded-xl hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100/50 transition-all duration-300 text-center"
+                  className="group relative p-5 bg-cream-50 border-2 border-warmstone-200/50 rounded-xl hover:border-softgold-300 hover:shadow-lg hover:shadow-softgold-100/30 transition-all duration-300 text-center"
                 >
-                  <div className={`w-14 h-14 ${type.color} rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform duration-300 shadow-md`}>
+                  <div className={`w-14 h-14 ${type.color} rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform duration-300 shadow-sm`}>
                     <Icon className="w-7 h-7 text-white" />
                   </div>
-                  <h3 className="text-sm font-semibold text-gray-800 whitespace-nowrap">{type.name}</h3>
+                  <h3 className="text-sm font-semibold text-warmstone-600 whitespace-nowrap">{type.name}</h3>
                 </button>
               );
             })}
