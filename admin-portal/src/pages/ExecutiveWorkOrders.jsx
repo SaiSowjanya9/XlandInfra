@@ -207,18 +207,9 @@ const ExecutiveWorkOrders = ({ user }) => {
                     <td className="py-4 px-4 text-sm text-gray-600">{wo.client_name || wo.property_name || '-'}</td>
                     <td className="py-4 px-4 text-sm text-gray-600">{wo.category_name || '-'}</td>
                     <td className="py-4 px-4">
-                      <select
-                        value={wo.status}
-                        onChange={(e) => handleStatusChange(wo.id, e.target.value)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="assigned">Assigned</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="closed">Closed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
+                        {wo.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Pending'}
+                      </span>
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-500">{formatDate(wo.created_at)}</td>
                     <td className="py-4 px-4">

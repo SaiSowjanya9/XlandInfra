@@ -205,32 +205,45 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
 
-    // Get own, assigned, and FP properties with creator name
-    const query = `SELECT p.*, z.name as zone_name, 
-              COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
-              'own' as access_type, TRUE as can_modify, FALSE as can_delete,
-              FALSE as can_assign_vendor, FALSE as can_assign_employee,
-              'properties' as source_table
-       FROM properties p
-       LEFT JOIN zones z ON p.zone_id = z.id
-       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
-       WHERE (p.executive_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})
-       UNION
-       SELECT p.*, z.name as zone_name,
-              COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
-              'assigned' as access_type, eap.can_modify, eap.can_delete,
-              eap.can_assign_vendor, eap.can_assign_employee,
-              'properties' as source_table
-       FROM properties p
-       INNER JOIN executive_assigned_properties eap ON p.id = eap.property_id
-       LEFT JOIN zones z ON p.zone_id = z.id
-       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
-       WHERE eap.executive_id = ?
-       ORDER BY created_at DESC`;
-    const params = franchisePartnerId ? [executiveId, franchisePartnerId, executiveId] : [executiveId, executiveId];
-    const [regularProperties] = await pool.query(query, params);
+    // For FP executives, fetch properties from franchise partner
+    // For regular executives, fetch their own and assigned properties
+    let regularProperties = [];
+    
+    if (franchisePartnerId) {
+      // FP Executive - get all FP properties
+      const [rows] = await pool.query(
+        `SELECT p.*, z.name as zone_name, 
+                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+                'fp' as access_type, FALSE as can_modify, FALSE as can_delete,
+                FALSE as can_assign_vendor, FALSE as can_assign_employee,
+                'properties' as source_table
+         FROM properties p
+         LEFT JOIN zones z ON p.zone_id = z.id
+         LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
+         WHERE p.franchise_partner_id = ?
+         ORDER BY p.created_at DESC`,
+        [franchisePartnerId]
+      );
+      regularProperties = rows;
+    } else {
+      // Regular Executive - get own and assigned properties
+      const [rows] = await pool.query(
+        `SELECT p.*, z.name as zone_name, 
+                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+                'own' as access_type, TRUE as can_modify, FALSE as can_delete,
+                FALSE as can_assign_vendor, FALSE as can_assign_employee,
+                'properties' as source_table
+         FROM properties p
+         LEFT JOIN zones z ON p.zone_id = z.id
+         LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
+         WHERE p.executive_id = ?
+         ORDER BY p.created_at DESC`,
+        [executiveId]
+      );
+      regularProperties = rows;
+    }
 
-    // Also fetch from onboarded_properties with creator name
+    // Also fetch from onboarded_properties
     let onboardedProperties = [];
     try {
       const scopeColumn = franchisePartnerId ? 'franchise_partner_id' : 'executive_id';
@@ -242,7 +255,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
                 op.contact_person, op.contact_phone, op.contact_email as email,
                 COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
                 op.created_at, op.status,
-                'own' as access_type, TRUE as can_modify, FALSE as can_delete,
+                'own' as access_type, FALSE as can_modify, FALSE as can_delete,
                 FALSE as can_assign_vendor, FALSE as can_assign_employee,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
