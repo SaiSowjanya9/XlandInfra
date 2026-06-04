@@ -118,8 +118,8 @@ const FPLayout = ({ admin, onLogout, children }) => {
         onClick={handleClick}
         className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
           isActive
-            ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-md'
-            : 'text-gray-600 hover:bg-amber-50'
+            ? 'bg-slate-800 text-white'
+            : 'text-gray-600 hover:bg-gray-100'
         }`}
       >
         <Icon className="w-5 h-5" />
@@ -137,7 +137,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center space-x-2">
-            <Briefcase className="w-6 h-6 text-amber-600" />
+            <Briefcase className="w-6 h-6 text-slate-700" />
             <span className="font-bold text-gray-900">{getRoleDisplay()}</span>
           </div>
           <div className="w-10" />
@@ -156,23 +156,18 @@ const FPLayout = ({ admin, onLogout, children }) => {
         }`}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-between px-6 h-16 border-b border-gray-200">
-            <div className="flex items-center space-x-2">
-              <Briefcase className="w-8 h-8 text-amber-600" />
-              <span className="font-bold text-lg text-gray-900">{getRoleDisplay()}</span>
+          {/* Top - Icon and Logged in as */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <Briefcase className="w-7 h-7 text-slate-600" />
+              <div>
+                <p className="text-xs text-gray-400">Logged in as</p>
+                <span className="text-sm font-medium text-gray-700">{isFPManager ? 'Manager' : 'Partner'}</span>
+              </div>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
               <X className="w-5 h-5" />
             </button>
-          </div>
-
-          {/* Admin Info */}
-          <div className="px-6 py-4 border-b border-gray-200">
-            <p className="text-sm text-gray-500">Logged in as</p>
-            <span className={`inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full ${isFPManager ? 'bg-amber-100 text-amber-700' : 'bg-amber-100 text-amber-700'}`}>
-              {getRoleDisplay()}
-            </span>
           </div>
 
           {/* Navigation */}
@@ -270,15 +265,21 @@ const FPLayout = ({ admin, onLogout, children }) => {
 
           </nav>
 
-          {/* Logout */}
-          <div className="px-4 py-3 border-t border-gray-200">
-            <button
-              onClick={onLogout}
-              className="flex items-center space-x-2 px-3 py-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded transition-all duration-200 text-sm"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Logout</span>
-            </button>
+          {/* Bottom - Role Title & Logout */}
+          <div className="border-t border-gray-200">
+            <div className="px-5 py-3">
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Portal</p>
+              <p className="text-sm font-semibold text-gray-800">{getRoleDisplay()}</p>
+            </div>
+            <div className="px-4 pb-3">
+              <button
+                onClick={onLogout}
+                className="flex items-center space-x-2 px-3 py-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-all duration-200 text-sm"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
+            </div>
           </div>
         </div>
       </aside>

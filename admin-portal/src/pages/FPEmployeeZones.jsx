@@ -277,10 +277,10 @@ const FPEmployeeZones = ({ user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Pending Assignment</p>
-              <p className="text-2xl font-bold text-amber-600">{unassignedCount}</p>
+              <p className="text-2xl font-bold text-gray-700">{unassignedCount}</p>
             </div>
-            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-              <XCircle className="w-6 h-6 text-amber-600" />
+            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+              <XCircle className="w-6 h-6 text-gray-500" />
             </div>
           </div>
         </div>
@@ -360,7 +360,7 @@ const FPEmployeeZones = ({ user }) => {
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                     hasZones
                       ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-amber-100 text-amber-700'
+                      : 'bg-gray-100 text-gray-600'
                   }`}>
                     {hasZones ? 'Active' : 'Pending'}
                   </span>
@@ -380,12 +380,12 @@ const FPEmployeeZones = ({ user }) => {
 
                 {/* Zone Assignment Status */}
                 <div className={`p-3 rounded-lg mb-4 ${
-                  hasZones ? 'bg-emerald-50 border border-emerald-100' : 'bg-amber-50 border border-amber-100'
+                  hasZones ? 'bg-emerald-50 border border-emerald-100' : 'bg-gray-50 border border-gray-200'
                 }`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <MapPin className={`w-4 h-4 ${hasZones ? 'text-emerald-600' : 'text-amber-600'}`} />
-                      <span className={`text-sm font-medium ${hasZones ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      <MapPin className={`w-4 h-4 ${hasZones ? 'text-emerald-600' : 'text-gray-500'}`} />
+                      <span className={`text-sm font-medium ${hasZones ? 'text-emerald-700' : 'text-gray-600'}`}>
                         {hasZones ? `${zoneCount} Zone${zoneCount !== 1 ? 's' : ''}` : 'No Zones'}
                       </span>
                     </div>
@@ -393,7 +393,7 @@ const FPEmployeeZones = ({ user }) => {
                       <span className="text-xs text-emerald-600">All</span>
                     )}
                   </div>
-                  <p className={`text-xs mt-1 ${hasZones ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  <p className={`text-xs mt-1 ${hasZones ? 'text-emerald-600' : 'text-gray-500'}`}>
                     {getEmployeeZoneDisplay(employee)}
                   </p>
                 </div>

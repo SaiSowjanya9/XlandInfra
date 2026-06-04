@@ -543,18 +543,18 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
-                      {estimateForm.selectedAddons.map(id => {
+                      {estimateForm.selectedAddons.map((id, idx) => {
                         const addon = addons.find(a => a.id == id || a.id === parseInt(id));
                         if (!addon) return null;
                         const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
                         return (
-                          <tr key={id}>
+                          <tr key={idx}>
                             <td className="px-5 py-2.5 text-gray-800">{addon.service_name}</td>
                             <td className="px-5 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-5 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-5 py-2.5 text-right text-gray-800">{formatCurrency(addon.price)}</td>
                             <td className="px-5 py-2.5 text-center">
-                              <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter(a => a !== id)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                              <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                             </td>
                           </tr>
                         );
@@ -802,18 +802,18 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
-                      {estimateForm.selectedAddons.map(id => {
+                      {estimateForm.selectedAddons.map((id, idx) => {
                         const addon = addons.find(a => a.id == id || a.id === parseInt(id));
                         if (!addon) return null;
                         const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
                         return (
-                          <tr key={id}>
+                          <tr key={idx}>
                             <td className="px-5 py-2.5 text-gray-800">{addon.service_name}</td>
                             <td className="px-5 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-5 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-5 py-2.5 text-right text-gray-800">{formatCurrency(addon.price)}</td>
                             <td className="px-5 py-2.5 text-center">
-                              <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter(a => a !== id)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                              <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                             </td>
                           </tr>
                         );
