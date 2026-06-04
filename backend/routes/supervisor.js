@@ -768,7 +768,24 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
 router.get('/vendors', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
-    const franchisePartnerId = req.franchisePartnerId;
+    
+    // Get FP ID from multiple sources (same as properties route)
+    let franchisePartnerId = req.franchisePartnerId || req.fpId || req.user?.franchisePartnerId || req.user?.fpId;
+    
+    // If still no fpId, try to get it from fp_employees table
+    if (!franchisePartnerId && (req.user?.id || supervisorId)) {
+      try {
+        const [fpEmp] = await pool.execute(
+          'SELECT franchise_partner_id FROM fp_employees WHERE id = ? OR user_id = ?',
+          [req.user?.id || supervisorId, req.user?.id || supervisorId]
+        );
+        if (fpEmp.length > 0) {
+          franchisePartnerId = fpEmp[0].franchise_partner_id;
+        }
+      } catch (e) { /* ignore */ }
+    }
+    
+    console.log('[Supervisor Vendors] supervisorId:', supervisorId, 'franchisePartnerId:', franchisePartnerId);
 
     // For FP employees, show all FP vendors (zone-based like Manager)
     if (franchisePartnerId) {
@@ -787,32 +804,37 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
         } catch (e) { zoneIds = []; }
       }
 
-      // Get all FP vendors, optionally filtered by zone
+      // Get all FP vendors like Manager portal
       let vendorQuery = `
-        SELECT v.*, 
-               COALESCE(v.company_name, v.owner_name) as company_name,
-               COALESCE(v.contact_person, v.owner_name) as contact_person,
-               COALESCE(v.phone, v.owner_mobile) as phone,
-               COALESCE(v.email, v.owner_email) as email,
-               z.name as zone_name,
+        SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
+               ov.zone, ov.zone as zone_name, ov.area_name, ov.area_name as area, ov.division,
+               ov.owner_name, ov.owner_name as company_name, ov.owner_name as contact_person,
+               ov.owner_mobile, ov.owner_mobile as phone, ov.owner_email, ov.owner_email as email,
+               ov.owner_aadhar, ov.owner_country_code,
+               ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
+               ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
+               ov.rate_per_visit, ov.coverage_per_day,
+               ov.created_by, ov.created_by_id,
                COALESCE(
                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
-                 v.created_by, 'System'
+                 ov.created_by, 'System'
                ) as created_by_name,
+               ov.status,
+               ov.created_at, ov.updated_at,
+               CASE WHEN ov.status = 'active' THEN 1 ELSE 0 END as is_active,
                'fp' as vendor_type, FALSE as can_modify, FALSE as can_delete
-        FROM onboarded_vendors v
-        LEFT JOIN zones z ON v.zone_id = z.id
-        LEFT JOIN fp_employees fpe ON v.created_by = fpe.email OR CAST(v.created_by AS UNSIGNED) = fpe.id
-        WHERE v.franchise_partner_id = ? AND v.is_active = TRUE
+        FROM onboarded_vendors ov
+        LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
+        WHERE ov.franchise_partner_id = ?
       `;
       const params = [franchisePartnerId];
 
       if (zoneIds.length > 0) {
-        vendorQuery += ` AND (v.zone_id IN (?) OR v.zone_id IS NULL)`;
+        vendorQuery += ` AND ov.zone IN (?)`;
         params.push(zoneIds);
       }
 
-      vendorQuery += ` ORDER BY v.created_at DESC`;
+      vendorQuery += ` ORDER BY ov.created_at DESC`;
 
       const [allVendors] = await pool.query(vendorQuery, params);
 
