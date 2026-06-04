@@ -782,7 +782,7 @@ router.get('/vendors/assignments', async (req, res) => {
         COALESCE(p.city, op.city) as city,
         v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
-        v.zone_name, v.area, v.rate_per_visit
+        v.zone as zone_name, v.area_name as area, v.rate_per_visit
       FROM property_vendor_assignments pva
       LEFT JOIN properties p ON pva.property_id = p.id
       LEFT JOIN onboarded_properties op ON pva.property_id = op.id

@@ -1,18 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Phone, Mail, MapPin, Eye, Calendar, User } from 'lucide-react';
+import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Eye, Wrench, Zap, Wind, Sparkles, Shield } from 'lucide-react';
+
+const SERVICE_TYPES = [
+  { id: 'all', label: 'All Vendors', icon: Store },
+  { id: 'Plumbing', label: 'Plumbing', icon: Wrench },
+  { id: 'Electrical', label: 'Electrical', icon: Zap },
+  { id: 'HVAC', label: 'HVAC', icon: Wind },
+  { id: 'Cleaning', label: 'Cleaning', icon: Sparkles },
+  { id: 'Security', label: 'Security', icon: Shield },
+];
 
 const SupervisorVendors = ({ user }) => {
   const location = useLocation();
   const [vendors, setVendors] = useState({ own: [], assigned: [], all: [] });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
+  const [serviceFilter, setServiceFilter] = useState('all');
+  const [zoneFilter, setZoneFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  const viewType = location.pathname.includes('/assigned') ? 'assigned' : 'all';
   const token = sessionStorage.getItem('pm_auth_token');
 
   const fetchVendors = async () => {
@@ -28,56 +38,114 @@ const SupervisorVendors = ({ user }) => {
     }
   };
 
-  useEffect(() => { fetchVendors(); if (viewType === 'assigned') setActiveTab('assigned'); }, [viewType]);
+  useEffect(() => { fetchVendors(); }, []);
 
-  const viewVendorDetails = (vendor) => {
-    setSelectedVendor(vendor);
-    setShowDetailModal(true);
-  };
+  const viewVendorDetails = (vendor) => { setSelectedVendor(vendor); setShowDetailModal(true); };
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(dateString).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  const getStatusColor = (status) => {
+  const getServiceBadgeColor = (type) => {
     const colors = {
-      active: 'bg-green-100 text-green-700',
-      inactive: 'bg-gray-100 text-gray-600',
-      pending: 'bg-yellow-100 text-yellow-700'
+      'HVAC': 'bg-blue-100 text-blue-700',
+      'Plumbing': 'bg-cyan-100 text-cyan-700',
+      'Electrical': 'bg-yellow-100 text-yellow-700',
+      'Cleaning': 'bg-pink-100 text-pink-700',
+      'Security': 'bg-purple-100 text-purple-700',
     };
-    return colors[status] || colors.active;
+    return colors[type] || 'bg-gray-100 text-gray-700';
   };
 
-  const getVendorList = () => { switch (activeTab) { case 'own': return vendors.own || []; case 'assigned': return vendors.assigned || []; default: return vendors.all || []; } };
-  const filteredVendors = getVendorList().filter(v => v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) || v.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) || v.vendor_id?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const allVendors = vendors.all || [];
+  const zones = [...new Set(allVendors.map(v => v.zone || v.zone_name).filter(Boolean))];
+  
+  const getServiceCount = (type) => {
+    if (type === 'all') return allVendors.length;
+    return allVendors.filter(v => v.service_type?.toLowerCase() === type.toLowerCase()).length;
+  };
+
+  const filteredVendors = allVendors.filter(v => {
+    const matchSearch = !searchTerm || 
+      v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.owner_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.vendor_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.zone?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchService = serviceFilter === 'all' || v.service_type?.toLowerCase() === serviceFilter.toLowerCase();
+    const matchZone = zoneFilter === 'all' || v.zone === zoneFilter || v.zone_name === zoneFilter;
+    const matchStatus = statusFilter === 'all' || (statusFilter === 'active' ? (v.status === 'active' || v.is_active) : v.status !== 'active');
+    return matchSearch && matchService && matchZone && matchStatus;
+  });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div><h1 className="text-2xl font-bold text-gray-900">Vendor Management</h1><p className="text-gray-500 mt-1">View your assigned vendors</p></div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Vendor Details</h1>
+          <p className="text-amber-600 text-sm">{allVendors.length} total vendors</p>
+        </div>
+        <button onClick={fetchVendors} className="p-2 hover:bg-gray-100 rounded-lg" title="Refresh">
+          <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {message.text && (
-        <div className={`p-4 rounded-lg flex items-center gap-3 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-          {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+        <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
           <span>{message.text}</span>
           <button onClick={() => setMessage({ type: '', text: '' })} className="ml-auto"><X className="w-4 h-4" /></button>
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-100 p-1">
-        <div className="flex gap-1">
-          <button onClick={() => setActiveTab('all')} className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'all' ? 'bg-amber-100 text-amber-700' : 'text-gray-600 hover:bg-gray-50'}`}>All Vendors ({vendors.all?.length || 0})</button>
-          <button onClick={() => setActiveTab('own')} className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'own' ? 'bg-amber-100 text-amber-700' : 'text-gray-600 hover:bg-gray-50'}`}>My Vendors ({vendors.own?.length || 0})</button>
+      {/* Service Type Tabs */}
+      <div className="flex items-center gap-4 border-b border-gray-200 overflow-x-auto pb-0">
+        {SERVICE_TYPES.map(type => {
+          const Icon = type.icon;
+          const count = getServiceCount(type.id);
+          const isActive = serviceFilter === type.id;
+          return (
+            <button
+              key={type.id}
+              onClick={() => setServiceFilter(type.id)}
+              className={`flex items-center gap-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                isActive ? 'text-amber-600 border-amber-500' : 'text-gray-500 border-transparent hover:text-gray-700'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {type.label}
+              <span className={`px-1.5 py-0.5 rounded text-xs ${isActive ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[250px] relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name, ID, service, or zone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+          />
         </div>
+        <select value={zoneFilter} onChange={(e) => setZoneFilter(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+          <option value="all">All Zones</option>
+          {zones.map(z => <option key={z} value={z}>{z}</option>)}
+        </select>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+          <option value="active">Active Vendors</option>
+          <option value="all">All Status</option>
+          <option value="inactive">Inactive</option>
+        </select>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search vendors..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      {/* Vendors Table */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12"><RefreshCw className="w-6 h-6 text-amber-600 animate-spin" /></div>
         ) : filteredVendors.length === 0 ? (
@@ -87,59 +155,41 @@ const SupervisorVendors = ({ user }) => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor ID</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Service Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Vendor ID</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Service Type</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Zone</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Area</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Coverage/Day</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Created By</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Created</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                  <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-50">
                 {filteredVendors.map((vendor) => (
-                  <tr key={vendor.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900">{vendor.vendor_id || '-'}</p>
-                      <p className="text-xs text-gray-500">{vendor.company_name}</p>
+                  <tr key={vendor.id} className="hover:bg-gray-50">
+                    <td className="py-4 px-4">
+                      <p className="font-semibold text-gray-900">{vendor.owner_name || vendor.company_name || '-'}</p>
+                      <p className="text-xs text-gray-500">{vendor.vendor_id}</p>
                     </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-700">{vendor.service_type || vendor.vendor_type || '-'}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="text-sm text-gray-700">{vendor.contact_person || '-'}</p>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{vendor.zone_name || '-'}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{vendor.city || vendor.area || '-'}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{vendor.coverage_per_day || '-'}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{vendor.created_by_name || '-'}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-500">{formatDate(vendor.created_at)}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(vendor.status || 'active')}`}>
-                        {vendor.status || 'Active'}
+                    <td className="py-4 px-4">
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getServiceBadgeColor(vendor.service_type)}`}>
+                        {vendor.service_type || '-'}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      <button
-                        onClick={() => viewVendorDetails(vendor)}
-                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                        title="View"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                    <td className="py-4 px-4 text-sm text-gray-700">{vendor.zone || vendor.zone_name || '-'}</td>
+                    <td className="py-4 px-4 text-sm text-gray-700">{vendor.area || vendor.area_name || '-'}</td>
+                    <td className="py-4 px-4 text-sm text-gray-700">{vendor.coverage_per_day || '-'}</td>
+                    <td className="py-4 px-4 text-sm text-gray-700">{vendor.created_by_name || '-'}</td>
+                    <td className="py-4 px-4 text-sm text-gray-500">{formatDate(vendor.created_at)}</td>
+                    <td className="py-4 px-4">
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${vendor.status === 'active' || vendor.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {vendor.status === 'active' || vendor.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <button onClick={() => viewVendorDetails(vendor)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg"><Eye className="w-4 h-4" /></button>
                     </td>
                   </tr>
                 ))}
