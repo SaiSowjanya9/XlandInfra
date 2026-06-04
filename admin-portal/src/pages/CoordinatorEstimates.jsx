@@ -285,7 +285,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
             <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
             <select
               onChange={(e) => {
-                if (e.target.value && !selectedAddons.includes(e.target.value)) {
+                if (e.target.value) {
                   setSelectedAddons([...selectedAddons, e.target.value]);
                 }
                 e.target.value = '';

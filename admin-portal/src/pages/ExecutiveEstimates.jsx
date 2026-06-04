@@ -338,7 +338,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           })()}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
-            <select onChange={(e) => { if (e.target.value && !selectedAddons.includes(e.target.value)) setSelectedAddons([...selectedAddons, e.target.value]); e.target.value = ''; }} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
+            <select onChange={(e) => { if (e.target.value) setSelectedAddons([...selectedAddons, e.target.value]); e.target.value = ''; }} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
               <option value="">+ Select Add-on to add</option>
               {(() => {
                 const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
