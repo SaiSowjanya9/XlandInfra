@@ -90,12 +90,19 @@ const ExecutiveVendors = ({ user }) => {
               <tbody>
                 {filteredVendors.map((vendor) => (
                   <tr key={vendor.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900">{vendor.vendor_id || '-'}</p>
-                      <p className="text-xs text-gray-500">{vendor.company_name}</p>
+                    <td className="py-4 px-4">
+                      <p className="font-semibold text-gray-900">{vendor.owner_name || vendor.company_name || '-'}</p>
+                      <p className="text-xs text-gray-400">{vendor.vendor_id}</p>
                     </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-700">{vendor.service_type || vendor.vendor_type || '-'}</span>
+                    <td className="py-4 px-4">
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${
+                        vendor.service_type === 'HVAC' ? 'bg-blue-100 text-blue-700' :
+                        vendor.service_type === 'Security' ? 'bg-teal-100 text-teal-700' :
+                        vendor.service_type === 'Electrical' ? 'bg-yellow-100 text-yellow-700' :
+                        vendor.service_type === 'Plumbing' ? 'bg-cyan-100 text-cyan-700' :
+                        vendor.service_type === 'Cleaning' ? 'bg-pink-100 text-pink-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>{vendor.service_type || '-'}</span>
                     </td>
                     <td className="py-3 px-4">
                       <p className="text-sm text-gray-700">{vendor.contact_person || '-'}</p>
