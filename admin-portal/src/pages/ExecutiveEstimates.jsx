@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Download, Mail, EyeOff, Calendar, Filter, Home, Building2, User } from 'lucide-react';
+import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Download, Mail, Calendar, Filter, Home, Building2, User } from 'lucide-react';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
@@ -71,8 +71,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
     if (pkg) subTotal += parseFloat(pkg.price || pkg.base_price) || 0;
     selectedAddons.forEach(addonId => {
-      const addon = addons.find(a => a.id?.toString() === addonId);
-      if (addon) subTotal += parseFloat(addon.price) || 0;
+      const addon = addons.find(a => getAddonId(a) === addonId);
+      if (addon) subTotal += getAddonPrice(addon);
     });
     const discountAmount = (subTotal * discountPercent) / 100;
     const afterDiscount = subTotal - discountAmount;
@@ -82,6 +82,9 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   };
   const priceSummary = calculatePriceSummary();
   const formatCurrency = (amt) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(amt || 0);
+  const getAddonId = (addon) => (addon.id ?? addon.addonId)?.toString();
+  const getAddonName = (addon) => addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name || 'Add-on Service';
+  const getAddonPrice = (addon) => parseFloat(addon.price ?? addon.totalPrice ?? addon.services?.[0]?.price) || 0;
 
   // Reset estimate form
   const resetEstimateForm = () => {
@@ -121,8 +124,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           address: selectedProperty?.address || directForm.address,
           package_id: selectedAmcPackage,
           package_name: amcPackages.find(p => p.id?.toString() === selectedAmcPackage)?.name || '',
-          package_price: amcPackages.find(p => p.id?.toString() === selectedAmcPackage)?.price || 0,
-          addons: selectedAddons.map(id => addons.find(a => a.id?.toString() === id)),
+          package_price: getPackagePrice(amcPackages.find(p => p.id?.toString() === selectedAmcPackage)),
+          addons: selectedAddons.map(id => addons.find(a => getAddonId(a) === id)).filter(Boolean),
           subtotal: priceSummary.subTotal,
           discount_percent: discountPercent,
           discount_amount: priceSummary.discountAmount,
@@ -234,6 +237,136 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
   const getStatusColor = (status) => { const colors = { draft: 'bg-gray-100 text-gray-700', pending_approval: 'bg-yellow-100 text-yellow-700', approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700', converted: 'bg-blue-100 text-blue-700', archived: 'bg-gray-100 text-gray-500' }; return colors[status] || 'bg-gray-100 text-gray-700'; };
   const calculateTotals = () => { const subtotal = estimateForm.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0); const tax = (subtotal * estimateForm.taxPercentage) / 100; const discount = (subtotal * estimateForm.discountPercentage) / 100; return { subtotal, tax, discount, total: subtotal + tax - discount }; };
+  const getPackagePrice = (pkg) => parseFloat(pkg?.price ?? pkg?.base_price ?? pkg?.total_rate) || 0;
+  const getPackageServicesText = (pkg) => {
+    let servicesData = pkg.services || pkg.services_data || pkg.serviceRows;
+    if (typeof servicesData === 'string') {
+      try { servicesData = JSON.parse(servicesData); } catch (e) { return servicesData || '-'; }
+    }
+    const serviceRows = servicesData?.serviceRows || servicesData || [];
+    return Array.isArray(serviceRows) ? serviceRows.map(s => s.name || s.service || 'Service').join(', ') : '-';
+  };
+  const getBillingBadgeColor = (billing) => {
+    switch (billing) {
+      case 'monthly': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'quarterly': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'half-yearly': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'yearly': return 'bg-green-50 text-green-700 border-green-200';
+      default: return 'bg-blue-50 text-blue-700 border-blue-200';
+    }
+  };
+
+  const renderAmcAndPriceSummary = (showSaveButton = false) => (
+    <>
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900">AMC Package</h2>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select AMC Package <span className="text-red-500">*</span></label>
+            <select value={selectedAmcPackage} onChange={(e) => setSelectedAmcPackage(e.target.value)} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
+              <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+              {(() => {
+                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
+                const filteredPkgs = propertyType ? amcPackages.filter(pkg => {
+                  const pkgType = (pkg.property_type || pkg.propertyType || '').toUpperCase();
+                  const searchType = propertyType.toUpperCase();
+                  return pkgType === searchType || pkgType === 'GC' && searchType === 'GC';
+                }) : amcPackages;
+                const otherPkgs = propertyType ? amcPackages.filter(pkg => !filteredPkgs.includes(pkg)) : [];
+                return (<>
+                  {filteredPkgs.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}</optgroup>}
+                  {otherPkgs.length > 0 && <optgroup label="Other Packages">{otherPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}</optgroup>}
+                  {!propertyType && amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}
+                </>);
+              })()}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
+            <select onChange={(e) => { if (e.target.value && !selectedAddons.includes(e.target.value)) setSelectedAddons([...selectedAddons, e.target.value]); e.target.value = ''; }} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
+              <option value="">+ Select Add-on to add</option>
+              {(() => {
+                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
+                const filteredAddons = propertyType ? addons.filter(addon => {
+                  const addonType = (addon.property_type || addon.propertyType || '').toUpperCase();
+                  const searchType = propertyType.toUpperCase();
+                  return addonType === searchType || addonType === 'GC' && searchType === 'GC';
+                }) : addons;
+                const otherAddons = propertyType ? addons.filter(addon => !filteredAddons.includes(addon)) : [];
+                return (<>
+                  {filteredAddons.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}</optgroup>}
+                  {otherAddons.length > 0 && <optgroup label="Other Add-ons">{otherAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}</optgroup>}
+                  {!propertyType && addons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}
+                </>);
+              })()}
+            </select>
+          </div>
+          {selectedAddons.length === 0 ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+              <p className="text-amber-700">No add-ons selected. Use the dropdown above to add services.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {selectedAddons.map(addonId => {
+                const addon = addons.find(a => getAddonId(a) === addonId);
+                return addon ? (
+                  <div key={addonId} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <span className="text-blue-800">{getAddonName(addon)}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium text-blue-700">{formatCurrency(getAddonPrice(addon))}</span>
+                      <button onClick={() => setSelectedAddons(selectedAddons.filter(id => id !== addonId))} className="text-red-500 hover:text-red-700"><X className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900">Price Summary</h2>
+        </div>
+        <div className="p-6">
+          <div className="max-w-md ml-auto space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">Sub Total</span>
+              <span className="font-medium text-gray-900">{formatCurrency(priceSummary.subTotal)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">Discount (%)</span>
+              <div className="flex items-center gap-2">
+                <input type="number" min="0" max="100" value={discountPercent} onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)} className="w-16 px-2 py-1 border border-gray-300 rounded text-center" />
+                <span className="text-gray-500">- {formatCurrency(priceSummary.discountAmount)}</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">GST (%)</span>
+              <div className="flex items-center gap-2">
+                <input type="number" min="0" max="100" value={gstPercent} onChange={(e) => setGstPercent(parseFloat(e.target.value) || 0)} className="w-16 px-2 py-1 border border-blue-300 rounded text-center" />
+                <span className="text-gray-500">+ {formatCurrency(priceSummary.gstAmount)}</span>
+              </div>
+            </div>
+            <div className="bg-gray-900 text-white rounded-lg p-4 flex items-center justify-between">
+              <span className="font-medium">Total Amount</span>
+              <span className="text-xl font-bold">{formatCurrency(priceSummary.totalAmount)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-500">* Currency: INR (₹) | GST: 18% applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
+        <div className="flex gap-3">
+          <button onClick={resetEstimateForm} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
+          {showSaveButton && <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save</button>}
+        </div>
+      </div>
+    </>
+  );
 
   const filteredEstimates = estimates.filter(e => e.title?.toLowerCase().includes(searchTerm.toLowerCase()) || e.estimate_id?.toLowerCase().includes(searchTerm.toLowerCase()) || e.client_name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -414,58 +547,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                   </div>
 
-                  {/* AMC Package */}
-                  <div className="bg-white rounded-xl border border-gray-200">
-                    <div className="px-6 py-4 border-b border-gray-100"><h2 className="font-semibold text-gray-900">AMC Package</h2></div>
-                    <div className="p-6 space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Select AMC Package <span className="text-red-500">*</span></label>
-                        <select value={selectedAmcPackage} onChange={(e) => setSelectedAmcPackage(e.target.value)} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
-                          <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
-                          {amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price || pkg.base_price)}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
-                        <select onChange={(e) => { if (e.target.value && !selectedAddons.includes(e.target.value)) setSelectedAddons([...selectedAddons, e.target.value]); e.target.value = ''; }} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
-                          <option value="">+ Select Add-on to add</option>
-                          {addons.map(addon => <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>)}
-                        </select>
-                        {selectedAddons.length > 0 ? (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {selectedAddons.map(id => { const addon = addons.find(a => a.id?.toString() === id); return addon ? (
-                              <span key={id} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">{addon.name}<button type="button" onClick={() => setSelectedAddons(selectedAddons.filter(a => a !== id))} className="ml-1 text-blue-500 hover:text-blue-700">×</button></span>
-                            ) : null; })}
-                          </div>
-                        ) : (
-                          <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center text-sm text-amber-700">No add-ons selected. Use the dropdown above to add services.</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Price Summary */}
-                  <div className="bg-white rounded-xl border border-gray-200">
-                    <div className="px-6 py-4 border-b border-gray-100"><h2 className="font-semibold text-gray-900">Price Summary</h2></div>
-                    <div className="p-6">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Discount %</label><input type="number" min="0" max="100" value={discountPercent} onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-                        <div><label className="block text-xs font-medium text-slate-500 mb-1">GST %</label><input type="number" min="0" value={gstPercent} onChange={(e) => setGstPercent(parseFloat(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-                      </div>
-                      <div className="bg-slate-50 rounded-lg p-4 space-y-2">
-                        <div className="flex justify-between text-sm"><span className="text-gray-600">Subtotal</span><span className="font-medium">{formatCurrency(priceSummary.subTotal)}</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-gray-600">Discount ({discountPercent}%)</span><span className="font-medium text-red-600">-{formatCurrency(priceSummary.discountAmount)}</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-gray-600">GST ({gstPercent}%)</span><span className="font-medium">+{formatCurrency(priceSummary.gstAmount)}</span></div>
-                        <div className="flex justify-between text-base font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-blue-600">{formatCurrency(priceSummary.totalAmount)}</span></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex justify-end gap-3">
-                    <button type="button" onClick={resetEstimateForm} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
-                    <button type="button" onClick={handleSaveEstimate} className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium">Save Estimate</button>
-                  </div>
+                  {renderAmcAndPriceSummary(true)}
                 </>
               )}
 
@@ -489,55 +571,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                   </div>
 
-                  {/* AMC Package for Direct */}
-                  <div className="bg-white rounded-xl border border-gray-200">
-                    <div className="px-6 py-4 border-b border-gray-100"><h2 className="font-semibold text-gray-900">AMC Package</h2></div>
-                    <div className="p-6 space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Select AMC Package <span className="text-red-500">*</span></label>
-                        <select value={selectedAmcPackage} onChange={(e) => setSelectedAmcPackage(e.target.value)} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white">
-                          <option value="">Select a Package</option>
-                          {amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price || pkg.base_price)}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
-                        <select onChange={(e) => { if (e.target.value && !selectedAddons.includes(e.target.value)) setSelectedAddons([...selectedAddons, e.target.value]); e.target.value = ''; }} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white">
-                          <option value="">+ Select Add-on</option>
-                          {addons.map(addon => <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>)}
-                        </select>
-                        {selectedAddons.length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {selectedAddons.map(id => { const addon = addons.find(a => a.id?.toString() === id); return addon ? (
-                              <span key={id} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">{addon.name}<button type="button" onClick={() => setSelectedAddons(selectedAddons.filter(a => a !== id))} className="ml-1">×</button></span>
-                            ) : null; })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Price Summary for Direct */}
-                  <div className="bg-white rounded-xl border border-gray-200">
-                    <div className="px-6 py-4 border-b border-gray-100"><h2 className="font-semibold text-gray-900">Price Summary</h2></div>
-                    <div className="p-6">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Discount %</label><input type="number" min="0" max="100" value={discountPercent} onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-                        <div><label className="block text-xs font-medium text-slate-500 mb-1">GST %</label><input type="number" min="0" value={gstPercent} onChange={(e) => setGstPercent(parseFloat(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-                      </div>
-                      <div className="bg-slate-50 rounded-lg p-4 space-y-2">
-                        <div className="flex justify-between text-sm"><span className="text-gray-600">Subtotal</span><span className="font-medium">{formatCurrency(priceSummary.subTotal)}</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-gray-600">Discount ({discountPercent}%)</span><span className="font-medium text-red-600">-{formatCurrency(priceSummary.discountAmount)}</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-gray-600">GST ({gstPercent}%)</span><span className="font-medium">+{formatCurrency(priceSummary.gstAmount)}</span></div>
-                        <div className="flex justify-between text-base font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-blue-600">{formatCurrency(priceSummary.totalAmount)}</span></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-3">
-                    <button type="button" onClick={resetEstimateForm} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
-                    <button type="button" onClick={handleSaveEstimate} className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium">Save Estimate</button>
-                  </div>
+                  {renderAmcAndPriceSummary(true)}
                 </>
               )}
             </div>
@@ -611,7 +645,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {(filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType))).map((pkg) => {
-                          const servicesText = pkg.services || (pkg.services_data ? pkg.services_data.map(s => s.name).join(', ') : '-');
+                          const servicesText = getPackageServicesText(pkg);
                           const getBillingBadgeColor = (billing) => {
                             switch(billing) {
                               case 'monthly': return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -627,7 +661,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{PROPERTY_TYPE_OPTIONS.find(t => t.id === pkg.property_type)?.label || pkg.property_type || '-'}</span></td>
                               <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getBillingBadgeColor(pkg.billing_duration)}`}>{BILLING_DURATIONS.find(d => d.value === pkg.billing_duration)?.label || 'Monthly'}</span></td>
                               <td className="px-4 py-4 max-w-xs"><p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText}</p></td>
-                              <td className="px-4 py-4 text-right"><span className="text-sm text-gray-400 italic flex items-center justify-end gap-1"><EyeOff className="w-3 h-3" /> Hidden</span></td>
+                              <td className="px-4 py-4 text-right"><span className="text-lg font-bold text-slate-800">{formatCurrency(getPackagePrice(pkg))}</span></td>
                               <td className="px-4 py-4">
                                 <div className="flex items-center justify-center gap-1">
                                   <button className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button>
@@ -690,11 +724,11 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                           const getFrequencyBadgeColor = (freq) => { switch(freq?.toLowerCase()) { case 'monthly': return 'bg-blue-100 text-blue-700 border-blue-200'; case 'every 2 months': return 'bg-cyan-100 text-cyan-700 border-cyan-200'; case 'quarterly': return 'bg-purple-100 text-purple-700 border-purple-200'; default: return 'bg-gray-100 text-gray-700 border-gray-200'; } };
                           return (
                             <tr key={addon.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-4"><span className="font-semibold text-gray-900">{addon.name || 'Unnamed Add-on'}</span></td>
+                              <td className="px-6 py-4"><span className="font-semibold text-gray-900">{getAddonName(addon)}</span></td>
                               <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{PROPERTY_TYPE_OPTIONS.find(t => t.id === addon.property_type)?.label || addon.property_type || '-'}</span></td>
                               <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getFrequencyBadgeColor(addon.frequency_type || addon.frequency)}`}>{addon.frequency_type || addon.frequency || 'Monthly'}</span></td>
                               <td className="px-4 py-4"><span className="text-sm text-gray-600">{addon.frequency_count || addon.visits || '12'}x</span></td>
-                              <td className="px-4 py-4 text-right"><span className="text-sm text-gray-400 italic flex items-center justify-end gap-1"><EyeOff className="w-3 h-3" /> Hidden</span></td>
+                              <td className="px-4 py-4 text-right"><span className="font-semibold text-gray-900">{formatCurrency(getAddonPrice(addon))}</span></td>
                               <td className="px-4 py-4"><div className="flex items-center justify-center gap-1"><button className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button><button className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button></div></td>
                             </tr>
                           );
