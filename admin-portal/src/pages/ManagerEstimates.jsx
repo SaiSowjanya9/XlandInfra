@@ -344,18 +344,18 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
-                  {selectedAddons.map(addonId => {
+                  {selectedAddons.map((addonId, idx) => {
                     const addon = addons.find(a => getAddonId(a) === addonId);
                     if (!addon) return null;
                     const freqType = addon.frequency_type || addon.frequencyType || addon.services?.[0]?.frequencyType || 'Monthly';
                     return (
-                      <tr key={addonId}>
+                      <tr key={idx}>
                         <td className="px-5 py-2.5 text-gray-800">{getAddonName(addon)}</td>
                         <td className="px-5 py-2.5 text-gray-600">{freqType}</td>
                         <td className="px-5 py-2.5 text-center text-gray-600">{addon.frequency_count || addon.frequencyCount || getFrequencyVisits(freqType)}</td>
                         <td className="px-5 py-2.5 text-right text-gray-800">{formatCurrency(getAddonPrice(addon))}</td>
                         <td className="px-5 py-2.5 text-center">
-                          <button onClick={() => setSelectedAddons(selectedAddons.filter(id => id !== addonId))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => setSelectedAddons(selectedAddons.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                         </td>
                       </tr>
                     );
