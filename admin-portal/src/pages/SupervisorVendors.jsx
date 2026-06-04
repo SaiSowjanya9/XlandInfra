@@ -135,10 +135,10 @@ const SupervisorVendors = ({ user }) => {
                     <td className="py-3 px-4">
                       <button
                         onClick={() => viewVendorDetails(vendor)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        title="View"
                       >
                         <Eye className="w-4 h-4" />
-                        <span>View Details</span>
                       </button>
                     </td>
                   </tr>
