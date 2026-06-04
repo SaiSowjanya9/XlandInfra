@@ -352,13 +352,10 @@ const generatePDF = (data, type, filename) => {
       y += descBoxHeight + 8;
     }
 
-    // ===== TOTAL PRICE BOX (Only total shown - no breakdown) =====
-    const summaryWidth = 100;
-    const summaryX = pageWidth - margin - summaryWidth;
-    
+    // ===== TOTAL PRICE BOX (Full width - heading left, price right) =====
     const total = parseFloat(data.totalPrice) || parseFloat(data.subtotal) || 0;
-    
-    const summaryBoxHeight = 45;
+    const fullWidth = pageWidth - margin * 2;
+    const summaryBoxHeight = 22;
 
     // Check if we need a new page for the total box
     if (y + summaryBoxHeight + 30 > pageHeight) {
@@ -366,28 +363,19 @@ const generatePDF = (data, type, filename) => {
       y = margin;
     }
 
-    // Outer box with subtle shadow effect
-    doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(220, 220, 220);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(summaryX, y, summaryWidth, summaryBoxHeight, 4, 4, 'FD');
-    
-    // Header bar with primary color
+    // Full width box with primary color background
     doc.setFillColor(...primaryColor);
-    doc.roundedRect(summaryX, y, summaryWidth, 14, 4, 4, 'F');
-    doc.rect(summaryX, y + 10, summaryWidth, 4, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ESTIMATE TOTAL', summaryX + summaryWidth / 2, y + 9, { align: 'center' });
+    doc.roundedRect(margin, y, fullWidth, summaryBoxHeight, 3, 3, 'F');
     
-    // Total amount - prominently displayed
-    doc.setFillColor(...accentColor);
-    doc.roundedRect(summaryX + 5, y + 20, summaryWidth - 10, 20, 3, 3, 'F');
-    doc.setTextColor(0, 0, 0);
+    // ESTIMATE TOTAL label on left
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
+    doc.text('ESTIMATE TOTAL', margin + 10, y + 14);
+    
+    // Price on right
     doc.setFontSize(14);
-    doc.text(formatCurrency(total), summaryX + summaryWidth / 2, y + 33, { align: 'center' });
+    doc.text(formatCurrency(total), pageWidth - margin - 10, y + 14, { align: 'right' });
 
     y += summaryBoxHeight + 10;
 
