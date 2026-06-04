@@ -270,7 +270,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
       if (isFPCoordinator) {
         // FP Coordinators see: ALL onboarded properties from their FP
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                  op.zone_id as zone_name, op.area_name as area, op.division, op.total_units as units,
+                  op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
                   op.address, op.city, op.state, op.pincode as zip_code,
                   op.contact_person, op.contact_phone, op.contact_email as email,
                   COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
@@ -283,7 +283,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
         onbParams = [franchisePartnerId];
       } else {
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                  op.zone_id as zone_name, op.area_name as area, op.division, op.total_units as units,
+                  op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
                   op.address, op.city, op.state, op.pincode as zip_code,
                   op.contact_person, op.contact_phone, op.contact_email as email,
                   COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
