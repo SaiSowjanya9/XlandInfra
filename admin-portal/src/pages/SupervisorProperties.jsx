@@ -565,7 +565,6 @@ const SupervisorProperties = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Zone</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Area</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Division</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Units</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Address</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">City</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contacts</th>
@@ -597,9 +596,6 @@ const SupervisorProperties = ({ user }) => {
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600">{property.division || '-'}</span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="text-sm text-gray-600">{property.units || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600 max-w-[150px] truncate block">{property.address || '-'}</span>

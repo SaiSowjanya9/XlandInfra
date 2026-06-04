@@ -409,11 +409,13 @@ router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
 
-    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
+    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
+             cl.name as client_name, cl.name as customer_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
+       LEFT JOIN clients cl ON wo.client_id = cl.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')
        ORDER BY wo.created_at DESC`;
     const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
@@ -432,11 +434,13 @@ router.get('/work-orders/completed', requireExecutiveScope, async (req, res) => 
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
 
-    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
+    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
+             cl.name as client_name, cl.name as customer_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
+       LEFT JOIN clients cl ON wo.client_id = cl.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('completed', 'closed')
        ORDER BY wo.created_at DESC`;
     const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
