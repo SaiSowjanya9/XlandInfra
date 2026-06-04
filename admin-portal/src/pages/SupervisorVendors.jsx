@@ -237,10 +237,6 @@ const SupervisorVendors = ({ user }) => {
                     <p className="text-xs text-gray-500">Area</p>
                     <p className="font-medium text-gray-900">{selectedVendor.area || selectedVendor.area_name || '-'}</p>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Division</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.division || '-'}</p>
-                  </div>
                 </div>
               </div>
 
