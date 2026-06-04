@@ -66,90 +66,90 @@ const FPDashboard = ({ user }) => {
       title: 'Properties',
       value: stats?.properties || 0,
       icon: Building2,
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-600',
+      color: 'bg-softslate-500',
+      bgColor: 'bg-softslate-50',
+      textColor: 'text-softslate-600',
       link: '/fp/properties'
     },
     {
       title: 'Vendors',
       value: stats?.vendors || 0,
       icon: Store,
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-600',
+      color: 'bg-dustyrose-400',
+      bgColor: 'bg-dustyrose-50',
+      textColor: 'text-dustyrose-500',
       link: '/fp/vendors'
     },
     {
       title: 'Customers',
       value: stats?.customers || 0,
       icon: Users,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50',
-      textColor: 'text-blue-600',
+      color: 'bg-sage-500',
+      bgColor: 'bg-sage-50',
+      textColor: 'text-sage-600',
       link: '/fp/customers'
     },
     {
       title: 'Employees',
       value: stats?.employees || 0,
       icon: Users,
-      color: 'bg-orange-500',
-      bgColor: 'bg-orange-50',
-      textColor: 'text-orange-600',
+      color: 'bg-warmstone-400',
+      bgColor: 'bg-warmstone-50',
+      textColor: 'text-warmstone-600',
       link: '/fp/employees'
     },
     {
       title: 'Total Work Orders',
       value: stats?.workOrders?.total || 0,
       icon: ClipboardList,
-      color: 'bg-indigo-500',
-      bgColor: 'bg-indigo-50',
-      textColor: 'text-indigo-600',
+      color: 'bg-softgold-500',
+      bgColor: 'bg-softgold-50',
+      textColor: 'text-softgold-600',
       link: '/fp/work-orders'
     },
     {
       title: 'Pending Work Orders',
       value: stats?.workOrders?.pending || 0,
       icon: Clock,
-      color: 'bg-amber-500',
-      bgColor: 'bg-amber-50',
-      textColor: 'text-amber-600',
+      color: 'bg-softgold-400',
+      bgColor: 'bg-cream-200',
+      textColor: 'text-softgold-600',
       link: '/fp/work-orders?status=pending'
     },
     {
       title: 'Completed Work Orders',
       value: stats?.workOrders?.completed || 0,
       icon: CheckCircle,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-600',
+      color: 'bg-sage-400',
+      bgColor: 'bg-sage-50',
+      textColor: 'text-sage-600',
       link: '/fp/work-orders?status=completed'
     },
     {
       title: 'Estimates',
       value: stats?.estimates || 0,
       icon: FileText,
-      color: 'bg-teal-500',
-      bgColor: 'bg-teal-50',
-      textColor: 'text-teal-600',
+      color: 'bg-warmstone-500',
+      bgColor: 'bg-warmstone-50',
+      textColor: 'text-warmstone-600',
       link: '/fp/estimates'
     }
   ];
 
   const getStatusColor = (status) => {
     const colors = {
-      draft: 'bg-gray-100 text-gray-700',
-      requested: 'bg-blue-100 text-blue-700',
-      under_review: 'bg-yellow-100 text-yellow-700',
-      assigned: 'bg-purple-100 text-purple-700',
-      accepted: 'bg-indigo-100 text-indigo-700',
-      in_progress: 'bg-orange-100 text-orange-700',
-      completed: 'bg-green-100 text-green-700',
-      verified: 'bg-green-100 text-green-700',
-      closed: 'bg-gray-100 text-gray-700',
-      cancelled: 'bg-red-100 text-red-700'
+      draft: 'bg-warmstone-100 text-warmstone-600',
+      requested: 'bg-softslate-100 text-softslate-600',
+      under_review: 'bg-softgold-100 text-softgold-700',
+      assigned: 'bg-dustyrose-100 text-dustyrose-500',
+      accepted: 'bg-sage-100 text-sage-600',
+      in_progress: 'bg-softgold-200 text-softgold-700',
+      completed: 'bg-sage-100 text-sage-600',
+      verified: 'bg-sage-200 text-sage-600',
+      closed: 'bg-warmstone-100 text-warmstone-600',
+      cancelled: 'bg-dustyrose-200 text-dustyrose-500'
     };
-    return colors[status] || 'bg-gray-100 text-gray-700';
+    return colors[status] || 'bg-warmstone-100 text-warmstone-600';
   };
 
   const formatDate = (dateString) => {
@@ -165,8 +165,8 @@ const FPDashboard = ({ user }) => {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading dashboard...</p>
+          <RefreshCw className="w-8 h-8 text-softgold-500 animate-spin mx-auto mb-4" />
+          <p className="text-warmstone-500">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -177,16 +177,16 @@ const FPDashboard = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-warmstone-700">
             Welcome, {user?.firstName || user?.name?.split(' ')[0] || 'Partner'}!
           </h1>
           {user?.companyName && (
-            <p className="text-gray-500 mt-1">{user.companyName}</p>
+            <p className="text-warmstone-500 mt-1">{user.companyName}</p>
           )}
         </div>
         <button
           onClick={fetchDashboardData}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-cream-100 border border-warmstone-200 rounded-lg hover:bg-cream-200 transition-colors text-warmstone-600"
         >
           <RefreshCw className="w-4 h-4" />
           <span>Refresh</span>
@@ -207,12 +207,12 @@ const FPDashboard = ({ user }) => {
           <Link
             key={index}
             to={card.link}
-            className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group"
+            className="bg-gradient-to-br from-cream-50 to-warmstone-50 rounded-xl border border-warmstone-200/50 p-5 hover:shadow-lg hover:border-softgold-300 transition-all duration-200 group"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">{card.title}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
+                <p className="text-sm font-medium text-warmstone-500">{card.title}</p>
+                <p className="text-2xl font-bold text-warmstone-700 mt-1">{card.value}</p>
               </div>
               <div className={`w-12 h-12 ${card.bgColor} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
                 <card.icon className={`w-6 h-6 ${card.textColor}`} />
@@ -223,73 +223,73 @@ const FPDashboard = ({ user }) => {
       </div>
 
       {/* Employee Team Overview */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
+      <div className="bg-gradient-to-br from-cream-50 to-warmstone-50 rounded-xl border border-warmstone-200/50 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Your Team</h2>
+          <h2 className="text-lg font-semibold text-warmstone-700">Your Team</h2>
           <Link
             to="/fp/employees"
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+            className="text-sm text-softgold-600 hover:text-softgold-700 font-medium flex items-center gap-1"
           >
             View All <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-indigo-50 rounded-xl p-4">
+          <div className="bg-softslate-50 rounded-xl p-4 border border-softslate-200/50">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                <UserCog className="w-5 h-5 text-indigo-600" />
+              <div className="w-10 h-10 bg-softslate-100 rounded-lg flex items-center justify-center">
+                <UserCog className="w-5 h-5 text-softslate-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-indigo-700">{stats?.employeeRoles?.managers || 0}</p>
-                <p className="text-sm text-indigo-600">Managers</p>
+                <p className="text-2xl font-bold text-softslate-600">{stats?.employeeRoles?.managers || 0}</p>
+                <p className="text-sm text-softslate-500">Managers</p>
               </div>
             </div>
-            <div className="text-xs text-indigo-500 bg-indigo-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
+            <div className="text-xs text-softslate-500 bg-softslate-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
               <ClipboardList className="w-3 h-3" />
               {stats?.workOrders?.byRole?.managers || 0} Work Orders
             </div>
           </div>
-          <div className="bg-purple-50 rounded-xl p-4">
+          <div className="bg-dustyrose-50 rounded-xl p-4 border border-dustyrose-200/50">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <UserCheck className="w-5 h-5 text-purple-600" />
+              <div className="w-10 h-10 bg-dustyrose-100 rounded-lg flex items-center justify-center">
+                <UserCheck className="w-5 h-5 text-dustyrose-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-purple-700">{stats?.employeeRoles?.coordinators || 0}</p>
-                <p className="text-sm text-purple-600">Coordinators</p>
+                <p className="text-2xl font-bold text-dustyrose-500">{stats?.employeeRoles?.coordinators || 0}</p>
+                <p className="text-sm text-dustyrose-400">Coordinators</p>
               </div>
             </div>
-            <div className="text-xs text-purple-500 bg-purple-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
+            <div className="text-xs text-dustyrose-400 bg-dustyrose-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
               <ClipboardList className="w-3 h-3" />
               {stats?.workOrders?.byRole?.coordinators || 0} Work Orders
             </div>
           </div>
-          <div className="bg-amber-50 rounded-xl p-4">
+          <div className="bg-softgold-50 rounded-xl p-4 border border-softgold-200/50">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 text-amber-600" />
+              <div className="w-10 h-10 bg-softgold-100 rounded-lg flex items-center justify-center">
+                <Shield className="w-5 h-5 text-softgold-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-amber-700">{stats?.employeeRoles?.supervisors || 0}</p>
-                <p className="text-sm text-amber-600">Supervisors</p>
+                <p className="text-2xl font-bold text-softgold-600">{stats?.employeeRoles?.supervisors || 0}</p>
+                <p className="text-sm text-softgold-500">Supervisors</p>
               </div>
             </div>
-            <div className="text-xs text-amber-500 bg-amber-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
+            <div className="text-xs text-softgold-500 bg-softgold-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
               <ClipboardList className="w-3 h-3" />
               {stats?.workOrders?.byRole?.supervisors || 0} Work Orders
             </div>
           </div>
-          <div className="bg-teal-50 rounded-xl p-4">
+          <div className="bg-sage-50 rounded-xl p-4 border border-sage-200/50">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                <Briefcase className="w-5 h-5 text-teal-600" />
+              <div className="w-10 h-10 bg-sage-100 rounded-lg flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-sage-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-teal-700">{stats?.employeeRoles?.executives || 0}</p>
-                <p className="text-sm text-teal-600">Executives</p>
+                <p className="text-2xl font-bold text-sage-600">{stats?.employeeRoles?.executives || 0}</p>
+                <p className="text-sm text-sage-500">Executives</p>
               </div>
             </div>
-            <div className="text-xs text-teal-500 bg-teal-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
+            <div className="text-xs text-sage-500 bg-sage-100 rounded-lg px-2 py-1 inline-flex items-center gap-1">
               <ClipboardList className="w-3 h-3" />
               {stats?.workOrders?.byRole?.executives || 0} Work Orders
             </div>
@@ -298,53 +298,53 @@ const FPDashboard = ({ user }) => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+      <div className="bg-gradient-to-br from-cream-50 to-warmstone-50 rounded-xl border border-warmstone-200/50 p-6">
+        <h2 className="text-lg font-semibold text-warmstone-700 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {/* Add Property - Hidden for FP Manager */}
           {!isFPManager && (
             <Link
               to="/fp/properties"
-              className="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              className="flex flex-col items-center p-4 bg-softslate-50 rounded-xl hover:bg-softslate-100 transition-colors border border-softslate-200/50"
             >
-              <Building2 className="w-8 h-8 text-blue-600 mb-2" />
-              <span className="text-sm font-medium text-blue-700">Add Property</span>
+              <Building2 className="w-8 h-8 text-softslate-500 mb-2" />
+              <span className="text-sm font-medium text-softslate-600">Add Property</span>
             </Link>
           )}
           <Link
             to="/fp/work-orders"
-            className="flex flex-col items-center p-4 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+            className="flex flex-col items-center p-4 bg-softgold-50 rounded-xl hover:bg-softgold-100 transition-colors border border-softgold-200/50"
           >
-            <ClipboardList className="w-8 h-8 text-indigo-600 mb-2" />
-            <span className="text-sm font-medium text-indigo-700">Create Work Order</span>
+            <ClipboardList className="w-8 h-8 text-softgold-500 mb-2" />
+            <span className="text-sm font-medium text-softgold-600">Create Work Order</span>
           </Link>
           {/* Add Employee */}
           {!isFPManager && (
             <Link
               to="/fp/employees/add"
-              className="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+              className="flex flex-col items-center p-4 bg-sage-50 rounded-xl hover:bg-sage-100 transition-colors border border-sage-200/50"
             >
-              <Users className="w-8 h-8 text-green-600 mb-2" />
-              <span className="text-sm font-medium text-green-700">Add Employee</span>
+              <Users className="w-8 h-8 text-sage-500 mb-2" />
+              <span className="text-sm font-medium text-sage-600">Add Employee</span>
             </Link>
           )}
           <Link
             to="/fp/estimates/create"
-            className="flex flex-col items-center p-4 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors"
+            className="flex flex-col items-center p-4 bg-warmstone-50 rounded-xl hover:bg-warmstone-100 transition-colors border border-warmstone-200/50"
           >
-            <FileText className="w-8 h-8 text-teal-600 mb-2" />
-            <span className="text-sm font-medium text-teal-700">Create Estimate</span>
+            <FileText className="w-8 h-8 text-warmstone-500 mb-2" />
+            <span className="text-sm font-medium text-warmstone-600">Create Estimate</span>
           </Link>
         </div>
       </div>
 
       {/* Recent Work Orders */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
+      <div className="bg-gradient-to-br from-cream-50 to-warmstone-50 rounded-xl border border-warmstone-200/50 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Work Orders</h2>
+          <h2 className="text-lg font-semibold text-warmstone-700">Recent Work Orders</h2>
           <Link
             to="/fp/work-orders"
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+            className="text-sm text-softgold-600 hover:text-softgold-700 font-medium flex items-center gap-1"
           >
             View All
             <ArrowRight className="w-4 h-4" />
@@ -353,11 +353,11 @@ const FPDashboard = ({ user }) => {
         
         {recentWorkOrders.length === 0 ? (
           <div className="text-center py-8">
-            <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No work orders yet</p>
+            <ClipboardList className="w-12 h-12 text-warmstone-300 mx-auto mb-3" />
+            <p className="text-warmstone-500">No work orders yet</p>
             <Link
               to="/fp/work-orders"
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium mt-2 inline-block"
+              className="text-softgold-600 hover:text-softgold-700 text-sm font-medium mt-2 inline-block"
             >
               Create your first work order
             </Link>
@@ -366,32 +366,32 @@ const FPDashboard = ({ user }) => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">ID</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Category</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
+                <tr className="border-b border-warmstone-200/50">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-warmstone-600">ID</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-warmstone-600">Property</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-warmstone-600">Category</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-warmstone-600">Created By</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-warmstone-600">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-warmstone-600">Created</th>
                 </tr>
               </thead>
               <tbody>
                 {recentWorkOrders.map((wo) => (
-                  <tr key={wo.id} className="border-b border-gray-50 hover:bg-gray-50">
+                  <tr key={wo.id} className="border-b border-warmstone-100/50 hover:bg-cream-100/50">
                     <td className="py-3 px-4">
-                      <span className="text-sm font-medium text-gray-900">{wo.work_order_id}</span>
+                      <span className="text-sm font-medium text-warmstone-700">{wo.work_order_id}</span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{wo.property_name || '-'}</span>
+                      <span className="text-sm text-warmstone-600">{wo.property_name || '-'}</span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{wo.category_name || '-'}</span>
+                      <span className="text-sm text-warmstone-600">{wo.category_name || '-'}</span>
                     </td>
                     <td className="py-3 px-4">
                       <div>
-                        <span className="text-sm text-gray-900">{wo.created_by_name || 'System'}</span>
+                        <span className="text-sm text-warmstone-700">{wo.created_by_name || 'System'}</span>
                         {wo.created_by_role && (
-                          <span className="block text-xs text-gray-400 capitalize">{wo.created_by_role}</span>
+                          <span className="block text-xs text-warmstone-400 capitalize">{wo.created_by_role}</span>
                         )}
                       </div>
                     </td>
@@ -401,7 +401,7 @@ const FPDashboard = ({ user }) => {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
+                      <span className="text-sm text-warmstone-500">{formatDate(wo.created_at)}</span>
                     </td>
                   </tr>
                 ))}
