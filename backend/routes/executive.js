@@ -378,11 +378,13 @@ router.get('/work-orders', requireExecutiveScope, async (req, res) => {
 
     // FP employees see FP work orders, standalone executives see their created work orders
     let query = `
-      SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
+      SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
+             cl.name as client_name, cl.name as customer_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
+      LEFT JOIN clients cl ON wo.client_id = cl.id
       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'}
     `;
     const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
@@ -689,8 +691,66 @@ router.put('/customers/:id', requireExecutiveScope, async (req, res) => {
 router.get('/vendors', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
+    const employeeId = req.user?.id || executiveId;
 
-    // Get own vendors
+    // If FP employee, get all FP vendors like Manager does
+    if (franchisePartnerId) {
+      // Get employee's assigned zones
+      let assignedZones = [];
+      try {
+        const [zones] = await pool.execute(
+          `SELECT zone_name FROM fp_employee_zones WHERE fp_employee_id = ?`,
+          [employeeId]
+        );
+        assignedZones = zones.map(z => z.zone_name);
+      } catch (e) {
+        console.log('Zone fetch error:', e.message);
+      }
+
+      let query = `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
+                ov.zone, ov.zone as zone_name, ov.area_name, ov.area_name as area, ov.division,
+                ov.owner_name, ov.owner_name as company_name, ov.owner_name as contact_person,
+                ov.owner_mobile, ov.owner_mobile as phone, ov.owner_email, ov.owner_email as email,
+                ov.owner_aadhar, ov.owner_country_code,
+                ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
+                ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
+                ov.rate_per_visit, ov.coverage_per_day,
+                ov.created_by, ov.created_by_id,
+                COALESCE(
+                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                  ov.created_by, 'System'
+                ) as created_by_name,
+                ov.status,
+                ov.created_at, ov.updated_at,
+                CASE WHEN ov.status = 'active' THEN 1 ELSE 0 END as is_active,
+                'own' as vendor_type
+         FROM onboarded_vendors ov
+         LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
+         WHERE ov.franchise_partner_id = ?`;
+      
+      let params = [franchisePartnerId];
+      
+      if (assignedZones.length > 0) {
+        query += ` AND ov.zone IN (${assignedZones.map(() => '?').join(',')})`;
+        params.push(...assignedZones);
+      }
+      
+      query += ` ORDER BY ov.created_at DESC`;
+      
+      const [vendors] = await pool.execute(query, params);
+
+      return res.json({
+        success: true,
+        data: {
+          own: vendors,
+          assigned: [],
+          all: vendors
+        }
+      });
+    }
+
+    // Standalone executive - get own and assigned vendors
     const [ownVendors] = await pool.query(
       `SELECT v.*, 'own' as vendor_type, TRUE as can_modify, FALSE as can_delete
        FROM onboarded_vendors v
@@ -698,7 +758,6 @@ router.get('/vendors', requireExecutiveScope, async (req, res) => {
       [executiveId]
     );
 
-    // Get assigned vendors
     const [assignedVendors] = await pool.query(
       `SELECT v.*, 'assigned' as vendor_type, eav.can_modify, eav.can_delete
        FROM onboarded_vendors v
