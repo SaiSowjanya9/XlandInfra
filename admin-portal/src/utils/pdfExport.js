@@ -45,28 +45,43 @@ const generatePDF = (data, type, filename) => {
     };
 
     // ===== HEADER =====
-    doc.setFillColor(...primaryColor);
-    doc.rect(0, 0, pageWidth, 32, 'F');
+    // Dark blue header background
+    doc.setFillColor(30, 41, 59); // Slate-800
+    doc.rect(0, 0, pageWidth, 35, 'F');
     
-    // Company name
+    // Add logo (embedded as base64 or use placeholder icon)
+    try {
+      // Draw a simple logo placeholder - square with "X" inside
+      doc.setFillColor(59, 130, 246); // Blue-500
+      doc.roundedRect(margin, 8, 20, 20, 3, 3, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('X', margin + 7, 21);
+    } catch (e) {
+      console.log('Logo error:', e);
+    }
+    
+    // Company name - next to logo
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', margin, 15);
+    doc.text('XLAND INFRA', margin + 25, 17);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text('Property Management Solutions', margin, 23);
+    doc.setTextColor(148, 163, 184); // Slate-400
+    doc.text('Property Management Solutions', margin + 25, 25);
 
-    // Document type badge
-    doc.setFillColor(241, 245, 249); // Slate-100
-    doc.roundedRect(pageWidth - margin - 45, 8, 45, 16, 2, 2, 'F');
-    doc.setTextColor(...primaryColor);
-    doc.setFontSize(10);
+    // Document type badge - right aligned
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(pageWidth - margin - 50, 10, 50, 18, 3, 3, 'F');
+    doc.setTextColor(30, 41, 59); // Slate-800
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
-    doc.text(docType, pageWidth - margin - 22.5, 18, { align: 'center' });
+    doc.text(docType, pageWidth - margin - 25, 22, { align: 'center' });
 
-    y = 40;
+    y = 45;
 
     // ===== DOCUMENT INFO =====
     doc.setTextColor(...darkText);
@@ -147,9 +162,9 @@ const generatePDF = (data, type, filename) => {
     
     y += 50;
     
-    // Customer Details Section
+    // Customer Details Section (same style as Property Details)
     doc.setFillColor(239, 246, 255); // Blue-50 background
-    doc.roundedRect(margin, y, fullWidth, 35, 3, 3, 'F');
+    doc.roundedRect(margin, y, fullWidth, 45, 3, 3, 'F');
     
     doc.setTextColor(30, 64, 175); // Blue-800
     doc.setFontSize(10);
@@ -157,6 +172,7 @@ const generatePDF = (data, type, filename) => {
     doc.text('Customer Details', margin + 5, y + 8);
     
     infoY = y + 16;
+    doc.setFontSize(8);
     
     // Row 1
     doc.setFont('helvetica', 'normal');
@@ -176,12 +192,10 @@ const generatePDF = (data, type, filename) => {
     doc.text('Email', col1X, infoY);
     infoY += 5;
     doc.setTextColor(...darkText);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
     doc.text(String(data.customerEmail || '-'), col1X, infoY);
-    doc.setFontSize(8);
     
-    y += 50;
+    y += 55;
     } // End of property/customer details section (skipped for package type)
 
     // ===== NO OF VISITS =====
@@ -350,6 +364,12 @@ const generatePDF = (data, type, filename) => {
     const total = parseFloat(data.totalPrice) || parseFloat(data.subtotal) || 0;
     
     const summaryBoxHeight = 45;
+
+    // Check if we need a new page for the total box
+    if (y + summaryBoxHeight + 30 > pageHeight) {
+      doc.addPage();
+      y = margin;
+    }
 
     // Outer box with subtle shadow effect
     doc.setFillColor(255, 255, 255);
@@ -531,19 +551,35 @@ export const exportEstimateToPDF = (estimate) => {
 
     // Parse addons from various formats (no prices - only names and frequency)
     let addons = [];
-    if (estimate.addons && Array.isArray(estimate.addons)) {
+    
+    // Try addons array first
+    if (estimate.addons && Array.isArray(estimate.addons) && estimate.addons.length > 0) {
       addons = estimate.addons.map(a => ({
         name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
         frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time'
       }));
     }
-    // Also check selectedAddons array (from form)
-    if (addons.length === 0 && estimate.selectedAddons && Array.isArray(estimate.selectedAddons)) {
+    // Try addons_data JSON string (from backend)
+    if (addons.length === 0 && estimate.addons_data) {
+      try {
+        const parsed = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          addons = parsed.map(a => ({
+            name: a.name || a.serviceName || a.service_name || 'Add-on',
+            frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time'
+          }));
+        }
+      } catch (e) { console.log('[PDF] addons_data parse error:', e); }
+    }
+    // Try selectedAddons array (from form)
+    if (addons.length === 0 && estimate.selectedAddons && Array.isArray(estimate.selectedAddons) && estimate.selectedAddons.length > 0) {
       addons = estimate.selectedAddons.map(a => ({
         name: a.name || a.serviceName || a.service_name || 'Add-on',
         frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time'
       }));
     }
+    
+    console.log('[PDF] Parsed addons:', addons);
 
     const exportData = {
       estimateId: estimate.estimateId || estimate.estimate_id || estimate.id || 'EST-' + Date.now(),
