@@ -85,7 +85,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const calculatePriceSummary = () => {
     let subTotal = 0;
     const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
-    if (pkg) subTotal += parseFloat(pkg.price || pkg.base_price) || 0;
+    if (pkg) subTotal += getPackagePrice(pkg);
     selectedAddons.forEach(addonId => {
       const addon = addons.find(a => getAddonId(a) === addonId);
       if (addon) subTotal += getAddonPrice(addon);
@@ -253,7 +253,29 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
   const getStatusColor = (status) => { const colors = { draft: 'bg-gray-100 text-gray-700', pending_approval: 'bg-yellow-100 text-yellow-700', approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700', converted: 'bg-blue-100 text-blue-700', archived: 'bg-gray-100 text-gray-500' }; return colors[status] || 'bg-gray-100 text-gray-700'; };
   const calculateTotals = () => { const subtotal = estimateForm.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0); const tax = (subtotal * estimateForm.taxPercentage) / 100; const discount = (subtotal * estimateForm.discountPercentage) / 100; return { subtotal, tax, discount, total: subtotal + tax - discount }; };
-  const getPackagePrice = (pkg) => parseFloat(pkg?.price ?? pkg?.base_price ?? pkg?.total_rate) || 0;
+  const getPackagePrice = (pkg) => parseFloat(pkg?.price ?? pkg?.base_price ?? pkg?.totalPrice ?? pkg?.total_price ?? pkg?.rate ?? pkg?.total_rate) || 0;
+  const getPackageServices = (pkg) => {
+    let servicesData = pkg?.services || pkg?.services_data || pkg?.serviceRows;
+    if (typeof servicesData === 'string') {
+      try { servicesData = JSON.parse(servicesData); } catch (e) { return []; }
+    }
+    return servicesData?.serviceRows || servicesData?.services || (Array.isArray(servicesData) ? servicesData : []);
+  };
+  const getPackageBillingDuration = (pkg) => {
+    let servicesData = pkg?.services || pkg?.services_data;
+    if (typeof servicesData === 'string') {
+      try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = {}; }
+    }
+    return servicesData?.billing_duration || pkg?.billing_duration || pkg?.billingDuration || 'monthly';
+  };
+  const getPackagePropertyType = (pkg) => {
+    let servicesData = pkg?.services || pkg?.services_data;
+    if (typeof servicesData === 'string') {
+      try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = {}; }
+    }
+    return servicesData?.property_type || pkg?.property_type || pkg?.propertyType || '';
+  };
+  const getFrequencyVisits = (frequency) => ({ Monthly: 12, 'Every 2 Months': 6, 'Every 3 Months': 4, Quarterly: 3, 'Half-Yearly': 2, Yearly: 1 }[frequency]) || parseInt(frequency) || 12;
   const getPackageServicesText = (pkg) => {
     let servicesData = pkg.services || pkg.services_data || pkg.serviceRows;
     if (typeof servicesData === 'string') {
@@ -284,17 +306,36 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
             <select value={selectedAmcPackage} onChange={(e) => setSelectedAmcPackage(e.target.value)} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
               <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
               {(() => {
-                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
-                const filteredPkgs = propertyType ? amcPackages.filter(pkg => matchPropertyType(pkg.property_type || pkg.propertyType, propertyType)) : amcPackages;
+                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || selectedProperty?.property_type || directForm?.propertyType;
+                const filteredPkgs = propertyType ? amcPackages.filter(pkg => matchPropertyType(getPackagePropertyType(pkg), propertyType)) : [];
                 const otherPkgs = propertyType ? amcPackages.filter(pkg => !filteredPkgs.includes(pkg)) : [];
                 return (<>
                   {filteredPkgs.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}</optgroup>}
                   {otherPkgs.length > 0 && <optgroup label="Other Packages">{otherPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}</optgroup>}
-                  {!propertyType && amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}
+                  {!propertyType && <option disabled>Select property type first</option>}
                 </>);
               })()}
             </select>
           </div>
+          {(() => {
+            const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
+            if (!pkg) return null;
+            const services = getPackageServices(pkg);
+            return (
+              <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30">
+                <div className="px-5 py-3 flex items-center gap-3">
+                  <Package className="w-5 h-5 text-blue-600" />
+                  <span className="font-semibold text-gray-900">{pkg.name}</span>
+                  <span className="px-2 py-0.5 bg-slate-700 text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
+                </div>
+                <table className="w-full text-sm bg-white">
+                  <thead><tr className="border-y border-blue-100"><th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th><th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th><th className="px-5 py-2.5 text-right text-xs font-semibold text-blue-600 uppercase">No. of Visits</th></tr></thead>
+                  <tbody className="divide-y divide-gray-100">{services.length > 0 ? services.map((svc, idx) => { const freqType = svc.frequencyType || svc.frequency_type || 'Monthly'; return (<tr key={idx}><td className="px-5 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td><td className="px-5 py-2.5 text-gray-600">{freqType}</td><td className="px-5 py-2.5 text-right text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td></tr>); }) : <tr><td colSpan={3} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}</tbody>
+                </table>
+                <div className="px-5 py-3 bg-blue-50 border-t border-blue-100"><div className="flex justify-between items-center"><span className="text-sm font-semibold text-blue-700">Total Package Price</span><span className="text-lg font-bold text-gray-900">{formatCurrency(getPackagePrice(pkg))}</span></div><div className="text-xs text-blue-600 mt-1">Service Period: <span className="capitalize">{getPackageBillingDuration(pkg)}</span></div></div>
+              </div>
+            );
+          })()}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
             <select onChange={(e) => { if (e.target.value && !selectedAddons.includes(e.target.value)) setSelectedAddons([...selectedAddons, e.target.value]); e.target.value = ''; }} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
@@ -311,24 +352,14 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               })()}
             </select>
           </div>
-          {selectedAddons.length === 0 ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-              <p className="text-amber-700">No add-ons selected. Use the dropdown above to add services.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {selectedAddons.map(addonId => {
-                const addon = addons.find(a => getAddonId(a) === addonId);
-                return addon ? (
-                  <div key={addonId} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <span className="text-blue-800">{getAddonName(addon)}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium text-blue-700">{formatCurrency(getAddonPrice(addon))}</span>
-                      <button onClick={() => setSelectedAddons(selectedAddons.filter(id => id !== addonId))} className="text-red-500 hover:text-red-700"><X className="w-4 h-4" /></button>
-                    </div>
-                  </div>
-                ) : null;
-              })}
+          {selectedAddons.length > 0 && (
+            <div className="border border-blue-200 rounded-xl overflow-hidden">
+              <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200"><span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span></div>
+              <table className="w-full text-sm">
+                <thead><tr className="border-b border-blue-100 bg-white"><th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th><th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th><th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th><th className="px-5 py-2.5 text-right text-xs font-semibold text-blue-600 uppercase">Price</th><th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">Action</th></tr></thead>
+                <tbody className="divide-y divide-gray-100 bg-white">{selectedAddons.map(addonId => { const addon = addons.find(a => getAddonId(a) === addonId); if (!addon) return null; const freqType = addon.frequency_type || addon.frequencyType || addon.services?.[0]?.frequencyType || 'Monthly'; return (<tr key={addonId}><td className="px-5 py-2.5 text-gray-800">{getAddonName(addon)}</td><td className="px-5 py-2.5 text-gray-600">{freqType}</td><td className="px-5 py-2.5 text-center text-gray-600">{addon.frequency_count || addon.frequencyCount || getFrequencyVisits(freqType)}</td><td className="px-5 py-2.5 text-right text-gray-800">{formatCurrency(getAddonPrice(addon))}</td><td className="px-5 py-2.5 text-center"><button onClick={() => setSelectedAddons(selectedAddons.filter(id => id !== addonId))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></td></tr>); })}</tbody>
+                <tfoot className="bg-blue-50 border-t border-blue-200"><tr><td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons</td><td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0))}</td><td></td></tr></tfoot>
+              </table>
             </div>
           )}
         </div>

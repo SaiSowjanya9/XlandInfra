@@ -13,6 +13,7 @@ import {
 } from '../../utils/estimateStore';
 
 import { getProperties, getPropertyById, extractBlockNames, extractTotalUnits, extractUnitNumber } from '../../utils/propertyStore';
+import { getPackageId, getPackageName, getPackagePrice as getNormalizedPackagePrice, getPackagePropertyType } from '../../utils/estimatePackageUtils';
 
 // Subcategory options for services
 const SUBCATEGORIES = ['Maintenance', 'Cleaning', 'Security', 'Landscaping', 'Utilities', 'Other'];
@@ -28,7 +29,7 @@ const PROPERTY_ICONS = {
 
 const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   // Check if user is Operations Manager (restricted access)
-  const isOpsManager = admin?.role === 'operations_manager';
+  const isOpsManager = false;
   
   const [estimateType, setEstimateType] = useState(null);
   const [selectedProperty, setSelectedProperty] = useState(null);
@@ -245,7 +246,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
 
   // Get package base price
   const getPackagePrice = () => {
-    return selectedPackage ? (parseFloat(selectedPackage.rate) || 0) : 0;
+    return getNormalizedPackagePrice(selectedPackage);
   };
 
   // Get total add-ons price
@@ -304,7 +305,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       setSelectedPackage(null);
       return;
     }
-    const pkg = availablePackages.find(p => p.packageId === packageId);
+    const pkg = availablePackages.find(p => getPackageId(p) === packageId);
     setSelectedPackage(pkg || null);
   };
 
@@ -427,14 +428,14 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       setDirectSelectedPackage(null);
       return;
     }
-    const pkg = availablePackages.find(p => p.packageId === packageId);
+    const pkg = availablePackages.find(p => getPackageId(p) === packageId);
     setDirectSelectedPackage(pkg || null);
   };
 
   // Direct Estimate - Get package price
   const getDirectPackagePrice = () => {
     if (!directSelectedPackage) return 0;
-    return directSelectedPackage.rate || directSelectedPackage.totalPrice || 0;
+    return getNormalizedPackagePrice(directSelectedPackage);
   };
 
   // Direct Estimate - Get add-ons total
@@ -1254,7 +1255,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   </label>
                   <div className="relative max-w-md">
                     <select
-                      value={selectedPackage?.packageId || ''}
+                      value={getPackageId(selectedPackage) || ''}
                       onChange={(e) => handlePackageSelect(e.target.value)}
                       className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
                     >
@@ -1264,7 +1265,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                         const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType;
                         const filteredPkgs = propertyType 
                           ? availablePackages.filter(pkg => {
-                              const pkgType = pkg.propertyType?.toUpperCase();
+                              const pkgType = getPackagePropertyType(pkg)?.toUpperCase();
                               const searchType = propertyType.toUpperCase();
                               return pkgType === searchType || 
                                      (pkgType === 'GC' && searchType === 'GC') ||
@@ -1273,7 +1274,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                                      (pkgType === 'FLAT' && (searchType === 'FLAT' || searchType === 'FLATS')) ||
                                      (pkgType === 'PLOT' && (searchType === 'PLOT' || searchType === 'PLOTS'));
                             })
-                          : availablePackages;
+                          : [];
                         
                         const remainingPkgs = propertyType 
                           ? availablePackages.filter(pkg => !filteredPkgs.includes(pkg))
@@ -1284,8 +1285,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                             {filteredPkgs.length > 0 && (
                               <optgroup label={`Recommended for ${propertyType}`}>
                                 {filteredPkgs.map(pkg => (
-                                  <option key={pkg.packageId} value={pkg.packageId}>
-                                    {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
+                                  <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
+                                    {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
                                   </option>
                                 ))}
                               </optgroup>
@@ -1293,18 +1294,14 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                             {remainingPkgs.length > 0 && (
                               <optgroup label="Other Packages">
                                 {remainingPkgs.map(pkg => (
-                                  <option key={pkg.packageId} value={pkg.packageId}>
-                                    {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
+                                  <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
+                                    {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
                                   </option>
                                 ))}
                               </optgroup>
                             )}
                             {filteredPkgs.length === 0 && remainingPkgs.length === 0 && (
-                              availablePackages.map(pkg => (
-                                <option key={pkg.packageId} value={pkg.packageId}>
-                                  {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
-                                </option>
-                              ))
+                              <option disabled>Select property type first</option>
                             )}
                           </>
                         );
@@ -1969,7 +1966,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 </label>
                 <div className="relative max-w-md">
                   <select
-                    value={directSelectedPackage?.packageId || ''}
+                    value={getPackageId(directSelectedPackage) || ''}
                     onChange={(e) => handleDirectPackageSelect(e.target.value)}
                     className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
                   >
@@ -1978,7 +1975,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       const propertyType = estimateForm.propertyType;
                       const filteredPkgs = propertyType 
                         ? availablePackages.filter(pkg => {
-                            const pkgType = pkg.propertyType?.toUpperCase();
+                            const pkgType = getPackagePropertyType(pkg)?.toUpperCase();
                             const searchType = propertyType.toUpperCase();
                             return pkgType === searchType || 
                                    (pkgType === 'GC' && searchType === 'GC') ||
@@ -1987,7 +1984,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                                    (pkgType === 'FLAT' && (searchType === 'FLAT' || searchType === 'FLATS')) ||
                                    (pkgType === 'PLOT' && (searchType === 'PLOT' || searchType === 'PLOTS'));
                           })
-                        : availablePackages;
+                        : [];
                       
                       const remainingPkgs = propertyType 
                         ? availablePackages.filter(pkg => !filteredPkgs.includes(pkg))
@@ -1998,8 +1995,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                           {filteredPkgs.length > 0 && propertyType && (
                             <optgroup label={`Recommended for ${propertyType}`}>
                               {filteredPkgs.map(pkg => (
-                                <option key={pkg.packageId} value={pkg.packageId}>
-                                  {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
+                                <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
+                                  {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
                                 </option>
                               ))}
                             </optgroup>
@@ -2007,17 +2004,13 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                           {remainingPkgs.length > 0 && (
                             <optgroup label="Other Packages">
                               {remainingPkgs.map(pkg => (
-                                <option key={pkg.packageId} value={pkg.packageId}>
-                                  {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
+                                <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
+                                  {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
                                 </option>
                               ))}
                             </optgroup>
                           )}
-                          {!propertyType && availablePackages.map(pkg => (
-                            <option key={pkg.packageId} value={pkg.packageId}>
-                              {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
-                            </option>
-                          ))}
+                          {!propertyType && <option disabled>Select property type first</option>}
                         </>
                       );
                     })()}
