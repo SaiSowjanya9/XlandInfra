@@ -174,10 +174,13 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
 
     // Get counts - check both supervisor-owned and FP data
     const [propertiesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM properties WHERE supervisor_id = ? OR franchise_partner_id = ?
-       UNION ALL
-       SELECT COUNT(*) FROM onboarded_properties WHERE franchise_partner_id = ?`,
-      [supervisorId, franchisePartnerId, franchisePartnerId]
+      `SELECT COUNT(*) as count FROM properties WHERE supervisor_id = ? OR franchise_partner_id = ?`,
+      [supervisorId, franchisePartnerId]
+    );
+    
+    // Count onboarded_properties separately (no franchise_partner_id column)
+    const [onboardedPropsCount] = await pool.query(
+      `SELECT COUNT(*) as count FROM onboarded_properties`
     );
 
     const [vendorsCount] = await pool.query(
@@ -233,8 +236,8 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
       success: true,
       data: {
         stats: {
-          properties: (propertiesCount[0]?.count || 0) + (propertiesCount[1]?.count || 0),
-          vendors: (vendorsCount[0]?.count || 0) + (vendorsCount[1]?.count || 0),
+          properties: (propertiesCount[0]?.count || 0) + (onboardedPropsCount[0]?.count || 0),
+          vendors: vendorsCount[0]?.count || 0,
           customers: customersCount[0]?.count || 0,
           employees: employeesCount[0]?.count || 0,
           workOrders: workOrdersCount[0]?.count || 0,
