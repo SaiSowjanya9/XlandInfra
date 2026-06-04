@@ -1118,18 +1118,19 @@ const Properties = () => {
                   </h3>
                   <div className="space-y-2">
                     {selectedEstimate.addons.map((addon, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">
-                            {addon.services?.map(s => s.name).join(', ') || `Add-on ${idx + 1}`}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {addon.services?.map(s => s.frequencyType).join(', ')}
-                          </p>
-                        </div>
-                        <p className="font-semibold text-green-700">₹{(addon.totalPrice || 0).toLocaleString()}</p>
+                      <div key={idx} className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm font-medium text-gray-800">
+                          {addon.services?.map(s => s.name).join(', ') || `Add-on ${idx + 1}`}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {addon.services?.map(s => s.frequencyType).join(', ')}
+                        </p>
                       </div>
                     ))}
+                    <div className="flex justify-between items-center p-3 bg-green-100 border border-green-300 rounded-lg">
+                      <p className="text-sm font-semibold text-green-800">Total Add-ons Price</p>
+                      <p className="font-bold text-green-700">₹{(selectedEstimate.addonsTotal || selectedEstimate.addons.reduce((sum, a) => sum + (a.totalPrice || 0), 0)).toLocaleString()}</p>
+                    </div>
                   </div>
                 </div>
               )}

@@ -323,7 +323,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         client_email: selectedProperty?.contact_email || selectedProperty?.email || estimateForm.email || '',
         property_type: selectedProperty?.property_type || selectedProperty?.entry_type || estimateForm.propertyType || '',
         property_name: selectedProperty?.name || selectedProperty?.community_name || estimateForm.propertyName || '',
-        zone: selectedProperty?.zone_id || selectedProperty?.zone || estimateForm.zone || '',
+        zone: selectedProperty?.zone_name || selectedProperty?.zoneName || selectedProperty?.zone || estimateForm.zone || '',
         division: selectedProperty?.division || selectedProperty?.division_id || selectedProperty?.division_name || '',
         city: selectedProperty?.city || estimateForm.city || '',
         address: selectedProperty?.address || estimateForm.address || '',
@@ -432,7 +432,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Zone</label>
-                      <input type="text" value={selectedProperty.zone_id || selectedProperty.zone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                      <input type="text" value={selectedProperty.zone_name || selectedProperty.zoneName || selectedProperty.zone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Area</label>
@@ -587,9 +587,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     const pkgPropertyType = selectedPkg?.property_type;
                     const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType || pkgPropertyType;
                     const searchType = normalizePropertyType(propertyType);
-                    const filteredAddons = searchType ? addons.filter(addon => normalizePropertyType(addon.property_type) === searchType) : addons;
-                    if (searchType && filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
-                    return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>);
+                    if (!searchType) return <option disabled>Select property type first</option>;
+                    const filteredAddons = addons.filter(addon => normalizePropertyType(addon.property_type) === searchType);
+                    if (filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
+                    return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name}</option>);
                   })()}
                 </select>
               </div>
@@ -606,7 +607,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <th className="px-5 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Service</th>
                         <th className="px-5 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Frequency</th>
                         <th className="px-5 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase">No. of Visits</th>
-                        <th className="px-5 py-2.5 text-right text-xs font-semibold text-amber-600 uppercase">Price</th>
                         <th className="px-5 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase">Action</th>
                       </tr>
                     </thead>
@@ -620,7 +620,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             <td className="px-5 py-2.5 text-gray-800">{addon.service_name}</td>
                             <td className="px-5 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-5 py-2.5 text-center text-gray-600">{visits}</td>
-                            <td className="px-5 py-2.5 text-right text-gray-800">{formatCurrency(addon.price)}</td>
                             <td className="px-5 py-2.5 text-center">
                               <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                             </td>
@@ -630,9 +629,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </tbody>
                     <tfoot className="bg-amber-50 border-t border-amber-200">
                       <tr>
-                        <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-amber-700">Total Add-ons</td>
+                        <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-amber-700">Total Add-ons Price</td>
                         <td className="px-5 py-2.5 text-right font-bold text-amber-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
-                        <td></td>
                       </tr>
                     </tfoot>
                   </table>
@@ -849,9 +847,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     const pkgPropertyType = selectedPkg?.property_type;
                     const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType || pkgPropertyType;
                     const searchType = normalizePropertyType(propertyType);
-                    const filteredAddons = searchType ? addons.filter(addon => normalizePropertyType(addon.property_type) === searchType) : addons;
-                    if (searchType && filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
-                    return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name} - {formatCurrency(addon.price)}</option>);
+                    if (!searchType) return <option disabled>Select property type first</option>;
+                    const filteredAddons = addons.filter(addon => normalizePropertyType(addon.property_type) === searchType);
+                    if (filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
+                    return filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.service_name}</option>);
                   })()}
                 </select>
               </div>
@@ -868,7 +867,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <th className="px-5 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Service</th>
                         <th className="px-5 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Frequency</th>
                         <th className="px-5 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase">No. of Visits</th>
-                        <th className="px-5 py-2.5 text-right text-xs font-semibold text-amber-600 uppercase">Price</th>
                         <th className="px-5 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase">Action</th>
                       </tr>
                     </thead>
@@ -882,7 +880,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             <td className="px-5 py-2.5 text-gray-800">{addon.service_name}</td>
                             <td className="px-5 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-5 py-2.5 text-center text-gray-600">{visits}</td>
-                            <td className="px-5 py-2.5 text-right text-gray-800">{formatCurrency(addon.price)}</td>
                             <td className="px-5 py-2.5 text-center">
                               <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                             </td>
@@ -892,9 +889,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </tbody>
                     <tfoot className="bg-amber-50 border-t border-amber-200">
                       <tr>
-                        <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-amber-700">Total Add-ons</td>
+                        <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-amber-700">Total Add-ons Price</td>
                         <td className="px-5 py-2.5 text-right font-bold text-amber-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
-                        <td></td>
                       </tr>
                     </tfoot>
                   </table>

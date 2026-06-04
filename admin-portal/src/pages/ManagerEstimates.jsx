@@ -334,12 +334,10 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 const selectedPkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
                 const pkgPropertyType = selectedPkg?.property_type || getPackagePropertyType(selectedPkg);
                 const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType || pkgPropertyType;
-                const filteredAddons = propertyType ? addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType)) : addons;
-                return (<>
-                  {filteredAddons.length > 0 && filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)}</option>)}
-                  {propertyType && filteredAddons.length === 0 && <option disabled>No add-ons available for {propertyType}</option>}
-                  {!propertyType && <option disabled>Select property type first</option>}
-                </>);
+                if (!propertyType) return <option disabled>Select property type first</option>;
+                const filteredAddons = addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType));
+                if (filteredAddons.length === 0) return <option disabled>No add-ons available for {propertyType}</option>;
+                return filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)}</option>);
               })()}
             </select>
           </div>
@@ -1246,14 +1244,15 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                   <p className="text-sm font-semibold text-gray-700 mb-3">Add-ons</p>
                   <div className="space-y-2">
                     {viewEstimate.addons.map((addon, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-green-50 p-3 rounded-lg">
-                        <div>
-                          <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
-                          <p className="text-xs text-green-600">{addon.frequency_type || addon.frequencyType || 'One-time'}</p>
-                        </div>
-                        <p className="font-semibold text-green-700">₹{Number(addon.price || 0).toLocaleString()}</p>
+                      <div key={idx} className="bg-green-50 p-3 rounded-lg">
+                        <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
+                        <p className="text-xs text-green-600">{addon.frequency_type || addon.frequencyType || 'One-time'}</p>
                       </div>
                     ))}
+                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-lg mt-2">
+                      <p className="font-semibold text-green-800">Total Add-ons Price</p>
+                      <p className="font-bold text-green-700">₹{viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0).toLocaleString()}</p>
+                    </div>
                   </div>
                 </div>
               )}
