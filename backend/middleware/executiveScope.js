@@ -9,13 +9,32 @@ const { pool } = require('../config/database');
  * Attach executive scope to request
  * Extracts executive ID and franchise partner ID from authenticated user
  */
-const attachExecutiveScope = (req, res, next) => {
+const attachExecutiveScope = async (req, res, next) => {
   if (req.user && (req.user.role === 'executive' || req.user.executiveId)) {
     req.executiveId = req.user.executiveId || req.user.id;
     // Check both req.user.franchisePartnerId AND req.fpId (set by auth middleware)
     req.franchisePartnerId = req.user.franchisePartnerId || req.fpId || null;
+    
+    // If no FP ID yet, try to get it from fp_employees table
+    if (!req.franchisePartnerId) {
+      try {
+        const [fpEmp] = await pool.execute(
+          `SELECT franchise_partner_id FROM fp_employees WHERE id = ? OR user_id = ? OR email = ? OR username = ?`,
+          [req.user?.id || 0, req.user?.id || 0, req.user?.email || '', req.user?.username || '']
+        );
+        if (fpEmp.length > 0 && fpEmp[0].franchise_partner_id) {
+          req.franchisePartnerId = fpEmp[0].franchise_partner_id;
+          req.fpId = fpEmp[0].franchise_partner_id;
+          console.log('[ExecutiveScope] Found FP ID from fp_employees:', fpEmp[0].franchise_partner_id);
+        }
+      } catch (e) {
+        console.error('[ExecutiveScope] Error fetching franchisePartnerId:', e.message);
+      }
+    }
+    
     req.executiveScope = true;
     req.isFPExecutive = !!req.franchisePartnerId;
+    console.log('[ExecutiveScope] executiveId:', req.executiveId, 'fpId:', req.franchisePartnerId);
   }
   next();
 };
