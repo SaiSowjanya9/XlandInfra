@@ -118,8 +118,8 @@ const FPLayout = ({ admin, onLogout, children }) => {
         onClick={handleClick}
         className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
           isActive
-            ? 'bg-slate-800 text-white'
-            : 'text-gray-600 hover:bg-gray-100'
+            ? 'bg-amber-100 text-amber-900'
+            : 'text-gray-600 hover:bg-gray-50'
         }`}
       >
         <Icon className="w-5 h-5" />
@@ -131,15 +131,14 @@ const FPLayout = ({ admin, onLogout, children }) => {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Mobile Header */}
-      <header className="lg:hidden bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-        <div className="flex items-center justify-between px-4 h-16">
+      <header className="lg:hidden bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
+        <div className="flex items-center justify-between px-4 h-14">
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100">
-            <Menu className="w-6 h-6" />
+            <Menu className="w-5 h-5 text-gray-600" />
           </button>
-          <div className="flex items-center space-x-2">
-            <Briefcase className="w-6 h-6 text-slate-700" />
-            <span className="font-bold text-gray-900">{getRoleDisplay()}</span>
-          </div>
+          <span className="px-3 py-1 text-sm font-medium text-teal-700 bg-teal-50 rounded-full">
+            Franchise Partner
+          </span>
           <div className="w-10" />
         </div>
       </header>
@@ -156,16 +155,13 @@ const FPLayout = ({ admin, onLogout, children }) => {
         }`}
       >
         <div className="flex flex-col h-full">
-          {/* Top - Icon and Logged in as */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center space-x-3">
-              <Briefcase className="w-7 h-7 text-slate-600" />
-              <div>
-                <p className="text-xs text-gray-400">Logged in as</p>
-                <span className="text-sm font-medium text-gray-700">{isFPManager ? 'Manager' : 'Partner'}</span>
-              </div>
-            </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
+          {/* Top - Logged in as with badge */}
+          <div className="px-6 py-5 border-b border-gray-100">
+            <p className="text-sm text-gray-400 mb-1.5">Logged in as</p>
+            <span className="inline-block px-3 py-1 text-sm font-medium text-teal-700 bg-teal-50 rounded-full">
+              Franchise Partner
+            </span>
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden absolute right-4 top-4 p-2 rounded-lg hover:bg-gray-100">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -265,21 +261,15 @@ const FPLayout = ({ admin, onLogout, children }) => {
 
           </nav>
 
-          {/* Bottom - Role Title & Logout */}
-          <div className="border-t border-gray-200">
-            <div className="px-5 py-3">
-              <p className="text-xs text-gray-400 uppercase tracking-wide">Portal</p>
-              <p className="text-sm font-semibold text-gray-800">{getRoleDisplay()}</p>
-            </div>
-            <div className="px-4 pb-3">
-              <button
-                onClick={onLogout}
-                className="flex items-center space-x-2 px-3 py-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-all duration-200 text-sm"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
-              </button>
-            </div>
+          {/* Bottom - Logout */}
+          <div className="px-4 py-3 border-t border-gray-100">
+            <button
+              onClick={onLogout}
+              className="flex items-center space-x-2 px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200 text-sm w-full"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </button>
           </div>
         </div>
       </aside>
