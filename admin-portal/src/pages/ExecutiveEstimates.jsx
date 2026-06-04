@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Download, Mail, EyeOff, Calendar, Filter, Home, Building2 } from 'lucide-react';
+import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Download, Mail, EyeOff, Calendar, Filter, Home, Building2, User } from 'lucide-react';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
@@ -50,9 +50,100 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [toDate, setToDate] = useState('');
   const clearAllFilters = () => { setEstimateTypeFilter('all'); setStatusFilter('all'); setCategoryFilter('all'); setFromDate(''); setToDate(''); setSearchTerm(''); };
 
-  const [estimateForm, setEstimateForm] = useState({ clientId: '', propertyId: '', title: '', description: '', estimateType: 'property_based', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
+  const [estimateForm, setEstimateForm] = useState({ clientId: '', propertyId: '', title: '', description: '', estimateType: '', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
   const [amcForm, setAmcForm] = useState({ name: '', description: '', durationMonths: 12, basePrice: 0, services: '', termsConditions: '', hidePricing: true });
   const [addonForm, setAddonForm] = useState({ name: '', description: '', price: 0, unit: 'per_service', categoryId: '', hidePricing: true });
+  
+  // Property-based estimate state (like Manager)
+  const [propertyIdInput, setPropertyIdInput] = useState('');
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [selectedAmcPackage, setSelectedAmcPackage] = useState('');
+  const [selectedAddons, setSelectedAddons] = useState([]);
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [gstPercent, setGstPercent] = useState(18);
+  
+  // Direct estimate form
+  const [directForm, setDirectForm] = useState({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '' });
+
+  // Calculate price summary
+  const calculatePriceSummary = () => {
+    let subTotal = 0;
+    const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
+    if (pkg) subTotal += parseFloat(pkg.price || pkg.base_price) || 0;
+    selectedAddons.forEach(addonId => {
+      const addon = addons.find(a => a.id?.toString() === addonId);
+      if (addon) subTotal += parseFloat(addon.price) || 0;
+    });
+    const discountAmount = (subTotal * discountPercent) / 100;
+    const afterDiscount = subTotal - discountAmount;
+    const gstAmount = (afterDiscount * gstPercent) / 100;
+    const totalAmount = afterDiscount + gstAmount;
+    return { subTotal, discountAmount, gstAmount, totalAmount };
+  };
+  const priceSummary = calculatePriceSummary();
+  const formatCurrency = (amt) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(amt || 0);
+
+  // Reset estimate form
+  const resetEstimateForm = () => {
+    setEstimateForm({ ...estimateForm, estimateType: '' });
+    setPropertyIdInput('');
+    setSelectedProperty(null);
+    setSelectedAmcPackage('');
+    setSelectedAddons([]);
+    setDiscountPercent(0);
+    setDirectForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '' });
+  };
+
+  // Save estimate
+  const handleSaveEstimate = async () => {
+    const authToken = sessionStorage.getItem('pm_auth_token');
+    if (estimateForm.estimateType === 'property_based' && !propertyIdInput) {
+      setMessage({ type: 'error', text: 'Enter Property ID' }); return;
+    }
+    if (!selectedAmcPackage) {
+      setMessage({ type: 'error', text: 'Select AMC Package' }); return;
+    }
+    try {
+      const res = await fetch('/api/executive/estimates', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          estimate_type: estimateForm.estimateType,
+          property_id: propertyIdInput,
+          property_code: selectedProperty?.property_id,
+          client_name: selectedProperty?.contact_person || selectedProperty?.name || directForm.customerName,
+          client_phone: selectedProperty?.contact_phone || directForm.phone,
+          client_email: selectedProperty?.contact_email || directForm.email,
+          property_name: selectedProperty?.name || directForm.propertyName,
+          property_type: selectedProperty?.property_type || directForm.propertyType,
+          zone: selectedProperty?.zone || directForm.zone,
+          city: selectedProperty?.city || directForm.city,
+          address: selectedProperty?.address || directForm.address,
+          package_id: selectedAmcPackage,
+          package_name: amcPackages.find(p => p.id?.toString() === selectedAmcPackage)?.name || '',
+          package_price: amcPackages.find(p => p.id?.toString() === selectedAmcPackage)?.price || 0,
+          addons: selectedAddons.map(id => addons.find(a => a.id?.toString() === id)),
+          subtotal: priceSummary.subTotal,
+          discount_percent: discountPercent,
+          discount_amount: priceSummary.discountAmount,
+          gst_percent: gstPercent,
+          gst_amount: priceSummary.gstAmount,
+          total_amount: priceSummary.totalAmount
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Estimate created successfully!' });
+        resetEstimateForm();
+        setActiveTab('list');
+        fetchData();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Failed to create estimate' });
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: 'Failed to create estimate' });
+    }
+  };
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -134,7 +225,6 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     } catch (error) { setMessage({ type: 'error', text: 'Failed to create add-on' }); }
   };
 
-  const resetEstimateForm = () => { setEstimateForm({ clientId: '', propertyId: '', title: '', description: '', estimateType: 'property_based', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] }); };
   const resetAmcForm = () => { setAmcForm({ name: '', description: '', durationMonths: 12, basePrice: 0, services: '', termsConditions: '', hidePricing: true }); };
   const resetAddonForm = () => { setAddonForm({ name: '', description: '', price: 0, unit: 'per_service', categoryId: '', hidePricing: true }); };
 
@@ -143,7 +233,6 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const updateLineItem = (index, field, value) => { const updatedItems = [...estimateForm.items]; updatedItems[index][field] = value; setEstimateForm({ ...estimateForm, items: updatedItems }); };
 
   const getStatusColor = (status) => { const colors = { draft: 'bg-gray-100 text-gray-700', pending_approval: 'bg-yellow-100 text-yellow-700', approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700', converted: 'bg-blue-100 text-blue-700', archived: 'bg-gray-100 text-gray-500' }; return colors[status] || 'bg-gray-100 text-gray-700'; };
-  const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(amount || 0);
   const calculateTotals = () => { const subtotal = estimateForm.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0); const tax = (subtotal * estimateForm.taxPercentage) / 100; const discount = (subtotal * estimateForm.discountPercentage) / 100; return { subtotal, tax, discount, total: subtotal + tax - discount }; };
 
   const filteredEstimates = estimates.filter(e => e.title?.toLowerCase().includes(searchTerm.toLowerCase()) || e.estimate_id?.toLowerCase().includes(searchTerm.toLowerCase()) || e.client_name?.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -266,50 +355,190 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
           {activeTab === 'create' && (
             <div className="space-y-6">
-              {!estimateForm.estimateType || estimateForm.estimateType === 'select' ? (
+              {/* Type Selection */}
+              {!estimateForm.estimateType && (
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-6">Select Estimate Type</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'property_based' })} className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-center">
-                      <FileText className="w-8 h-8 mx-auto mb-3 text-gray-400" />
-                      <p className="font-semibold text-gray-900">Property-Based Estimate</p>
-                      <p className="text-sm text-indigo-600 mt-1">Enter Property ID to auto-fill details</p>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Estimate Type</h2>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'property_based' })} className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                      <Building2 className="w-10 h-10 text-gray-400 group-hover:text-blue-500 mx-auto mb-3" />
+                      <p className="font-semibold text-gray-800 group-hover:text-blue-600">Property-Based Estimate</p>
+                      <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
                     </button>
-                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'direct' })} className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-center">
-                      <Eye className="w-8 h-8 mx-auto mb-3 text-gray-400" />
-                      <p className="font-semibold text-gray-900">Direct-Based Estimate</p>
+                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'direct' })} className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                      <User className="w-10 h-10 text-gray-400 group-hover:text-blue-500 mx-auto mb-3" />
+                      <p className="font-semibold text-gray-800 group-hover:text-blue-600">Direct Estimate</p>
                       <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
                     </button>
                   </div>
                 </div>
-              ) : (
-                <form onSubmit={handleEstimateSubmit} className="space-y-6">
-                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Estimate Details</h3></div>
+              )}
+
+              {/* Property-Based Estimate */}
+              {estimateForm.estimateType === 'property_based' && (
+                <>
+                  <div className="bg-white rounded-xl border border-gray-200">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                      <h2 className="font-semibold text-gray-900">Estimate Details</h2>
+                      <button onClick={resetEstimateForm} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
+                    </div>
                     <div className="p-6">
-                      {estimateForm.estimateType === 'property_based' ? (
-                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Property ID <span className="text-red-500">*</span></label><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Type Property ID (e.g., GC-2024-001)" value={estimateForm.propertyId} onChange={(e) => setEstimateForm({ ...estimateForm, propertyId: e.target.value })} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" /></div></div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Customer Name <span className="text-red-500">*</span></label><input type="text" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Customer name" /></div>
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input type="text" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Phone number" /></div>
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Email address" /></div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Property ID <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input type="text" value={propertyIdInput} onChange={(e) => { setPropertyIdInput(e.target.value); const m = properties.find(p => p.property_id?.toLowerCase() === e.target.value.toLowerCase()); setSelectedProperty(m || null); }} placeholder="GC-DMMN-20260520" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
+                      </div>
+                      {selectedProperty && (
+                        <div className="mt-6 space-y-4">
+                          <div className="grid grid-cols-5 gap-4">
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Contact Name</label><input type="text" value={selectedProperty.contact_person || selectedProperty.contact_name || selectedProperty.customer_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Property ID</label><input type="text" value={selectedProperty.property_id || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Entry Type</label><input type="text" value={selectedProperty.entry_type || selectedProperty.property_type?.substring(0,2).toUpperCase() || 'GC'} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Zone</label><input type="text" value={selectedProperty.zone_id || selectedProperty.zone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Area</label><input type="text" value={selectedProperty.area || selectedProperty.area_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                          </div>
+                          <div className="grid grid-cols-5 gap-4">
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Community Name</label><input type="text" value={selectedProperty.name || selectedProperty.community_name || selectedProperty.property_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Division</label><input type="text" value={selectedProperty.division || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Property Type</label><input type="text" value={selectedProperty.property_type || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Units</label><input type="text" value={selectedProperty.units || selectedProperty.total_units || selectedProperty.number_of_units || '1'} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">City</label><input type="text" value={selectedProperty.city || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-4">
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Address</label><input type="text" value={selectedProperty.address || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Contact Phone</label><input type="text" value={selectedProperty.contact_phone || selectedProperty.phone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Contact Email</label><input type="text" value={selectedProperty.contact_email || selectedProperty.email || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                          </div>
                         </div>
                       )}
                     </div>
                   </div>
-                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">AMC Package</h3></div>
+
+                  {/* AMC Package */}
+                  <div className="bg-white rounded-xl border border-gray-200">
+                    <div className="px-6 py-4 border-b border-gray-100"><h2 className="font-semibold text-gray-900">AMC Package</h2></div>
                     <div className="p-6 space-y-4">
-                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Select AMC Package <span className="text-red-500">*</span></label><select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"><option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>{amcPackages.map((pkg) => (<option key={pkg.id} value={pkg.id}>{pkg.name}</option>))}</select></div>
-                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Add Service from Add-ons</label><select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"><option value="">+ Select Add-on to add</option>{addons.map((addon) => (<option key={addon.id} value={addon.id}>{addon.name}</option>))}</select><div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center text-sm text-amber-700">No add-ons selected. Use the dropdown above to add services.</div></div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Select AMC Package <span className="text-red-500">*</span></label>
+                        <select value={selectedAmcPackage} onChange={(e) => setSelectedAmcPackage(e.target.value)} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
+                          <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                          {amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price || pkg.base_price)}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
+                        <select onChange={(e) => { if (e.target.value && !selectedAddons.includes(e.target.value)) setSelectedAddons([...selectedAddons, e.target.value]); e.target.value = ''; }} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
+                          <option value="">+ Select Add-on to add</option>
+                          {addons.map(addon => <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>)}
+                        </select>
+                        {selectedAddons.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {selectedAddons.map(id => { const addon = addons.find(a => a.id?.toString() === id); return addon ? (
+                              <span key={id} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">{addon.name}<button type="button" onClick={() => setSelectedAddons(selectedAddons.filter(a => a !== id))} className="ml-1 text-blue-500 hover:text-blue-700">×</button></span>
+                            ) : null; })}
+                          </div>
+                        ) : (
+                          <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center text-sm text-amber-700">No add-ons selected. Use the dropdown above to add services.</div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-3">
-                    <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'select' })} className="px-6 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
-                    <button type="submit" className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium">Save</button>
+
+                  {/* Price Summary */}
+                  <div className="bg-white rounded-xl border border-gray-200">
+                    <div className="px-6 py-4 border-b border-gray-100"><h2 className="font-semibold text-gray-900">Price Summary</h2></div>
+                    <div className="p-6">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Discount %</label><input type="number" min="0" max="100" value={discountPercent} onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                        <div><label className="block text-xs font-medium text-slate-500 mb-1">GST %</label><input type="number" min="0" value={gstPercent} onChange={(e) => setGstPercent(parseFloat(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                      </div>
+                      <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                        <div className="flex justify-between text-sm"><span className="text-gray-600">Subtotal</span><span className="font-medium">{formatCurrency(priceSummary.subTotal)}</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-gray-600">Discount ({discountPercent}%)</span><span className="font-medium text-red-600">-{formatCurrency(priceSummary.discountAmount)}</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-gray-600">GST ({gstPercent}%)</span><span className="font-medium">+{formatCurrency(priceSummary.gstAmount)}</span></div>
+                        <div className="flex justify-between text-base font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-blue-600">{formatCurrency(priceSummary.totalAmount)}</span></div>
+                      </div>
+                    </div>
                   </div>
-                </form>
+
+                  {/* Actions */}
+                  <div className="flex justify-end gap-3">
+                    <button type="button" onClick={resetEstimateForm} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
+                    <button type="button" onClick={handleSaveEstimate} className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium">Save Estimate</button>
+                  </div>
+                </>
+              )}
+
+              {/* Direct Estimate */}
+              {estimateForm.estimateType === 'direct' && (
+                <>
+                  <div className="bg-white rounded-xl border border-gray-200">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                      <h2 className="font-semibold text-gray-900">Customer Information</h2>
+                      <button onClick={resetEstimateForm} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
+                    </div>
+                    <div className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Customer Name <span className="text-red-500">*</span></label><input type="text" value={directForm.customerName} onChange={(e) => setDirectForm({...directForm, customerName: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Customer name" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input type="text" value={directForm.phone} onChange={(e) => setDirectForm({...directForm, phone: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Phone number" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" value={directForm.email} onChange={(e) => setDirectForm({...directForm, email: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Email address" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label><select value={directForm.propertyType} onChange={(e) => setDirectForm({...directForm, propertyType: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg"><option value="">Select Type</option>{PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Property Name</label><input type="text" value={directForm.propertyName} onChange={(e) => setDirectForm({...directForm, propertyName: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Property name" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">City</label><input type="text" value={directForm.city} onChange={(e) => setDirectForm({...directForm, city: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="City" /></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AMC Package for Direct */}
+                  <div className="bg-white rounded-xl border border-gray-200">
+                    <div className="px-6 py-4 border-b border-gray-100"><h2 className="font-semibold text-gray-900">AMC Package</h2></div>
+                    <div className="p-6 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Select AMC Package <span className="text-red-500">*</span></label>
+                        <select value={selectedAmcPackage} onChange={(e) => setSelectedAmcPackage(e.target.value)} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white">
+                          <option value="">Select a Package</option>
+                          {amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price || pkg.base_price)}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
+                        <select onChange={(e) => { if (e.target.value && !selectedAddons.includes(e.target.value)) setSelectedAddons([...selectedAddons, e.target.value]); e.target.value = ''; }} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white">
+                          <option value="">+ Select Add-on</option>
+                          {addons.map(addon => <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>)}
+                        </select>
+                        {selectedAddons.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {selectedAddons.map(id => { const addon = addons.find(a => a.id?.toString() === id); return addon ? (
+                              <span key={id} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">{addon.name}<button type="button" onClick={() => setSelectedAddons(selectedAddons.filter(a => a !== id))} className="ml-1">×</button></span>
+                            ) : null; })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Price Summary for Direct */}
+                  <div className="bg-white rounded-xl border border-gray-200">
+                    <div className="px-6 py-4 border-b border-gray-100"><h2 className="font-semibold text-gray-900">Price Summary</h2></div>
+                    <div className="p-6">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Discount %</label><input type="number" min="0" max="100" value={discountPercent} onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                        <div><label className="block text-xs font-medium text-slate-500 mb-1">GST %</label><input type="number" min="0" value={gstPercent} onChange={(e) => setGstPercent(parseFloat(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                      </div>
+                      <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                        <div className="flex justify-between text-sm"><span className="text-gray-600">Subtotal</span><span className="font-medium">{formatCurrency(priceSummary.subTotal)}</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-gray-600">Discount ({discountPercent}%)</span><span className="font-medium text-red-600">-{formatCurrency(priceSummary.discountAmount)}</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-gray-600">GST ({gstPercent}%)</span><span className="font-medium">+{formatCurrency(priceSummary.gstAmount)}</span></div>
+                        <div className="flex justify-between text-base font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-blue-600">{formatCurrency(priceSummary.totalAmount)}</span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3">
+                    <button type="button" onClick={resetEstimateForm} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
+                    <button type="button" onClick={handleSaveEstimate} className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium">Save Estimate</button>
+                  </div>
+                </>
               )}
             </div>
           )}
