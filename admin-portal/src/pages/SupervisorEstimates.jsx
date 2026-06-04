@@ -16,8 +16,24 @@ const matchPropertyType = (value, filterId) => {
   const normalize = (str) => str.toLowerCase().replace(/[_\s-]/g, '');
   const filterOption = PROPERTY_TYPE_OPTIONS.find(t => t.id === filterId);
   const normalizedValue = normalize(value);
+  const aliases = {
+    gc: ['gc', 'gatedcommunity'],
+    gatedcommunity: ['gc', 'gatedcommunity'],
+    apartment: ['apt', 'apartment'],
+    apt: ['apt', 'apartment'],
+    villa: ['villa', 'villas'],
+    villas: ['villa', 'villas'],
+    flat: ['flat', 'flats'],
+    flats: ['flat', 'flats'],
+    plot: ['plot', 'plots'],
+    plots: ['plot', 'plots']
+  };
+  const normalizedFilter = normalize(filterId);
+  const filterAliases = aliases[normalizedFilter] || [normalizedFilter];
+  const valueAliases = aliases[normalizedValue] || [normalizedValue];
   return normalize(filterId) === normalizedValue || 
-         (filterOption && normalize(filterOption.label) === normalizedValue);
+         (filterOption && normalize(filterOption.label) === normalizedValue) ||
+         filterAliases.some(alias => valueAliases.includes(alias));
 };
 
 const BILLING_DURATIONS = [
@@ -462,14 +478,32 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Select AMC Package <span className="text-red-500">*</span></label>
                         <select value={selectedAmcPackage} onChange={(e) => setSelectedAmcPackage(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200">
                           <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
-                          {amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}
+                          {(() => {
+                            const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || selectedProperty?.property_type;
+                            const filteredPkgs = propertyType ? amcPackages.filter(pkg => matchPropertyType(pkg.property_type || pkg.propertyType, propertyType)) : amcPackages;
+                            const otherPkgs = propertyType ? amcPackages.filter(pkg => !filteredPkgs.includes(pkg)) : [];
+                            return (<>
+                              {filteredPkgs.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price || pkg.base_price)}</option>)}</optgroup>}
+                              {otherPkgs.length > 0 && <optgroup label="Other Packages">{otherPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price || pkg.base_price)}</option>)}</optgroup>}
+                              {!propertyType && amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price || pkg.base_price)}</option>)}
+                            </>);
+                          })()}
                         </select>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
                         <select onChange={(e) => { if (e.target.value && !selectedAddons.includes(e.target.value)) { setSelectedAddons([...selectedAddons, e.target.value]); } e.target.value = ''; }} className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200">
                           <option value="">+ Select Add-on to add</option>
-                          {addons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}
+                          {(() => {
+                            const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || selectedProperty?.property_type;
+                            const filteredAddons = propertyType ? addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType)) : addons;
+                            const otherAddons = propertyType ? addons.filter(addon => !filteredAddons.includes(addon)) : [];
+                            return (<>
+                              {filteredAddons.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}</optgroup>}
+                              {otherAddons.length > 0 && <optgroup label="Other Add-ons">{otherAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}</optgroup>}
+                              {!propertyType && addons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}
+                            </>);
+                          })()}
                         </select>
                       </div>
                       {selectedAddons.length === 0 ? (
