@@ -95,6 +95,13 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   // Direct estimate form
   const [directForm, setDirectForm] = useState({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '' });
 
+  // Helper functions (must be defined before calculatePriceSummary)
+  const formatCurrency = (amt) => { const num = parseFloat(amt); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : num); };
+  const getAddonId = (addon) => (addon.id ?? addon.addonId)?.toString();
+  const getAddonName = (addon) => addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name || 'Add-on Service';
+  const getAddonPrice = (addon) => parseFloat(addon.price ?? addon.totalPrice ?? addon.services?.[0]?.price) || 0;
+  const getPackagePrice = (pkg) => parseFloat(pkg?.price ?? pkg?.base_price ?? pkg?.totalPrice ?? pkg?.total_price ?? pkg?.rate ?? pkg?.total_rate) || 0;
+
   // Calculate price summary
   const calculatePriceSummary = () => {
     let subTotal = 0;
@@ -111,11 +118,6 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     return { subTotal, discountAmount, gstAmount, totalAmount };
   };
   const priceSummary = calculatePriceSummary();
-  const formatCurrency = (amt) => { const num = parseFloat(amt); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : num); };
-  const getAddonId = (addon) => (addon.id ?? addon.addonId)?.toString();
-  const getAddonName = (addon) => addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name || 'Add-on Service';
-  const getAddonPrice = (addon) => parseFloat(addon.price ?? addon.totalPrice ?? addon.services?.[0]?.price) || 0;
-  const getPackagePrice = (pkg) => parseFloat(pkg?.price ?? pkg?.base_price ?? pkg?.totalPrice ?? pkg?.total_price ?? pkg?.rate ?? pkg?.total_rate) || 0;
 
   // Reset estimate form
   const resetEstimateForm = () => {
