@@ -331,7 +331,10 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
             >
               <option value="">+ Select Add-on to add</option>
               {(() => {
-                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
+                // Get property type from selected property, direct form, or selected AMC package
+                const selectedPkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
+                const pkgPropertyType = selectedPkg?.property_type || getPackagePropertyType(selectedPkg);
+                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType || pkgPropertyType;
                 const filteredAddons = propertyType ? addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType)) : addons;
                 const otherAddons = propertyType ? addons.filter(addon => !filteredAddons.includes(addon)) : [];
                 return (<>

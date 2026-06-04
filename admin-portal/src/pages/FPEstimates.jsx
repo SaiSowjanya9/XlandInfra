@@ -569,7 +569,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 >
                   <option value="">+ Select Add-on to add</option>
                   {(() => {
-                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
+                    // Get property type from selected property, form, or selected AMC package
+                    const selectedPkg = amcPackages.find(p => p.id == estimateForm.selectedPackage);
+                    const pkgPropertyType = selectedPkg?.property_type;
+                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType || pkgPropertyType;
                     const searchType = normalizePropertyType(propertyType);
                     const filteredAddons = searchType ? addons.filter(addon => normalizePropertyType(addon.property_type) === searchType) : addons;
                     if (searchType && filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
@@ -828,7 +831,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 >
                   <option value="">+ Select Add-on to add</option>
                   {(() => {
-                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
+                    // Get property type from selected property, form, or selected AMC package
+                    const selectedPkg = amcPackages.find(p => p.id == estimateForm.selectedPackage);
+                    const pkgPropertyType = selectedPkg?.property_type;
+                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType || pkgPropertyType;
                     const searchType = normalizePropertyType(propertyType);
                     const filteredAddons = searchType ? addons.filter(addon => normalizePropertyType(addon.property_type) === searchType) : addons;
                     if (searchType && filteredAddons.length === 0) return <option disabled>No add-ons for {propertyType}</option>;
