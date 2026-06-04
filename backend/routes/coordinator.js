@@ -118,11 +118,16 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
   try {
     const scopeId = getScopeId(req);
     const scopeColumn = getScopeColumn(req);
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+    
+    console.log('[Coordinator Dashboard] scopeId:', scopeId, 'scopeColumn:', scopeColumn, 'fpId:', franchisePartnerId);
 
-    // Get counts - filter by FP or Coordinator scope
+    // Get counts - filter by FP or Coordinator scope, include onboarded_properties
     const [propertiesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM properties WHERE ${scopeColumn} = ?`,
-      [scopeId]
+      `SELECT COUNT(*) as count FROM properties WHERE ${scopeColumn} = ?
+       UNION ALL
+       SELECT COUNT(*) FROM onboarded_properties WHERE franchise_partner_id = ?`,
+      [scopeId, franchisePartnerId]
     );
 
     const [vendorsCount] = await pool.query(
@@ -181,7 +186,7 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
       success: true,
       data: {
         stats: {
-          properties: propertiesCount[0]?.count || 0,
+          properties: (propertiesCount[0]?.count || 0) + (propertiesCount[1]?.count || 0),
           vendors: vendorsCount[0]?.count || 0,
           customers: customersCount[0]?.count || 0,
           employees: employeesCount[0]?.count || 0,
