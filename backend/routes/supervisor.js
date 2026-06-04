@@ -768,8 +768,65 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
 router.get('/vendors', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId;
 
-    // Get own vendors from onboarded_vendors
+    // For FP employees, show all FP vendors (zone-based like Manager)
+    if (franchisePartnerId) {
+      // Get employee's assigned zones
+      const [empZones] = await pool.query(
+        `SELECT assigned_zones FROM fp_employees WHERE id = ?`,
+        [supervisorId]
+      );
+      
+      let zoneIds = [];
+      if (empZones.length > 0 && empZones[0].assigned_zones) {
+        try {
+          zoneIds = typeof empZones[0].assigned_zones === 'string' 
+            ? JSON.parse(empZones[0].assigned_zones) 
+            : empZones[0].assigned_zones;
+        } catch (e) { zoneIds = []; }
+      }
+
+      // Get all FP vendors, optionally filtered by zone
+      let vendorQuery = `
+        SELECT v.*, 
+               COALESCE(v.company_name, v.owner_name) as company_name,
+               COALESCE(v.contact_person, v.owner_name) as contact_person,
+               COALESCE(v.phone, v.owner_mobile) as phone,
+               COALESCE(v.email, v.owner_email) as email,
+               z.name as zone_name,
+               COALESCE(
+                 CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                 v.created_by, 'System'
+               ) as created_by_name,
+               'fp' as vendor_type, FALSE as can_modify, FALSE as can_delete
+        FROM onboarded_vendors v
+        LEFT JOIN zones z ON v.zone_id = z.id
+        LEFT JOIN fp_employees fpe ON v.created_by = fpe.email OR CAST(v.created_by AS UNSIGNED) = fpe.id
+        WHERE v.franchise_partner_id = ? AND v.is_active = TRUE
+      `;
+      const params = [franchisePartnerId];
+
+      if (zoneIds.length > 0) {
+        vendorQuery += ` AND (v.zone_id IN (?) OR v.zone_id IS NULL)`;
+        params.push(zoneIds);
+      }
+
+      vendorQuery += ` ORDER BY v.created_at DESC`;
+
+      const [allVendors] = await pool.query(vendorQuery, params);
+
+      return res.json({
+        success: true,
+        data: {
+          own: [],
+          assigned: [],
+          all: allVendors
+        }
+      });
+    }
+
+    // For standalone supervisors - original logic
     const [ownVendors] = await pool.query(
       `SELECT v.*, COALESCE(v.company_name, v.owner_name) as company_name, 
               COALESCE(v.contact_person, v.owner_name) as contact_person,
@@ -781,7 +838,6 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
       [supervisorId]
     );
 
-    // Get assigned vendors from onboarded_vendors
     const [assignedVendors] = await pool.query(
       `SELECT v.*, COALESCE(v.company_name, v.owner_name) as company_name,
               COALESCE(v.contact_person, v.owner_name) as contact_person,
