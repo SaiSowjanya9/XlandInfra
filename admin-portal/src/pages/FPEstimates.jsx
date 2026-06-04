@@ -104,17 +104,23 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     selectedPackage: '', selectedAddons: [], discount: 0, gst: 18, description: ''
   });
 
-  // Helper to normalize property type to short code (GC, Apt, Villa, etc.)
+  // Helper to normalize property type to match PROPERTY_TYPE_OPTIONS IDs
   const normalizePropertyType = (type) => {
     if (!type) return '';
     const upper = type.toUpperCase();
-    // Map full names to short codes
+    // Map full names to short codes (matching PROPERTY_TYPE_OPTIONS IDs)
     if (upper.includes('GATED') || upper === 'GC') return 'GC';
-    if (upper.includes('APARTMENT') || upper === 'APT') return 'APT';
-    if (upper.includes('VILLA')) return 'VILLA';
-    if (upper.includes('FLAT')) return 'FLAT';
-    if (upper.includes('PLOT')) return 'PLOT';
-    return upper;
+    if (upper.includes('APARTMENT') || upper === 'APT') return 'Apt';
+    if (upper.includes('VILLA')) return 'Villa';
+    if (upper.includes('FLAT')) return 'Flat';
+    if (upper.includes('PLOT')) return 'Plot';
+    return type;
+  };
+
+  // Helper to get property type label
+  const getPropertyTypeLabel = (type) => {
+    const normalized = normalizePropertyType(type);
+    return PROPERTY_TYPE_OPTIONS.find(t => t.id === normalized)?.label || type || '-';
   };
 
   // Export FP estimate to PDF with properly formatted data
@@ -1223,7 +1229,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </td>
                         <td className="px-4 py-4">
                           <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">
-                            {PROPERTY_TYPE_OPTIONS.find(t => t.id === propertyType)?.label || propertyType || '-'}
+                            {getPropertyTypeLabel(propertyType)}
                           </span>
                         </td>
                         <td className="px-4 py-4">
@@ -1818,7 +1824,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-800">{a.service_name}</p>
-                        <p className="text-sm text-gray-500">{a.frequency_count}x {a.frequency_type} • {PROPERTY_TYPE_OPTIONS.find(t => t.id === a.property_type)?.label}</p>
+                        <p className="text-sm text-gray-500">{a.frequency_count}x {a.frequency_type} • {getPropertyTypeLabel(a.property_type)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -2120,7 +2126,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-500">Property Type</p>
-                  <p className="font-semibold text-sm">{PROPERTY_TYPE_OPTIONS.find(t => t.id === viewAmcPackage.propertyType)?.label || viewAmcPackage.propertyType || '-'}</p>
+                  <p className="font-semibold text-sm">{getPropertyTypeLabel(viewAmcPackage.propertyType)}</p>
                 </div>
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-500">Billing Duration</p>
