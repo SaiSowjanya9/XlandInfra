@@ -96,7 +96,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
-  const formatCurrency = (amt) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(amt || 0);
+  const formatCurrency = (amt) => {
+    const num = parseFloat(amt);
+    const value = isNaN(num) ? 0 : num;
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(value);
+  };
 
   // Estimate form state
   const [estimateForm, setEstimateForm] = useState({
@@ -121,6 +125,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const getPropertyTypeLabel = (type) => {
     const normalized = normalizePropertyType(type);
     return PROPERTY_TYPE_OPTIONS.find(t => t.id === normalized)?.label || type || '-';
+  };
+
+  // Helper to match property type for filtering
+  const matchPropertyType = (value, filterId) => {
+    if (!value || !filterId) return false;
+    const normalizedValue = normalizePropertyType(value);
+    return normalizedValue === filterId;
   };
 
   // Export FP estimate to PDF with properly formatted data
@@ -1106,7 +1117,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   );
 
   // AMC PACKAGES
-  const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => p.property_type === filterPropertyType);
+  const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType));
   const handleSaveAmcPackage = async () => {
     if (!amcForm.packageName.trim()) { showToast('Enter package name', 'error'); return; }
     if (!selectedPropertyType) { showToast('Select property type', 'error'); return; }
@@ -1556,7 +1567,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                         <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                           <span className="text-sm font-semibold text-gray-700">Total Rate</span>
-                          <span className="text-2xl font-bold text-gray-800">₹{getPrice().toLocaleString()}</span>
+                          <span className="text-2xl font-bold text-gray-800">{formatCurrency(amcForm.price)}</span>
                         </div>
                       </div>
                     </div>
@@ -1610,7 +1621,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   );
 
   // ADDONS
-  const filteredAddons = addonFilterPropertyType === 'all' ? addons : addons.filter(a => a.property_type === addonFilterPropertyType);
+  const filteredAddons = addonFilterPropertyType === 'all' ? addons : addons.filter(a => matchPropertyType(a.property_type, addonFilterPropertyType));
   const handleSaveAddon = async () => {
     if (!addonSelectedPropertyType) { showToast('Select property type', 'error'); return; }
     if (!addonForm.serviceName.trim()) { showToast('Enter service name', 'error'); return; }
@@ -2088,7 +2099,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <p className="font-semibold text-indigo-900">{viewEstimate.package_name}</p>
                       <p className="text-xs text-indigo-600">Yearly Billing</p>
                     </div>
-                    <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.package_price || 0).toLocaleString()}</p>
+                    <p className="text-lg font-bold text-indigo-700">{formatCurrency(viewEstimate.package_price)}</p>
                   </div>
                 </div>
               )}
@@ -2104,7 +2115,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
                           <p className="text-xs text-green-600">{addon.frequency_type || addon.frequencyType || 'One-time'}</p>
                         </div>
-                        <p className="font-semibold text-green-700">₹{Number(addon.price || 0).toLocaleString()}</p>
+                        <p className="font-semibold text-green-700">{formatCurrency(addon.price)}</p>
                       </div>
                     ))}
                   </div>
@@ -2123,12 +2134,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>₹{Number(viewEstimate.subtotal || 0).toLocaleString()}</span></div>
-                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm text-green-600"><span>Discount ({viewEstimate.discount_percent || 0}%)</span><span>-₹{Number(viewEstimate.discount_amount).toLocaleString()}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 18}%)</span><span>₹{Number(viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>{formatCurrency(viewEstimate.subtotal)}</span></div>
+                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm text-green-600"><span>Discount ({viewEstimate.discount_percent || 0}%)</span><span>-{formatCurrency(viewEstimate.discount_amount)}</span></div>}
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 18}%)</span><span>{formatCurrency(viewEstimate.gst_amount)}</span></div>
                   <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                     <p className="text-lg font-semibold">Total</p>
-                    <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total_amount || 0).toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-indigo-600">{formatCurrency(viewEstimate.total_amount)}</p>
                   </div>
                 </div>
               </div>
