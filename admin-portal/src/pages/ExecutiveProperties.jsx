@@ -695,6 +695,10 @@ const ExecutiveProperties = ({ user }) => {
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
                   </div>
                   <div>
+                    <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.units || selectedProperty.number_of_units || selectedProperty.number_of_blocks || '1'}</p>
+                  </div>
+                  <div>
                     <p className="text-xs text-gray-500 mb-1">Created Date</p>
                     <p className="text-sm font-medium text-gray-900">
                       {selectedProperty.created_at ? new Date(selectedProperty.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
