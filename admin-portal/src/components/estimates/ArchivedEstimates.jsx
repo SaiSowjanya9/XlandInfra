@@ -25,7 +25,7 @@ const STATUS_STYLES = {
 
 const ArchivedEstimates = ({ admin, onRefresh, showToast }) => {
   // Check if user is Operations Manager (restricted access - view only)
-  const isOpsManager = admin?.role === 'operations_manager';
+  const isOpsManager = false;
   
   const [archivedEstimates, setArchivedEstimates] = useState([]);
   const [viewEstimate, setViewEstimate] = useState(null);

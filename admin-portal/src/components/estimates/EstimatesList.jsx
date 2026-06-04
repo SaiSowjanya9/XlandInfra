@@ -36,7 +36,7 @@ const STATUS_STYLES = {
 
 const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
   // Check if user is Operations Manager (restricted access - view only)
-  const isOpsManager = admin?.role === 'operations_manager';
+  const isOpsManager = false;
   
   const [searchTerm, setSearchTerm] = useState('');
   const [exportingId, setExportingId] = useState(null);

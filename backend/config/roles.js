@@ -563,7 +563,7 @@ const isAdminOrOpsManager = (role) => isAdmin(role) || isOperationsManager(role)
  */
 
 // Admin-only capabilities
-const canManageUsers = (role) => role === ROLES.ADMIN;           // Manage all users and permissions
+const canManageUsers = (role) => [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER].includes(role);           // Manage all users and permissions
 const canManageSettings = (role) => role === ROLES.ADMIN;        // Change full system settings
 const canOverrideManagerActions = (role) => role === ROLES.ADMIN; // Override manager actions
 const canReopenWorkOrder = (role) => role === ROLES.ADMIN;       // Reopen closed work orders

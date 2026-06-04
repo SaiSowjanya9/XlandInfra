@@ -453,7 +453,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   {(() => {
                     const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
                     const searchType = normalizePropertyType(propertyType);
-                    const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : amcPackages;
+                    const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : [];
+                    if (!searchType) return <option disabled>Select property type first</option>;
                     if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
                     return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
                   })()}
@@ -711,7 +712,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
                   {(() => {
                     const searchType = normalizePropertyType(estimateForm.propertyType);
-                    const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : amcPackages;
+                    const filteredPkgs = searchType ? amcPackages.filter(pkg => getPkgPropertyType(pkg) === searchType) : [];
+                    if (!searchType) return <option disabled>Select property type first</option>;
                     if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {estimateForm.propertyType}</option>;
                     return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
                   })()}

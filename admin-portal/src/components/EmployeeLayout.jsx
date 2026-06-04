@@ -33,7 +33,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Check if user is Operations Manager (restricted access)
-  const isOpsManager = admin?.role === 'operations_manager';
+  const isOpsManager = false;
 
   const [vendorOpen, setVendorOpen] = useState(
     location.pathname.startsWith('/employee/add-vendor') ||

@@ -16,7 +16,7 @@ const PROPERTY_TYPE_OPTIONS = [
 
 const AddonsManager = ({ admin, showToast }) => {
   // Check if user is Operations Manager (restricted access - view only)
-  const isOpsManager = admin?.role === 'operations_manager';
+  const isOpsManager = false;
   
   // Operations Manager defaults to 'all-addons' tab (no create access)
   const [activeTab, setActiveTab] = useState(isOpsManager ? 'all-addons' : 'create'); // 'create' or 'all-addons'

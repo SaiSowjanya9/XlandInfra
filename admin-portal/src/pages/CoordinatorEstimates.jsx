@@ -124,6 +124,29 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
   const getAddonId = (addon) => (addon.id ?? addon.addonId)?.toString();
   const getAddonName = (addon) => addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name || 'Add-on Service';
   const getAddonPrice = (addon) => parseFloat(addon.price ?? addon.totalPrice ?? addon.services?.[0]?.price) || 0;
+  const getPackagePrice = (pkg) => parseFloat(pkg?.price ?? pkg?.base_price ?? pkg?.totalPrice ?? pkg?.total_price ?? pkg?.rate ?? pkg?.total_rate) || 0;
+  const getPackageServices = (pkg) => {
+    let servicesData = pkg?.services || pkg?.services_data || pkg?.serviceRows;
+    if (typeof servicesData === 'string') {
+      try { servicesData = JSON.parse(servicesData); } catch (e) { return []; }
+    }
+    return servicesData?.serviceRows || servicesData?.services || (Array.isArray(servicesData) ? servicesData : []);
+  };
+  const getPackageBillingDuration = (pkg) => {
+    let servicesData = pkg?.services || pkg?.services_data;
+    if (typeof servicesData === 'string') {
+      try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = {}; }
+    }
+    return servicesData?.billing_duration || pkg?.billing_duration || pkg?.billingDuration || 'monthly';
+  };
+  const getPackagePropertyType = (pkg) => {
+    let servicesData = pkg?.services || pkg?.services_data;
+    if (typeof servicesData === 'string') {
+      try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = {}; }
+    }
+    return servicesData?.property_type || pkg?.property_type || pkg?.propertyType || '';
+  };
+  const getFrequencyVisits = (frequency) => FREQUENCY_COUNT_MAP?.[frequency] || parseInt(frequency) || 12;
 
   // CREATE ESTIMATE - State for new form
   const [selectedAmcPackage, setSelectedAmcPackage] = useState('');
@@ -147,7 +170,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
   const calculatePriceSummary = () => {
     let subTotal = 0;
     const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
-    if (pkg) subTotal += parseFloat(pkg.price) || 0;
+    if (pkg) subTotal += getPackagePrice(pkg);
     selectedAddons.forEach(addonId => {
       const addon = addons.find(a => getAddonId(a) === addonId);
       if (addon) subTotal += getAddonPrice(addon);
@@ -228,17 +251,36 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
             >
               <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
               {(() => {
-                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
-                const filteredPkgs = propertyType ? amcPackages.filter(pkg => matchPropertyType(pkg.property_type || pkg.propertyType, propertyType)) : amcPackages;
+                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || selectedProperty?.property_type || directForm?.propertyType;
+                const filteredPkgs = propertyType ? amcPackages.filter(pkg => matchPropertyType(getPackagePropertyType(pkg), propertyType)) : [];
                 const otherPkgs = propertyType ? amcPackages.filter(pkg => !filteredPkgs.includes(pkg)) : [];
                 return (<>
-                  {filteredPkgs.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}
-                  {otherPkgs.length > 0 && <optgroup label="Other Packages">{otherPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}
-                  {!propertyType && amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}
+                  {filteredPkgs.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}</optgroup>}
+                  {otherPkgs.length > 0 && <optgroup label="Other Packages">{otherPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}</optgroup>}
+                  {!propertyType && <option disabled>Select property type first</option>}
                 </>);
               })()}
             </select>
           </div>
+          {(() => {
+            const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
+            if (!pkg) return null;
+            const services = getPackageServices(pkg);
+            return (
+              <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30">
+                <div className="px-5 py-3 flex items-center gap-3">
+                  <Package className="w-5 h-5 text-blue-600" />
+                  <span className="font-semibold text-gray-900">{pkg.name}</span>
+                  <span className="px-2 py-0.5 bg-slate-700 text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
+                </div>
+                <table className="w-full text-sm bg-white">
+                  <thead><tr className="border-y border-blue-100"><th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th><th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th><th className="px-5 py-2.5 text-right text-xs font-semibold text-blue-600 uppercase">No. of Visits</th></tr></thead>
+                  <tbody className="divide-y divide-gray-100">{services.length > 0 ? services.map((svc, idx) => { const freqType = svc.frequencyType || svc.frequency_type || 'Monthly'; return (<tr key={idx}><td className="px-5 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td><td className="px-5 py-2.5 text-gray-600">{freqType}</td><td className="px-5 py-2.5 text-right text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td></tr>); }) : <tr><td colSpan={3} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}</tbody>
+                </table>
+                <div className="px-5 py-3 bg-blue-50 border-t border-blue-100"><div className="flex justify-between items-center"><span className="text-sm font-semibold text-blue-700">Total Package Price</span><span className="text-lg font-bold text-gray-900">{formatCurrency(getPackagePrice(pkg))}</span></div><div className="text-xs text-blue-600 mt-1">Service Period: <span className="capitalize">{getPackageBillingDuration(pkg)}</span></div></div>
+              </div>
+            );
+          })()}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
             <select
@@ -263,24 +305,14 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
               })()}
             </select>
           </div>
-          {selectedAddons.length === 0 ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-              <p className="text-amber-700">No add-ons selected. Use the dropdown above to add services.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {selectedAddons.map(addonId => {
-                const addon = addons.find(a => getAddonId(a) === addonId);
-                return addon ? (
-                  <div key={addonId} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <span className="text-blue-800">{getAddonName(addon)}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium text-blue-700">{formatCurrency(getAddonPrice(addon))}</span>
-                      <button onClick={() => setSelectedAddons(selectedAddons.filter(id => id !== addonId))} className="text-red-500 hover:text-red-700"><X className="w-4 h-4" /></button>
-                    </div>
-                  </div>
-                ) : null;
-              })}
+          {selectedAddons.length > 0 && (
+            <div className="border border-blue-200 rounded-xl overflow-hidden">
+              <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200"><span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span></div>
+              <table className="w-full text-sm">
+                <thead><tr className="border-b border-blue-100 bg-white"><th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th><th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th><th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th><th className="px-5 py-2.5 text-right text-xs font-semibold text-blue-600 uppercase">Price</th><th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">Action</th></tr></thead>
+                <tbody className="divide-y divide-gray-100 bg-white">{selectedAddons.map(addonId => { const addon = addons.find(a => getAddonId(a) === addonId); if (!addon) return null; const freqType = addon.frequency_type || addon.frequencyType || addon.services?.[0]?.frequencyType || 'Monthly'; return (<tr key={addonId}><td className="px-5 py-2.5 text-gray-800">{getAddonName(addon)}</td><td className="px-5 py-2.5 text-gray-600">{freqType}</td><td className="px-5 py-2.5 text-center text-gray-600">{addon.frequency_count || addon.frequencyCount || getFrequencyVisits(freqType)}</td><td className="px-5 py-2.5 text-right text-gray-800">{formatCurrency(getAddonPrice(addon))}</td><td className="px-5 py-2.5 text-center"><button onClick={() => setSelectedAddons(selectedAddons.filter(id => id !== addonId))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></td></tr>); })}</tbody>
+                <tfoot className="bg-blue-50 border-t border-blue-200"><tr><td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons</td><td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0))}</td><td></td></tr></tfoot>
+              </table>
             </div>
           )}
         </div>
@@ -708,7 +740,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                           <p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText}</p>
                         </td>
                         <td className="px-4 py-4 text-right">
-                          <span className="text-lg font-bold text-slate-800">{formatCurrency(pkg.price || pkg.base_price)}</span>
+                          <span className="text-lg font-bold text-slate-800">{formatCurrency(getPackagePrice(pkg))}</span>
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center justify-center">
@@ -1192,7 +1224,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
                 <div className="bg-green-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-500">Total Price</p>
-                  <p className="font-bold text-lg text-green-700">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</p>
+                  <p className="font-bold text-lg text-green-700">{formatCurrency(getPackagePrice(viewAmcPackage))}</p>
                 </div>
               </div>
 
