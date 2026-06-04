@@ -566,7 +566,6 @@ const ExecutiveProperties = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Zone</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Area</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Division</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Units</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Address</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">City</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contacts</th>
@@ -598,9 +597,6 @@ const ExecutiveProperties = ({ user }) => {
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600">{property.division || '-'}</span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="text-sm text-gray-600">{property.units || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600 max-w-[150px] truncate block">{property.address || '-'}</span>
@@ -697,10 +693,6 @@ const ExecutiveProperties = ({ user }) => {
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Property Type</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Total Units</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.units || selectedProperty.number_of_units || selectedProperty.number_of_blocks || '1'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Created Date</p>
