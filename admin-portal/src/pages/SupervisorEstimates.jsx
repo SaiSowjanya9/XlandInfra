@@ -617,16 +617,14 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-6 py-4"><span className="font-semibold text-gray-900">{pkg.name || 'Unnamed Package'}</span></td>
-                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{PROPERTY_TYPE_OPTIONS.find(t => t.id === pkg.property_type)?.label || pkg.property_type || '-'}</span></td>
+                              <td className="px-4 py-4"><span className="text-gray-700">{pkg.property_type || 'GC'}</span></td>
                               <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getBillingBadgeColor(pkg.billing_duration)}`}>{BILLING_DURATIONS.find(d => d.value === pkg.billing_duration)?.label || 'Monthly'}</span></td>
-                              <td className="px-4 py-4 max-w-xs"><p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText}</p></td>
-                              <td className="px-4 py-4 text-right"><span className="text-sm text-gray-400 italic flex items-center justify-end gap-1"><EyeOff className="w-3 h-3" /> Hidden</span></td>
+                              <td className="px-4 py-4 max-w-xs"><p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText || '-'}</p></td>
+                              <td className="px-4 py-4 text-right"><span className="font-semibold text-gray-900">{formatCurrency(pkg.price || 0)}</span></td>
                               <td className="px-4 py-4">
-                                <div className="flex items-center justify-center gap-1">
-                                  <button className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button>
-                                  <button className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Export PDF"><Download className="w-4 h-4" /></button>
-                                  <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Email"><Mail className="w-4 h-4" /></button>
-                                </div>
+                                <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg transition-colors" title="View">
+                                  <Eye className="w-4 h-4" />
+                                </button>
                               </td>
                             </tr>
                           );
