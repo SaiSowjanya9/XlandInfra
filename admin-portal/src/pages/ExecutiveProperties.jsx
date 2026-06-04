@@ -631,50 +631,11 @@ const ExecutiveProperties = ({ user }) => {
                               setSelectedProperty(property);
                               setShowDetailsModal(true);
                             }}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
                             title="View Details"
                           >
-                            <Eye className="w-4 h-4 text-gray-500" />
+                            <Eye className="w-4 h-4 text-blue-500" />
                           </button>
-                          <button
-                            onClick={() => exportSingleProperty(property)}
-                            className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors"
-                            title="Export to CSV"
-                          >
-                            <Download className="w-4 h-4 text-gray-400 hover:text-emerald-600" />
-                          </button>
-                          {!isFPExecutive && (
-                            <>
-                              <button
-                                onClick={() => openEditModal(property)}
-                                className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Edit Property"
-                              >
-                                <Edit2 className="w-4 h-4 text-blue-500" />
-                              </button>
-                              <button
-                                onClick={() => openAssignModal(property, 'vendor')}
-                                className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
-                                title="Assign Vendor"
-                              >
-                                <Truck className="w-4 h-4 text-purple-500" />
-                              </button>
-                              <button
-                                onClick={() => openAssignModal(property, 'employee')}
-                                className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
-                                title="Assign Employee"
-                              >
-                                <UserPlus className="w-4 h-4 text-green-500" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteProperty(property.id)}
-                                className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4 text-red-500" />
-                              </button>
-                            </>
-                          )}
                         </div>
                       </td>
                     </tr>
