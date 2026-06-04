@@ -179,8 +179,8 @@ const ExecutiveVendors = ({ user }) => {
                       <span className="text-sm text-gray-500">{formatDate(vendor.created_at)}</span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(vendor.status || 'active')}`}>
-                        {vendor.status || 'Active'}
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${vendor.status === 'active' || vendor.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {vendor.status === 'active' || vendor.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="py-3 px-4">
