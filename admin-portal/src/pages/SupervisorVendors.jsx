@@ -47,16 +47,7 @@ const SupervisorVendors = ({ user }) => {
     return new Date(dateString).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  const getServiceBadgeColor = (type) => {
-    const colors = {
-      'HVAC': 'bg-blue-100 text-blue-700',
-      'Plumbing': 'bg-cyan-100 text-cyan-700',
-      'Electrical': 'bg-yellow-100 text-yellow-700',
-      'Cleaning': 'bg-pink-100 text-pink-700',
-      'Security': 'bg-purple-100 text-purple-700',
-    };
-    return colors[type] || 'bg-gray-100 text-gray-700';
-  };
+  const getServiceBadgeColor = () => 'bg-gray-100 text-gray-700';
 
   const allVendors = vendors.all || [];
   const zones = [...new Set(allVendors.map(v => v.zone || v.zone_name).filter(Boolean))];
@@ -171,12 +162,17 @@ const SupervisorVendors = ({ user }) => {
                   <tr key={vendor.id} className="hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <p className="font-semibold text-gray-900">{vendor.owner_name || vendor.company_name || '-'}</p>
-                      <p className="text-xs text-gray-500">{vendor.vendor_id}</p>
+                      <p className="text-xs text-gray-400">{vendor.vendor_id}</p>
                     </td>
                     <td className="py-4 px-4">
-                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getServiceBadgeColor(vendor.service_type)}`}>
-                        {vendor.service_type || '-'}
-                      </span>
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${
+                        vendor.service_type === 'HVAC' ? 'bg-blue-100 text-blue-700' :
+                        vendor.service_type === 'Security' ? 'bg-teal-100 text-teal-700' :
+                        vendor.service_type === 'Electrical' ? 'bg-yellow-100 text-yellow-700' :
+                        vendor.service_type === 'Plumbing' ? 'bg-cyan-100 text-cyan-700' :
+                        vendor.service_type === 'Cleaning' ? 'bg-pink-100 text-pink-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>{vendor.service_type || '-'}</span>
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-700">{vendor.zone || vendor.zone_name || '-'}</td>
                     <td className="py-4 px-4 text-sm text-gray-700">{vendor.area || vendor.area_name || '-'}</td>
