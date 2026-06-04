@@ -49,30 +49,23 @@ const generatePDF = (data, type, filename) => {
     doc.setFillColor(30, 41, 59); // Slate-800
     doc.rect(0, 0, pageWidth, 38, 'F');
     
-    // Add logo from website
-    try {
-      const logoImg = new Image();
-      logoImg.src = '/logo.png';
-      doc.addImage(logoImg, 'PNG', margin, 5, 28, 28);
-    } catch (e) {
-      // Fallback: Draw logo placeholder if image fails
-      doc.setFillColor(212, 175, 55); // Gold color
-      doc.roundedRect(margin, 8, 22, 22, 3, 3, 'F');
-      doc.setTextColor(30, 41, 59);
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text('X', margin + 7, 22);
-    }
+    // Logo - Gold styled X with border
+    doc.setFillColor(212, 175, 55); // Gold color
+    doc.roundedRect(margin, 7, 24, 24, 3, 3, 'F');
+    doc.setTextColor(30, 41, 59); // Dark text on gold
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('XI', margin + 5, 23);
     
     // Company name - next to logo
     doc.setTextColor(212, 175, 55); // Gold color to match logo
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', margin + 32, 18);
+    doc.text('XLAND INFRA', margin + 30, 18);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(148, 163, 184); // Slate-400
-    doc.text('Property Management Solutions', margin + 32, 27);
+    doc.text('Property Management Solutions', margin + 30, 27);
 
     // Document type badge - right aligned
     doc.setFillColor(255, 255, 255);
