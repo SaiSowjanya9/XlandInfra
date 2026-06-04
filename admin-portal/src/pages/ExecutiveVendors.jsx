@@ -141,96 +141,155 @@ const ExecutiveVendors = ({ user }) => {
       {showDetailModal && selectedVendor && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <div>
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Vendor Details</h2>
-                <p className="text-sm text-gray-500">{selectedVendor.vendor_id}</p>
+                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
               </div>
-              <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Company Name</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.company_name || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Service Type</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.service_type || selectedVendor.vendor_type || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Owner/Contact Person</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.contact_person || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Zone</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.zone_name || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Area</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.city || selectedVendor.area || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Coverage/Day</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Status</p>
-                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedVendor.status || 'active')}`}>
-                    {selectedVendor.status || 'Active'}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Created By</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.created_by_name || '-'}</p>
-                </div>
-              </div>
 
-              <div className="border-t border-gray-100 pt-4">
-                <h3 className="font-semibold text-gray-900 mb-3">Contact Information</h3>
+            <div className="p-6 space-y-6">
+              {/* Basic Info */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Basic Information</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-700">{selectedVendor.phone || '-'}</span>
+                  <div>
+                    <p className="text-xs text-gray-500">Vendor ID</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.vendor_id || '-'}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-700">{selectedVendor.email || '-'}</span>
+                  <div>
+                    <p className="text-xs text-gray-500">Status</p>
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${selectedVendor.is_active || selectedVendor.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {selectedVendor.is_active || selectedVendor.status === 'active' ? 'Active' : 'Inactive'}
+                    </span>
                   </div>
-                  <div className="col-span-2 flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                    <span className="text-gray-700">
-                      {[selectedVendor.address, selectedVendor.city, selectedVendor.state, selectedVendor.zip_code].filter(Boolean).join(', ') || '-'}
+                  <div>
+                    <p className="text-xs text-gray-500">Service Type</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.service_type || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Vendor Type</p>
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${selectedVendor.vendor_type === 'own' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {selectedVendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-4">
-                <h3 className="font-semibold text-gray-900 mb-3">Additional Details</h3>
+              {/* Location */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Location</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">GST Number</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.gst_number || '-'}</p>
+                    <p className="text-xs text-gray-500">Zone</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.zone_name || selectedVendor.zone || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">PAN Number</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.pan_number || '-'}</p>
+                    <p className="text-xs text-gray-500">Area</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.area || selectedVendor.area_name || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Created Date</p>
-                    <p className="font-medium text-gray-900 flex items-center gap-1">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      {formatDate(selectedVendor.created_at)}
-                    </p>
+                    <p className="text-xs text-gray-500">Division</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.division || '-'}</p>
                   </div>
                 </div>
               </div>
-            </div>
-            <div className="p-6 border-t border-gray-100">
-              <button onClick={() => setShowDetailModal(false)} className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                Close
-              </button>
+
+              {/* Coverage */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Coverage</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Coverage Per Day</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Owner Details */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Owner Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Name</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.owner_name || selectedVendor.company_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Mobile</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.owner_country_code || '+91'} {selectedVendor.owner_mobile || selectedVendor.phone || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.owner_email || selectedVendor.email || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Aadhar</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.owner_aadhar || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Manager Details */}
+              {(selectedVendor.manager_name || selectedVendor.manager_mobile) && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Manager / Primary Contact</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Name</p>
+                      <p className="font-medium text-gray-900">{selectedVendor.manager_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Mobile</p>
+                      <p className="font-medium text-gray-900">{selectedVendor.manager_country_code || '+91'} {selectedVendor.manager_mobile || '-'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="font-medium text-gray-900">{selectedVendor.manager_email || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* POC Details */}
+              {(selectedVendor.poc_name || selectedVendor.poc_mobile) && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Point of Contact</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Name</p>
+                      <p className="font-medium text-gray-900">{selectedVendor.poc_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Mobile</p>
+                      <p className="font-medium text-gray-900">{selectedVendor.poc_country_code || '+91'} {selectedVendor.poc_mobile || '-'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="font-medium text-gray-900">{selectedVendor.poc_email || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Created Info */}
+              <div className="pt-4 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-gray-400">Created By</p>
+                    <p className="text-gray-600">{selectedVendor.created_by_name || selectedVendor.created_by || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Created At</p>
+                    <p className="text-gray-600">{formatDate(selectedVendor.created_at)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-gray-100">
+                <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

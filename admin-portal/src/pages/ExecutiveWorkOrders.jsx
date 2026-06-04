@@ -255,8 +255,10 @@ const ExecutiveWorkOrders = ({ user }) => {
                       <p className="text-sm text-gray-500">{wo.title}</p>
                     </td>
                     <td className="py-4 px-4">
-                      <p className="text-sm font-medium text-gray-900">{wo.client_name || '-'}</p>
-                      <p className="text-sm text-gray-500">{wo.property_name || '-'}</p>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{wo.client_name || wo.customer_name || wo.resident_name || '-'}</p>
+                        <p className="text-sm text-gray-500">{wo.property_name || wo.property_type || 'SSR'}</p>
+                      </div>
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-600">{wo.category_name || '-'}</td>
                     <td className="py-4 px-4">
