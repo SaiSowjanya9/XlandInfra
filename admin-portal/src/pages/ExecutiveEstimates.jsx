@@ -326,10 +326,9 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               {(() => {
                 const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || selectedProperty?.property_type || directForm?.propertyType;
                 const filteredPkgs = propertyType ? amcPackages.filter(pkg => matchPropertyType(getPackagePropertyType(pkg), propertyType)) : [];
-                const otherPkgs = propertyType ? amcPackages.filter(pkg => !filteredPkgs.includes(pkg)) : [];
                 return (<>
-                  {filteredPkgs.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}</optgroup>}
-                  {otherPkgs.length > 0 && <optgroup label="Other Packages">{otherPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}</optgroup>}
+                  {filteredPkgs.length > 0 && filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}
+                  {propertyType && filteredPkgs.length === 0 && <option disabled>No packages available for {propertyType}</option>}
                   {!propertyType && <option disabled>Select property type first</option>}
                 </>);
               })()}
@@ -361,11 +360,10 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               {(() => {
                 const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
                 const filteredAddons = propertyType ? addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType)) : addons;
-                const otherAddons = propertyType ? addons.filter(addon => !filteredAddons.includes(addon)) : [];
                 return (<>
-                  {filteredAddons.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}</optgroup>}
-                  {otherAddons.length > 0 && <optgroup label="Other Add-ons">{otherAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}</optgroup>}
-                  {!propertyType && addons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}
+                  {filteredAddons.length > 0 && filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}
+                  {propertyType && filteredAddons.length === 0 && <option disabled>No add-ons available for {propertyType}</option>}
+                  {!propertyType && <option disabled>Select property type first</option>}
                 </>);
               })()}
             </select>

@@ -1276,31 +1276,17 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                             })
                           : [];
                         
-                        const remainingPkgs = propertyType 
-                          ? availablePackages.filter(pkg => !filteredPkgs.includes(pkg))
-                          : [];
-                        
                         return (
                           <>
-                            {filteredPkgs.length > 0 && (
-                              <optgroup label={`Recommended for ${propertyType}`}>
-                                {filteredPkgs.map(pkg => (
-                                  <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
-                                    {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
-                                  </option>
-                                ))}
-                              </optgroup>
+                            {filteredPkgs.length > 0 && filteredPkgs.map(pkg => (
+                              <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
+                                {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
+                              </option>
+                            ))}
+                            {propertyType && filteredPkgs.length === 0 && (
+                              <option disabled>No packages available for {propertyType}</option>
                             )}
-                            {remainingPkgs.length > 0 && (
-                              <optgroup label="Other Packages">
-                                {remainingPkgs.map(pkg => (
-                                  <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
-                                    {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            )}
-                            {filteredPkgs.length === 0 && remainingPkgs.length === 0 && (
+                            {!propertyType && (
                               <option disabled>Select property type first</option>
                             )}
                           </>
@@ -1395,30 +1381,17 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                                      addonType === 'GATED COMMUNITY' && searchType === 'GC';
                             })
                           : availableAddons;
-                        const otherAddons = propertyType 
-                          ? availableAddons.filter(addon => !filteredAddons.includes(addon))
-                          : [];
                         return (
                           <>
-                            {filteredAddons.length > 0 && (
-                              <optgroup label={`For ${propertyType || 'Selected Property'}`}>
-                                {filteredAddons.map(addon => (
-                                  <option key={addon.addonId} value={addon.addonId}>
-                                    {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
-                                  </option>
-                                ))}
-                              </optgroup>
+                            {filteredAddons.length > 0 && filteredAddons.map(addon => (
+                              <option key={addon.addonId} value={addon.addonId}>
+                                {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
+                              </option>
+                            ))}
+                            {propertyType && filteredAddons.length === 0 && (
+                              <option disabled>No add-ons available for {propertyType}</option>
                             )}
-                            {otherAddons.length > 0 && (
-                              <optgroup label="Other Property Types">
-                                {otherAddons.map(addon => (
-                                  <option key={addon.addonId} value={addon.addonId}>
-                                    {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            )}
-                            {filteredAddons.length === 0 && otherAddons.length === 0 && availableAddons.map(addon => (
+                            {!propertyType && availableAddons.map(addon => (
                               <option key={addon.addonId} value={addon.addonId}>
                                 {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
                               </option>
@@ -1986,29 +1959,15 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                           })
                         : [];
                       
-                      const remainingPkgs = propertyType 
-                        ? availablePackages.filter(pkg => !filteredPkgs.includes(pkg))
-                        : [];
-                      
                       return (
                         <>
-                          {filteredPkgs.length > 0 && propertyType && (
-                            <optgroup label={`Recommended for ${propertyType}`}>
-                              {filteredPkgs.map(pkg => (
-                                <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
-                                  {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
-                                </option>
-                              ))}
-                            </optgroup>
-                          )}
-                          {remainingPkgs.length > 0 && (
-                            <optgroup label="Other Packages">
-                              {remainingPkgs.map(pkg => (
-                                <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
-                                  {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
-                                </option>
-                              ))}
-                            </optgroup>
+                          {filteredPkgs.length > 0 && filteredPkgs.map(pkg => (
+                            <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
+                              {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
+                            </option>
+                          ))}
+                          {propertyType && filteredPkgs.length === 0 && (
+                            <option disabled>No packages available for {propertyType}</option>
                           )}
                           {!propertyType && <option disabled>Select property type first</option>}
                         </>
@@ -2103,30 +2062,17 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                                    addonType === 'GATED COMMUNITY' && searchType === 'GC';
                           })
                         : availableAddons;
-                      const otherAddons = propertyType 
-                        ? availableAddons.filter(addon => !filteredAddons.includes(addon))
-                        : [];
                       return (
                         <>
-                          {filteredAddons.length > 0 && (
-                            <optgroup label={`For ${propertyType || 'Selected Property'}`}>
-                              {filteredAddons.map(addon => (
-                                <option key={addon.addonId} value={addon.addonId}>
-                                  {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
-                                </option>
-                              ))}
-                            </optgroup>
+                          {filteredAddons.length > 0 && filteredAddons.map(addon => (
+                            <option key={addon.addonId} value={addon.addonId}>
+                              {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
+                            </option>
+                          ))}
+                          {propertyType && filteredAddons.length === 0 && (
+                            <option disabled>No add-ons available for {propertyType}</option>
                           )}
-                          {otherAddons.length > 0 && (
-                            <optgroup label="Other Property Types">
-                              {otherAddons.map(addon => (
-                                <option key={addon.addonId} value={addon.addonId}>
-                                  {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
-                                </option>
-                              ))}
-                            </optgroup>
-                          )}
-                          {filteredAddons.length === 0 && otherAddons.length === 0 && availableAddons.map(addon => (
+                          {!propertyType && availableAddons.map(addon => (
                             <option key={addon.addonId} value={addon.addonId}>
                               {addon.services?.map(s => s.name).join(', ') || addon.addonId} - ₹{(addon.totalPrice || 0).toLocaleString()}
                             </option>
