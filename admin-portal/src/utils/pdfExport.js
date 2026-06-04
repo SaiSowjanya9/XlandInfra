@@ -47,41 +47,43 @@ const generatePDF = (data, type, filename) => {
     // ===== HEADER =====
     // Dark blue header background
     doc.setFillColor(30, 41, 59); // Slate-800
-    doc.rect(0, 0, pageWidth, 35, 'F');
+    doc.rect(0, 0, pageWidth, 38, 'F');
     
-    // Add logo (embedded as base64 or use placeholder icon)
+    // Add logo from website
     try {
-      // Draw a simple logo placeholder - square with "X" inside
-      doc.setFillColor(59, 130, 246); // Blue-500
-      doc.roundedRect(margin, 8, 20, 20, 3, 3, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('X', margin + 7, 21);
+      const logoImg = new Image();
+      logoImg.src = '/logo.png';
+      doc.addImage(logoImg, 'PNG', margin, 5, 28, 28);
     } catch (e) {
-      console.log('Logo error:', e);
+      // Fallback: Draw logo placeholder if image fails
+      doc.setFillColor(212, 175, 55); // Gold color
+      doc.roundedRect(margin, 8, 22, 22, 3, 3, 'F');
+      doc.setTextColor(30, 41, 59);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('X', margin + 7, 22);
     }
     
     // Company name - next to logo
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(212, 175, 55); // Gold color to match logo
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', margin + 25, 17);
+    doc.text('XLAND INFRA', margin + 32, 18);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(148, 163, 184); // Slate-400
-    doc.text('Property Management Solutions', margin + 25, 25);
+    doc.text('Property Management Solutions', margin + 32, 27);
 
     // Document type badge - right aligned
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(pageWidth - margin - 50, 10, 50, 18, 3, 3, 'F');
+    doc.roundedRect(pageWidth - margin - 50, 12, 50, 18, 3, 3, 'F');
     doc.setTextColor(30, 41, 59); // Slate-800
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
-    doc.text(docType, pageWidth - margin - 25, 22, { align: 'center' });
+    doc.text(docType, pageWidth - margin - 25, 24, { align: 'center' });
 
-    y = 45;
+    y = 48;
 
     // ===== DOCUMENT INFO =====
     doc.setTextColor(...darkText);
@@ -163,10 +165,10 @@ const generatePDF = (data, type, filename) => {
     y += 50;
     
     // Customer Details Section (same style as Property Details)
-    doc.setFillColor(239, 246, 255); // Blue-50 background
+    doc.setFillColor(241, 245, 249); // Slate-100 background (same as Property Details)
     doc.roundedRect(margin, y, fullWidth, 45, 3, 3, 'F');
     
-    doc.setTextColor(30, 64, 175); // Blue-800
+    doc.setTextColor(...primaryColor); // Same color as Property Details
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('Customer Details', margin + 5, y + 8);
