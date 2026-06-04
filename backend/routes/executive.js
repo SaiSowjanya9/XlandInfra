@@ -378,8 +378,12 @@ router.get('/work-orders', requireExecutiveScope, async (req, res) => {
 
     // FP employees see FP work orders, standalone executives see their created work orders
     let query = `
-      SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
-             cl.name as client_name, cl.name as customer_name
+      SELECT wo.*, 
+             COALESCE(p.name, wo.property_name) as property_name, 
+             COALESCE(c.name, wo.category_name) as category_name, 
+             v.company_name as vendor_name,
+             COALESCE(cl.name, wo.customer_name) as client_name,
+             wo.customer_name, wo.customer_email, wo.customer_phone
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN categories c ON wo.category_id = c.id
@@ -409,8 +413,12 @@ router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
 
-    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
-             cl.name as client_name, cl.name as customer_name
+    const query = `SELECT wo.*, 
+             COALESCE(p.name, wo.property_name) as property_name, 
+             COALESCE(c.name, wo.category_name) as category_name, 
+             v.company_name as vendor_name,
+             COALESCE(cl.name, wo.customer_name) as client_name,
+             wo.customer_name, wo.customer_email, wo.customer_phone
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
@@ -434,8 +442,12 @@ router.get('/work-orders/completed', requireExecutiveScope, async (req, res) => 
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
 
-    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name,
-             cl.name as client_name, cl.name as customer_name
+    const query = `SELECT wo.*, 
+             COALESCE(p.name, wo.property_name) as property_name, 
+             COALESCE(c.name, wo.category_name) as category_name, 
+             v.company_name as vendor_name,
+             COALESCE(cl.name, wo.customer_name) as client_name,
+             wo.customer_name, wo.customer_email, wo.customer_phone
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
