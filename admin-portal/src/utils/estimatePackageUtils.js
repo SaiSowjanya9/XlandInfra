@@ -1,4 +1,8 @@
-export const formatCurrency = (amt) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(amt || 0);
+export const formatCurrency = (amt) => {
+  const num = parseFloat(amt);
+  const value = isNaN(num) ? 0 : num;
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(value);
+};
 
 export const parsePackageServicesData = (pkg) => {
   let servicesData = pkg?.services || pkg?.services_data || pkg?.serviceRows;
