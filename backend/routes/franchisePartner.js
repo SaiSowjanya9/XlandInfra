@@ -1352,7 +1352,7 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
         COALESCE(p.zone_id, op.zone) as property_zone,
         v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
-        v.zone_name, v.area, v.rate_per_visit, v.coverage_per_day
+        v.zone as zone_name, v.area_name as area, v.rate_per_visit, v.coverage_per_day
        FROM property_vendor_assignments pva
        LEFT JOIN properties p ON pva.property_id = p.id
        LEFT JOIN onboarded_properties op ON pva.property_id = op.id
