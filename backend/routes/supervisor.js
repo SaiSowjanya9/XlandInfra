@@ -310,7 +310,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
       const scopeId = franchisePartnerId || supervisorId;
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
-                op.zone_id as zone_name, op.area_name as area, op.division, COALESCE(op.total_units, 1) as units,
+                op.zone as zone_name, op.area_name as area, op.division, COALESCE(op.total_units, 1) as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
                 COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
@@ -789,19 +789,16 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
 
     // For FP employees, show all FP vendors (zone-based like Manager)
     if (franchisePartnerId) {
-      // Get employee's assigned zones
-      const [empZones] = await pool.query(
-        `SELECT assigned_zones FROM fp_employees WHERE id = ?`,
-        [supervisorId]
-      );
-      
-      let zoneIds = [];
-      if (empZones.length > 0 && empZones[0].assigned_zones) {
-        try {
-          zoneIds = typeof empZones[0].assigned_zones === 'string' 
-            ? JSON.parse(empZones[0].assigned_zones) 
-            : empZones[0].assigned_zones;
-        } catch (e) { zoneIds = []; }
+      // Get employee's assigned zones from fp_employee_zones table
+      let assignedZones = [];
+      try {
+        const [zones] = await pool.execute(
+          `SELECT zone_name FROM fp_employee_zones WHERE fp_employee_id = ?`,
+          [req.user?.id || supervisorId]
+        );
+        assignedZones = zones.map(z => z.zone_name);
+      } catch (e) {
+        console.log('Zone fetch error:', e.message);
       }
 
       // Get all FP vendors like Manager portal
@@ -827,11 +824,12 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
         LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
         WHERE ov.franchise_partner_id = ?
       `;
-      const params = [franchisePartnerId];
+      let params = [franchisePartnerId];
 
-      if (zoneIds.length > 0) {
-        vendorQuery += ` AND ov.zone IN (?)`;
-        params.push(zoneIds);
+      // Filter by zones if assigned
+      if (assignedZones.length > 0) {
+        vendorQuery += ` AND ov.zone IN (${assignedZones.map(() => '?').join(',')})`;
+        params.push(...assignedZones);
       }
 
       vendorQuery += ` ORDER BY ov.created_at DESC`;
