@@ -36,6 +36,19 @@ const matchPropertyType = (value, filterId) => {
          filterAliases.some(alias => valueAliases.includes(alias));
 };
 
+// Helper to get property type label from any format
+const getPropertyTypeLabel = (type) => {
+  if (!type) return '-';
+  const upper = type.toUpperCase();
+  if (upper.includes('GATED') || upper === 'GC') return 'Gated Community';
+  if (upper.includes('APARTMENT') || upper === 'APT') return 'Apartment';
+  if (upper.includes('VILLA')) return 'Villa';
+  if (upper.includes('FLAT')) return 'Flat';
+  if (upper.includes('PLOT')) return 'Plot';
+  const match = PROPERTY_TYPE_OPTIONS.find(t => t.id === type);
+  return match?.label || type || '-';
+};
+
 const BILLING_DURATIONS = [
   { value: 'monthly', label: 'Monthly' },
   { value: 'quarterly', label: 'Quarterly' },
@@ -697,7 +710,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-6 py-4"><span className="font-semibold text-gray-900">{pkg.name || 'Unnamed Package'}</span></td>
-                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{PROPERTY_TYPE_OPTIONS.find(t => t.id === pkg.property_type)?.label || pkg.property_type || '-'}</span></td>
+                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{getPropertyTypeLabel(pkg.property_type)}</span></td>
                               <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getBillingBadgeColor(pkg.billing_duration)}`}>{BILLING_DURATIONS.find(d => d.value === pkg.billing_duration)?.label || 'Monthly'}</span></td>
                               <td className="px-4 py-4 max-w-xs"><p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText}</p></td>
                               <td className="px-4 py-4 text-right"><span className="text-lg font-bold text-slate-800">{formatCurrency(getPackagePrice(pkg))}</span></td>
@@ -764,7 +777,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={addon.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-6 py-4"><span className="font-semibold text-gray-900">{getAddonName(addon)}</span></td>
-                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{PROPERTY_TYPE_OPTIONS.find(t => t.id === addon.property_type)?.label || addon.property_type || '-'}</span></td>
+                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{getPropertyTypeLabel(addon.property_type)}</span></td>
                               <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getFrequencyBadgeColor(addon.frequency_type || addon.frequency)}`}>{addon.frequency_type || addon.frequency || 'Monthly'}</span></td>
                               <td className="px-4 py-4"><span className="text-sm text-gray-600">{addon.frequency_count || addon.visits || '12'}x</span></td>
                               <td className="px-4 py-4 text-right"><span className="font-semibold text-gray-900">{formatCurrency(getAddonPrice(addon))}</span></td>

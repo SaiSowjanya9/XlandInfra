@@ -34,3 +34,27 @@ export const getAddonId = (addon) => (addon?.id ?? addon?.addonId ?? addon?.addo
 export const getAddonName = (addon) => addon?.service_name || addon?.name || addon?.serviceName || addon?.services?.[0]?.name || 'Add-on Service';
 
 export const getAddonPrice = (addon) => parseFloat(addon?.price ?? addon?.totalPrice ?? addon?.total_price ?? addon?.services?.[0]?.price) || 0;
+
+// Normalize property type to standard label - handles GC, Apt, gated_community, etc.
+export const getPropertyTypeLabel = (type) => {
+  if (!type) return '-';
+  const upper = type.toUpperCase();
+  if (upper.includes('GATED') || upper === 'GC') return 'Gated Community';
+  if (upper.includes('APARTMENT') || upper === 'APT') return 'Apartment';
+  if (upper.includes('VILLA')) return 'Villa';
+  if (upper.includes('FLAT')) return 'Flat';
+  if (upper.includes('PLOT')) return 'Plot';
+  return type || '-';
+};
+
+// Normalize property type to short code - for filtering/matching
+export const normalizePropertyTypeCode = (type) => {
+  if (!type) return '';
+  const upper = type.toUpperCase();
+  if (upper.includes('GATED') || upper === 'GC') return 'GC';
+  if (upper.includes('APARTMENT') || upper === 'APT') return 'Apt';
+  if (upper.includes('VILLA')) return 'Villa';
+  if (upper.includes('FLAT')) return 'Flat';
+  if (upper.includes('PLOT')) return 'Plot';
+  return type;
+};
