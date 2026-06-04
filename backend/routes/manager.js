@@ -124,9 +124,12 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
     const employeeTable = req.isFPManager ? 'fp_employees' : 'manager_employees';
     const employeeScopeCol = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
 
+    console.log('[Manager Dashboard] scopeId:', scopeId, 'scopeColumn:', scopeColumn, 'fpId:', franchisePartnerId);
+
     // Run all queries in parallel for faster response
     const [
       propertiesCount,
+      onboardedPropertiesCount,
       vendorsCount,
       customersCount,
       employeesCount,
@@ -136,6 +139,10 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
     ] = await Promise.all([
       // Properties count
       pool.execute(`SELECT COUNT(*) as count FROM properties WHERE ${scopeColumn} = ?`, [scopeId])
+        .then(([r]) => r[0].count).catch(() => 0),
+      
+      // Onboarded Properties count
+      pool.execute(`SELECT COUNT(*) as count FROM onboarded_properties WHERE franchise_partner_id = ?`, [franchisePartnerId])
         .then(([r]) => r[0].count).catch(() => 0),
       
       // Vendors count
@@ -187,7 +194,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       success: true,
       data: {
         stats: {
-          properties: propertiesCount,
+          properties: propertiesCount + onboardedPropertiesCount,
           vendors: vendorsCount,
           customers: customersCount,
           employees: employeesCount,

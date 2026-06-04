@@ -167,52 +167,53 @@ router.use(attachSupervisorScope);
 router.get('/dashboard', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+    
+    console.log('[Supervisor Dashboard] supervisorId:', supervisorId, 'fpId:', franchisePartnerId);
 
-    // Get counts for supervisor's data
+    // Get counts - check both supervisor-owned and FP data
     const [propertiesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM properties WHERE supervisor_id = ?
+      `SELECT COUNT(*) as count FROM properties WHERE supervisor_id = ? OR franchise_partner_id = ?
        UNION ALL
-       SELECT COUNT(*) FROM supervisor_assigned_properties WHERE supervisor_id = ?`,
-      [supervisorId, supervisorId]
+       SELECT COUNT(*) FROM onboarded_properties WHERE franchise_partner_id = ?`,
+      [supervisorId, franchisePartnerId, franchisePartnerId]
     );
 
     const [vendorsCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE supervisor_id = ?
-       UNION ALL
-       SELECT COUNT(*) FROM supervisor_assigned_vendors WHERE supervisor_id = ?`,
-      [supervisorId, supervisorId]
+      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE supervisor_id = ? OR franchise_partner_id = ?`,
+      [supervisorId, franchisePartnerId]
     );
 
     const [customersCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?`,
-      [franchisePartnerId]
+      `SELECT COUNT(*) as count FROM clients WHERE supervisor_id = ? OR franchise_partner_id = ?`,
+      [supervisorId, franchisePartnerId]
     );
 
     const [employeesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM supervisor_employees WHERE supervisor_id = ?`,
-      [supervisorId]
+      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ?`,
+      [franchisePartnerId]
     );
 
     const [workOrdersCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ?`,
-      [franchisePartnerId]
+      `SELECT COUNT(*) as count FROM work_orders WHERE supervisor_id = ? OR franchise_partner_id = ?`,
+      [supervisorId, franchisePartnerId]
     );
 
     const [pendingWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
-       WHERE franchise_partner_id = ? AND status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
-      [franchisePartnerId]
+       WHERE (supervisor_id = ? OR franchise_partner_id = ?) AND status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
+      [supervisorId, franchisePartnerId]
     );
 
     const [completedWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
-       WHERE franchise_partner_id = ? AND status IN ('completed', 'closed')`,
-      [franchisePartnerId]
+       WHERE (supervisor_id = ? OR franchise_partner_id = ?) AND status IN ('completed', 'closed')`,
+      [supervisorId, franchisePartnerId]
     );
 
     const [estimatesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM estimates WHERE supervisor_id = ?`,
-      [supervisorId]
+      `SELECT COUNT(*) as count FROM estimates WHERE supervisor_id = ? OR franchise_partner_id = ?`,
+      [supervisorId, franchisePartnerId]
     );
 
     // Get recent work orders
@@ -221,10 +222,10 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
-       WHERE wo.supervisor_id = ?
+       WHERE wo.supervisor_id = ? OR wo.franchise_partner_id = ?
        ORDER BY wo.created_at DESC
        LIMIT 5`,
-      [supervisorId]
+      [supervisorId, franchisePartnerId]
     );
 
     res.json({
