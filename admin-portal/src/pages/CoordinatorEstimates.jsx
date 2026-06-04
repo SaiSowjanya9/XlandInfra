@@ -105,6 +105,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
 
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
   const formatCurrency = (amt) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(amt || 0);
+  const getAddonId = (addon) => (addon.id ?? addon.addonId)?.toString();
+  const getAddonName = (addon) => addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name || 'Add-on Service';
+  const getAddonPrice = (addon) => parseFloat(addon.price ?? addon.totalPrice ?? addon.services?.[0]?.price) || 0;
 
   // CREATE ESTIMATE - State for new form
   const [selectedAmcPackage, setSelectedAmcPackage] = useState('');
@@ -130,8 +133,8 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
     const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
     if (pkg) subTotal += parseFloat(pkg.price) || 0;
     selectedAddons.forEach(addonId => {
-      const addon = addons.find(a => a.id?.toString() === addonId);
-      if (addon) subTotal += parseFloat(addon.price) || 0;
+      const addon = addons.find(a => getAddonId(a) === addonId);
+      if (addon) subTotal += getAddonPrice(addon);
     });
     const discountAmount = (subTotal * discountPercent) / 100;
     const afterDiscount = subTotal - discountAmount;
@@ -245,9 +248,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                 }) : addons;
                 const otherAddons = propertyType ? addons.filter(addon => !filteredAddons.includes(addon)) : [];
                 return (<>
-                  {filteredAddons.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>)}</optgroup>}
-                  {otherAddons.length > 0 && <optgroup label="Other Add-ons">{otherAddons.map(addon => <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>)}</optgroup>}
-                  {!propertyType && addons.map(addon => <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>)}
+                  {filteredAddons.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}</optgroup>}
+                  {otherAddons.length > 0 && <optgroup label="Other Add-ons">{otherAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}</optgroup>}
+                  {!propertyType && addons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}
                 </>);
               })()}
             </select>
@@ -259,12 +262,12 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
           ) : (
             <div className="space-y-2">
               {selectedAddons.map(addonId => {
-                const addon = addons.find(a => a.id?.toString() === addonId);
+                const addon = addons.find(a => getAddonId(a) === addonId);
                 return addon ? (
                   <div key={addonId} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <span className="text-blue-800">{addon.name}</span>
+                    <span className="text-blue-800">{getAddonName(addon)}</span>
                     <div className="flex items-center gap-3">
-                      <span className="font-medium text-blue-700">{formatCurrency(addon.price)}</span>
+                      <span className="font-medium text-blue-700">{formatCurrency(getAddonPrice(addon))}</span>
                       <button onClick={() => setSelectedAddons(selectedAddons.filter(id => id !== addonId))} className="text-red-500 hover:text-red-700"><X className="w-4 h-4" /></button>
                     </div>
                   </div>

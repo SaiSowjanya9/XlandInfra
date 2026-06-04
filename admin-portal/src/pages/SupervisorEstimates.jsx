@@ -62,6 +62,9 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const [selectedAddons, setSelectedAddons] = useState([]);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [gstPercent, setGstPercent] = useState(18);
+  const getAddonId = (addon) => (addon.id ?? addon.addonId)?.toString();
+  const getAddonName = (addon) => addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name || 'Add-on Service';
+  const getAddonPrice = (addon) => parseFloat(addon.price ?? addon.totalPrice ?? addon.services?.[0]?.price) || 0;
 
   // Calculate price summary
   const calculatePriceSummary = () => {
@@ -69,8 +72,8 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
     const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
     if (pkg) subTotal += parseFloat(pkg.price) || 0;
     selectedAddons.forEach(addonId => {
-      const addon = addons.find(a => a.id?.toString() === addonId);
-      if (addon) subTotal += parseFloat(addon.price) || 0;
+      const addon = addons.find(a => getAddonId(a) === addonId);
+      if (addon) subTotal += getAddonPrice(addon);
     });
     const discountAmount = (subTotal * discountPercent) / 100;
     const afterDiscount = subTotal - discountAmount;
@@ -466,7 +469,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
                         <select onChange={(e) => { if (e.target.value && !selectedAddons.includes(e.target.value)) { setSelectedAddons([...selectedAddons, e.target.value]); } e.target.value = ''; }} className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200">
                           <option value="">+ Select Add-on to add</option>
-                          {addons.map(addon => <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>)}
+                          {addons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}
                         </select>
                       </div>
                       {selectedAddons.length === 0 ? (
@@ -476,12 +479,12 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                       ) : (
                         <div className="space-y-2">
                           {selectedAddons.map(addonId => {
-                            const addon = addons.find(a => a.id?.toString() === addonId);
+                            const addon = addons.find(a => getAddonId(a) === addonId);
                             return addon ? (
                               <div key={addonId} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <span className="text-blue-800">{addon.name}</span>
+                                <span className="text-blue-800">{getAddonName(addon)}</span>
                                 <div className="flex items-center gap-3">
-                                  <span className="font-medium text-blue-700">{formatCurrency(addon.price)}</span>
+                                  <span className="font-medium text-blue-700">{formatCurrency(getAddonPrice(addon))}</span>
                                   <button onClick={() => setSelectedAddons(selectedAddons.filter(id => id !== addonId))} className="text-red-500 hover:text-red-700"><X className="w-4 h-4" /></button>
                                 </div>
                               </div>
@@ -514,7 +517,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">AMC Package</h3></div>
                     <div className="p-6 space-y-4">
                       <div><label className="block text-sm font-medium text-gray-700 mb-1">Select AMC Package <span className="text-red-500">*</span></label><select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg"><option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>{amcPackages.map((pkg) => (<option key={pkg.id} value={pkg.id}>{pkg.name}</option>))}</select></div>
-                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Add Service from Add-ons</label><select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg"><option value="">+ Select Add-on to add</option>{addons.map((addon) => (<option key={addon.id} value={addon.id}>{addon.name}</option>))}</select><div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center text-sm text-amber-700">No add-ons selected. Use the dropdown above to add services.</div></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Add Service from Add-ons</label><select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg"><option value="">+ Select Add-on to add</option>{addons.map((addon) => (<option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>))}</select><div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center text-sm text-amber-700">No add-ons selected. Use the dropdown above to add services.</div></div>
                     </div>
                   </div>
                   <div className="flex justify-end gap-3">
@@ -681,7 +684,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                           const getFrequencyBadgeColor = (freq) => { switch(freq?.toLowerCase()) { case 'monthly': return 'bg-blue-100 text-blue-700 border-blue-200'; case 'every 2 months': return 'bg-cyan-100 text-cyan-700 border-cyan-200'; case 'quarterly': return 'bg-purple-100 text-purple-700 border-purple-200'; default: return 'bg-gray-100 text-gray-700 border-gray-200'; } };
                           return (
                             <tr key={addon.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-4"><span className="font-semibold text-gray-900">{addon.name || 'Unnamed Add-on'}</span></td>
+                              <td className="px-6 py-4"><span className="font-semibold text-gray-900">{getAddonName(addon)}</span></td>
                               <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{PROPERTY_TYPE_OPTIONS.find(t => t.id === addon.property_type)?.label || addon.property_type || '-'}</span></td>
                               <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getFrequencyBadgeColor(addon.frequency_type || addon.frequency)}`}>{addon.frequency_type || addon.frequency || 'Monthly'}</span></td>
                               <td className="px-4 py-4"><span className="text-sm text-gray-600">{addon.frequency_count || addon.visits || '12'}x</span></td>
