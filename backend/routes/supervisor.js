@@ -77,20 +77,21 @@ router.post('/login', async (req, res) => {
           }
         }
 
-        // If no linked user but fp_employee has password_hash
-        if (!user && fpSup.password_hash) {
+        // If no linked user but fp_employee has password
+        if (!user && (fpSup.password_hash || fpSup.password)) {
           user = {
             id: fpSup.user_id || fpSup.id,
             username: fpSup.username,
             email: fpSup.email,
-            password_hash: fpSup.password_hash,
+            password_hash: fpSup.password_hash || fpSup.password,
             first_name: fpSup.first_name,
             last_name: fpSup.last_name,
             role: 'supervisor',
-            is_active: fpSup.is_active
+            is_active: fpSup.is_active !== false && fpSup.is_active !== 0
           };
           userSource = 'fp_employees_direct';
           franchisePartnerId = fpSup.franchise_partner_id;
+          console.log('[Supervisor Login] Using fp_employees direct, FP:', franchisePartnerId);
         }
       }
     }
