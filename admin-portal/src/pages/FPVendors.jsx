@@ -283,16 +283,7 @@ const FPVendors = ({ user }) => {
                       <p className="font-semibold text-gray-900">{vendor.ownerName || vendor.owner_name || '-'}</p>
                       <p className="text-xs text-gray-400">{vendor.vendorId || vendor.vendor_id}</p>
                     </td>
-                    <td className="px-4 py-4">
-                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${
-                        (vendor.serviceType || vendor.service_type) === 'HVAC' ? 'bg-blue-100 text-blue-700' :
-                        (vendor.serviceType || vendor.service_type) === 'Security' ? 'bg-teal-100 text-teal-700' :
-                        (vendor.serviceType || vendor.service_type) === 'Electrical' ? 'bg-yellow-100 text-yellow-700' :
-                        (vendor.serviceType || vendor.service_type) === 'Plumbing' ? 'bg-cyan-100 text-cyan-700' :
-                        (vendor.serviceType || vendor.service_type) === 'Cleaning' ? 'bg-pink-100 text-pink-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>{vendor.serviceType || vendor.service_type || '-'}</span>
-                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-700">{vendor.serviceType || vendor.service_type || '-'}</td>
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                       {vendor.zone_name || vendor.zone || '-'}
                     </td>
