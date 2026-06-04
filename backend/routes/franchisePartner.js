@@ -491,17 +491,34 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
       return res.status(400).json({ success: false, message: 'Vendor ID is required' });
     }
 
-    // Verify property belongs to this FP and get full details
-    const [property] = await pool.execute(
-      `SELECT id, property_id, name, property_type, address, city, state, zip_code, zone_id, 
+    // Verify property belongs to this FP - check both properties and onboarded_properties
+    let property = [];
+    let propertySource = 'properties';
+    
+    // First check properties table
+    [property] = await pool.execute(
+      `SELECT id, property_id, name, property_type, address, city, state, zip_code as zipcode, zone_id, 
               contact_person, contact_phone, contact_email 
        FROM properties WHERE id = ? AND franchise_partner_id = ?`,
       [id, req.fpId]
     );
 
+    // If not found, check onboarded_properties table
+    if (property.length === 0) {
+      [property] = await pool.execute(
+        `SELECT id, property_id, community_name as name, property_type, address, city, state, pincode as zipcode, zone as zone_id,
+                contact_person, contact_phone, contact_email 
+         FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+      propertySource = 'onboarded_properties';
+    }
+
     if (property.length === 0) {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
+    
+    console.log('[Assign Vendor] Property found in:', propertySource, 'ID:', id);
 
     // Verify vendor belongs to this FP (check onboarded_vendors table)
     const [vendor] = await pool.execute(

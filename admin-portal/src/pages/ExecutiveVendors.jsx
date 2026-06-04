@@ -142,14 +142,13 @@ const ExecutiveVendors = ({ user }) => {
                 <tr>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Vendor ID</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Service Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Zone</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Area</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Coverage/Day</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -160,24 +159,11 @@ const ExecutiveVendors = ({ user }) => {
                       <p className="text-xs text-gray-400">{vendor.vendor_id}</p>
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-700">{vendor.service_type || '-'}</td>
-                    <td className="py-3 px-4">
-                      <p className="text-sm text-gray-700">{vendor.contact_person || '-'}</p>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{vendor.zone_name || '-'}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{vendor.city || vendor.area || '-'}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{vendor.coverage_per_day || '-'}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">{vendor.created_by_name || '-'}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-gray-500">{formatDate(vendor.created_at)}</span>
-                    </td>
+                    <td className="py-4 px-4 text-sm text-gray-700">{vendor.zone || vendor.zone_name || '-'}</td>
+                    <td className="py-4 px-4 text-sm text-gray-700">{vendor.area || vendor.area_name || '-'}</td>
+                    <td className="py-4 px-4 text-sm text-gray-700">{vendor.coverage_per_day || '-'}</td>
+                    <td className="py-4 px-4 text-sm text-gray-700">{vendor.created_by_name || '-'}</td>
+                    <td className="py-4 px-4 text-sm text-gray-500">{formatDate(vendor.created_at)}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${vendor.status === 'active' || vendor.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                         {vendor.status === 'active' || vendor.is_active ? 'Active' : 'Inactive'}
@@ -250,10 +236,6 @@ const ExecutiveVendors = ({ user }) => {
                   <div>
                     <p className="text-xs text-gray-500">Area</p>
                     <p className="font-medium text-gray-900">{selectedVendor.area || selectedVendor.area_name || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Division</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.division || '-'}</p>
                   </div>
                 </div>
               </div>
