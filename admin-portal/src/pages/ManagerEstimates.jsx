@@ -22,8 +22,24 @@ const matchPropertyType = (value, filterId) => {
   const normalize = (str) => str.toLowerCase().replace(/[_\s-]/g, '');
   const filterOption = PROPERTY_TYPE_OPTIONS.find(t => t.id === filterId);
   const normalizedValue = normalize(value);
+  const aliases = {
+    gc: ['gc', 'gatedcommunity'],
+    gatedcommunity: ['gc', 'gatedcommunity'],
+    apartment: ['apt', 'apartment'],
+    apt: ['apt', 'apartment'],
+    villa: ['villa', 'villas'],
+    villas: ['villa', 'villas'],
+    flat: ['flat', 'flats'],
+    flats: ['flat', 'flats'],
+    plot: ['plot', 'plots'],
+    plots: ['plot', 'plots']
+  };
+  const normalizedFilter = normalize(filterId);
+  const filterAliases = aliases[normalizedFilter] || [normalizedFilter];
+  const valueAliases = aliases[normalizedValue] || [normalizedValue];
   return normalize(filterId) === normalizedValue || 
-         (filterOption && normalize(filterOption.label) === normalizedValue);
+         (filterOption && normalize(filterOption.label) === normalizedValue) ||
+         filterAliases.some(alias => valueAliases.includes(alias));
 };
 
 const BILLING_DURATIONS = [
@@ -213,11 +229,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
               {(() => {
                 const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
-                const filteredPkgs = propertyType ? amcPackages.filter(pkg => {
-                  const pkgType = (pkg.property_type || pkg.propertyType || '').toUpperCase();
-                  const searchType = propertyType.toUpperCase();
-                  return pkgType === searchType || pkgType === 'GC' && searchType === 'GC';
-                }) : amcPackages;
+                const filteredPkgs = propertyType ? amcPackages.filter(pkg => matchPropertyType(pkg.property_type || pkg.propertyType, propertyType)) : amcPackages;
                 const otherPkgs = propertyType ? amcPackages.filter(pkg => !filteredPkgs.includes(pkg)) : [];
                 return (<>
                   {filteredPkgs.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}</optgroup>}
@@ -241,11 +253,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               <option value="">+ Select Add-on to add</option>
               {(() => {
                 const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
-                const filteredAddons = propertyType ? addons.filter(addon => {
-                  const addonType = (addon.property_type || addon.propertyType || '').toUpperCase();
-                  const searchType = propertyType.toUpperCase();
-                  return addonType === searchType || addonType === 'GC' && searchType === 'GC';
-                }) : addons;
+                const filteredAddons = propertyType ? addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType)) : addons;
                 const otherAddons = propertyType ? addons.filter(addon => !filteredAddons.includes(addon)) : [];
                 return (<>
                   {filteredAddons.length > 0 && propertyType && <optgroup label={`For ${propertyType}`}>{filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}</optgroup>}
