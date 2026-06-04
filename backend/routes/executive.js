@@ -33,13 +33,26 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find executive user (include franchise_partner_id for FP linking)
-    const [users] = await pool.query(
+    // First check users table
+    let [users] = await pool.query(
       `SELECT id, username, email, password_hash, first_name, last_name, role, is_active, franchise_partner_id
        FROM users 
        WHERE (username = ? OR email = ?) AND role = 'executive'`,
       [username, username]
     );
+
+    let userSource = 'users';
+
+    // If not found in users, check fp_employees table
+    if (users.length === 0) {
+      [users] = await pool.query(
+        `SELECT id, username, email, password as password_hash, first_name, last_name, role, is_active, franchise_partner_id
+         FROM fp_employees 
+         WHERE (username = ? OR email = ?) AND role = 'executive'`,
+        [username, username]
+      );
+      userSource = 'fp_employees';
+    }
 
     if (users.length === 0) {
       return res.status(401).json({
@@ -49,8 +62,9 @@ router.post('/login', async (req, res) => {
     }
 
     const user = users[0];
+    console.log('[Executive Login] Found user in:', userSource, 'ID:', user.id, 'FP:', user.franchise_partner_id);
 
-    if (!user.is_active) {
+    if (!user.is_active && user.is_active !== undefined) {
       return res.status(401).json({
         success: false,
         message: 'Account is inactive'
