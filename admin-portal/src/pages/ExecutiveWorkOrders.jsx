@@ -213,34 +213,13 @@ const ExecutiveWorkOrders = ({ user }) => {
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-500">{formatDate(wo.created_at)}</td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        {/* Pending Tab: View Details only */}
-                        {viewType === 'pending' && (
-                          <button 
-                            onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
-                            className="flex items-center gap-1 px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                          >
-                            <Eye className="w-4 h-4" />
-                            <span>View Details</span>
-                          </button>
-                        )}
-                        
-                        {/* Completed Tab: View Only - No actions */}
-                        {viewType === 'completed' && (
-                          <span className="text-xs text-gray-400 italic">View Only</span>
-                        )}
-                        
-                        {/* All Tab: View Details */}
-                        {viewType === 'all' && (
-                          <button 
-                            onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
-                            className="flex items-center gap-1 px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                          >
-                            <Eye className="w-4 h-4" />
-                            <span>View</span>
-                          </button>
-                        )}
-                      </div>
+                      <button 
+                        onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
+                        className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>View</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
