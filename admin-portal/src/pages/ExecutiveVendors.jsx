@@ -1,10 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Phone, Mail, MapPin, Eye, Calendar } from 'lucide-react';
+import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Eye, Wrench, Zap, Wind, Sparkles, Shield } from 'lucide-react';
+
+const SERVICE_TYPES = [
+  { id: 'all', label: 'All Vendors', icon: Store },
+  { id: 'Plumbing', label: 'Plumbing', icon: Wrench },
+  { id: 'Electrical', label: 'Electrical', icon: Zap },
+  { id: 'HVAC', label: 'HVAC', icon: Wind },
+  { id: 'Cleaning', label: 'Cleaning', icon: Sparkles },
+  { id: 'Security', label: 'Security', icon: Shield },
+];
 
 const ExecutiveVendors = ({ user }) => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [serviceFilter, setServiceFilter] = useState('all');
+  const [zoneFilter, setZoneFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -26,43 +38,96 @@ const ExecutiveVendors = ({ user }) => {
 
   useEffect(() => { fetchVendors(); }, []);
 
-  const viewVendorDetails = (vendor) => {
-    setSelectedVendor(vendor);
-    setShowDetailModal(true);
-  };
+  const viewVendorDetails = (vendor) => { setSelectedVendor(vendor); setShowDetailModal(true); };
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(dateString).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      active: 'bg-green-100 text-green-700',
-      inactive: 'bg-gray-100 text-gray-600',
-      pending: 'bg-yellow-100 text-yellow-700'
-    };
-    return colors[status] || colors.active;
+  const zones = [...new Set(vendors.map(v => v.zone || v.zone_name).filter(Boolean))];
+  
+  const getServiceCount = (type) => {
+    if (type === 'all') return vendors.length;
+    return vendors.filter(v => v.service_type?.toLowerCase() === type.toLowerCase()).length;
   };
 
-  const filteredVendors = vendors.filter(v => v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) || v.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) || v.vendor_id?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredVendors = vendors.filter(v => {
+    const matchSearch = !searchTerm || 
+      v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.owner_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.vendor_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.zone?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchService = serviceFilter === 'all' || v.service_type?.toLowerCase() === serviceFilter.toLowerCase();
+    const matchZone = zoneFilter === 'all' || v.zone === zoneFilter || v.zone_name === zoneFilter;
+    const matchStatus = statusFilter === 'all' || (statusFilter === 'active' ? (v.status === 'active' || v.is_active) : v.status !== 'active');
+    return matchSearch && matchService && matchZone && matchStatus;
+  });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div><h1 className="text-2xl font-bold text-gray-900">Vendor Management</h1><p className="text-gray-500 mt-1">View and manage vendors</p></div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Vendor Details</h1>
+          <p className="text-indigo-600 text-sm">{vendors.length} total vendors</p>
+        </div>
+        <button onClick={fetchVendors} className="p-2 hover:bg-gray-100 rounded-lg" title="Refresh">
+          <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {message.text && (
-        <div className={`p-4 rounded-lg flex items-center gap-3 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-          {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+        <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
           <span>{message.text}</span>
           <button onClick={() => setMessage({ type: '', text: '' })} className="ml-auto"><X className="w-4 h-4" /></button>
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search vendors..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" /></div>
+      {/* Service Type Tabs */}
+      <div className="flex items-center gap-4 border-b border-gray-200 overflow-x-auto pb-0">
+        {SERVICE_TYPES.map(type => {
+          const Icon = type.icon;
+          const count = getServiceCount(type.id);
+          const isActive = serviceFilter === type.id;
+          return (
+            <button
+              key={type.id}
+              onClick={() => setServiceFilter(type.id)}
+              className={`flex items-center gap-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                isActive ? 'text-indigo-600 border-indigo-500' : 'text-gray-500 border-transparent hover:text-gray-700'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {type.label}
+              <span className={`px-1.5 py-0.5 rounded text-xs ${isActive ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[250px] relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name, ID, service, or zone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+        <select value={zoneFilter} onChange={(e) => setZoneFilter(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+          <option value="all">All Zones</option>
+          {zones.map(z => <option key={z} value={z}>{z}</option>)}
+        </select>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+          <option value="active">Active Vendors</option>
+          <option value="all">All Status</option>
+          <option value="inactive">Inactive</option>
+        </select>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
