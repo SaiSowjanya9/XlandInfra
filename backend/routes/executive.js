@@ -212,13 +212,18 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
     if (franchisePartnerId) {
       // FP Executive - get all FP properties
       const [rows] = await pool.query(
-        `SELECT p.*, z.name as zone_name, 
+        `SELECT p.id, p.property_id, p.name, p.property_type,
+                COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area, 
+                p.division_id as division, p.number_of_units as units,
+                p.address, p.city, p.state, p.zip_code,
+                p.contact_person, p.contact_phone, p.contact_email,
                 COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+                p.created_at, p.status, TRUE as is_active,
                 'fp' as access_type, FALSE as can_modify, FALSE as can_delete,
                 FALSE as can_assign_vendor, FALSE as can_assign_employee,
                 'properties' as source_table
          FROM properties p
-         LEFT JOIN zones z ON p.zone_id = z.id
+         LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
          WHERE p.franchise_partner_id = ?
          ORDER BY p.created_at DESC`,
@@ -228,13 +233,18 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
     } else {
       // Regular Executive - get own and assigned properties
       const [rows] = await pool.query(
-        `SELECT p.*, z.name as zone_name, 
+        `SELECT p.id, p.property_id, p.name, p.property_type,
+                COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area,
+                p.division_id as division, p.number_of_units as units,
+                p.address, p.city, p.state, p.zip_code,
+                p.contact_person, p.contact_phone, p.contact_email,
                 COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+                p.created_at, p.status, TRUE as is_active,
                 'own' as access_type, TRUE as can_modify, FALSE as can_delete,
                 FALSE as can_assign_vendor, FALSE as can_assign_employee,
                 'properties' as source_table
          FROM properties p
-         LEFT JOIN zones z ON p.zone_id = z.id
+         LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
          WHERE p.executive_id = ?
          ORDER BY p.created_at DESC`,
@@ -249,12 +259,12 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
       const scopeColumn = franchisePartnerId ? 'franchise_partner_id' : 'executive_id';
       const scopeId = franchisePartnerId || executiveId;
       const [rows] = await pool.execute(
-        `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
-                op.zone_id as zone_name, op.area_name as area, op.division, op.total_units as units,
-                op.address, op.city, op.state, op.pincode as zip_code,
+        `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
+                op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
+                op.address, op.city, op.state, op.postal_code as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
                 COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
-                op.created_at, op.status,
+                op.created_at, op.status, TRUE as is_active,
                 'own' as access_type, FALSE as can_modify, FALSE as can_delete,
                 FALSE as can_assign_vendor, FALSE as can_assign_employee,
                 'onboarded_properties' as source_table
