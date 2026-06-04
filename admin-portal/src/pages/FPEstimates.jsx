@@ -136,19 +136,32 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Export FP estimate to PDF with properly formatted data
   const handleExportPDF = (estimate) => {
+    console.log('Export PDF - Full estimate:', estimate);
+    
     // Parse addons from multiple possible sources (no prices shown)
     let addonsArray = [];
     
     // Try estimate.addons first (from backend enrichment)
     if (estimate.addons && Array.isArray(estimate.addons) && estimate.addons.length > 0) {
+      console.log('Found addons array:', estimate.addons);
       addonsArray = estimate.addons;
     }
     // Try addons_data JSON string
     else if (estimate.addons_data) {
+      console.log('Found addons_data:', estimate.addons_data);
       try {
         const parsed = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
+        console.log('Parsed addons_data:', parsed);
         if (Array.isArray(parsed)) addonsArray = parsed;
       } catch (e) { console.log('Addon parse error:', e); }
+    }
+    // Try selected_addons JSON string
+    else if (estimate.selected_addons) {
+      console.log('Found selected_addons:', estimate.selected_addons);
+      try {
+        const parsed = typeof estimate.selected_addons === 'string' ? JSON.parse(estimate.selected_addons) : estimate.selected_addons;
+        if (Array.isArray(parsed)) addonsArray = parsed;
+      } catch (e) { console.log('Selected addons parse error:', e); }
     }
     
     // Parse package services from multiple sources

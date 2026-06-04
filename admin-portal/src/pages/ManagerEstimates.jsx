@@ -336,7 +336,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType || pkgPropertyType;
                 const filteredAddons = propertyType ? addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType)) : addons;
                 return (<>
-                  {filteredAddons.length > 0 && filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)} - {formatCurrency(getAddonPrice(addon))}</option>)}
+                  {filteredAddons.length > 0 && filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)}</option>)}
                   {propertyType && filteredAddons.length === 0 && <option disabled>No add-ons available for {propertyType}</option>}
                   {!propertyType && <option disabled>Select property type first</option>}
                 </>);
@@ -354,7 +354,6 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                     <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th>
                     <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th>
                     <th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th>
-                    <th className="px-5 py-2.5 text-right text-xs font-semibold text-blue-600 uppercase">Price</th>
                     <th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">Action</th>
                   </tr>
                 </thead>
@@ -368,7 +367,6 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                         <td className="px-5 py-2.5 text-gray-800">{getAddonName(addon)}</td>
                         <td className="px-5 py-2.5 text-gray-600">{freqType}</td>
                         <td className="px-5 py-2.5 text-center text-gray-600">{addon.frequency_count || addon.frequencyCount || getFrequencyVisits(freqType)}</td>
-                        <td className="px-5 py-2.5 text-right text-gray-800">{formatCurrency(getAddonPrice(addon))}</td>
                         <td className="px-5 py-2.5 text-center">
                           <button onClick={() => setSelectedAddons(selectedAddons.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                         </td>
@@ -378,9 +376,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 </tbody>
                 <tfoot className="bg-blue-50 border-t border-blue-200">
                   <tr>
-                    <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons</td>
+                    <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
                     <td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0))}</td>
-                    <td></td>
                   </tr>
                 </tfoot>
               </table>
