@@ -122,10 +122,10 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
     
     console.log('[Coordinator Dashboard] scopeId:', scopeId, 'scopeColumn:', scopeColumn, 'fpId:', franchisePartnerId);
 
-    // Get counts - filter by FP or Coordinator scope
+    // Get counts - use franchise_partner_id for all tables
     const [propertiesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM properties WHERE ${scopeColumn} = ?`,
-      [scopeId]
+      `SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ?`,
+      [franchisePartnerId]
     );
     
     // Count onboarded_properties separately (no franchise_partner_id column)
@@ -134,43 +134,40 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
     );
 
     const [vendorsCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE ${scopeColumn} = ?`,
-      [scopeId]
+      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ?`,
+      [franchisePartnerId]
     );
 
     const [customersCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM clients WHERE ${scopeColumn} = ?`,
-      [scopeId]
+      `SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?`,
+      [franchisePartnerId]
     );
 
-    // For FP Coordinators, count FP employees; for standalone, count coordinator employees
-    const employeeTable = req.isFPCoordinator ? 'fp_employees' : 'coordinator_employees';
-    const employeeScopeCol = req.isFPCoordinator ? 'franchise_partner_id' : 'coordinator_id';
     const [employeesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM ${employeeTable} WHERE ${employeeScopeCol} = ? AND is_active = 1`,
-      [scopeId]
+      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ?`,
+      [franchisePartnerId]
     );
 
     const [workOrdersCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM work_orders WHERE ${scopeColumn} = ?`,
-      [scopeId]
+      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ?`,
+      [franchisePartnerId]
     );
 
     const [pendingWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
-       WHERE ${scopeColumn} = ? AND status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
-      [scopeId]
+       WHERE franchise_partner_id = ? AND status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
+      [franchisePartnerId]
     );
 
     const [completedWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
-       WHERE ${scopeColumn} = ? AND status IN ('completed', 'closed')`,
-      [scopeId]
+       WHERE franchise_partner_id = ? AND status IN ('completed', 'closed')`,
+      [franchisePartnerId]
     );
 
     const [estimatesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM estimates WHERE ${scopeColumn} = ?`,
-      [scopeId]
+      `SELECT COUNT(*) as count FROM estimates WHERE franchise_partner_id = ?`,
+      [franchisePartnerId]
     );
 
     // Get recent work orders
@@ -179,10 +176,10 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
-       WHERE wo.${scopeColumn} = ?
+       WHERE wo.franchise_partner_id = ?
        ORDER BY wo.created_at DESC
        LIMIT 5`,
-      [scopeId]
+      [franchisePartnerId]
     );
 
     res.json({
