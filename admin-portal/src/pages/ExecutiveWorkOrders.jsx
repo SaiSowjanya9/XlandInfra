@@ -1,19 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import {
-  ClipboardList, Plus, Search, Filter, RefreshCw, X, Save, AlertCircle,
-  CheckCircle, ChevronDown, Clock, CheckCircle2, Eye
+  ClipboardList, Plus, Search, RefreshCw, X, Save, AlertCircle,
+  CheckCircle, Clock, Eye
 } from 'lucide-react';
 
 const ExecutiveWorkOrders = ({ user }) => {
-  const location = useLocation();
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [activeTab, setActiveTab] = useState('pending');
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
@@ -23,14 +22,7 @@ const ExecutiveWorkOrders = ({ user }) => {
     priority: 'medium', permissionToEnter: 'no', hasPet: 'no', scheduledDate: ''
   });
 
-  const viewType = location.pathname.includes('/pending') ? 'pending' : location.pathname.includes('/completed') ? 'completed' : 'all';
   const token = sessionStorage.getItem('pm_auth_token');
-
-  const statusOptions = [
-    { value: '', label: 'All Status' }, { value: 'draft', label: 'Draft' }, { value: 'requested', label: 'Requested' },
-    { value: 'under_review', label: 'Under Review' }, { value: 'assigned', label: 'Assigned' }, { value: 'accepted', label: 'Accepted' },
-    { value: 'in_progress', label: 'In Progress' }, { value: 'completed', label: 'Completed' }, { value: 'closed', label: 'Closed' }
-  ];
 
   const priorityOptions = [
     { value: 'low', label: 'Low', color: 'bg-green-100 text-green-700' },
@@ -42,13 +34,9 @@ const ExecutiveWorkOrders = ({ user }) => {
   const fetchWorkOrders = async () => {
     setLoading(true);
     try {
-      let endpoint = '/api/executive/work-orders';
-      if (viewType === 'pending') endpoint = '/api/executive/work-orders/pending';
-      else if (viewType === 'completed') endpoint = '/api/executive/work-orders/completed';
-      else if (statusFilter) endpoint += `?status=${statusFilter}`;
-      const response = await fetch(endpoint, { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch('/api/executive/work-orders', { headers: { 'Authorization': `Bearer ${token}` } });
       const result = await response.json();
-      if (result.success) setWorkOrders(result.data);
+      if (result.success) setWorkOrders(result.data || []);
     } catch (error) {
       console.error('Fetch work orders error:', error);
     } finally {
@@ -72,7 +60,37 @@ const ExecutiveWorkOrders = ({ user }) => {
     }
   };
 
-  useEffect(() => { fetchWorkOrders(); fetchDependencies(); }, [viewType, statusFilter]);
+  useEffect(() => { fetchWorkOrders(); fetchDependencies(); }, []);
+
+  // Count work orders by status
+  const pendingCount = workOrders.filter(wo => 
+    ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)
+  ).length;
+  const completedCount = workOrders.filter(wo => 
+    ['completed', 'verified', 'closed'].includes(wo.status)
+  ).length;
+
+  // Filter work orders by active tab and search term
+  const filteredWorkOrders = workOrders.filter(wo => {
+    const isPending = ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status);
+    const isCompleted = ['completed', 'verified', 'closed'].includes(wo.status);
+    
+    if (activeTab === 'pending' && !isPending) return false;
+    if (activeTab === 'completed' && !isCompleted) return false;
+
+    if (searchTerm) {
+      return (
+        wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        wo.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    return true;
+  });
+
+  const handleSearch = () => setSearchTerm(searchInput);
+  const handleClear = () => { setSearchInput(''); setSearchTerm(''); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -128,28 +146,17 @@ const ExecutiveWorkOrders = ({ user }) => {
   const getPriorityColor = (priority) => priorityOptions.find(p => p.value === priority)?.color || 'bg-gray-100 text-gray-700';
   const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
-  const filteredWorkOrders = workOrders.filter(wo =>
-    wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getViewTitle = () => viewType === 'pending' ? 'Pending Work Orders' : viewType === 'completed' ? 'Completed Work Orders' : 'All Work Orders';
-  const getViewIcon = () => viewType === 'pending' ? Clock : viewType === 'completed' ? CheckCircle2 : ClipboardList;
-  const ViewIcon = getViewIcon();
-
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${viewType === 'pending' ? 'bg-orange-100' : viewType === 'completed' ? 'bg-green-100' : 'bg-indigo-100'}`}>
-            <ViewIcon className={`w-5 h-5 ${viewType === 'pending' ? 'text-orange-600' : viewType === 'completed' ? 'text-green-600' : 'text-indigo-600'}`} />
-          </div>
-          <div><h1 className="text-2xl font-bold text-gray-900">{getViewTitle()}</h1><p className="text-gray-500 mt-1">Manage your work orders</p></div>
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+          <ClipboardList className="w-6 h-6 text-white" />
         </div>
-        <button onClick={() => { resetForm(); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-          <Plus className="w-4 h-4" /><span>Create Work Order</span>
-        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
+          <p className="text-gray-500">Manage and track all work orders</p>
+        </div>
       </div>
 
       {message.text && (
@@ -160,22 +167,65 @@ const ExecutiveWorkOrders = ({ user }) => {
         </div>
       )}
 
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'pending'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Pending</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${
+            activeTab === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+          }`}>{pendingCount}</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('completed')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'completed'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <CheckCircle className="w-4 h-4" />
+          <span>Completed</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${
+            activeTab === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+          }`}>{completedCount}</span>
+        </button>
+        <button
+          onClick={() => { resetForm(); setActiveTab('create'); setShowModal(true); }}
+          className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Create Work Order</span>
+        </button>
+      </div>
+
+      {/* Search Bar */}
       <div className="bg-white rounded-xl border border-gray-100 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input type="text" placeholder="Search work orders..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+            <input 
+              type="text" 
+              placeholder="Search by Work Order ID, category, or name..." 
+              value={searchInput} 
+              onChange={(e) => setSearchInput(e.target.value)} 
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
+            />
           </div>
-          {viewType === 'all' && (
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-9 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 appearance-none bg-white">
-                {statusOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-          )}
-          <button onClick={fetchWorkOrders} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"><RefreshCw className="w-4 h-4" /><span>Refresh</span></button>
+          <button onClick={handleSearch} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <Search className="w-4 h-4" /><span>Search</span>
+          </button>
+          <button onClick={handleClear} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <RefreshCw className="w-4 h-4" /><span>Clear</span>
+          </button>
         </div>
       </div>
 
@@ -187,14 +237,14 @@ const ExecutiveWorkOrders = ({ user }) => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className="border-b border-gray-100">
                 <tr>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Order ID</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Resident</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Category</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Order ID</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Resident</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Category</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,21 +254,24 @@ const ExecutiveWorkOrders = ({ user }) => {
                       <p className="font-medium text-gray-900">{wo.work_order_id}</p>
                       <p className="text-sm text-gray-500">{wo.title}</p>
                     </td>
-                    <td className="py-4 px-4 text-sm text-gray-600">{wo.client_name || wo.property_name || '-'}</td>
+                    <td className="py-4 px-4">
+                      <p className="text-sm font-medium text-gray-900">{wo.client_name || '-'}</p>
+                      <p className="text-sm text-gray-500">{wo.property_name || '-'}</p>
+                    </td>
                     <td className="py-4 px-4 text-sm text-gray-600">{wo.category_name || '-'}</td>
                     <td className="py-4 px-4">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
-                        {wo.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Pending'}
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium uppercase ${getStatusColor(wo.status)}`}>
+                        {wo.status?.replace(/_/g, ' ') || 'Pending'}
                       </span>
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-500">{formatDate(wo.created_at)}</td>
                     <td className="py-4 px-4">
                       <button 
                         onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
-                        className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800"
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="View Details"
                       >
-                        <Eye className="w-4 h-4" />
-                        <span>View</span>
+                        <Eye className="w-4 h-4 text-gray-500" />
                       </button>
                     </td>
                   </tr>

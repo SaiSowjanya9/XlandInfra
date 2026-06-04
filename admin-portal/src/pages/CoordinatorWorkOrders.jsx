@@ -429,53 +429,58 @@ const CoordinatorWorkOrders = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* Tabs Header */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="flex items-center border-b border-gray-100">
-          <Link
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+          <ClipboardList className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
+          <p className="text-gray-500">Manage and track all work orders</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-gray-200">
+        <Link
             to="/coordinator/work-orders/pending"
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               viewType === 'pending'
-                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
+                ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <Clock className="w-4 h-4" />
             <span>Pending</span>
             <span className={`px-2 py-0.5 rounded-full text-xs ${
-              viewType === 'pending' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'
+              viewType === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
             }`}>
               {pendingCount}
             </span>
           </Link>
           <Link
             to="/coordinator/work-orders/completed"
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               viewType === 'completed'
-                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
+                ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <CheckCircle2 className="w-4 h-4" />
             <span>Completed</span>
             <span className={`px-2 py-0.5 rounded-full text-xs ${
-              viewType === 'completed' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'
+              viewType === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
             }`}>
               {completedCount}
             </span>
           </Link>
           <Link
             to="/coordinator/work-orders/create"
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-              viewType === 'create'
-                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+            className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent"
           >
             <Plus className="w-4 h-4" />
-            <span>Create New</span>
+            <span>Create Work Order</span>
           </Link>
-        </div>
       </div>
 
       {/* Message */}
@@ -835,7 +840,7 @@ const CoordinatorWorkOrders = ({ user }) => {
         </div>
       )}
 
-      {/* Filters - Only show for list views */}
+      {/* Search Bar - Only show for list views */}
       {viewType !== 'create' && (
       <div className="bg-white rounded-xl border border-gray-100 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -843,33 +848,25 @@ const CoordinatorWorkOrders = ({ user }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search work orders..."
+              placeholder="Search by Work Order ID, category, or name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          {viewType === 'all' && (
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="pl-9 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 appearance-none bg-white"
-              >
-                {statusOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-          )}
           <button
             onClick={fetchWorkOrders}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Search className="w-4 h-4" />
+            <span>Search</span>
+          </button>
+          <button
+            onClick={() => setSearchTerm('')}
             className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Refresh</span>
+            <span>Clear</span>
           </button>
         </div>
       </div>
