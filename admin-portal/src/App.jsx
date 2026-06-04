@@ -441,6 +441,8 @@ function App() {
             <Route path="/executive/employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
             <Route path="/executive/estimates" element={<ExecutiveEstimates user={user} defaultTab="list" />} />
             <Route path="/executive/estimates/create" element={<ExecutiveEstimates user={user} defaultTab="create" />} />
+            <Route path="/executive/estimates/amc" element={<ExecutiveEstimates user={user} defaultTab="amc" />} />
+            <Route path="/executive/estimates/addons" element={<ExecutiveEstimates user={user} defaultTab="addons" />} />
             <Route path="/executive/estimates/archived" element={<ExecutiveEstimates user={user} defaultTab="archived" />} />
             <Route path="*" element={<Navigate to="/executive" replace />} />
           </Routes>

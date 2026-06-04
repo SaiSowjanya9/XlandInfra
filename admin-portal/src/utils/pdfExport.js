@@ -181,7 +181,7 @@ const generatePDF = (data, type, filename) => {
     doc.text(String(data.customerEmail || '-'), col1X, infoY);
     doc.setFontSize(8);
     
-    y += 40;
+    y += 50;
     } // End of property/customer details section (skipped for package type)
 
     // ===== NO OF VISITS =====
@@ -264,7 +264,7 @@ const generatePDF = (data, type, filename) => {
 
     y = doc.lastAutoTable.finalY + 8;
 
-    // ===== ADD-ONS SECTION =====
+    // ===== ADD-ONS SECTION (No individual prices shown) =====
     if (data.addons && data.addons.length > 0) {
       doc.setTextColor(...primaryColor);
       doc.setFontSize(11);
@@ -277,18 +277,16 @@ const generatePDF = (data, type, filename) => {
 
       const addonsBody = data.addons.map((addon, idx) => {
         const addonName = addon.name || addon.serviceName || addon.service_name || 'Additional Service';
-        const addonPrice = parseFloat(addon.price) || 0;
         return [
           String(idx + 1),
           addonName,
-          addon.frequencyType || addon.frequency || 'One-time',
-          `Rs. ${addonPrice.toLocaleString('en-IN')}`
+          addon.frequencyType || addon.frequency || 'One-time'
         ];
       });
 
       autoTable(doc, {
         startY: y,
-        head: [['#', 'Add-on Service', 'Frequency', 'Price']],
+        head: [['#', 'Add-on Service', 'Frequency']],
         body: addonsBody,
         margin: { left: margin, right: margin },
         styles: {
@@ -309,8 +307,7 @@ const generatePDF = (data, type, filename) => {
         columnStyles: {
           0: { cellWidth: 12, halign: 'center' },
           1: { cellWidth: 'auto' },
-          2: { cellWidth: 28, halign: 'center' },
-          3: { cellWidth: 30, halign: 'right' }
+          2: { cellWidth: 35, halign: 'center' }
         },
         alternateRowStyles: { fillColor: [250, 251, 252] }
       });
@@ -346,17 +343,13 @@ const generatePDF = (data, type, filename) => {
       y += descBoxHeight + 8;
     }
 
-    // ===== PRICE SUMMARY (Right after services to minimize whitespace) =====
+    // ===== TOTAL PRICE BOX (Only total shown - no breakdown) =====
     const summaryWidth = 100;
     const summaryX = pageWidth - margin - summaryWidth;
     
-    const subtotal = parseFloat(data.subtotal) || parseFloat(data.totalPrice) || 0;
-    const discount = parseFloat(data.discount) || 0;
-    const afterDiscount = subtotal - discount;
-    const gst = Math.round(afterDiscount * GST_RATE);
-    const total = parseFloat(data.totalPrice) || (afterDiscount + gst);
+    const total = parseFloat(data.totalPrice) || parseFloat(data.subtotal) || 0;
     
-    const summaryBoxHeight = discount > 0 ? 90 : 78;
+    const summaryBoxHeight = 45;
 
     // Outer box with subtle shadow effect
     doc.setFillColor(255, 255, 255);
@@ -371,54 +364,15 @@ const generatePDF = (data, type, filename) => {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('PRICE SUMMARY', summaryX + summaryWidth / 2, y + 9, { align: 'center' });
+    doc.text('ESTIMATE TOTAL', summaryX + summaryWidth / 2, y + 9, { align: 'center' });
     
-    let sumY = y + 24;
-    
-    // Subtotal row
-    doc.setTextColor(100, 100, 100);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('Subtotal', summaryX + 10, sumY);
-    doc.setTextColor(...darkText);
-    doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(subtotal), summaryX + summaryWidth - 10, sumY, { align: 'right' });
-    sumY += 12;
-    
-    // Discount row (if applicable)
-    if (discount > 0) {
-      doc.setTextColor(34, 139, 34); // Green for discount
-      doc.setFont('helvetica', 'normal');
-      doc.text('Discount', summaryX + 10, sumY);
-      doc.setFont('helvetica', 'bold');
-      doc.text('- ' + formatCurrency(discount), summaryX + summaryWidth - 10, sumY, { align: 'right' });
-      sumY += 12;
-    }
-    
-    // GST row
-    doc.setTextColor(100, 100, 100);
-    doc.setFont('helvetica', 'normal');
-    doc.text('GST (18%)', summaryX + 10, sumY);
-    doc.setTextColor(...darkText);
-    doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(gst), summaryX + summaryWidth - 10, sumY, { align: 'right' });
-    sumY += 8;
-    
-    // Separator line
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.5);
-    doc.line(summaryX + 8, sumY, summaryX + summaryWidth - 8, sumY);
-    sumY += 10;
-    
-    // Total bar with accent color - black text for readability
+    // Total amount - prominently displayed
     doc.setFillColor(...accentColor);
-    doc.roundedRect(summaryX + 5, sumY - 3, summaryWidth - 10, 18, 3, 3, 'F');
-    doc.setTextColor(0, 0, 0); // Black text
+    doc.roundedRect(summaryX + 5, y + 20, summaryWidth - 10, 20, 3, 3, 'F');
+    doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('TOTAL', summaryX + 12, sumY + 8);
-    doc.setFontSize(11);
-    doc.text(formatCurrency(total), summaryX + summaryWidth - 12, sumY + 8, { align: 'right' });
+    doc.setFontSize(14);
+    doc.text(formatCurrency(total), summaryX + summaryWidth / 2, y + 33, { align: 'center' });
 
     y += summaryBoxHeight + 10;
 
@@ -512,49 +466,54 @@ export const exportEstimateToPDF = (estimate) => {
     let services = [];
     
     console.log('[PDF] Estimate type:', estimate.estimateType || estimate.estimate_type);
-    console.log('[PDF] Phone fields:', { customerPhone: estimate.customerPhone, phone: estimate.phone, customer_phone: estimate.customer_phone, contactPhone: estimate.contactPhone });
+    console.log('[PDF] Package services:', estimate.packageServices);
     
-    // Check serviceRows first (package service rows from form)
-    if (estimate.serviceRows && Array.isArray(estimate.serviceRows) && estimate.serviceRows.length > 0) {
+    // PRIORITY 1: Check packageServices (services from selected AMC package)
+    if (estimate.packageServices && Array.isArray(estimate.packageServices) && estimate.packageServices.length > 0) {
+      console.log('[PDF] Using packageServices:', estimate.packageServices);
+      services = estimate.packageServices.map(s => ({
+        name: s.service || s.name || s.serviceName || 'Service',
+        frequencyCount: s.frequencyCount || s.frequency || s.visits || 1,
+        frequencyType: s.frequencyType || 'Monthly'
+      }));
+    }
+    // PRIORITY 2: Check serviceRows (package service rows from form)
+    else if (estimate.serviceRows && Array.isArray(estimate.serviceRows) && estimate.serviceRows.length > 0) {
       services = estimate.serviceRows.filter(sr => sr.service || sr.name).map(sr => ({
         name: sr.service || sr.name || 'Service',
         frequencyCount: sr.frequencyCount || sr.frequency || 1,
-        frequencyType: sr.frequencyType || 'Monthly',
-        price: parseFloat(sr.price || sr.rate || 0)
+        frequencyType: sr.frequencyType || 'Monthly'
       }));
     }
-    // Check services array (from database or form)
+    // PRIORITY 3: Check services array (from database or form)
     else if (estimate.services && Array.isArray(estimate.services) && estimate.services.length > 0) {
       console.log('[PDF] Processing services array:', estimate.services);
       services = estimate.services.map(s => {
-        // Handle nested package structure
-        if (s.type === 'package' && s.services) {
-          return {
-            name: s.name || 'Package',
-            frequencyCount: 1,
-            frequencyType: 'Yearly',
-            price: parseFloat(s.price || 0)
-          };
+        // Handle nested package structure with services inside
+        if (s.services && Array.isArray(s.services)) {
+          return s.services.map(inner => ({
+            name: inner.name || inner.service || 'Service',
+            frequencyCount: inner.frequencyCount || inner.frequency || 1,
+            frequencyType: inner.frequencyType || 'Monthly'
+          }));
         }
         // Handle addon/service structure
         return {
           name: s.name || s.service || s.serviceName || s.description || 'Service',
           frequencyCount: s.frequencyCount || s.frequency || s.visits || 1,
-          frequencyType: s.frequencyType || s.billingType || s.billing || 'Monthly',
-          price: parseFloat(s.price || s.rate || s.amount || s.total || 0)
+          frequencyType: s.frequencyType || s.billingType || s.billing || 'Monthly'
         };
-      });
+      }).flat();
     }
     
-    // If package name exists and no services, add package as main service
+    // If package name exists and no services, show package name as fallback
     if (services.length === 0 && (estimate.packageName || estimate.package_name)) {
       const pkgName = estimate.packageName || estimate.package_name;
       console.log('[PDF] Adding package as service:', pkgName);
       services.push({
-        name: pkgName,
-        frequencyCount: 1,
-        frequencyType: estimate.billingDuration || estimate.billing_duration || 'Yearly',
-        price: parseFloat(estimate.packageRate || estimate.subtotal || estimate.total || 0)
+        name: pkgName + ' - AMC Services',
+        frequencyCount: 12,
+        frequencyType: estimate.billingDuration || estimate.billing_duration || 'Yearly'
       });
     }
     
@@ -564,19 +523,25 @@ export const exportEstimateToPDF = (estimate) => {
       services.push({
         name: estimate.propertyType ? `${estimate.propertyType} Service` : 'Estimate Services',
         frequencyCount: 1,
-        frequencyType: estimate.billingDuration || 'Yearly',
-        price: parseFloat(estimate.subtotal || estimate.total || estimate.totalPrice || 0)
+        frequencyType: estimate.billingDuration || 'Yearly'
       });
     }
     
     console.log('[PDF] Final services:', services);
 
-    // Parse addons from various formats
+    // Parse addons from various formats (no prices - only names and frequency)
     let addons = [];
     if (estimate.addons && Array.isArray(estimate.addons)) {
       addons = estimate.addons.map(a => ({
-        name: a.name || a.serviceName || a.services?.[0]?.name || 'Add-on',
-        price: parseFloat(a.price || a.totalPrice || a.services?.[0]?.price || 0)
+        name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
+        frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time'
+      }));
+    }
+    // Also check selectedAddons array (from form)
+    if (addons.length === 0 && estimate.selectedAddons && Array.isArray(estimate.selectedAddons)) {
+      addons = estimate.selectedAddons.map(a => ({
+        name: a.name || a.serviceName || a.service_name || 'Add-on',
+        frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time'
       }));
     }
 

@@ -257,6 +257,25 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       </div>
 
+      {/* Tab Bar */}
+      <div className="bg-white rounded-xl border border-gray-200 p-1 flex items-center gap-1">
+        <button onClick={() => window.location.href = '/supervisor/estimates'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <List className="w-4 h-4" />All Estimates
+        </button>
+        <button onClick={() => window.location.href = '/supervisor/estimates/create'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'create' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <Plus className="w-4 h-4" />Create Estimate
+        </button>
+        <button onClick={() => window.location.href = '/supervisor/estimates/amc'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'amc' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <Package className="w-4 h-4" />AMC Packages
+        </button>
+        <button onClick={() => window.location.href = '/supervisor/estimates/addons'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'addons' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <PlusCircle className="w-4 h-4" />Add-ons
+        </button>
+        <button onClick={() => window.location.href = '/supervisor/estimates/archived'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'archived' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <Archive className="w-4 h-4" />Archived
+        </button>
+      </div>
+
       {message.text && (
         <div className={`p-4 rounded-lg flex items-center gap-3 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
           {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}

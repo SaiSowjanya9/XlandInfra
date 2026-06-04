@@ -125,7 +125,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Export FP estimate to PDF with properly formatted data
   const handleExportPDF = (estimate) => {
-    // Parse addons from multiple possible sources
+    // Parse addons from multiple possible sources (no prices shown)
     let addonsArray = [];
     
     // Try estimate.addons first (from backend enrichment)
@@ -140,7 +140,43 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       } catch (e) { console.log('Addon parse error:', e); }
     }
     
-    console.log('PDF Export - Estimate:', estimate.estimate_id, 'Division:', estimate.division, 'Addons:', addonsArray);
+    // Parse package services from multiple sources
+    let packageServices = [];
+    
+    // Try services_data JSON string (contains package services)
+    if (estimate.services_data) {
+      try {
+        const parsed = typeof estimate.services_data === 'string' ? JSON.parse(estimate.services_data) : estimate.services_data;
+        if (parsed.serviceRows && Array.isArray(parsed.serviceRows)) {
+          packageServices = parsed.serviceRows;
+        } else if (Array.isArray(parsed)) {
+          packageServices = parsed;
+        }
+      } catch (e) { console.log('Services parse error:', e); }
+    }
+    // Try package_services
+    else if (estimate.package_services) {
+      try {
+        const parsed = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+        if (Array.isArray(parsed)) packageServices = parsed;
+      } catch (e) { console.log('Package services parse error:', e); }
+    }
+    // If we have a package_id, try to find package services from amcPackages
+    else if (estimate.package_id && amcPackages.length > 0) {
+      const pkg = amcPackages.find(p => p.id?.toString() === estimate.package_id?.toString());
+      if (pkg) {
+        try {
+          const servicesData = typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services;
+          if (servicesData?.serviceRows) {
+            packageServices = servicesData.serviceRows;
+          } else if (Array.isArray(servicesData)) {
+            packageServices = servicesData;
+          }
+        } catch (e) { console.log('Package lookup error:', e); }
+      }
+    }
+    
+    console.log('PDF Export - Estimate:', estimate.estimate_id, 'Package Services:', packageServices, 'Addons:', addonsArray);
     
     // Prepare estimate data for PDF
     const pdfData = {
@@ -164,21 +200,20 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       totalPrice: parseFloat(estimate.total_amount) || 0,
       discount: parseFloat(estimate.discount_percent) || 0,
       description: estimate.description || '',
-      services: estimate.package_name ? [{
-        name: estimate.package_name,
-        frequencyCount: 1,
-        frequencyType: 'Yearly',
-        price: parseFloat(estimate.package_price) || 0
-      }] : [],
+      // Include package services (no prices)
+      packageServices: packageServices.map(s => ({
+        name: s.service || s.name || s.serviceName || 'Service',
+        frequencyCount: s.frequencyCount || s.frequency || 1,
+        frequencyType: s.frequencyType || 'Monthly'
+      })),
+      // Include addons (no prices)
       addons: addonsArray.map(a => ({
         name: a.name || a.service_name || a.serviceName || 'Add-on',
-        price: parseFloat(a.price) || 0,
-        frequencyType: a.frequency_type || a.frequencyType || 'One-time',
-        frequency: a.frequency_count || a.frequencyCount || 1
+        frequencyType: a.frequency_type || a.frequencyType || 'One-time'
       }))
     };
     
-    console.log('PDF Data addons:', pdfData.addons);
+    console.log('PDF Data:', pdfData);
     exportEstimateToPDF(pdfData);
   };
 

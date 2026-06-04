@@ -1154,6 +1154,30 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
         </div>
       </div>
+      
+      {/* Tab Bar */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center gap-1 py-3">
+            <button onClick={() => window.location.href = '/manager/estimates'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+              <List className="w-4 h-4" />All Estimates
+            </button>
+            <button onClick={() => window.location.href = '/manager/estimates/create'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'create' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+              <Plus className="w-4 h-4" />Create Estimate
+            </button>
+            <button onClick={() => window.location.href = '/manager/estimates/amc'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'amc' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+              <Package className="w-4 h-4" />AMC Packages
+            </button>
+            <button onClick={() => window.location.href = '/manager/estimates/addons'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'addons' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+              <PlusCircle className="w-4 h-4" />Add-ons
+            </button>
+            <button onClick={() => window.location.href = '/manager/estimates/archived'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'archived' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+              <Archive className="w-4 h-4" />Archived
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-6 py-6">{renderContent()}</div>
       {toast && <div className="fixed bottom-6 right-6 z-50"><div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}<span>{toast.message}</span><button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-white/20 rounded"><X className="w-4 h-4" /></button></div></div>}
       
