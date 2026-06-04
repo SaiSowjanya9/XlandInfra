@@ -54,6 +54,31 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const [estimateForm, setEstimateForm] = useState({ clientId: '', propertyId: '', title: '', description: '', estimateType: '', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
   const [amcForm, setAmcForm] = useState({ name: '', description: '', durationMonths: 12, basePrice: 0, services: '', termsConditions: '', hidePricing: true });
   const [addonForm, setAddonForm] = useState({ name: '', description: '', price: 0, unit: 'per_service', categoryId: '', hidePricing: true });
+  
+  // Property-based estimate state
+  const [propertyIdInput, setPropertyIdInput] = useState('');
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [selectedAmcPackage, setSelectedAmcPackage] = useState('');
+  const [selectedAddons, setSelectedAddons] = useState([]);
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [gstPercent, setGstPercent] = useState(18);
+
+  // Calculate price summary
+  const calculatePriceSummary = () => {
+    let subTotal = 0;
+    const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
+    if (pkg) subTotal += parseFloat(pkg.price) || 0;
+    selectedAddons.forEach(addonId => {
+      const addon = addons.find(a => a.id?.toString() === addonId);
+      if (addon) subTotal += parseFloat(addon.price) || 0;
+    });
+    const discountAmount = (subTotal * discountPercent) / 100;
+    const afterDiscount = subTotal - discountAmount;
+    const gstAmount = (afterDiscount * gstPercent) / 100;
+    const totalAmount = afterDiscount + gstAmount;
+    return { subTotal, discountAmount, gstAmount, totalAmount };
+  };
+  const priceSummary = calculatePriceSummary();
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -258,7 +283,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                             <td className="py-4 px-4">
                               <div>
                                 <p className="font-medium text-gray-900">{estimate.created_by_name || 'System'}</p>
-                                <p className="text-xs text-blue-600">{estimate.created_by_role || 'Supervisor'}</p>
+                                <p className="text-xs text-blue-600">{(estimate.created_by_role || 'supervisor').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
                               </div>
                             </td>
                             <td className="py-4 px-4">
@@ -350,32 +375,151 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                     </button>
                   </div>
                 </div>
+              ) : estimateForm.estimateType === 'property_based' ? (
+                <div className="space-y-6">
+                  {/* Estimate Details */}
+                  <div className="bg-white rounded-xl border border-gray-200">
+                    <div className="px-6 py-4 border-b border-gray-100">
+                      <h2 className="font-semibold text-gray-900">Estimate Details</h2>
+                    </div>
+                    <div className="p-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Property ID <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input 
+                          type="text" 
+                          value={propertyIdInput} 
+                          onChange={(e) => { 
+                            setPropertyIdInput(e.target.value); 
+                            const match = properties.find(p => p.property_id?.toLowerCase() === e.target.value.toLowerCase()); 
+                            setSelectedProperty(match || null); 
+                          }} 
+                          placeholder="COORD-APT-1780347062151" 
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500" 
+                        />
+                      </div>
+                      {selectedProperty && (
+                        <div className="mt-6 space-y-4">
+                          <div className="grid grid-cols-5 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Contact Name</label>
+                              <input type="text" value={selectedProperty.contact_person || selectedProperty.contact_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Property ID</label>
+                              <input type="text" value={selectedProperty.property_id || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Entry Type</label>
+                              <input type="text" value={selectedProperty.entry_type || selectedProperty.property_type?.substring(0,3).toUpperCase() || 'GC'} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Zone</label>
+                              <input type="text" value={selectedProperty.zone_id || selectedProperty.zone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Area</label>
+                              <input type="text" value={selectedProperty.area || selectedProperty.area_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-5 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Community Name</label>
+                              <input type="text" value={selectedProperty.name || selectedProperty.community_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Division</label>
+                              <input type="text" value={selectedProperty.division || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Property Type</label>
+                              <input type="text" value={selectedProperty.property_type || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Units</label>
+                              <input type="text" value={selectedProperty.units || selectedProperty.total_units || selectedProperty.number_of_units || '1'} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">City</label>
+                              <input type="text" value={selectedProperty.city || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* AMC Package */}
+                  <div className="bg-white rounded-xl border border-gray-200">
+                    <div className="px-6 py-4 border-b border-gray-100">
+                      <h2 className="font-semibold text-gray-900">AMC Package</h2>
+                    </div>
+                    <div className="p-6 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Select AMC Package <span className="text-red-500">*</span></label>
+                        <select value={selectedAmcPackage} onChange={(e) => setSelectedAmcPackage(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200">
+                          <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                          {amcPackages.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Add Service from Add-ons</label>
+                        <select onChange={(e) => { if (e.target.value && !selectedAddons.includes(e.target.value)) { setSelectedAddons([...selectedAddons, e.target.value]); } e.target.value = ''; }} className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200">
+                          <option value="">+ Select Add-on to add</option>
+                          {addons.map(addon => <option key={addon.id} value={addon.id}>{addon.name} - {formatCurrency(addon.price)}</option>)}
+                        </select>
+                      </div>
+                      {selectedAddons.length === 0 ? (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+                          <p className="text-amber-700">No add-ons selected. Use the dropdown above to add services.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {selectedAddons.map(addonId => {
+                            const addon = addons.find(a => a.id?.toString() === addonId);
+                            return addon ? (
+                              <div key={addonId} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <span className="text-blue-800">{addon.name}</span>
+                                <div className="flex items-center gap-3">
+                                  <span className="font-medium text-blue-700">{formatCurrency(addon.price)}</span>
+                                  <button onClick={() => setSelectedAddons(selectedAddons.filter(id => id !== addonId))} className="text-red-500 hover:text-red-700"><X className="w-4 h-4" /></button>
+                                </div>
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Footer Buttons */}
+                  <div className="flex justify-end gap-3">
+                    <button type="button" onClick={() => { setEstimateForm({ ...estimateForm, estimateType: 'select' }); setPropertyIdInput(''); setSelectedProperty(null); setSelectedAmcPackage(''); setSelectedAddons([]); }} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
+                    <button type="button" onClick={handleEstimateSubmit} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save</button>
+                  </div>
+                </div>
               ) : (
                 <form onSubmit={handleEstimateSubmit} className="space-y-6">
                   <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Estimate Details</h3></div>
+                    <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Customer Information</h3></div>
                     <div className="p-6">
-                      {estimateForm.estimateType === 'property_based' ? (
-                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Property ID <span className="text-red-500">*</span></label><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Type Property ID (e.g., GC-2024-001)" value={estimateForm.propertyId} onChange={(e) => setEstimateForm({ ...estimateForm, propertyId: e.target.value })} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div></div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Customer Name <span className="text-red-500">*</span></label><input type="text" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Customer name" /></div>
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input type="text" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Phone number" /></div>
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Email address" /></div>
-                        </div>
-                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Customer Name <span className="text-red-500">*</span></label><input type="text" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Customer name" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input type="text" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Phone number" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Email address" /></div>
+                      </div>
                     </div>
                   </div>
                   <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">AMC Package</h3></div>
                     <div className="p-6 space-y-4">
-                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Select AMC Package <span className="text-red-500">*</span></label><select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"><option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>{amcPackages.map((pkg) => (<option key={pkg.id} value={pkg.id}>{pkg.name}</option>))}</select></div>
-                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Add Service from Add-ons</label><select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"><option value="">+ Select Add-on to add</option>{addons.map((addon) => (<option key={addon.id} value={addon.id}>{addon.name}</option>))}</select><div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center text-sm text-amber-700">No add-ons selected. Use the dropdown above to add services.</div></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Select AMC Package <span className="text-red-500">*</span></label><select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg"><option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>{amcPackages.map((pkg) => (<option key={pkg.id} value={pkg.id}>{pkg.name}</option>))}</select></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Add Service from Add-ons</label><select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg"><option value="">+ Select Add-on to add</option>{addons.map((addon) => (<option key={addon.id} value={addon.id}>{addon.name}</option>))}</select><div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center text-sm text-amber-700">No add-ons selected. Use the dropdown above to add services.</div></div>
                     </div>
                   </div>
                   <div className="flex justify-end gap-3">
                     <button type="button" onClick={() => setEstimateForm({ ...estimateForm, estimateType: 'select' })} className="px-6 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
-                    <button type="submit" className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium">Save</button>
+                    <button type="submit" className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save</button>
                   </div>
                 </form>
               )}
@@ -450,7 +594,17 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {(filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType))).map((pkg) => {
-                          const servicesText = pkg.services || (pkg.services_data ? pkg.services_data.map(s => s.name).join(', ') : '-');
+                          // Handle services - could be string, array, or object
+                          let servicesText = '-';
+                          if (typeof pkg.services === 'string') {
+                            servicesText = pkg.services;
+                          } else if (Array.isArray(pkg.services)) {
+                            servicesText = pkg.services.map(s => typeof s === 'string' ? s : s.name || s.service || '').join(', ');
+                          } else if (pkg.services_data && Array.isArray(pkg.services_data)) {
+                            servicesText = pkg.services_data.map(s => s.name || s.service || '').join(', ');
+                          } else if (pkg.serviceRows && Array.isArray(pkg.serviceRows)) {
+                            servicesText = pkg.serviceRows.map(s => s.service || s.name || '').join(', ');
+                          }
                           const getBillingBadgeColor = (billing) => {
                             switch(billing) {
                               case 'monthly': return 'bg-blue-100 text-blue-700 border-blue-200';
