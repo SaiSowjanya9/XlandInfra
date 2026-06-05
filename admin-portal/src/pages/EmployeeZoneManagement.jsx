@@ -399,7 +399,7 @@ const EmployeeZoneManagement = () => {
                   className={`w-full py-2.5 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
                     hasZones
                       ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                      : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-200'
                   }`}
                 >
                   <Edit3 className="w-4 h-4" />
