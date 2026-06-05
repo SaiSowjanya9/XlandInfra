@@ -320,13 +320,43 @@ const VendorDetails = () => {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header with FP Switcher */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Vendor Details</h1>
-          <p className="text-gray-500 text-sm mt-1">{vendors.length} vendors for {selectedFp.companyName}</p>
+          <p className="text-gray-500 text-sm mt-1">{vendors.length} total vendors</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* FP Switcher */}
+          <div className="relative">
+            <button
+              onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm hover:border-gray-300 transition-all"
+            >
+              <div className="w-2 h-2 rounded-full bg-slate-500"></div>
+              <span className="font-medium text-gray-700">{selectedFp.fpId}</span>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {fpDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto">
+                {fpList.map(fp => (
+                  <button
+                    key={fp.id}
+                    onClick={() => handleFpSelect(fp)}
+                    className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
+                      selectedFp.id === fp.id ? 'bg-slate-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-gray-800">{fp.fpId}</span>
+                      <span className="text-xs text-gray-500">{fp.ownerName}</span>
+                    </div>
+                    <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={loadData}
             className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"

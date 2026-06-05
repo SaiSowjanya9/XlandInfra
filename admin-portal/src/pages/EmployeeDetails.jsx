@@ -294,21 +294,53 @@ const EmployeeDetails = () => {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header with FP Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Employee Details</h1>
           <p className="text-gray-500 text-xs sm:text-sm mt-1">
-            {employees.length} employees for {selectedFp.companyName}
+            {employees.length} employees • Manage and view all registered employees
           </p>
         </div>
-        <button
-          onClick={() => navigate('/employee/add-employee')}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors w-full sm:w-auto"
-        >
-          <UserPlus className="w-4 h-4" />
-          Add Employee
-        </button>
+        <div className="flex items-center gap-3">
+          {/* FP Switcher */}
+          <div className="relative">
+            <button
+              onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm hover:border-gray-300 transition-all"
+            >
+              <div className="w-2 h-2 rounded-full bg-slate-500"></div>
+              <span className="font-medium text-gray-700">{selectedFp.fpId}</span>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {fpDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto">
+                {fpList.map(fp => (
+                  <button
+                    key={fp.id}
+                    onClick={() => handleFpSelect(fp)}
+                    className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
+                      selectedFp.id === fp.id ? 'bg-slate-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-gray-800">{fp.fpId}</span>
+                      <span className="text-xs text-gray-500">{fp.ownerName}</span>
+                    </div>
+                    <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => navigate('/employee/add-employee')}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add Employee
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
