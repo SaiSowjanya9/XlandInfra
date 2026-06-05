@@ -47,7 +47,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     location.pathname.startsWith('/employee/customer-submissions')
   );
   const [residentialFpDropdown, setResidentialFpDropdown] = useState(false);
-  const [commercialFpDropdown, setCommercialFpDropdown] = useState(false);
 
   const [vendorOpen, setVendorOpen] = useState(
     location.pathname.startsWith('/employee/add-vendor') ||
@@ -66,7 +65,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     selectFp(fp);
     setSelectedPropertyType(propertyType);
     setResidentialFpDropdown(false);
-    setCommercialFpDropdown(false);
     navigate('/employee/customer-submissions');
     if (sidebarOpen) setSidebarOpen(false);
   };
@@ -296,63 +294,13 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
                     )}
                   </div>
 
-                  {/* Commercial */}
-                  <div className="relative">
-                    <button
-                      onClick={() => {
-                        setCommercialFpDropdown(!commercialFpDropdown);
-                        setResidentialFpDropdown(false);
-                      }}
-                      className={`flex items-center justify-between w-full px-4 py-2 rounded-lg transition-all duration-200 ${
-                        selectedPropertyType === 'commercial' && location.pathname.startsWith('/employee/customer-submissions')
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Store className="w-4 h-4" />
-                        <span className="text-sm font-medium">Commercial</span>
-                      </div>
-                      <ChevronDown className={`w-3 h-3 transition-transform ${commercialFpDropdown ? 'rotate-180' : ''}`} />
-                    </button>
-                    {commercialFpDropdown && (
-                      <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                        {/* Admin option - shows all data */}
-                        <button
-                          onClick={() => handleFpSelect(null, 'commercial')}
-                          className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors ${
-                            !selectedFp && selectedPropertyType === 'commercial' ? 'bg-blue-100 text-blue-700' : 'text-gray-700'
-                          }`}
-                        >
-                          <div className="font-medium flex items-center gap-2">
-                            <Shield className="w-3 h-3" />
-                            Admin (All FPs)
-                          </div>
-                          <div className="text-xs text-gray-500">View all data</div>
-                        </button>
-                        <div className="border-t border-gray-100"></div>
-                        {fpLoading ? (
-                          <div className="px-3 py-2 text-sm text-gray-500 flex items-center gap-2">
-                            <RefreshCw className="w-3 h-3 animate-spin" /> Loading...
-                          </div>
-                        ) : fpList.length === 0 ? (
-                          <div className="px-3 py-2 text-sm text-gray-500">No FPs found</div>
-                        ) : (
-                          fpList.map(fp => (
-                            <button
-                              key={fp.id}
-                              onClick={() => handleFpSelect(fp, 'commercial')}
-                              className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors ${
-                                selectedFp?.id === fp.id && selectedPropertyType === 'commercial' ? 'bg-blue-100 text-blue-700' : 'text-gray-700'
-                              }`}
-                            >
-                              <div className="font-medium">{fp.fpId}</div>
-                              <div className="text-xs text-gray-500">{fp.companyName}</div>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
+                  {/* Commercial - Coming Soon */}
+                  <div className="flex items-center justify-between w-full px-4 py-2 rounded-lg bg-gray-50 cursor-not-allowed">
+                    <div className="flex items-center space-x-3">
+                      <Store className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-400">Commercial</span>
+                    </div>
+                    <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">Coming Soon</span>
                   </div>
                 </div>
               )}
