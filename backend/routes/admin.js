@@ -1358,24 +1358,42 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
 // Get ALL employees from ALL FPs (Admin mode)
 router.get('/all-employees', authenticate, adminOnly, async (req, res) => {
   try {
+    // Get employees first (matching FP portal approach)
     const [employees] = await pool.execute(
-      `SELECT e.id, e.employee_id, e.first_name, e.last_name,
-              CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
-              e.email, e.phone, e.role, e.is_active,
+      `SELECT e.*, CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
               CASE WHEN e.is_active = 1 THEN 'active' ELSE 'inactive' END as status,
-              e.created_at, e.franchise_partner_id,
-              fp.fp_code, fp.company_name as fp_name,
-              GROUP_CONCAT(DISTINCT ez.zone_name ORDER BY ez.zone_name) as zone_names,
-              COUNT(DISTINCT ez.zone_name) as zone_count
+              fp.fp_code, fp.company_name as fp_name
        FROM fp_employees e
        LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
-       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id
-       GROUP BY e.id
-       ORDER BY e.first_name, e.last_name`
+       ORDER BY e.created_at DESC`
     );
+
+    // Get all zone assignments
+    const [zoneAssignments] = await pool.execute(
+      `SELECT fp_employee_id, zone_name FROM fp_employee_zones`
+    );
+
+    // Build a map of employee zones
+    const employeeZonesMap = {};
+    zoneAssignments.forEach(za => {
+      if (!employeeZonesMap[za.fp_employee_id]) {
+        employeeZonesMap[za.fp_employee_id] = [];
+      }
+      if (za.zone_name) {
+        employeeZonesMap[za.fp_employee_id].push(za.zone_name);
+      }
+    });
+
+    // Transform employees with their zones
+    const transformedEmployees = employees.map(emp => ({
+      ...emp,
+      assigned_zones: employeeZonesMap[emp.id] || [],
+      zone_names: (employeeZonesMap[emp.id] || []).join(', '),
+      zone_count: (employeeZonesMap[emp.id] || []).length
+    }));
     
-    console.log('Admin all-employees: Found', employees.length, 'employees');
-    res.json({ success: true, data: employees || [] });
+    console.log('Admin all-employees: Found', transformedEmployees.length, 'employees');
+    res.json({ success: true, data: transformedEmployees || [] });
   } catch (error) {
     console.error('Error fetching all employees:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch employees' });
@@ -1706,24 +1724,43 @@ router.get('/fp-view/:fpId/employees', authenticate, adminOnly, async (req, res)
       return res.status(400).json({ success: false, message: 'Invalid FP ID' });
     }
     
+    // Get employees first (matching FP portal approach)
     const [employees] = await pool.execute(
-      `SELECT e.id, e.employee_id, e.first_name, e.last_name,
-              CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
-              e.email, e.phone, e.role, e.is_active,
-              CASE WHEN e.is_active = 1 THEN 'active' ELSE 'inactive' END as status,
-              e.created_at,
-              GROUP_CONCAT(DISTINCT ez.zone_name ORDER BY ez.zone_name) as zone_names,
-              COUNT(DISTINCT ez.zone_name) as zone_count
+      `SELECT e.*, CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
+              CASE WHEN e.is_active = 1 THEN 'active' ELSE 'inactive' END as status
        FROM fp_employees e
-       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
        WHERE e.franchise_partner_id = ?
-       GROUP BY e.id
-       ORDER BY e.first_name, e.last_name`,
-      [fpIdNum, fpIdNum]
+       ORDER BY e.created_at DESC`,
+      [fpIdNum]
     );
+
+    // Get zone assignments for this FP
+    const [zoneAssignments] = await pool.execute(
+      `SELECT fp_employee_id, zone_name FROM fp_employee_zones WHERE franchise_partner_id = ?`,
+      [fpIdNum]
+    );
+
+    // Build a map of employee zones
+    const employeeZonesMap = {};
+    zoneAssignments.forEach(za => {
+      if (!employeeZonesMap[za.fp_employee_id]) {
+        employeeZonesMap[za.fp_employee_id] = [];
+      }
+      if (za.zone_name) {
+        employeeZonesMap[za.fp_employee_id].push(za.zone_name);
+      }
+    });
+
+    // Transform employees with their zones
+    const transformedEmployees = employees.map(emp => ({
+      ...emp,
+      assigned_zones: employeeZonesMap[emp.id] || [],
+      zone_names: (employeeZonesMap[emp.id] || []).join(', '),
+      zone_count: (employeeZonesMap[emp.id] || []).length
+    }));
     
-    console.log('Admin fp-view employees: Found', employees.length, 'employees for FP', fpIdNum);
-    res.json({ success: true, data: employees || [] });
+    console.log('Admin fp-view employees: Found', transformedEmployees.length, 'employees for FP', fpIdNum);
+    res.json({ success: true, data: transformedEmployees || [] });
   } catch (error) {
     console.error('Error fetching FP employees:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch employees' });
