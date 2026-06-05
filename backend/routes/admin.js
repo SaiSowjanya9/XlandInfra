@@ -1091,11 +1091,85 @@ const validateFpId = (fpId) => {
   return parseInt(fpId);
 };
 
+// Get aggregated dashboard stats for Admin (all data)
+router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
+  try {
+    // Total properties (from both tables)
+    const [[propCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM properties WHERE status != 'deleted'`
+    );
+    const [[onboardedCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM onboarded_properties WHERE status = 'active'`
+    );
+    
+    // Total vendors
+    const [[vendorCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM vendors WHERE status = 'active'`
+    );
+    
+    // Total employees (users + fp_employees)
+    const [[userCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM users WHERE status = 'active'`
+    );
+    const [[fpEmpCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM fp_employees WHERE is_active = TRUE`
+    );
+    
+    // Work orders
+    const [[pendingWO]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM work_orders WHERE status IN ('pending', 'in_progress', 'assigned')`
+    );
+    const [[completedWO]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM work_orders WHERE status = 'completed'`
+    );
+    
+    // Estimates
+    const [[estimateCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM estimates WHERE is_archived = FALSE`
+    );
+    const [[fpEstimateCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM fp_estimates WHERE is_archived = FALSE`
+    );
+    
+    // Zones
+    const [[zoneCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM zones WHERE is_active = TRUE`
+    );
+    
+    // Recent work orders
+    const [recentWorkOrders] = await pool.execute(
+      `SELECT wo.id, wo.work_order_id, wo.title, wo.status, wo.priority, wo.created_at,
+              p.name as property_name
+       FROM work_orders wo
+       LEFT JOIN properties p ON wo.property_id = p.id
+       ORDER BY wo.created_at DESC
+       LIMIT 10`
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        totalProperties: (propCount?.count || 0) + (onboardedCount?.count || 0),
+        totalVendors: vendorCount?.count || 0,
+        totalEmployees: (userCount?.count || 0) + (fpEmpCount?.count || 0),
+        pendingWorkOrders: pendingWO?.count || 0,
+        completedWorkOrders: completedWO?.count || 0,
+        totalEstimates: (estimateCount?.count || 0) + (fpEstimateCount?.count || 0),
+        totalZones: zoneCount?.count || 0,
+        recentWorkOrders: recentWorkOrders || []
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching admin dashboard stats:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Get list of all FPs for dropdown selection
 router.get('/fp-list', authenticate, adminOnly, async (req, res) => {
   try {
     const [fps] = await pool.execute(
-      `SELECT id, fp_id, company_name, owner_name, city, state, is_active 
+      `SELECT id, fp_code, company_name, owner_name, city, state, is_active 
        FROM franchise_partners 
        WHERE is_active = TRUE 
        ORDER BY company_name ASC`
@@ -1105,12 +1179,12 @@ router.get('/fp-list', authenticate, adminOnly, async (req, res) => {
       success: true, 
       data: fps.map(fp => ({
         id: fp.id,
-        fpId: fp.fp_id,
+        fpId: fp.fp_code,
         companyName: fp.company_name,
         ownerName: fp.owner_name,
         city: fp.city,
         state: fp.state,
-        displayName: `${fp.fp_id} - ${fp.company_name}`
+        displayName: `${fp.fp_code} - ${fp.company_name}`
       }))
     });
   } catch (error) {
@@ -1129,7 +1203,7 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
               p.address, p.city, p.state, p.zip_code,
               p.contact_person, p.contact_phone, p.contact_email,
               p.created_at, p.status, 'properties' as source_table,
-              p.franchise_partner_id, fp.fp_id, fp.company_name,
+              p.franchise_partner_id, fp.fp_code, fp.company_name,
               COALESCE(p.category, 'residential') as category
        FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
@@ -1144,7 +1218,7 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
               op.address, op.city, op.state, op.postal_code as zip_code,
               op.contact_person, op.contact_phone, op.contact_email,
               op.created_at, op.status, 'onboarded_properties' as source_table,
-              op.franchise_partner_id, fp.fp_id, fp.company_name,
+              op.franchise_partner_id, fp.fp_code, fp.company_name,
               COALESCE(op.category, 'residential') as category
        FROM onboarded_properties op
        LEFT JOIN franchise_partners fp ON op.franchise_partner_id = fp.id
