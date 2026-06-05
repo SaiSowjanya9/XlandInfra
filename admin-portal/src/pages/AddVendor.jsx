@@ -67,6 +67,29 @@ const AddVendor = ({ admin }) => {
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
   const [createdVendor, setCreatedVendor] = useState(null);
+  
+  // Check if user is Operations Manager (view-only access)
+  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const isOpsManager = currentUser?.role === 'operations_manager';
+  
+  // Redirect Ops Manager to Vendor Details (view-only)
+  if (isOpsManager) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
+          <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-amber-800 mb-2">View Only Access</h2>
+          <p className="text-amber-600 mb-4">Operations Manager cannot add new vendors. You can view existing vendors in Vendor Details.</p>
+          <button
+            onClick={() => navigate('/employee/vendor-details')}
+            className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+          >
+            Go to Vendor Details
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Zone & Area autocomplete
   const [zoneSuggestions, setZoneSuggestions] = useState([]);

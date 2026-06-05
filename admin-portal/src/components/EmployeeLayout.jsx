@@ -58,12 +58,12 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const allNavItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer', adminOnly: true },
+    { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
     { path: '/employee/user-management', icon: Shield, label: 'User Management', adminOnly: true },
     { path: '/employee/qr-management', icon: QrCode, label: 'QR Management' },
   ];
   
-  // Filter nav items for Operations Manager
+  // Filter nav items for Operations Manager (only User Management is hidden)
   const navItems = isOpsManager 
     ? allNavItems.filter(item => !item.adminOnly)
     : allNavItems;
@@ -87,27 +87,19 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
   const isEstimatesSectionActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/employee/estimates';
 
-  // Vendor sub-items - Add Vendor hidden for Ops Manager
-  const allVendorSubItems = [
-    { path: '/employee/add-vendor', icon: UserPlus, label: 'Add Vendor', adminOnly: true },
+  // Vendor sub-items - All visible for Ops Manager (view-only inside)
+  const vendorSubItems = [
+    { path: '/employee/add-vendor', icon: UserPlus, label: 'Add Vendor' },
     { path: '/employee/vendor-details', icon: Hammer, label: 'Vendor Details' },
     { path: '/employee/assigned-vendors', icon: ClipboardCheck, label: 'Assigned Vendors' },
   ];
-  
-  const vendorSubItems = isOpsManager
-    ? allVendorSubItems.filter(item => !item.adminOnly)
-    : allVendorSubItems;
 
-  // Employee sub-items - Add Employee hidden for Ops Manager
-  const allEmployeeSubItems = [
-    { path: '/employee/add-employee', icon: UserPlus, label: 'Add Employee', adminOnly: true },
+  // Employee sub-items - All visible for Ops Manager (view-only inside)
+  const employeeSubItems = [
+    { path: '/employee/add-employee', icon: UserPlus, label: 'Add Employee' },
     { path: '/employee/employee-details', icon: Users, label: 'Employee Details' },
     { path: '/employee/employee-zone-management', icon: MapPin, label: 'Employee Zone Management' },
   ];
-  
-  const employeeSubItems = isOpsManager
-    ? allEmployeeSubItems.filter(item => !item.adminOnly)
-    : allEmployeeSubItems;
 
   const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEmployeeSectionActive = employeeSubItems.some(item => location.pathname === item.path);
