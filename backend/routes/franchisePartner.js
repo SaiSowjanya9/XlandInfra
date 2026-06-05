@@ -3568,4 +3568,31 @@ router.get('/categories', requireFPScope, async (req, res) => {
   }
 });
 
+// Migration: Update existing estimates with created_by_name
+router.post('/migrate-estimate-names', requireFPScope, async (req, res) => {
+  try {
+    // Update estimates where created_by_name is empty but created_by_id exists
+    const [result] = await pool.query(`
+      UPDATE fp_estimates e
+      LEFT JOIN users u ON e.created_by_id = u.id
+      SET e.created_by_name = COALESCE(
+        CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')),
+        u.name,
+        CONCAT(UPPER(SUBSTRING(e.created_by_role, 1, 1)), LOWER(SUBSTRING(e.created_by_role, 2)))
+      )
+      WHERE (e.created_by_name IS NULL OR e.created_by_name = '' OR e.created_by_name = '-')
+        AND e.franchise_partner_id = ?
+    `, [req.fpId]);
+    
+    res.json({ 
+      success: true, 
+      message: `Updated ${result.affectedRows} estimate records`,
+      affectedRows: result.affectedRows
+    });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;
