@@ -1300,6 +1300,31 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
   }
 });
 
+// Get ALL vendors from ALL FPs (Admin mode)
+router.get('/all-vendors', authenticate, adminOnly, async (req, res) => {
+  try {
+    const [vendors] = await pool.execute(
+      `SELECT ov.*, ov.owner_name as vendor_name, ov.owner_mobile as phone, ov.owner_email as email,
+              ov.franchise_partner_id as fp_id, fp.fp_code, fp.company_name as fp_name,
+              COALESCE(
+                CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                ov.created_by, 'System'
+              ) as created_by_name
+       FROM onboarded_vendors ov
+       LEFT JOIN franchise_partners fp ON ov.franchise_partner_id = fp.id
+       LEFT JOIN fp_employees fpe ON ov.created_by = fpe.email OR CAST(ov.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+       WHERE ov.is_active = TRUE
+       ORDER BY ov.created_at DESC`
+    );
+    
+    console.log('Admin all-vendors: Found', vendors.length, 'vendors');
+    res.json({ success: true, data: vendors || [] });
+  } catch (error) {
+    console.error('Error fetching all vendors:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch vendors' });
+  }
+});
+
 // Get FP Dashboard data
 router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res) => {
   try {

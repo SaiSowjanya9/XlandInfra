@@ -49,7 +49,7 @@ const VendorDetails = () => {
     setFpDropdownOpen(false);
   };
 
-  // Load vendors from FP-specific API
+  // Load vendors from API
   const loadData = async () => {
     if (!selectedFp) {
       setVendors([]);
@@ -60,7 +60,15 @@ const VendorDetails = () => {
     setLoading(true);
     setFetchError(null);
     try {
-      const response = await fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/vendors`, {
+      let url;
+      // Use Admin endpoint for "all" mode, otherwise FP-specific endpoint
+      if (selectedFp.id === 'all') {
+        url = `${API_BASE}/api/admin/all-vendors`;
+      } else {
+        url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/vendors`;
+      }
+      
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -331,14 +339,27 @@ const VendorDetails = () => {
           <div className="relative">
             <button
               onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm hover:border-gray-300 transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm hover:border-gray-300 hover:shadow-sm transition-all"
             >
-              <div className="w-2 h-2 rounded-full bg-slate-500"></div>
-              <span className="font-medium text-gray-700">{selectedFp.fpId}</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-slate-500"></div>
+              <span className="font-medium text-gray-700">
+                {selectedFp.id === 'all' ? 'Admin (All FPs)' : selectedFp.fpId}
+              </span>
               <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {fpDropdownOpen && (
-              <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto">
+              <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
+                <button
+                  onClick={() => handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' })}
+                  className={`w-full text-left px-4 py-3 text-sm hover:bg-slate-50 transition-colors border-b border-gray-100 ${
+                    selectedFp.id === 'all' ? 'bg-slate-50' : ''
+                  }`}
+                >
+                  <div className="font-medium flex items-center gap-2 text-slate-700">
+                    <Shield className="w-4 h-4" />
+                    Admin (All FPs)
+                  </div>
+                </button>
                 {fpList.map(fp => (
                   <button
                     key={fp.id}
@@ -557,7 +578,7 @@ const VendorDetails = () => {
                     <td className="px-3 py-3 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
                         {vendor.serviceType || vendor.service_type || '-'}
-                        {(vendor.serviceVerified || vendor.service_verified) && <FileCheck className="w-3 h-3 text-emerald-500" />}
+                        {(vendor.serviceVerified === true || vendor.serviceVerified === 1 || vendor.service_verified === true || vendor.service_verified === 1) && <FileCheck className="w-3 h-3 text-emerald-500" />}
                       </span>
                     </td>
                     <td className="px-3 py-3 font-medium text-gray-900 whitespace-nowrap text-sm truncate max-w-[100px]">
