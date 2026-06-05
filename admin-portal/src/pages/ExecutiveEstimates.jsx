@@ -58,6 +58,10 @@ const BILLING_DURATIONS = [
 
 const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
+  
+  // Sync activeTab with defaultTab when route changes
+  useEffect(() => { setActiveTab(defaultTab); }, [defaultTab]);
+  
   const [estimates, setEstimates] = useState([]);
   const [archivedEstimates, setArchivedEstimates] = useState([]);
   const [amcPackages, setAmcPackages] = useState([]);
@@ -324,7 +328,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
             <select value={selectedAmcPackage} onChange={(e) => setSelectedAmcPackage(e.target.value)} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
               <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
               {(() => {
-                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || selectedProperty?.property_type || directForm?.propertyType;
+                const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
                 const filteredPkgs = propertyType ? amcPackages.filter(pkg => matchPropertyType(getPackagePropertyType(pkg), propertyType)) : [];
                 return (<>
                   {filteredPkgs.length > 0 && filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}
@@ -358,7 +362,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
             <select onChange={(e) => { if (e.target.value) setSelectedAddons([...selectedAddons, e.target.value]); e.target.value = ''; }} className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
               <option value="">+ Select Add-on to add</option>
               {(() => {
-                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
+                const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
                 if (!propertyType) return <option disabled>Select property type first</option>;
                 const filteredAddons = addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType));
                 if (filteredAddons.length === 0) return <option disabled>No add-ons available for {propertyType}</option>;

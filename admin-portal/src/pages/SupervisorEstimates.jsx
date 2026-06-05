@@ -534,7 +534,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                         <select value={selectedAmcPackage} onChange={(e) => setSelectedAmcPackage(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200">
                           <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
                           {(() => {
-                            const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || selectedProperty?.property_type;
+                            const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType;
                             const filteredPkgs = propertyType ? amcPackages.filter(pkg => matchPropertyType(getPackagePropertyType(pkg), propertyType)) : [];
                             return (<>
                               {filteredPkgs.length > 0 && filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}
@@ -561,7 +561,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                         <select onChange={(e) => { if (e.target.value) { setSelectedAddons([...selectedAddons, e.target.value]); } e.target.value = ''; }} className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200">
                           <option value="">+ Select Add-on to add</option>
                           {(() => {
-                            const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || selectedProperty?.property_type;
+                            const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType;
                             if (!propertyType) return <option disabled>Select property type first</option>;
                             const filteredAddons = addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType));
                             if (filteredAddons.length === 0) return <option disabled>No add-ons available for {propertyType}</option>;
