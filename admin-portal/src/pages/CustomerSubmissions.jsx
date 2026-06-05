@@ -1016,8 +1016,8 @@ const CustomerSubmissions = () => {
                     <p className="text-sm text-gray-900">{viewProperty.propertyType || '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Total Units</label>
-                    <p className="text-sm text-gray-900">{viewProperty.totalUnits || 0}</p>
+                    <label className="block text-xs text-gray-500 mb-1">Units</label>
+                    <p className="text-sm text-gray-900">{viewProperty.units || 0}</p>
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Created Date</label>
