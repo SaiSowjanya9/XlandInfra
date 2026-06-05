@@ -468,38 +468,37 @@ const CustomerSubmissions = () => {
     return `Viewing all properties (Admin Mode)`;
   };
 
-  // Step 1: Show Property Type Selection (Residential/Commercial)
+  // Step 1: Show Property Type Selection (Residential/Commercial) - Clean Design
   if (!selectedCategory) {
     return (
-      <div className="space-y-8 p-6">
+      <div className="flex flex-col items-center justify-center min-h-[500px] bg-gray-50 rounded-xl p-8">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-gray-500 mt-1">Select property type to continue</p>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Select Category</h1>
+        <p className="text-gray-500 text-sm mb-8">Choose the customer category to proceed</p>
 
         {/* Property Type Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto mt-8">
+        <div className="flex gap-6">
           {/* Residential */}
           <button
             onClick={() => setSelectedCategory('residential')}
-            className="flex flex-col items-center p-8 bg-white rounded-2xl border-2 border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all group"
+            className="flex flex-col items-start p-6 w-56 bg-emerald-50 rounded-2xl border-2 border-emerald-200 hover:border-emerald-400 hover:shadow-md transition-all"
           >
-            <div className="w-16 h-16 bg-emerald-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
-              <Home className="w-8 h-8 text-emerald-600" />
+            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-4">
+              <Home className="w-6 h-6 text-emerald-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-800">Residential</h3>
-            <p className="text-sm text-gray-500 mt-1 text-center">Apartments, Villas, Gated Communities</p>
+            <h3 className="text-base font-semibold text-gray-800">Residential</h3>
           </button>
 
           {/* Commercial - Coming Soon */}
-          <div className="flex flex-col items-center p-8 bg-gray-50 rounded-2xl border-2 border-gray-200 cursor-not-allowed opacity-60">
-            <div className="w-16 h-16 bg-gray-200 rounded-xl flex items-center justify-center mb-4">
-              <Store className="w-8 h-8 text-gray-400" />
+          <div className="relative flex flex-col items-start p-6 w-56 bg-white rounded-2xl border-2 border-gray-200 cursor-not-allowed">
+            <span className="absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">
+              <Lock className="w-3 h-3" />
+              Coming Soon
+            </span>
+            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
+              <Store className="w-6 h-6 text-gray-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-400">Commercial</h3>
-            <p className="text-sm text-gray-400 mt-1 text-center">Offices, Retail, Industrial</p>
-            <span className="mt-3 px-3 py-1 bg-gray-200 text-gray-500 text-xs font-medium rounded-full">Coming Soon</span>
+            <h3 className="text-base font-semibold text-gray-400">Commercial</h3>
           </div>
         </div>
       </div>
