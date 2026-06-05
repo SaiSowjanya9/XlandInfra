@@ -621,55 +621,26 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Bottom Section - Quick Actions & Recent Activities */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Quick Actions */}
-          <div className="bg-white rounded-xl p-5 border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-gray-800">Quick Actions</h3>
-              <Settings className="w-4 h-4 text-gray-400" />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              {quickActions.map((action, index) => {
-                const Icon = action.icon;
-                return (
-                  <button
-                    key={index}
-                    onClick={() => navigate(action.path)}
-                    className="flex flex-col items-center justify-center p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                  >
-                    <Icon className="w-5 h-5 text-gray-500 mb-2" />
-                    <span className="text-xs text-gray-600 text-center">{action.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+        {/* Quick Actions - Full Width */}
+        <div className="bg-white rounded-xl p-5 border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-medium text-gray-800">Quick Actions</h3>
+            <Settings className="w-4 h-4 text-gray-400" />
           </div>
-
-          {/* Recent Activities */}
-          <div className="bg-white rounded-xl p-5 border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-gray-800">Recent Activities</h3>
-              <Activity className="w-4 h-4 text-gray-400" />
-            </div>
-            {recentActivities.length > 0 ? (
-              <div className="space-y-3 max-h-52 overflow-y-auto custom-scrollbar">
-                {recentActivities.slice(0, 6).map((activity, index) => (
-                  <div key={activity.id || index} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="w-2 h-2 rounded-full bg-slate-400 mt-1.5 flex-shrink-0"></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-700 line-clamp-2">{activity.message}</p>
-                      <p className="text-xs text-gray-400 mt-1">{activity.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                <Activity className="w-8 h-8 mb-2 opacity-50" />
-                <p className="text-sm">No recent activities</p>
-              </div>
-            )}
+          <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+            {quickActions.map((action, index) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={index}
+                  onClick={() => navigate(action.path)}
+                  className="flex flex-col items-center justify-center p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  <Icon className="w-5 h-5 text-gray-500 mb-2" />
+                  <span className="text-xs text-gray-600 text-center">{action.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -618,68 +618,71 @@ const CustomerSubmissions = () => {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Property Management</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              {getViewingLabel()} • {properties.length} properties
-            </p>
-          </div>
-          {/* FP Switcher */}
-          <div className="relative">
-            <button
-              onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-sm hover:bg-emerald-100 transition-colors"
-            >
-              <span className="font-medium text-emerald-700">
-                {selectedFp.id === 'all' ? 'Admin (All FPs)' : selectedFp.fpId}
-              </span>
-              <ChevronDown className={`w-4 h-4 text-emerald-600 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {fpDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto">
-                {/* Admin option */}
-                <button
-                  onClick={() => handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All Franchise Partners', displayName: 'Admin (All FPs)' })}
-                  className={`w-full text-left px-4 py-2.5 text-sm hover:bg-emerald-50 transition-colors border-b border-gray-100 ${
-                    selectedFp.id === 'all' ? 'bg-emerald-50' : ''
-                  }`}
-                >
-                  <div className="font-medium flex items-center gap-2 text-emerald-600">
-                    <Shield className="w-4 h-4" />
-                    Admin (All FPs)
-                  </div>
-                </button>
-                
-                {fpLoading ? (
-                  <div className="px-4 py-2.5 text-sm text-gray-500 flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4 animate-spin" /> Loading...
-                  </div>
-                ) : (
-                  fpList.map(fp => (
-                    <button
-                      key={fp.id}
-                      onClick={() => handleFpSelect(fp)}
-                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
-                        selectedFp.id === fp.id ? 'bg-emerald-50' : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-gray-800">{fp.fpId}</span>
-                        <span className="text-xs text-gray-500">{fp.ownerName}</span>
-                      </div>
-                      <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Property Management</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {getViewingLabel()} • {properties.length} properties
+          </p>
         </div>
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 mt-3 sm:mt-0">
+        
+        {/* FP Switcher - Top Right */}
+        <div className="relative">
+          <button
+            onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+            className="flex items-center gap-3 px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm hover:border-gray-300 hover:shadow-sm transition-all"
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-slate-500"></div>
+            <span className="font-medium text-gray-700">
+              {selectedFp.id === 'all' ? 'Admin (All FPs)' : selectedFp.fpId}
+            </span>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {fpDropdownOpen && (
+            <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
+              {/* Admin option */}
+              <button
+                onClick={() => handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All Franchise Partners', displayName: 'Admin (All FPs)' })}
+                className={`w-full text-left px-4 py-3 text-sm hover:bg-slate-50 transition-colors border-b border-gray-100 ${
+                  selectedFp.id === 'all' ? 'bg-slate-50' : ''
+                }`}
+              >
+                <div className="font-medium flex items-center gap-2 text-slate-700">
+                  <Shield className="w-4 h-4" />
+                  Admin (All FPs)
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">View all properties</div>
+              </button>
+              
+              {fpLoading ? (
+                <div className="px-4 py-3 text-sm text-gray-500 flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" /> Loading...
+                </div>
+              ) : (
+                fpList.map(fp => (
+                  <button
+                    key={fp.id}
+                    onClick={() => handleFpSelect(fp)}
+                    className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
+                      selectedFp.id === fp.id ? 'bg-slate-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-gray-800">{fp.fpId}</span>
+                      <span className="text-xs text-gray-500">{fp.ownerName}</span>
+                    </div>
+                    <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Secondary row with action buttons */}
+      <div className="flex items-center justify-end gap-2">
           {/* Notification Bell */}
           <div className="relative">
             <button
