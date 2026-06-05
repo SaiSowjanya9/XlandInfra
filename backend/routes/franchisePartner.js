@@ -1829,7 +1829,7 @@ const generateUserId = async (role) => {
 router.post('/employees', requireFPScope, async (req, res) => {
   try {
     const {
-      name, email, phone, countryCode, aadhaar, role, assignedZones
+      name, email, phone, countryCode, aadhaar, role, assignedZones, username: providedUsername
     } = req.body;
 
     // Validate required email field
@@ -1896,8 +1896,8 @@ router.post('/employees', requireFPScope, async (req, res) => {
     const tempPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-    // Generate username from email (part before @)
-    const username = email.trim().toLowerCase().split('@')[0] + '_' + Date.now().toString(36);
+    // Use provided username or generate from email (part before @)
+    const username = providedUsername?.trim() || (email.trim().toLowerCase().split('@')[0] + '_' + Date.now().toString(36));
 
     // Get FP company name for email
     const [fpData] = await pool.execute(
