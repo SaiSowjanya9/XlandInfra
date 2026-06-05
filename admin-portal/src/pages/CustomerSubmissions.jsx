@@ -111,15 +111,18 @@ const CustomerSubmissions = () => {
       if (selectedFp.id === 'all') {
         // Admin mode - fetch all properties from all FPs
         endpoint = `${API_BASE}/api/admin/all-properties`;
+        console.log('Property Management: Fetching ALL properties (Admin mode)');
       } else {
         // Specific FP selected - fetch from that FP only
         endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/properties`;
+        console.log('Property Management: Fetching properties for FP ID:', selectedFp.id);
       }
       
       const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
+      console.log('Property Management: API returned', result.data?.length || 0, 'properties');
       if (result.success) {
         // Map API response to expected format and filter by property type
         let props = result.data.map(p => ({
@@ -127,9 +130,11 @@ const CustomerSubmissions = () => {
           propertyId: p.property_id,
           name: p.name,
           propertyType: p.property_type,
-          category: p.category || 'residential', // residential or commercial
+          category: p.category || 'residential',
           zone: p.zone_name || p.zone,
           area: p.area || p.area_name,
+          division: p.division,
+          units: p.units || 0,
           address: p.address,
           city: p.city,
           state: p.state,
@@ -138,6 +143,7 @@ const CustomerSubmissions = () => {
           contactPhone: p.contact_phone,
           contactEmail: p.contact_email,
           createdAt: p.created_at,
+          createdBy: p.created_by,
           status: p.status || 'active',
           sourceTable: p.source_table,
           fpId: p.fp_id || p.franchise_partner_id,
@@ -838,25 +844,25 @@ const CustomerSubmissions = () => {
             <table className="w-full text-sm min-w-[800px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Name</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">ID</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Type</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden md:table-cell">Zone</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden lg:table-cell">Area</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden lg:table-cell">Division</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden xl:table-cell">Units</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden xl:table-cell">Address</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden xl:table-cell">City</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden xl:table-cell">Contacts</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden xl:table-cell">Created By</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden md:table-cell">Created</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden sm:table-cell">Status</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 whitespace-nowrap">Actions</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Name</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">ID</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Type</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden md:table-cell">Zone</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden lg:table-cell">Area</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden lg:table-cell">Division</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden xl:table-cell">Units</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden xl:table-cell">Address</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden xl:table-cell">City</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden xl:table-cell">Created By</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden md:table-cell">Created</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden sm:table-cell">Status</th>
+                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-600 whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredProperties.map((property) => {
-                  const style = TYPE_STYLES[property.entryType] || TYPE_STYLES.GC;
+                  const typeKey = property.propertyType?.toUpperCase()?.replace(/[^A-Z]/g, '') || 'GC';
+                  const style = TYPE_STYLES[typeKey] || TYPE_STYLES.GC;
                   return (
                     <tr key={property.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-3 py-3 font-medium text-gray-900 whitespace-nowrap text-sm truncate max-w-[120px]">
@@ -867,20 +873,20 @@ const CustomerSubmissions = () => {
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${style.badge}`}>
-                          {TYPE_LABELS[property.entryType]}
+                          {property.propertyType || '-'}
                         </span>
                       </td>
                       <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden md:table-cell">
                         {property.zone || '-'}
                       </td>
                       <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden lg:table-cell">
-                        {property.areaName || '-'}
+                        {property.area || '-'}
                       </td>
                       <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden lg:table-cell">
                         {property.division || '-'}
                       </td>
                       <td className="px-3 py-3 text-gray-700 whitespace-nowrap text-center hidden xl:table-cell">
-                        {property.totalUnits || 0}
+                        {property.units || 0}
                       </td>
                       <td className="px-3 py-3 text-gray-700 whitespace-nowrap max-w-[150px] truncate hidden xl:table-cell" title={property.address}>
                         {property.address || '-'}
@@ -888,11 +894,8 @@ const CustomerSubmissions = () => {
                       <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden xl:table-cell">
                         {property.city || '-'}
                       </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap text-center hidden xl:table-cell">
-                        {property.contacts?.length || 0}
-                      </td>
                       <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden xl:table-cell">
-                        Manager
+                        {property.createdBy || '-'}
                       </td>
                       <td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden md:table-cell">
                         {formatDate(property.createdAt)}

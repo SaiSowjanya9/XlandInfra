@@ -1196,13 +1196,15 @@ router.get('/fp-list', authenticate, adminOnly, async (req, res) => {
 // Get ALL properties from ALL FPs (Admin mode)
 router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
   try {
-    // Regular properties from all FPs - simplified query matching FP portal
+    // Regular properties from all FPs - all fields
     const [properties] = await pool.execute(
       `SELECT p.id, p.property_id, p.name, p.property_type,
               p.zone_id as zone_name, p.area_name as area,
+              p.division_id as division, p.units,
               p.address, p.city, p.state, p.zip_code,
               p.contact_person, p.contact_phone, p.contact_email,
-              p.created_at, p.status, 'properties' as source_table,
+              p.created_at, p.status, p.created_by,
+              'properties' as source_table,
               p.franchise_partner_id as fp_id, fp.fp_code, fp.company_name as fp_name,
               COALESCE(p.category, 'residential') as category
        FROM properties p
@@ -1218,9 +1220,11 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                 op.zone as zone_name, op.area_name as area,
+                op.division as division, op.units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email,
-                op.created_at, op.status, 'onboarded_properties' as source_table,
+                op.created_at, op.status, op.created_by,
+                'onboarded_properties' as source_table,
                 op.franchise_partner_id as fp_id, fp.fp_code, fp.company_name as fp_name,
                 COALESCE(op.category, 'residential') as category
          FROM onboarded_properties op
@@ -1343,13 +1347,15 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
     
     console.log('Admin fp-view properties: Fetching for FP ID:', fpIdNum);
     
-    // Regular properties - simplified query matching FP portal
+    // Regular properties - all fields
     const [properties] = await pool.execute(
       `SELECT p.id, p.property_id, p.name, p.property_type,
               p.zone_id as zone_name, p.area_name as area,
+              p.division_id as division, p.units,
               p.address, p.city, p.state, p.zip_code,
               p.contact_person, p.contact_phone, p.contact_email,
-              p.created_at, p.status, 'properties' as source_table,
+              p.created_at, p.status, p.created_by,
+              'properties' as source_table,
               COALESCE(p.category, 'residential') as category
        FROM properties p
        WHERE p.franchise_partner_id = ?
@@ -1365,9 +1371,11 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                 op.zone as zone_name, op.area_name as area,
+                op.division as division, op.units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email,
-                op.created_at, op.status, 'onboarded_properties' as source_table,
+                op.created_at, op.status, op.created_by,
+                'onboarded_properties' as source_table,
                 COALESCE(op.category, 'residential') as category
          FROM onboarded_properties op
          WHERE op.franchise_partner_id = ? AND op.status = 'active'
