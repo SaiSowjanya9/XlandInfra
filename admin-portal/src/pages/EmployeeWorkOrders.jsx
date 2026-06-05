@@ -25,6 +25,7 @@ import {
   Truck,
   UserPlus,
   Trash2,
+  Shield,
 } from 'lucide-react';
 import SelectWithAdd from '../components/SelectWithAdd';
 import { getCategories, addCategory, getSubcategories, addSubcategory } from '../utils/fieldOptionsStore';
@@ -92,7 +93,13 @@ const EmployeeWorkOrders = ({ admin }) => {
   const fileInputRef = useRef(null);
   
   // Get selected FP from context
-  const { selectedFp } = useFP();
+  const { selectedFp, fpList, selectFp } = useFP();
+  const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
+  
+  const handleFpSelect = (fp) => {
+    selectFp(fp);
+    setFpDropdownOpen(false);
+  };
   const token = sessionStorage.getItem('pm_auth_token');
 
   useEffect(() => {
@@ -112,12 +119,20 @@ const EmployeeWorkOrders = ({ admin }) => {
     
     setLoading(true);
     try {
-      // Use FP-specific endpoint
       const status = activeTab === 'pending' ? 'pending' : activeTab === 'completed' ? 'completed' : '';
-      let url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/work-orders`;
+      let url;
+      
+      // Use Admin endpoint for "all" mode, otherwise FP-specific endpoint
+      if (selectedFp.id === 'all') {
+        url = `${API_BASE}/api/admin/all-work-orders`;
+      } else {
+        url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/work-orders`;
+      }
+      
       if (status) {
         url += `?status=${status}`;
       }
+      
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -607,29 +622,100 @@ const EmployeeWorkOrders = ({ admin }) => {
     { id: 'create', label: 'Create New', icon: Plus, count: null },
   ];
 
-  // Show message if no FP selected
+  // Show FP selection if no FP selected
   if (!selectedFp) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 bg-gray-50">
-        <ClipboardList className="w-16 h-16 text-gray-300 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Franchise Partner</h2>
-        <p className="text-gray-400 text-sm">Choose an FP from the dropdown in the sidebar to view work orders</p>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
+          <p className="text-gray-500 mt-1">Select a Franchise Partner to view work orders</p>
+        </div>
+        <div className="bg-gray-50 rounded-2xl p-12 text-center">
+          <ClipboardList className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">Select Franchise Partner</h2>
+          <p className="text-gray-500 mb-6">Choose an FP from the list or view all work orders</p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              onClick={() => handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' })}
+              className="px-6 py-3 bg-slate-600 text-white rounded-xl hover:bg-slate-700 transition-colors flex items-center gap-2"
+            >
+              <Shield className="w-5 h-5" />
+              Admin (All FPs)
+            </button>
+            {fpList.map(fp => (
+              <button
+                key={fp.id}
+                onClick={() => handleFpSelect(fp)}
+                className="px-6 py-3 bg-white border border-gray-200 rounded-xl hover:border-teal-400 hover:bg-teal-50 transition-colors"
+              >
+                {fp.fpId} - {fp.companyName}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center space-x-3 mb-2">
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header with FP Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center space-x-3">
           <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
             <ClipboardList className="w-6 h-6 text-indigo-600" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
-            <p className="text-gray-500">Viewing work orders for {selectedFp.companyName}</p>
+            <p className="text-gray-500 text-sm">
+              {selectedFp.id === 'all' ? 'Viewing all work orders (Admin Mode)' : `Viewing work orders for ${selectedFp.companyName}`} • {workOrders.length} orders
+            </p>
           </div>
+        </div>
+        
+        {/* FP Switcher - Top Right */}
+        <div className="relative">
+          <button
+            onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+            className="flex items-center gap-3 px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm hover:border-gray-300 hover:shadow-sm transition-all"
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-slate-500"></div>
+            <span className="font-medium text-gray-700">
+              {selectedFp.id === 'all' ? 'Admin (All FPs)' : selectedFp.fpId}
+            </span>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {fpDropdownOpen && (
+            <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
+              <button
+                onClick={() => handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' })}
+                className={`w-full text-left px-4 py-3 text-sm hover:bg-slate-50 transition-colors border-b border-gray-100 ${
+                  selectedFp.id === 'all' ? 'bg-slate-50' : ''
+                }`}
+              >
+                <div className="font-medium flex items-center gap-2 text-slate-700">
+                  <Shield className="w-4 h-4" />
+                  Admin (All FPs)
+                </div>
+              </button>
+              {fpList.map(fp => (
+                <button
+                  key={fp.id}
+                  onClick={() => handleFpSelect(fp)}
+                  className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
+                    selectedFp.id === fp.id ? 'bg-slate-50' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-gray-800">{fp.fpId}</span>
+                    <span className="text-xs text-gray-500">{fp.ownerName}</span>
+                  </div>
+                  <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
