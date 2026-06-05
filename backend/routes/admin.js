@@ -1081,4 +1081,35 @@ router.put('/notifications/read-all', async (req, res) => {
   res.json({ success: true, message: 'All notifications marked as read' });
 });
 
+// Migration: Update all existing estimates with created_by_name
+router.post('/migrate-estimate-names', async (req, res) => {
+  try {
+    // Update estimates where created_by_name is empty - get name from users table
+    const [result] = await pool.query(`
+      UPDATE fp_estimates e
+      LEFT JOIN users u ON e.created_by_id = u.id
+      SET e.created_by_name = COALESCE(
+        NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''),
+        u.name,
+        u.username,
+        CONCAT(UPPER(SUBSTRING(REPLACE(e.created_by_role, '_', ' '), 1, 1)), 
+               LOWER(SUBSTRING(REPLACE(e.created_by_role, '_', ' '), 2)))
+      )
+      WHERE e.created_by_name IS NULL 
+         OR e.created_by_name = '' 
+         OR e.created_by_name = '-'
+         OR TRIM(e.created_by_name) = ''
+    `);
+    
+    res.json({ 
+      success: true, 
+      message: `Updated ${result.affectedRows} estimate records with created_by_name`,
+      affectedRows: result.affectedRows
+    });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;
