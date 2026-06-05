@@ -20,6 +20,9 @@ import {
   Briefcase,
   AtSign,
 } from 'lucide-react';
+import { useFP } from '../contexts/FPContext';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Employee roles for display
 const EMPLOYEE_ROLES = {
@@ -53,17 +56,27 @@ const EmployeeDetails = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Get selected FP from context
+  const { selectedFp } = useFP();
   const token = sessionStorage.getItem('pm_auth_token');
 
   useEffect(() => {
-    loadData();
-  }, [statusFilter]);
+    if (selectedFp) {
+      loadData();
+    }
+  }, [statusFilter, selectedFp]);
 
   const loadData = async () => {
+    if (!selectedFp) {
+      setEmployees([]);
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
-      // Fetch employees from API
-      const response = await fetch('/api/staff', {
+      // Fetch employees from FP-specific API
+      const response = await fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -75,8 +88,7 @@ const EmployeeDetails = () => {
         }
         setEmployees(empList);
       } else {
-        // Fallback to localStorage if API fails
-        setEmployees(getEmployees(statusFilter));
+        setEmployees([]);
       }
       setZones(getZones('active'));
     } catch (error) {
@@ -222,6 +234,17 @@ const EmployeeDetails = () => {
     return true;
   });
 
+  // Show message if no FP selected
+  if (!selectedFp) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 bg-gray-50">
+        <Users className="w-16 h-16 text-gray-300 mb-4" />
+        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Franchise Partner</h2>
+        <p className="text-gray-400 text-sm">Choose an FP from the dropdown in the sidebar to view employees</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Toast */}
@@ -242,7 +265,7 @@ const EmployeeDetails = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Employee Details</h1>
           <p className="text-gray-500 text-xs sm:text-sm mt-1">
-            {employees.length} employees • Manage and view all registered employees
+            {employees.length} employees for {selectedFp.companyName}
           </p>
         </div>
         <button

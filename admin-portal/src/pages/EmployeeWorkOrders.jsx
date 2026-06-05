@@ -29,8 +29,9 @@ import {
 import SelectWithAdd from '../components/SelectWithAdd';
 import { getCategories, addCategory, getSubcategories, addSubcategory } from '../utils/fieldOptionsStore';
 import { extractBlockNames, extractTotalUnits, extractUnitNumber } from '../utils/propertyStore';
+import { useFP } from '../contexts/FPContext';
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const EmployeeWorkOrders = ({ admin }) => {
   const [activeTab, setActiveTab] = useState('pending');
@@ -89,31 +90,45 @@ const EmployeeWorkOrders = ({ admin }) => {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
   const fileInputRef = useRef(null);
-
-  useEffect(() => {
-    fetchWorkOrders();
-    fetchCategories();
-    fetchProperties();
-  }, [activeTab]);
-
+  
+  // Get selected FP from context
+  const { selectedFp } = useFP();
   const token = sessionStorage.getItem('pm_auth_token');
 
+  useEffect(() => {
+    if (selectedFp) {
+      fetchWorkOrders();
+      fetchCategories();
+      fetchProperties();
+    }
+  }, [activeTab, selectedFp]);
+
   const fetchWorkOrders = async (searchQuery = '') => {
+    if (!selectedFp) {
+      setWorkOrders([]);
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
-      // Map tab to status - 'completed' tab shows both completed and closed
-      const status = activeTab === 'pending' ? 'pending' : activeTab === 'completed' ? 'completed,closed' : 'all';
-      let url = `${API_BASE}/admin/work-orders?status=${status}`;
-      if (searchQuery.trim()) {
-        url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+      // Use FP-specific endpoint
+      const status = activeTab === 'pending' ? 'pending' : activeTab === 'completed' ? 'completed' : '';
+      let url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/work-orders`;
+      if (status) {
+        url += `?status=${status}`;
       }
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
       if (result.success) {
-        setWorkOrders(result.data || result.workOrders || []);
-        setCounts(result.counts || { pending: 0, completed: 0, total: 0 });
+        const orders = result.data || [];
+        setWorkOrders(orders);
+        // Calculate counts
+        const pending = orders.filter(o => ['pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(o.status)).length;
+        const completed = orders.filter(o => ['completed', 'closed'].includes(o.status)).length;
+        setCounts({ pending, completed, total: orders.length });
       }
     } catch (error) {
       console.error('Error fetching work orders:', error);
@@ -592,6 +607,17 @@ const EmployeeWorkOrders = ({ admin }) => {
     { id: 'create', label: 'Create New', icon: Plus, count: null },
   ];
 
+  // Show message if no FP selected
+  if (!selectedFp) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 bg-gray-50">
+        <ClipboardList className="w-16 h-16 text-gray-300 mb-4" />
+        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Franchise Partner</h2>
+        <p className="text-gray-400 text-sm">Choose an FP from the dropdown in the sidebar to view work orders</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
@@ -602,7 +628,7 @@ const EmployeeWorkOrders = ({ admin }) => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
-            <p className="text-gray-500">Manage and track all work orders</p>
+            <p className="text-gray-500">Viewing work orders for {selectedFp.companyName}</p>
           </div>
         </div>
       </div>

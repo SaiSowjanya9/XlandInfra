@@ -1085,6 +1085,12 @@ router.put('/notifications/read-all', async (req, res) => {
 // FP VIEW MODE - Admin views FP data (READ-ONLY)
 // ============================================
 
+// Helper to validate and parse FP ID
+const validateFpId = (fpId) => {
+  if (!fpId || isNaN(parseInt(fpId))) return null;
+  return parseInt(fpId);
+};
+
 // Get list of all FPs for dropdown selection
 router.get('/fp-list', authenticate, adminOnly, async (req, res) => {
   try {
@@ -1118,48 +1124,55 @@ router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res)
   try {
     const { fpId } = req.params;
     
+    // Validate fpId is a number
+    if (!fpId || isNaN(parseInt(fpId))) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
+    
+    const fpIdNum = parseInt(fpId);
+    
     // Get FP info
     const [[fpInfo]] = await pool.execute(
       `SELECT id, fp_id, company_name, owner_name, city, state FROM franchise_partners WHERE id = ?`,
-      [fpId]
+      [fpIdNum]
     );
     
     if (!fpInfo) {
       return res.status(404).json({ success: false, message: 'FP not found' });
     }
     
-    // Dashboard stats
+    // Dashboard stats - using validated fpIdNum
     const [[propCount]] = await pool.execute(
       `SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ?`,
-      [fpId]
+      [fpIdNum]
     );
     const [[onbPropCount]] = await pool.execute(
       `SELECT COUNT(*) as count FROM onboarded_properties WHERE franchise_partner_id = ? AND status = 'active'`,
-      [fpId]
+      [fpIdNum]
     );
     const [[woCount]] = await pool.execute(
       `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ?`,
-      [fpId]
+      [fpIdNum]
     );
     const [[pendingWoCount]] = await pool.execute(
       `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ? AND status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
-      [fpId]
+      [fpIdNum]
     );
     const [[completedWoCount]] = await pool.execute(
       `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ? AND status IN ('completed', 'closed')`,
-      [fpId]
+      [fpIdNum]
     );
     const [[vendorCount]] = await pool.execute(
       `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND is_active = TRUE`,
-      [fpId]
+      [fpIdNum]
     );
     const [[employeeCount]] = await pool.execute(
       `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND is_active = TRUE`,
-      [fpId]
+      [fpIdNum]
     );
     const [[estimateCount]] = await pool.execute(
       `SELECT COUNT(*) as count FROM fp_estimates WHERE franchise_partner_id = ? AND is_archived = FALSE`,
-      [fpId]
+      [fpIdNum]
     );
     
     // Recent work orders
@@ -1170,7 +1183,7 @@ router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res)
        LEFT JOIN properties p ON wo.property_id = p.id
        WHERE wo.franchise_partner_id = ?
        ORDER BY wo.created_at DESC LIMIT 5`,
-      [fpId]
+      [fpIdNum]
     );
     
     res.json({
@@ -1198,7 +1211,10 @@ router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res)
 // Get FP Properties
 router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res) => {
   try {
-    const { fpId } = req.params;
+    const fpIdNum = validateFpId(req.params.fpId);
+    if (!fpIdNum) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
     
     // Regular properties
     const [properties] = await pool.execute(
@@ -1211,7 +1227,7 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
        LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
        WHERE p.franchise_partner_id = ?
        ORDER BY p.created_at DESC`,
-      [fpId]
+      [fpIdNum]
     );
     
     // Onboarded properties
@@ -1224,20 +1240,24 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
        FROM onboarded_properties op
        WHERE op.franchise_partner_id = ? AND op.status = 'active'
        ORDER BY op.created_at DESC`,
-      [fpId]
+      [fpIdNum]
     );
     
     res.json({ success: true, data: [...properties, ...onboardedProps] });
   } catch (error) {
     console.error('Error fetching FP properties:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch properties' });
   }
 });
 
 // Get FP Work Orders
 router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, res) => {
   try {
-    const { fpId } = req.params;
+    const fpIdNum = validateFpId(req.params.fpId);
+    if (!fpIdNum) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
+    
     const { status } = req.query;
     
     let query = `
@@ -1250,7 +1270,7 @@ router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, re
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       WHERE wo.franchise_partner_id = ?
     `;
-    const params = [fpId];
+    const params = [fpIdNum];
     
     if (status === 'pending') {
       query += ` AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`;
@@ -1261,37 +1281,43 @@ router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, re
     query += ` ORDER BY wo.created_at DESC`;
     
     const [workOrders] = await pool.execute(query, params);
-    res.json({ success: true, data: workOrders });
+    res.json({ success: true, data: workOrders || [] });
   } catch (error) {
     console.error('Error fetching FP work orders:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch work orders' });
   }
 });
 
 // Get FP Vendors
 router.get('/fp-view/:fpId/vendors', authenticate, adminOnly, async (req, res) => {
   try {
-    const { fpId } = req.params;
+    const fpIdNum = validateFpId(req.params.fpId);
+    if (!fpIdNum) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
     
     const [vendors] = await pool.execute(
       `SELECT ov.*, ov.owner_name as vendor_name, ov.owner_mobile as phone, ov.owner_email as email
        FROM onboarded_vendors ov
        WHERE ov.franchise_partner_id = ? AND ov.is_active = TRUE
        ORDER BY ov.created_at DESC`,
-      [fpId]
+      [fpIdNum]
     );
     
-    res.json({ success: true, data: vendors });
+    res.json({ success: true, data: vendors || [] });
   } catch (error) {
     console.error('Error fetching FP vendors:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch vendors' });
   }
 });
 
 // Get FP Vendor Assignments
 router.get('/fp-view/:fpId/vendor-assignments', authenticate, adminOnly, async (req, res) => {
   try {
-    const { fpId } = req.params;
+    const fpIdNum = validateFpId(req.params.fpId);
+    if (!fpIdNum) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
     
     const [assignments] = await pool.execute(
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
@@ -1306,20 +1332,23 @@ router.get('/fp-view/:fpId/vendor-assignments', authenticate, adminOnly, async (
        JOIN onboarded_vendors v ON pva.vendor_id = v.id
        WHERE (p.franchise_partner_id = ? OR op.franchise_partner_id = ?) AND pva.is_active = TRUE
        ORDER BY pva.assigned_at DESC`,
-      [fpId, fpId]
+      [fpIdNum, fpIdNum]
     );
     
-    res.json({ success: true, data: assignments });
+    res.json({ success: true, data: assignments || [] });
   } catch (error) {
     console.error('Error fetching FP vendor assignments:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch vendor assignments' });
   }
 });
 
 // Get FP Employees
 router.get('/fp-view/:fpId/employees', authenticate, adminOnly, async (req, res) => {
   try {
-    const { fpId } = req.params;
+    const fpIdNum = validateFpId(req.params.fpId);
+    if (!fpIdNum) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
     
     const [employees] = await pool.execute(
       `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name,
@@ -1329,20 +1358,23 @@ router.get('/fp-view/:fpId/employees', authenticate, adminOnly, async (req, res)
        WHERE e.franchise_partner_id = ? AND e.is_active = TRUE
        GROUP BY e.id
        ORDER BY e.first_name, e.last_name`,
-      [fpId, fpId]
+      [fpIdNum, fpIdNum]
     );
     
-    res.json({ success: true, data: employees });
+    res.json({ success: true, data: employees || [] });
   } catch (error) {
     console.error('Error fetching FP employees:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch employees' });
   }
 });
 
 // Get FP Employee Zones
 router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req, res) => {
   try {
-    const { fpId } = req.params;
+    const fpIdNum = validateFpId(req.params.fpId);
+    if (!fpIdNum) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
     
     const [employees] = await pool.execute(
       `SELECT e.id, e.first_name, e.last_name, CONCAT(e.first_name, ' ', e.last_name) as name,
@@ -1353,13 +1385,13 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
        WHERE e.franchise_partner_id = ? AND e.is_active = TRUE
        GROUP BY e.id
        ORDER BY e.first_name, e.last_name`,
-      [fpId, fpId]
+      [fpIdNum, fpIdNum]
     );
     
     const [zones] = await pool.execute(
       `SELECT DISTINCT ez.zone_name as name FROM fp_employee_zones ez 
        WHERE ez.franchise_partner_id = ? ORDER BY ez.zone_name`,
-      [fpId]
+      [fpIdNum]
     );
     
     res.json({ 
@@ -1381,7 +1413,11 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
 // Get FP Estimates
 router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res) => {
   try {
-    const { fpId } = req.params;
+    const fpIdNum = validateFpId(req.params.fpId);
+    if (!fpIdNum) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
+    
     const { archived } = req.query;
     const isArchived = archived === 'true';
     
@@ -1392,54 +1428,63 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
        LEFT JOIN clients c ON e.customer_id = c.id
        WHERE e.franchise_partner_id = ? AND e.is_archived = ?
        ORDER BY e.created_at DESC`,
-      [fpId, isArchived]
+      [fpIdNum, isArchived]
     );
     
-    res.json({ success: true, data: estimates });
+    res.json({ success: true, data: estimates || [] });
   } catch (error) {
     console.error('Error fetching FP estimates:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch estimates' });
   }
 });
 
 // Get FP AMC Packages
 router.get('/fp-view/:fpId/amc-packages', authenticate, adminOnly, async (req, res) => {
   try {
-    const { fpId } = req.params;
+    const fpIdNum = validateFpId(req.params.fpId);
+    if (!fpIdNum) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
     
     const [packages] = await pool.execute(
       `SELECT * FROM amc_packages WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
-      [fpId]
+      [fpIdNum]
     );
     
-    res.json({ success: true, data: packages });
+    res.json({ success: true, data: packages || [] });
   } catch (error) {
     console.error('Error fetching FP AMC packages:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch AMC packages' });
   }
 });
 
 // Get FP Add-ons
 router.get('/fp-view/:fpId/addons', authenticate, adminOnly, async (req, res) => {
   try {
-    const { fpId } = req.params;
+    const fpIdNum = validateFpId(req.params.fpId);
+    if (!fpIdNum) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
     
     const [addons] = await pool.execute(
       `SELECT * FROM addons WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
-      [fpId]
+      [fpIdNum]
     );
     
-    res.json({ success: true, data: addons });
+    res.json({ success: true, data: addons || [] });
   } catch (error) {
     console.error('Error fetching FP addons:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch addons' });
   }
 });
 
 // Get FP Customers
 router.get('/fp-view/:fpId/customers', authenticate, adminOnly, async (req, res) => {
   try {
-    const { fpId } = req.params;
+    const fpIdNum = validateFpId(req.params.fpId);
+    if (!fpIdNum) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
     
     const [customers] = await pool.execute(
       `SELECT c.*, p.name as property_name
@@ -1447,13 +1492,13 @@ router.get('/fp-view/:fpId/customers', authenticate, adminOnly, async (req, res)
        LEFT JOIN properties p ON c.property_id = p.id
        WHERE c.franchise_partner_id = ?
        ORDER BY c.created_at DESC`,
-      [fpId]
+      [fpIdNum]
     );
     
-    res.json({ success: true, data: customers });
+    res.json({ success: true, data: customers || [] });
   } catch (error) {
     console.error('Error fetching FP customers:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch customers' });
   }
 });
 

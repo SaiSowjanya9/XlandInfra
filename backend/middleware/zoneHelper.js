@@ -188,6 +188,114 @@ async function hasZoneRestrictions(employeeId) {
   return zones.length > 0;
 }
 
+/**
+ * Build zone filter with "OR created_by" logic for properties
+ * Employees see: zone-centric data + their own created data
+ * @param {string[]} zones - Array of zone names
+ * @param {string} createdBy - Creator identifier (email/username)
+ * @param {string} tableAlias - Table alias (e.g., 'p' for properties)
+ * @returns {{ clause: string, params: string[] }} SQL clause and parameters
+ */
+function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p') {
+  if (!zones || zones.length === 0) {
+    return { clause: '', params: [] };
+  }
+  
+  const placeholders = zones.map(() => '?').join(',');
+  return {
+    clause: ` AND ((${tableAlias}.zone_id IN (${placeholders}) OR ${tableAlias}.zone IN (${placeholders})) OR ${tableAlias}.created_by = ?)`,
+    params: [...zones, ...zones, createdBy]
+  };
+}
+
+/**
+ * Build zone filter with "OR created_by" logic for onboarded_properties
+ * @param {string[]} zones - Array of zone names
+ * @param {string} createdBy - Creator identifier (email/username)
+ * @param {string} tableAlias - Table alias (e.g., 'op')
+ * @returns {{ clause: string, params: string[] }} SQL clause and parameters
+ */
+function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'op') {
+  if (!zones || zones.length === 0) {
+    return { clause: '', params: [] };
+  }
+  
+  const placeholders = zones.map(() => '?').join(',');
+  return {
+    clause: ` AND (${tableAlias}.zone IN (${placeholders}) OR ${tableAlias}.created_by = ?)`,
+    params: [...zones, createdBy]
+  };
+}
+
+/**
+ * Build zone filter with "OR created_by" logic for work orders
+ * @param {string[]} zones - Array of zone names
+ * @param {string} createdBy - Creator identifier (email/username)
+ * @param {string} propertyAlias - Property table alias
+ * @param {string} workOrderAlias - Work order table alias
+ * @returns {{ clause: string, params: string[] }} SQL clause and parameters
+ */
+function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p', workOrderAlias = 'wo') {
+  if (!zones || zones.length === 0) {
+    return { clause: '', params: [] };
+  }
+  
+  const placeholders = zones.map(() => '?').join(',');
+  return {
+    clause: ` AND ((${propertyAlias}.zone_id IN (${placeholders}) OR ${propertyAlias}.zone IN (${placeholders})) OR ${workOrderAlias}.created_by = ?)`,
+    params: [...zones, ...zones, createdBy]
+  };
+}
+
+/**
+ * Build zone filter with "OR created_by" logic for clients/customers
+ * @param {string[]} zones - Array of zone names
+ * @param {string} createdBy - Creator identifier (email/username)
+ * @param {string} clientAlias - Client table alias
+ * @param {string} propertyAlias - Property table alias
+ * @returns {{ clause: string, params: string[] }} SQL clause and parameters
+ */
+function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', propertyAlias = 'p') {
+  if (!zones || zones.length === 0) {
+    return { clause: '', params: [] };
+  }
+  
+  const placeholders = zones.map(() => '?').join(',');
+  return {
+    clause: ` AND ((${propertyAlias}.zone_id IN (${placeholders}) OR ${propertyAlias}.zone IN (${placeholders})) OR ${clientAlias}.created_by = ?)`,
+    params: [...zones, ...zones, createdBy]
+  };
+}
+
+/**
+ * Build zone filter with "OR created_by" logic for estimates
+ * @param {string[]} zones - Array of zone names
+ * @param {string} createdBy - Creator identifier (email/username)
+ * @param {string} estimateAlias - Estimate table alias
+ * @param {string} propertyAlias - Property table alias
+ * @returns {{ clause: string, params: string[] }} SQL clause and parameters
+ */
+function buildEstimateZoneOrCreatorFilter(zones, createdBy, estimateAlias = 'e', propertyAlias = 'p') {
+  if (!zones || zones.length === 0) {
+    return { clause: '', params: [] };
+  }
+  
+  const placeholders = zones.map(() => '?').join(',');
+  return {
+    clause: ` AND ((${propertyAlias}.zone_id IN (${placeholders}) OR ${propertyAlias}.zone IN (${placeholders})) OR ${estimateAlias}.created_by = ?)`,
+    params: [...zones, ...zones, createdBy]
+  };
+}
+
+/**
+ * Get creator identifier from request object
+ * @param {object} req - Express request object
+ * @returns {string} Creator identifier (email/username)
+ */
+function getCreatorIdentifier(req) {
+  return req.user?.username || req.user?.email || '';
+}
+
 module.exports = {
   getAssignedZones,
   buildZoneFilterClause,
@@ -198,5 +306,12 @@ module.exports = {
   buildVendorZoneFilter,
   buildVendorAssignmentZoneFilter,
   getEmployeeIdForZoneLookup,
-  hasZoneRestrictions
+  hasZoneRestrictions,
+  // Zone + Creator filters (employees see zone data + their own created data)
+  buildPropertyZoneOrCreatorFilter,
+  buildOnboardedPropertyZoneOrCreatorFilter,
+  buildWorkOrderZoneOrCreatorFilter,
+  buildClientZoneOrCreatorFilter,
+  buildEstimateZoneOrCreatorFilter,
+  getCreatorIdentifier
 };
