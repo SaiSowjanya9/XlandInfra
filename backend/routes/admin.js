@@ -1545,8 +1545,8 @@ router.get('/fp-view/:fpId/vendors', authenticate, adminOnly, async (req, res) =
                 ov.created_by, 'System'
               ) as created_by_name
        FROM onboarded_vendors ov
-       LEFT JOIN fp_employees fpe ON ov.created_by = fpe.email OR CAST(ov.created_by AS CHAR) = CAST(fpe.id AS CHAR)
-       WHERE ov.franchise_partner_id = ? AND ov.is_active = TRUE
+       LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
+       WHERE (ov.franchise_partner_id = ? OR ov.franchise_partner_id IS NULL) AND ov.status = 'active'
        ORDER BY ov.created_at DESC`,
       [fpIdNum]
     );
