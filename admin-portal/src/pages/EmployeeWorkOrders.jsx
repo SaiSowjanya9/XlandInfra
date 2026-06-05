@@ -101,6 +101,10 @@ const EmployeeWorkOrders = ({ admin }) => {
     setFpDropdownOpen(false);
   };
   const token = sessionStorage.getItem('pm_auth_token');
+  
+  // Check if user is Operations Manager (view-only access)
+  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const isOpsManager = currentUser?.role === 'operations_manager';
 
   useEffect(() => {
     if (selectedFp) {
@@ -625,11 +629,13 @@ const EmployeeWorkOrders = ({ admin }) => {
     }
   };
 
-  const tabs = [
+  const allTabs = [
     { id: 'pending', label: 'Pending', icon: Clock, count: counts.pending },
     { id: 'completed', label: 'Completed', icon: CheckCircle2, count: counts.completed },
     { id: 'create', label: 'Create New', icon: Plus, count: null },
   ];
+  // Hide Create tab for Operations Manager
+  const tabs = isOpsManager ? allTabs.filter(t => t.id !== 'create') : allTabs;
 
   // Show FP selection if no FP selected
   if (!selectedFp) {
@@ -907,34 +913,38 @@ const EmployeeWorkOrders = ({ admin }) => {
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => handleEditWorkOrder(wo)}
-                              className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Edit"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => openAssignModal(wo, 'vendor')}
-                              className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg transition-colors"
-                              title="Assign Vendor"
-                            >
-                              <Truck className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => openAssignModal(wo, 'employee')}
-                              className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Assign Employee"
-                            >
-                              <UserPlus className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteWorkOrder(wo.id)}
-                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!isOpsManager && (
+                              <>
+                                <button
+                                  onClick={() => handleEditWorkOrder(wo)}
+                                  className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Edit"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => openAssignModal(wo, 'vendor')}
+                                  className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg transition-colors"
+                                  title="Assign Vendor"
+                                >
+                                  <Truck className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => openAssignModal(wo, 'employee')}
+                                  className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                                  title="Assign Employee"
+                                >
+                                  <UserPlus className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteWorkOrder(wo.id)}
+                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>

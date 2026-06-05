@@ -36,7 +36,7 @@ const STATUS_STYLES = {
 
 const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
   // Check if user is Operations Manager (restricted access - view only)
-  const isOpsManager = false;
+  const isOpsManager = admin?.role === 'operations_manager';
   
   const [searchTerm, setSearchTerm] = useState('');
   const [exportingId, setExportingId] = useState(null);
@@ -358,34 +358,27 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Download PDF - Available for all */}
-                        <button
-                          onClick={(e) => handleDownloadPDF(e, estimate)}
-                          disabled={exportingId === estimate.estimateId}
-                          className={`p-2 rounded-lg ${exportingId === estimate.estimateId ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
-                          title="Download PDF"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                        {/* Send Email - Available for all estimates with customer email */}
-                        {(estimate.customerEmail || estimate.email) && (
-                          <button
-                            onClick={() => handleSendEstimate(estimate)}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                            title="Send Email"
-                          >
-                            <Send className="w-4 h-4" />
-                          </button>
-                        )}
-                        {/* Archive - Hidden for Operations Manager */}
+                        {/* All other actions hidden for Operations Manager */}
                         {!isOpsManager && (
-                          <button
-                            onClick={() => setDeleteConfirm(estimate)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                            title="Archive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <>
+                            {/* Download PDF */}
+                            <button
+                              onClick={(e) => handleDownloadPDF(e, estimate)}
+                              disabled={exportingId === estimate.estimateId}
+                              className={`p-2 rounded-lg ${exportingId === estimate.estimateId ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
+                              title="Download PDF"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                            {/* Archive */}
+                            <button
+                              onClick={() => setDeleteConfirm(estimate)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                              title="Archive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
