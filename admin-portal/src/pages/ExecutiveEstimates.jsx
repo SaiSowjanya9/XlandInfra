@@ -144,10 +144,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       setMessage({ type: 'error', text: 'Select AMC Package' }); return;
     }
     try {
-      const res = await fetch('/api/executive/estimates', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const payload = {
           estimate_type: estimateForm.estimateType,
           property_id: propertyIdInput,
           property_code: selectedProperty?.property_id,
@@ -169,7 +166,12 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           gst_percent: gstPercent,
           gst_amount: priceSummary.gstAmount,
           total_amount: priceSummary.totalAmount
-        })
+      };
+      console.log('Saving estimate payload:', payload);
+      const res = await fetch('/api/executive/estimates', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
       if (!res.ok) {
         const errText = await res.text();
