@@ -1172,14 +1172,21 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
     const numericPropertyId = parseInt(property_id);
     const propertyIdValue = isNaN(numericPropertyId) ? null : numericPropertyId;
 
+    // Get creator name
+    let creatorName = 'Coordinator';
+    try {
+      const [[userInfo]] = await pool.query('SELECT first_name, last_name, name FROM users WHERE id = ?', [coordinatorId]);
+      if (userInfo) creatorName = userInfo.first_name && userInfo.last_name ? `${userInfo.first_name} ${userInfo.last_name}`.trim() : userInfo.name || 'Coordinator';
+    } catch (e) {}
+
     const [result] = await pool.query(
       `INSERT INTO fp_estimates (
         estimate_id, franchise_partner_id, property_id, estimate_type,
         client_name, client_phone, client_email, property_name, property_code, property_type,
         zone, city, address, package_id, package_name, package_price,
         subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
-        addons_data, description, created_by_id, created_by_role, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())`,
+        addons_data, description, created_by_id, created_by_name, created_by_role, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())`,
       [
         estimateId, franchisePartnerId, propertyIdValue, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
@@ -1188,7 +1195,7 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
         package_id || null, package_name || '', package_price || 0,
         subtotal || 0, discount_percent || 0, discount_amount || 0,
         gst_percent || 18, gst_amount || 0, total_amount || 0,
-        JSON.stringify(addons || []), description || '', coordinatorId, 'coordinator'
+        JSON.stringify(addons || []), description || '', coordinatorId, creatorName, 'coordinator'
       ]
     );
 
