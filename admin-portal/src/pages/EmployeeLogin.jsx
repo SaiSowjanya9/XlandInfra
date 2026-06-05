@@ -135,7 +135,7 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
         <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-700/50 rounded-2xl p-8 shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-amber-500/30">
+            <div className="w-16 h-16 bg-gradient-to-br from-yellow-300 to-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-amber-400/20">
               <Briefcase className="w-8 h-8 text-black" />
             </div>
             <h1 className="text-2xl font-semibold text-white">Employee Portal</h1>
@@ -203,7 +203,7 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-semibold py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40"
+              className="w-full bg-gradient-to-r from-yellow-400 to-amber-400 hover:from-yellow-300 hover:to-amber-300 text-black font-semibold py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg shadow-amber-400/20 hover:shadow-amber-400/30"
             >
               {loading ? (
                 <div className="flex items-center gap-2">
