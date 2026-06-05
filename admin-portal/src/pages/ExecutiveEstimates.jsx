@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Download, Calendar, Filter, Home, Building2, User } from 'lucide-react';
+import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Calendar, Filter, Home, Building2, User } from 'lucide-react';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
@@ -520,7 +520,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="py-4 px-4"><span className="text-gray-700">{estimate.client_name || '-'}</span></td>
                               <td className="py-4 px-4"><div className="flex items-center gap-1.5 text-gray-600"><Calendar className="w-4 h-4" />{estimate.created_at ? new Date(estimate.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : '-'}</div></td>
                               <td className="py-4 px-4"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(estimate.status)}`}>{estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}</span></td>
-                              <td className="py-4 px-4"><div className="flex items-center justify-center gap-1"><button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button><button onClick={() => exportEstimateToPDF(estimate)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Download PDF"><Download className="w-4 h-4" /></button></div></td>
+                              <td className="py-4 px-4"><div className="flex items-center justify-center gap-1"><button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button></div></td>
                             </tr>
                           );
                         })}
