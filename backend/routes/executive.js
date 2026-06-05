@@ -1140,20 +1140,24 @@ router.post('/estimates', requireExecutiveScope, async (req, res) => {
 
     const estimateId = `EST-EXEC-${Date.now()}`;
 
+    // Use fp_estimates table (has all required columns)
     const [result] = await pool.query(
-      `INSERT INTO estimates (
-        estimate_id, property_id, property_code, client_name, client_phone, client_email,
-        property_name, property_type, zone, city, address, package_id, package_name, package_price,
-        addons_data, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
-        estimate_type, description, executive_id, franchise_partner_id, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())`,
+      `INSERT INTO fp_estimates (
+        estimate_id, franchise_partner_id, property_id, estimate_type,
+        client_name, client_phone, client_email, property_name, property_code, property_type,
+        zone, city, address, package_id, package_name, package_price,
+        subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
+        addons_data, description, created_by_id, created_by_role, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())`,
       [
-        estimateId, property_id || null, property_code || null, client_name || null, client_phone || null, client_email || null,
-        property_name || null, property_type || null, zone || null, city || null, address || null,
+        estimateId, franchisePartnerId || 1, property_id || null, estimate_type || 'property_based',
+        client_name || null, client_phone || null, client_email || null,
+        property_name || null, property_code || null, property_type || null,
+        zone || null, city || null, address || null,
         package_id || null, package_name || null, package_price || 0,
-        JSON.stringify(addons || []), subtotal || 0, discount_percent || 0, discount_amount || 0,
+        subtotal || 0, discount_percent || 0, discount_amount || 0,
         gst_percent || 18, gst_amount || 0, total_amount || 0,
-        estimate_type || 'property_based', description || null, executiveId, franchisePartnerId
+        JSON.stringify(addons || []), description || null, executiveId, 'executive'
       ]
     );
 
