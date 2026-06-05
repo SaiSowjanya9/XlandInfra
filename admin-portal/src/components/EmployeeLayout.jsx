@@ -24,14 +24,20 @@ import {
   MapPin,
   QrCode,
   UserCog,
-  Eye,
+  Building,
+  RefreshCw,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useFP } from '../contexts/FPContext';
 
 const EmployeeLayout = ({ admin, onLogout, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
+  
+  // FP Context for selecting franchise partner
+  const { fpList, selectedFp, selectFp, loading: fpLoading, refreshFpList } = useFP();
   
   // Check if user is Operations Manager (restricted access)
   const isOpsManager = false;
@@ -51,7 +57,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   // Base nav items - filtered based on role
   const allNavItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/employee/fp-view', icon: Eye, label: 'FP Data Viewer', adminOnly: true },
     { path: '/employee/customer-submissions', icon: Building2, label: 'Property Management' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer', adminOnly: true },
@@ -179,7 +184,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
           </div>
 
           {/* Admin Info */}
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-3 border-b border-gray-200">
             <p className="text-sm text-gray-500">Logged in as</p>
             <p className="font-semibold text-gray-900">
               {admin?.firstName} {admin?.lastName}
@@ -187,6 +192,58 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
               {admin?.role === 'admin' ? 'Admin' : 'Operations Manager'}
             </span>
+          </div>
+
+          {/* FP Selector */}
+          <div className="px-4 py-3 border-b border-gray-200 bg-indigo-50">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-indigo-700 flex items-center gap-1">
+                <Building className="w-3 h-3" />
+                Viewing FP Data
+              </span>
+              <button 
+                onClick={refreshFpList}
+                className="p-1 hover:bg-indigo-100 rounded"
+                title="Refresh FP List"
+              >
+                <RefreshCw className={`w-3 h-3 text-indigo-600 ${fpLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+            <div className="relative">
+              <button
+                onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-white border border-indigo-200 rounded-lg text-sm hover:border-indigo-400 transition-colors"
+              >
+                <span className="truncate font-medium text-gray-800">
+                  {selectedFp ? selectedFp.displayName : 'Select FP...'}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {fpDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                  {fpList.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-gray-500">No FPs found</div>
+                  ) : (
+                    fpList.map(fp => (
+                      <button
+                        key={fp.id}
+                        onClick={() => {
+                          selectFp(fp);
+                          setFpDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 transition-colors ${
+                          selectedFp?.id === fp.id ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700'
+                        }`}
+                      >
+                        <div className="font-medium">{fp.fpId}</div>
+                        <div className="text-xs text-gray-500">{fp.companyName}</div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Navigation */}

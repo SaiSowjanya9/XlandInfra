@@ -6,6 +6,9 @@ import {
   QrCode, Download
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useFP } from '../contexts/FPContext';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
@@ -17,13 +20,21 @@ const Dashboard = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationRef = useRef(null);
   const navigate = useNavigate();
+  
+  // Get selected FP from context
+  const { selectedFp } = useFP();
+  const token = sessionStorage.getItem('pm_auth_token');
 
   useEffect(() => {
-    fetchDashboardData();
-    fetchNotifications();
-    const interval = setInterval(fetchDashboardData, 60000);
+    if (selectedFp) {
+      fetchDashboardData();
+      fetchNotifications();
+    }
+    const interval = setInterval(() => {
+      if (selectedFp) fetchDashboardData();
+    }, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedFp]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -36,17 +47,29 @@ const Dashboard = () => {
   }, []);
 
   const fetchDashboardData = async () => {
+    if (!selectedFp) {
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const response = await fetch('/api/admin/dashboard/stats');
+      // Fetch FP-specific dashboard data
+      const response = await fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/dashboard`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const result = await response.json();
       if (result.success) {
-        setStats(result.data);
-      }
-      
-      const activitiesResponse = await fetch('/api/admin/dashboard/recent-activities');
-      const activitiesResult = await activitiesResponse.json();
-      if (activitiesResult.success) {
-        setRecentActivities(activitiesResult.data || []);
+        // Map FP dashboard data to stats format
+        setStats({
+          totalProperties: result.data.stats.totalProperties || 0,
+          pendingWorkOrders: result.data.stats.pendingWorkOrders || 0,
+          completedWorkOrders: result.data.stats.completedWorkOrders || 0,
+          totalVendors: result.data.stats.totalVendors || 0,
+          totalEmployees: result.data.stats.totalEmployees || 0,
+          totalEstimates: result.data.stats.totalEstimates || 0,
+          fpInfo: result.data.fpInfo
+        });
+        setRecentActivities(result.data.recentWorkOrders || []);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -121,39 +144,39 @@ const Dashboard = () => {
   const kpiCards = [
     { 
       title: 'Properties',
-      value: stats?.properties ?? 0,
+      value: stats?.totalProperties ?? stats?.properties ?? 0,
       icon: Building2,
       path: '/employee/customer-submissions'
     },
     { 
       title: 'Vendors',
-      value: stats?.vendors ?? 0,
+      value: stats?.totalVendors ?? stats?.vendors ?? 0,
       icon: Wrench,
       path: '/employee/assigned-vendors'
     },
     { 
-      title: 'Customers',
-      value: stats?.customers ?? 0,
+      title: 'Employees',
+      value: stats?.totalEmployees ?? stats?.customers ?? 0,
       icon: Users,
-      path: '/employee/residents'
+      path: '/employee/employee-details'
     },
     { 
       title: 'Pending Orders',
       value: stats?.pendingWorkOrders ?? 0,
       icon: Clock,
-      path: '/work-orders'
+      path: '/employee/work-orders'
     },
     { 
       title: 'Completed',
       value: stats?.completedWorkOrders ?? 0,
       icon: CheckCircle2,
-      path: '/work-orders'
+      path: '/employee/work-orders'
     },
     { 
-      title: 'Zones',
-      value: stats?.totalZones ?? 0,
-      icon: MapPin,
-      path: '/employee/zones'
+      title: 'Estimates',
+      value: stats?.totalEstimates ?? stats?.totalZones ?? 0,
+      icon: FileText,
+      path: '/employee/estimates/list'
     },
   ];
 
@@ -176,6 +199,17 @@ const Dashboard = () => {
     }).format(Math.round(value));
   };
 
+  // Show message if no FP selected
+  if (!selectedFp) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 bg-gray-50">
+        <Building2 className="w-16 h-16 text-gray-300 mb-4" />
+        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Franchise Partner</h2>
+        <p className="text-gray-400 text-sm">Choose an FP from the dropdown in the sidebar to view their dashboard</p>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
@@ -188,11 +222,23 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="p-4 lg:p-6 space-y-5">
+        {/* FP Info Banner */}
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-indigo-100 text-xs uppercase tracking-wider">Viewing Data For</p>
+              <h2 className="text-xl font-bold">{selectedFp.displayName}</h2>
+              <p className="text-indigo-200 text-sm">{stats?.fpInfo?.city}, {stats?.fpInfo?.state}</p>
+            </div>
+            <Building2 className="w-12 h-12 text-white/30" />
+          </div>
+        </div>
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold text-gray-800">Operations Dashboard</h1>
-            <p className="text-gray-500 text-sm">Real-time system overview</p>
+            <p className="text-gray-500 text-sm">Real-time overview for {selectedFp.companyName}</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-gray-200">

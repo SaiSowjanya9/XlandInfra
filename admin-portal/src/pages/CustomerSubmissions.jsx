@@ -17,6 +17,9 @@ import {
 import { getEstimatesByPropertyId, getAMCPackageByPropertyId } from '../utils/estimateStore';
 import VendorAssignmentModal from '../components/VendorAssignmentModal';
 import * as XLSX from 'xlsx';
+import { useFP } from '../contexts/FPContext';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Category options for Customer Submissions (same as Create Customer)
 const CUSTOMER_CATEGORIES = [
@@ -69,6 +72,10 @@ const CustomerSubmissions = () => {
   const [notifications, setNotifications] = useState([]);
   const [statusFilter, setStatusFilter] = useState('active');
   
+  // Get selected FP from context
+  const { selectedFp } = useFP();
+  const token = sessionStorage.getItem('pm_auth_token');
+  
   // Assignment states
   const [assignVendorModal, setAssignVendorModal] = useState(null); // property to assign vendor to
   const [assignEmployeeModal, setAssignEmployeeModal] = useState(null); // property to assign employee to
@@ -91,32 +98,54 @@ const CustomerSubmissions = () => {
   const [viewAMCDetails, setViewAMCDetails] = useState(null); // AMC package details modal
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
 
-  // Load properties from backend API and notifications from localStorage
+  // Load properties from FP-specific API
   const loadData = async () => {
-    const props = await getProperties(statusFilter);
-    setProperties(props);
-    setNotifications(getNotifications());
+    if (!selectedFp) {
+      setProperties([]);
+      return;
+    }
     
-    // Sync zones from properties to zoneStore for Zone Assignment
-    // This ensures any zone from Property Management appears in Add Employee zone assignment
-    const existingZones = getZoneNames();
-    props.forEach(prop => {
-      if (prop.zone && prop.zone.trim()) {
-        const zoneExists = existingZones.some(z => z.toLowerCase() === prop.zone.trim().toLowerCase());
-        if (!zoneExists) {
-          createZone(prop.zone.trim());
-          existingZones.push(prop.zone.trim()); // Add to local array to avoid duplicates in same batch
-        }
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/properties`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        // Map API response to expected format
+        const props = result.data.map(p => ({
+          id: p.id,
+          propertyId: p.property_id,
+          name: p.name,
+          propertyType: p.property_type,
+          zone: p.zone_name,
+          area: p.area,
+          address: p.address,
+          city: p.city,
+          state: p.state,
+          zipCode: p.zip_code,
+          contactPerson: p.contact_person,
+          contactPhone: p.contact_phone,
+          contactEmail: p.contact_email,
+          createdAt: p.created_at,
+          status: p.status || 'active',
+          sourceTable: p.source_table
+        }));
+        setProperties(props);
       }
-    });
+    } catch (error) {
+      console.error('Error loading properties:', error);
+    }
+    setNotifications(getNotifications());
   };
 
   useEffect(() => {
-    loadData();
-    // Poll for new entries every 10 seconds
-    const interval = setInterval(loadData, 10000);
-    return () => clearInterval(interval);
-  }, [statusFilter]);
+    if (selectedFp) {
+      loadData();
+      // Poll for new entries every 10 seconds
+      const interval = setInterval(loadData, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedFp, statusFilter]);
 
   // Show toast helper
   const showToast = (message, type = 'success') => {
@@ -403,6 +432,17 @@ const CustomerSubmissions = () => {
     return `${Math.floor(hrs / 24)}d ago`;
   };
 
+  // Show message if no FP selected
+  if (!selectedFp) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 bg-gray-50">
+        <Building2 className="w-16 h-16 text-gray-300 mb-4" />
+        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Franchise Partner</h2>
+        <p className="text-gray-400 text-sm">Choose an FP from the dropdown in the sidebar to view properties</p>
+      </div>
+    );
+  }
+
   // Category Selection Screen (shown first)
   if (!selectedCategory) {
     return (
@@ -411,7 +451,7 @@ const CustomerSubmissions = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-            <p className="text-gray-500 mt-1">View and manage created customers</p>
+            <p className="text-gray-500 mt-1">Viewing properties for {selectedFp.companyName}</p>
           </div>
         </div>
 
