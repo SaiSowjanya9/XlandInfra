@@ -1091,72 +1091,83 @@ const validateFpId = (fpId) => {
   return parseInt(fpId);
 };
 
-// Get aggregated dashboard stats for Admin (all data)
+// Get aggregated dashboard stats for Admin (all data from all FPs)
 router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
   try {
-    // Total properties (from both tables)
-    const [[propCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM properties WHERE status != 'deleted'`
-    );
-    const [[onboardedCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM onboarded_properties WHERE status = 'active'`
-    );
-    
-    // Total vendors
-    const [[vendorCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM vendors WHERE status = 'active'`
-    );
-    
-    // Total employees (users + fp_employees)
-    const [[userCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM users WHERE status = 'active'`
-    );
-    const [[fpEmpCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM fp_employees WHERE is_active = TRUE`
-    );
-    
-    // Work orders
-    const [[pendingWO]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE status IN ('pending', 'in_progress', 'assigned')`
-    );
-    const [[completedWO]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE status = 'completed'`
-    );
-    
-    // Estimates
-    const [[estimateCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM estimates WHERE is_archived = FALSE`
-    );
-    const [[fpEstimateCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM fp_estimates WHERE is_archived = FALSE`
-    );
-    
-    // Zones
-    const [[zoneCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM zones WHERE is_active = TRUE`
-    );
-    
-    // Recent work orders
-    const [recentWorkOrders] = await pool.execute(
-      `SELECT wo.id, wo.work_order_id, wo.title, wo.status, wo.priority, wo.created_at,
-              p.name as property_name
-       FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id
-       ORDER BY wo.created_at DESC
-       LIMIT 10`
-    );
+    // Helper function to safely get count (handles missing tables)
+    const safeCount = (query, params = []) => {
+      return pool.execute(query, params)
+        .then(([result]) => result[0]?.count || 0)
+        .catch((e) => {
+          console.log(`Admin dashboard query skipped: ${e.message}`);
+          return 0;
+        });
+    };
+
+    // Run all queries in parallel
+    const [
+      // Properties - from properties table (FP properties have franchise_partner_id)
+      fpProperties,
+      // Also count onboarded_properties
+      onboardedProperties,
+      // Vendors - from onboarded_vendors (FP vendors)
+      fpVendors,
+      // Also count main vendors table
+      mainVendors,
+      // Employees - from fp_employees
+      fpEmployees,
+      // Work orders stats
+      workOrderStats,
+      // Estimates
+      estimates,
+      fpEstimates,
+      // Recent work orders
+      recentWorkOrders
+    ] = await Promise.all([
+      // FP properties
+      safeCount('SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id IS NOT NULL'),
+      // Onboarded properties
+      safeCount('SELECT COUNT(*) as count FROM onboarded_properties WHERE status = "active"'),
+      // FP onboarded vendors
+      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE is_active = TRUE'),
+      // Main vendors
+      safeCount('SELECT COUNT(*) as count FROM vendors WHERE status = "active"'),
+      // FP employees
+      safeCount('SELECT COUNT(*) as count FROM fp_employees WHERE is_active = TRUE'),
+      // Work orders - combined query
+      pool.execute(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN status NOT IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed
+        FROM work_orders
+      `).then(([[r]]) => ({ total: r.total || 0, pending: r.pending || 0, completed: r.completed || 0 }))
+        .catch(() => ({ total: 0, pending: 0, completed: 0 })),
+      // Estimates
+      safeCount('SELECT COUNT(*) as count FROM estimates'),
+      safeCount('SELECT COUNT(*) as count FROM fp_estimates WHERE is_archived = FALSE'),
+      // Recent work orders
+      pool.execute(
+        `SELECT wo.id, wo.work_order_id, wo.title, wo.status, wo.priority, wo.created_at,
+                p.name as property_name, fp.company_name as fp_name
+         FROM work_orders wo
+         LEFT JOIN properties p ON wo.property_id = p.id
+         LEFT JOIN franchise_partners fp ON wo.franchise_partner_id = fp.id
+         ORDER BY wo.created_at DESC
+         LIMIT 10`
+      ).then(([rows]) => rows).catch(() => [])
+    ]);
     
     res.json({
       success: true,
       data: {
-        totalProperties: (propCount?.count || 0) + (onboardedCount?.count || 0),
-        totalVendors: vendorCount?.count || 0,
-        totalEmployees: (userCount?.count || 0) + (fpEmpCount?.count || 0),
-        pendingWorkOrders: pendingWO?.count || 0,
-        completedWorkOrders: completedWO?.count || 0,
-        totalEstimates: (estimateCount?.count || 0) + (fpEstimateCount?.count || 0),
-        totalZones: zoneCount?.count || 0,
-        recentWorkOrders: recentWorkOrders || []
+        totalProperties: fpProperties + onboardedProperties,
+        totalVendors: fpVendors + mainVendors,
+        totalEmployees: fpEmployees,
+        pendingWorkOrders: workOrderStats.pending,
+        completedWorkOrders: workOrderStats.completed,
+        totalEstimates: estimates + fpEstimates,
+        recentWorkOrders: recentWorkOrders
       }
     });
   } catch (error) {
@@ -1247,7 +1258,7 @@ router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res)
     
     // Get FP info
     const [[fpInfo]] = await pool.execute(
-      `SELECT id, fp_id, company_name, owner_name, city, state FROM franchise_partners WHERE id = ?`,
+      `SELECT id, fp_code as fpId, company_name, owner_name, city, state FROM franchise_partners WHERE id = ?`,
       [fpIdNum]
     );
     

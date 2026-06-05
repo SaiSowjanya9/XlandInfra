@@ -468,21 +468,67 @@ const CustomerSubmissions = () => {
     return `Viewing all properties (Admin Mode)`;
   };
 
-  // Show FP selection screen if no FP selected
-  if (!selectedFp) {
+  // Step 1: Show Property Type Selection (Residential/Commercial)
+  if (!selectedCategory) {
     return (
       <div className="space-y-8 p-6">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-gray-500 mt-1">Select a franchise partner to view properties</p>
+          <p className="text-gray-500 mt-1">Select property type to continue</p>
+        </div>
+
+        {/* Property Type Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto mt-8">
+          {/* Residential */}
+          <button
+            onClick={() => setSelectedCategory('residential')}
+            className="flex flex-col items-center p-8 bg-white rounded-2xl border-2 border-gray-200 hover:border-emerald-400 hover:shadow-lg transition-all group"
+          >
+            <div className="w-16 h-16 bg-emerald-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
+              <Home className="w-8 h-8 text-emerald-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800">Residential</h3>
+            <p className="text-sm text-gray-500 mt-1 text-center">Apartments, Villas, Gated Communities</p>
+          </button>
+
+          {/* Commercial - Coming Soon */}
+          <div className="flex flex-col items-center p-8 bg-gray-50 rounded-2xl border-2 border-gray-200 cursor-not-allowed opacity-60">
+            <div className="w-16 h-16 bg-gray-200 rounded-xl flex items-center justify-center mb-4">
+              <Store className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-400">Commercial</h3>
+            <p className="text-sm text-gray-400 mt-1 text-center">Offices, Retail, Industrial</p>
+            <span className="mt-3 px-3 py-1 bg-gray-200 text-gray-500 text-xs font-medium rounded-full">Coming Soon</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 2: Show FP selection screen after Residential is selected
+  if (!selectedFp) {
+    return (
+      <div className="space-y-8 p-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Property Management - Residential</h1>
+            <p className="text-gray-500 mt-1">Select a franchise partner to view properties</p>
+          </div>
         </div>
 
         {/* Selection Card */}
         <div className="flex flex-col items-center justify-center min-h-[400px] bg-gray-50 rounded-xl p-8">
           <Building2 className="w-16 h-16 text-gray-300 mb-4" />
           <h2 className="text-xl font-semibold text-gray-600 mb-2">Select Franchise Partner</h2>
-          <p className="text-gray-400 text-sm mb-6">Choose an FP to view their properties</p>
+          <p className="text-gray-400 text-sm mb-6">Choose an FP to view their residential properties</p>
           
           {/* FP Dropdown */}
           <div className="relative w-80">
@@ -523,7 +569,7 @@ const CustomerSubmissions = () => {
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-gray-800">{fp.fpId}</span>
-                        <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded">FP</span>
+                        <span className="text-xs text-gray-500">{fp.ownerName}</span>
                       </div>
                       <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
                     </button>
@@ -544,11 +590,6 @@ const CustomerSubmissions = () => {
         </div>
       </div>
     );
-  }
-
-  // Auto-set category when FP is selected but category isn't
-  if (!selectedCategory && selectedFp) {
-    setSelectedCategory('residential');
   }
 
 
@@ -619,7 +660,7 @@ const CustomerSubmissions = () => {
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-gray-800">{fp.fpId}</span>
-                        <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded">FP</span>
+                        <span className="text-xs text-gray-500">{fp.ownerName}</span>
                       </div>
                       <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
                     </button>
