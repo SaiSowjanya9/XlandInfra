@@ -428,7 +428,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Zone</label>
-                      <input type="text" value={selectedProperty.zone_id || selectedProperty.zone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
+                      <input type="text" value={selectedProperty.zone_name || selectedProperty.zoneName || selectedProperty.zone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Area</label>

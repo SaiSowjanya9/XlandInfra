@@ -152,7 +152,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           client_email: selectedProperty?.contact_email || directForm.email,
           property_name: selectedProperty?.name || directForm.propertyName,
           property_type: selectedProperty?.property_type || directForm.propertyType,
-          zone: selectedProperty?.zone || directForm.zone,
+          zone: selectedProperty?.zone_name || selectedProperty?.zoneName || selectedProperty?.zone || directForm.zone,
           city: selectedProperty?.city || directForm.city,
           address: selectedProperty?.address || directForm.address,
           package_id: selectedAmcPackage,
@@ -595,7 +595,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Contact Name</label><input type="text" value={selectedProperty.contact_person || selectedProperty.contact_name || selectedProperty.customer_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Property ID</label><input type="text" value={selectedProperty.property_id || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Entry Type</label><input type="text" value={selectedProperty.entry_type || selectedProperty.property_type?.substring(0,2).toUpperCase() || 'GC'} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
-                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Zone</label><input type="text" value={selectedProperty.zone_id || selectedProperty.zone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
+                            <div><label className="block text-xs font-medium text-slate-500 mb-1">Zone</label><input type="text" value={selectedProperty.zone_name || selectedProperty.zoneName || selectedProperty.zone || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                             <div><label className="block text-xs font-medium text-slate-500 mb-1">Area</label><input type="text" value={selectedProperty.area || selectedProperty.area_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" /></div>
                           </div>
                           <div className="grid grid-cols-5 gap-4">
