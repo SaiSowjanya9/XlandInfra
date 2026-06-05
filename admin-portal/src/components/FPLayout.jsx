@@ -119,7 +119,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
         onClick={handleClick}
         className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
           isActive
-            ? 'bg-sky-500 text-white'
+            ? 'bg-primary-600 text-white'
             : 'text-gray-600 hover:bg-gray-100'
         }`}
       >
@@ -138,7 +138,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center space-x-2">
-            <Users2 className="w-6 h-6 text-sky-500" />
+            <Users2 className="w-6 h-6 text-primary-600" />
             <span className="font-bold text-gray-900">{getRoleDisplay()}</span>
           </div>
           <div className="w-10" />
@@ -160,7 +160,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
           {/* Logo/Title */}
           <div className="flex items-center justify-between px-6 h-16 border-b border-gray-200">
             <div className="flex items-center space-x-2">
-              <Users2 className="w-8 h-8 text-sky-500" />
+              <Users2 className="w-8 h-8 text-primary-600" />
               <span className="font-bold text-lg text-gray-900">{getRoleDisplay()}</span>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
@@ -171,7 +171,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
           {/* Logged in as */}
           <div className="px-6 py-4 border-b border-gray-200">
             <p className="text-sm text-gray-500">Logged in as</p>
-            <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-sky-100 text-sky-700">
+            <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
               {getRoleDisplay()}
             </span>
           </div>

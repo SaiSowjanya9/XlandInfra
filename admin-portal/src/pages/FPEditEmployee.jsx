@@ -237,19 +237,6 @@ const FPEditEmployee = ({ user }) => {
           {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
         </div>
 
-        {/* Aadhaar */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Aadhaar Number</label>
-          <input
-            type="text"
-            value={formData.aadhaar}
-            onChange={(e) => updateField('aadhaar', e.target.value.replace(/\D/g, ''))}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter 12-digit Aadhaar number"
-            maxLength={12}
-          />
-        </div>
-
         {/* Submit */}
         <div className="flex justify-end gap-3 pt-4 border-t">
           <button
