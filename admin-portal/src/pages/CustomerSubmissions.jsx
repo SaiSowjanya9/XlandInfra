@@ -3,7 +3,7 @@ import {
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Hammer, Lock, 
   ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, UserPlus, Users,
-  FileText, Store, Package
+  FileText, Store, Package, Shield, RefreshCw
 } from 'lucide-react';
 import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
 import { getZoneNames, createZone } from '../utils/zoneStore';
@@ -72,9 +72,10 @@ const CustomerSubmissions = () => {
   const [notifications, setNotifications] = useState([]);
   const [statusFilter, setStatusFilter] = useState('active');
   
-  // Get selected FP and property type from context
-  const { selectedFp, selectedPropertyType } = useFP();
+  // Get FP list and selection from context
+  const { fpList, selectedFp, selectFp, selectedPropertyType, setSelectedPropertyType, loading: fpLoading, refreshFpList } = useFP();
   const token = sessionStorage.getItem('pm_auth_token');
+  const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
   
   // Assignment states
   const [assignVendorModal, setAssignVendorModal] = useState(null); // property to assign vendor to
@@ -100,20 +101,19 @@ const CustomerSubmissions = () => {
 
   // Load properties from FP-specific API or all FPs (Admin mode)
   const loadData = async () => {
-    // If no property type selected, show message to select
-    if (!selectedPropertyType) {
+    if (!selectedFp) {
       setProperties([]);
       return;
     }
     
     try {
       let endpoint;
-      if (selectedFp) {
-        // Specific FP selected - fetch from that FP only
-        endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/properties`;
-      } else {
+      if (selectedFp.id === 'all') {
         // Admin mode - fetch all properties from all FPs
         endpoint = `${API_BASE}/api/admin/all-properties`;
+      } else {
+        // Specific FP selected - fetch from that FP only
+        endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/properties`;
       }
       
       const response = await fetch(endpoint, {
@@ -144,13 +144,11 @@ const CustomerSubmissions = () => {
           fpName: p.fp_name || p.company_name
         }));
         
-        // Filter by selected property type (residential/commercial)
-        if (selectedPropertyType) {
-          props = props.filter(p => {
-            const cat = (p.category || 'residential').toLowerCase();
-            return cat === selectedPropertyType.toLowerCase();
-          });
-        }
+        // For now, only showing residential properties (commercial coming soon)
+        props = props.filter(p => {
+          const cat = (p.category || 'residential').toLowerCase();
+          return cat === 'residential';
+        });
         
         setProperties(props);
       }
@@ -165,7 +163,7 @@ const CustomerSubmissions = () => {
     // Poll for new entries every 10 seconds
     const interval = setInterval(loadData, 10000);
     return () => clearInterval(interval);
-  }, [selectedFp, selectedPropertyType, statusFilter]);
+  }, [selectedFp, statusFilter]);
 
   // Show toast helper
   const showToast = (message, type = 'success') => {
@@ -452,32 +450,102 @@ const CustomerSubmissions = () => {
     return `${Math.floor(hrs / 24)}d ago`;
   };
 
-  // Show message if no property type selected (user needs to select from sidebar)
-  if (!selectedPropertyType) {
+  // Handle FP selection
+  const handleFpSelect = (fp) => {
+    selectFp(fp);
+    setFpDropdownOpen(false);
+    // Auto-set category to residential when FP is selected
+    if (!selectedCategory) {
+      setSelectedCategory('residential');
+    }
+  };
+
+  // Get the viewing label based on selection
+  const getViewingLabel = () => {
+    if (selectedFp && selectedFp.id !== 'all') {
+      return `Viewing properties for ${selectedFp.companyName}`;
+    }
+    return `Viewing all properties (Admin Mode)`;
+  };
+
+  // Show FP selection screen if no FP selected
+  if (!selectedFp) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 bg-gray-50 rounded-xl">
-        <Building2 className="w-16 h-16 text-gray-300 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select Property Type</h2>
-        <p className="text-gray-400 text-sm text-center max-w-md">
-          Click on <strong>Property Management</strong> in the sidebar, then choose <strong>Residential</strong> or <strong>Commercial</strong>, and select an FP to view properties.
-        </p>
+      <div className="space-y-8 p-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
+          <p className="text-gray-500 mt-1">Select a franchise partner to view properties</p>
+        </div>
+
+        {/* Selection Card */}
+        <div className="flex flex-col items-center justify-center min-h-[400px] bg-gray-50 rounded-xl p-8">
+          <Building2 className="w-16 h-16 text-gray-300 mb-4" />
+          <h2 className="text-xl font-semibold text-gray-600 mb-2">Select Franchise Partner</h2>
+          <p className="text-gray-400 text-sm mb-6">Choose an FP to view their properties</p>
+          
+          {/* FP Dropdown */}
+          <div className="relative w-80">
+            <button
+              onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm hover:border-emerald-400 transition-colors shadow-sm"
+            >
+              <span className="text-gray-600">Select Franchise Partner...</span>
+              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {fpDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto">
+                {/* Admin option */}
+                <button
+                  onClick={() => handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All Franchise Partners', displayName: 'Admin (All FPs)' })}
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-emerald-50 transition-colors border-b border-gray-100"
+                >
+                  <div className="font-medium flex items-center gap-2 text-emerald-600">
+                    <Shield className="w-4 h-4" />
+                    Admin (All FPs)
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">View all properties from all FPs</div>
+                </button>
+                
+                {fpLoading ? (
+                  <div className="px-4 py-3 text-sm text-gray-500 flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Loading franchise partners...
+                  </div>
+                ) : fpList.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-gray-500">No franchise partners found</div>
+                ) : (
+                  fpList.map(fp => (
+                    <button
+                      key={fp.id}
+                      onClick={() => handleFpSelect(fp)}
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                    >
+                      <div className="font-medium text-gray-800">{fp.fpId}</div>
+                      <div className="text-xs text-gray-500">{fp.companyName}</div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Refresh button */}
+          <button
+            onClick={refreshFpList}
+            className="mt-4 flex items-center gap-2 text-sm text-gray-500 hover:text-emerald-600 transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${fpLoading ? 'animate-spin' : ''}`} />
+            Refresh FP List
+          </button>
+        </div>
       </div>
     );
   }
 
-  // Get the viewing label based on selection
-  const getViewingLabel = () => {
-    if (selectedFp) {
-      return `Viewing ${selectedPropertyType} properties for ${selectedFp.companyName}`;
-    }
-    return `Viewing all ${selectedPropertyType} properties (Admin Mode)`;
-  };
-
-  // Category Selection Screen - SKIP since we now select from sidebar
-  // Auto-set category based on selectedPropertyType
-  if (!selectedCategory && selectedPropertyType) {
-    // Auto-select category based on property type from sidebar
-    setSelectedCategory(selectedPropertyType);
+  // Auto-set category when FP is selected but category isn't
+  if (!selectedCategory && selectedFp) {
+    setSelectedCategory('residential');
   }
 
 
@@ -499,13 +567,61 @@ const CustomerSubmissions = () => {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Property Management - {selectedPropertyType ? selectedPropertyType.charAt(0).toUpperCase() + selectedPropertyType.slice(1) : ''}
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {getViewingLabel()} • {properties.length} properties
-          </p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Property Management</h1>
+            <p className="text-gray-500 text-sm mt-1">
+              {getViewingLabel()} • {properties.length} properties
+            </p>
+          </div>
+          {/* FP Switcher */}
+          <div className="relative">
+            <button
+              onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-sm hover:bg-emerald-100 transition-colors"
+            >
+              <span className="font-medium text-emerald-700">
+                {selectedFp.id === 'all' ? 'Admin (All FPs)' : selectedFp.fpId}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-emerald-600 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {fpDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto">
+                {/* Admin option */}
+                <button
+                  onClick={() => handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All Franchise Partners', displayName: 'Admin (All FPs)' })}
+                  className={`w-full text-left px-4 py-2.5 text-sm hover:bg-emerald-50 transition-colors border-b border-gray-100 ${
+                    selectedFp.id === 'all' ? 'bg-emerald-50' : ''
+                  }`}
+                >
+                  <div className="font-medium flex items-center gap-2 text-emerald-600">
+                    <Shield className="w-4 h-4" />
+                    Admin (All FPs)
+                  </div>
+                </button>
+                
+                {fpLoading ? (
+                  <div className="px-4 py-2.5 text-sm text-gray-500 flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Loading...
+                  </div>
+                ) : (
+                  fpList.map(fp => (
+                    <button
+                      key={fp.id}
+                      onClick={() => handleFpSelect(fp)}
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
+                        selectedFp.id === fp.id ? 'bg-emerald-50' : ''
+                      }`}
+                    >
+                      <div className="font-medium text-gray-800">{fp.fpId}</div>
+                      <div className="text-xs text-gray-500">{fp.companyName}</div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
         {/* Action Buttons */}
         <div className="flex items-center gap-2 mt-3 sm:mt-0">

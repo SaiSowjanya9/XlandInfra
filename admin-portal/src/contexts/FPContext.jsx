@@ -57,26 +57,16 @@ export const FPProvider = ({ children }) => {
       if (result.success && Array.isArray(result.data)) {
         setFpList(result.data);
         
-        // Auto-select FP if none selected
+        // Only restore previously selected FP, don't auto-select
         if (result.data.length > 0) {
           const savedFpId = sessionStorage.getItem('selectedFpId');
-          let fpToSelect = null;
-          
           if (savedFpId) {
-            fpToSelect = result.data.find(f => f.id?.toString() === savedFpId);
+            const fpToSelect = result.data.find(f => f.id?.toString() === savedFpId);
+            if (fpToSelect) {
+              setSelectedFp(fpToSelect);
+            }
           }
-          
-          // If saved FP not found or no saved FP, select first one
-          if (!fpToSelect) {
-            fpToSelect = result.data[0];
-          }
-          
-          setSelectedFp(fpToSelect);
-          if (fpToSelect) {
-            sessionStorage.setItem('selectedFpId', fpToSelect.id.toString());
-          }
-        } else {
-          setSelectedFp(null);
+          // Don't auto-select first one anymore - let user choose
         }
       } else {
         setFpList([]);

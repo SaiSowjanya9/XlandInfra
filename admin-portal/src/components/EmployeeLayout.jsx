@@ -42,12 +42,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   // Check if user is Operations Manager (restricted access)
   const isOpsManager = false;
 
-  // Property Management section states
-  const [propertyMgmtOpen, setPropertyMgmtOpen] = useState(
-    location.pathname.startsWith('/employee/customer-submissions')
-  );
-  const [residentialFpDropdown, setResidentialFpDropdown] = useState(false);
-
   const [vendorOpen, setVendorOpen] = useState(
     location.pathname.startsWith('/employee/add-vendor') ||
     location.pathname.startsWith('/employee/vendor-details') ||
@@ -60,16 +54,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     location.pathname.startsWith('/employee/employee-zone-management')
   );
 
-  // Handle FP selection for property type
-  const handleFpSelect = (fp, propertyType) => {
-    selectFp(fp);
-    setSelectedPropertyType(propertyType);
-    setResidentialFpDropdown(false);
-    navigate('/employee/customer-submissions');
-    if (sidebarOpen) setSidebarOpen(false);
-  };
-
-  // Base nav items - filtered based on role (removed Property Management - it's now a section)
+  // Base nav items - filtered based on role
   const allNavItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
@@ -213,98 +198,8 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             {/* Dashboard only */}
             <NavLink item={{ path: '/employee', icon: LayoutDashboard, label: 'Dashboard' }} mobile />
 
-            {/* Property Management Section with Residential/Commercial + FP Selection */}
-            <div className="mt-2">
-              <button
-                onClick={() => setPropertyMgmtOpen(!propertyMgmtOpen)}
-                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
-                  location.pathname.startsWith('/employee/customer-submissions')
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <Building2 className="w-5 h-5" />
-                  <span className="font-medium">Property Management</span>
-                </div>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    propertyMgmtOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-              {propertyMgmtOpen && (
-                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
-                  {/* Residential */}
-                  <div className="relative">
-                    <button
-                      onClick={() => {
-                        setResidentialFpDropdown(!residentialFpDropdown);
-                        setCommercialFpDropdown(false);
-                      }}
-                      className={`flex items-center justify-between w-full px-4 py-2 rounded-lg transition-all duration-200 ${
-                        selectedPropertyType === 'residential' && location.pathname.startsWith('/employee/customer-submissions')
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Home className="w-4 h-4" />
-                        <span className="text-sm font-medium">Residential</span>
-                      </div>
-                      <ChevronDown className={`w-3 h-3 transition-transform ${residentialFpDropdown ? 'rotate-180' : ''}`} />
-                    </button>
-                    {residentialFpDropdown && (
-                      <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                        {/* Admin option - shows all data */}
-                        <button
-                          onClick={() => handleFpSelect(null, 'residential')}
-                          className={`w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 transition-colors ${
-                            !selectedFp && selectedPropertyType === 'residential' ? 'bg-emerald-100 text-emerald-700' : 'text-gray-700'
-                          }`}
-                        >
-                          <div className="font-medium flex items-center gap-2">
-                            <Shield className="w-3 h-3" />
-                            Admin (All FPs)
-                          </div>
-                          <div className="text-xs text-gray-500">View all data</div>
-                        </button>
-                        <div className="border-t border-gray-100"></div>
-                        {fpLoading ? (
-                          <div className="px-3 py-2 text-sm text-gray-500 flex items-center gap-2">
-                            <RefreshCw className="w-3 h-3 animate-spin" /> Loading...
-                          </div>
-                        ) : fpList.length === 0 ? (
-                          <div className="px-3 py-2 text-sm text-gray-500">No FPs found</div>
-                        ) : (
-                          fpList.map(fp => (
-                            <button
-                              key={fp.id}
-                              onClick={() => handleFpSelect(fp, 'residential')}
-                              className={`w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 transition-colors ${
-                                selectedFp?.id === fp.id && selectedPropertyType === 'residential' ? 'bg-emerald-100 text-emerald-700' : 'text-gray-700'
-                              }`}
-                            >
-                              <div className="font-medium">{fp.fpId}</div>
-                              <div className="text-xs text-gray-500">{fp.companyName}</div>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Commercial - Coming Soon */}
-                  <div className="flex items-center justify-between w-full px-4 py-2 rounded-lg bg-gray-50 cursor-not-allowed">
-                    <div className="flex items-center space-x-3">
-                      <Store className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-400">Commercial</span>
-                    </div>
-                    <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">Coming Soon</span>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Property Management - Direct link, FP selection on page */}
+            <NavLink item={{ path: '/employee/customer-submissions', icon: Building2, label: 'Property Management' }} mobile />
 
             {/* Other nav items (Work Orders, etc.) */}
             {navItems.filter(item => item.path !== '/employee').map((item) => (
