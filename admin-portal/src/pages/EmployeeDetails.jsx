@@ -99,9 +99,9 @@ const EmployeeDetails = () => {
         // Map API fields to frontend expected format
         let empList = (result.data || []).map(e => ({
           ...e,
-          employeeId: e.employee_id,
+          employeeId: e.employee_id || e.employee_code,
           fullName: e.name || `${e.first_name} ${e.last_name || ''}`.trim(),
-          assignedZones: e.zone_names ? e.zone_names.split(',').map(z => z.trim()) : [],
+          assignedZones: e.assigned_zones || (e.zone_names ? e.zone_names.split(',').map(z => z.trim()) : []),
           zoneCount: e.zone_count || 0,
           createdAt: e.created_at,
           status: e.status || (e.is_active ? 'active' : 'inactive')

@@ -1360,7 +1360,8 @@ router.get('/all-employees', authenticate, adminOnly, async (req, res) => {
   try {
     // Get employees first (matching FP portal approach)
     const [employees] = await pool.execute(
-      `SELECT e.*, CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
+      `SELECT e.*, e.employee_code as employee_id, 
+              CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
               CASE WHEN e.is_active = 1 THEN 'active' ELSE 'inactive' END as status,
               fp.fp_code, fp.company_name as fp_name
        FROM fp_employees e
@@ -1726,7 +1727,8 @@ router.get('/fp-view/:fpId/employees', authenticate, adminOnly, async (req, res)
     
     // Get employees first (matching FP portal approach)
     const [employees] = await pool.execute(
-      `SELECT e.*, CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
+      `SELECT e.*, e.employee_code as employee_id,
+              CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
               CASE WHEN e.is_active = 1 THEN 'active' ELSE 'inactive' END as status
        FROM fp_employees e
        WHERE e.franchise_partner_id = ?
