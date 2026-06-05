@@ -1300,6 +1300,33 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
   }
 });
 
+// Get ALL employees from ALL FPs (Admin mode)
+router.get('/all-employees', authenticate, adminOnly, async (req, res) => {
+  try {
+    const [employees] = await pool.execute(
+      `SELECT e.id, e.employee_id, e.first_name, e.last_name,
+              CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
+              e.email, e.phone, e.role, e.is_active,
+              CASE WHEN e.is_active = 1 THEN 'active' ELSE 'inactive' END as status,
+              e.created_at, e.franchise_partner_id,
+              fp.fp_code, fp.company_name as fp_name,
+              GROUP_CONCAT(DISTINCT ez.zone_name ORDER BY ez.zone_name) as zone_names,
+              COUNT(DISTINCT ez.zone_name) as zone_count
+       FROM fp_employees e
+       LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
+       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id
+       GROUP BY e.id
+       ORDER BY e.first_name, e.last_name`
+    );
+    
+    console.log('Admin all-employees: Found', employees.length, 'employees');
+    res.json({ success: true, data: employees || [] });
+  } catch (error) {
+    console.error('Error fetching all employees:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch employees' });
+  }
+});
+
 // Get ALL vendor assignments from ALL FPs (Admin mode)
 router.get('/all-vendor-assignments', authenticate, adminOnly, async (req, res) => {
   try {

@@ -83,8 +83,15 @@ const EmployeeDetails = () => {
     
     setLoading(true);
     try {
-      // Fetch employees from FP-specific API
-      const response = await fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/employees`, {
+      // Use Admin endpoint for "all" mode, otherwise FP-specific endpoint
+      let url;
+      if (selectedFp.id === 'all') {
+        url = `${API_BASE}/api/admin/all-employees`;
+      } else {
+        url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/employees`;
+      }
+      
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -251,33 +258,12 @@ const EmployeeDetails = () => {
     return true;
   });
 
-  // Show FP selection if no FP selected
-  if (!selectedFp) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Employee Details</h1>
-          <p className="text-gray-500 mt-1">Select a Franchise Partner to view employees</p>
-        </div>
-        <div className="bg-gray-50 rounded-2xl p-12 text-center">
-          <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Select Franchise Partner</h2>
-          <p className="text-gray-500 mb-6">Choose an FP from the list to view employees</p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {fpList.map(fp => (
-              <button
-                key={fp.id}
-                onClick={() => handleFpSelect(fp)}
-                className="px-6 py-3 bg-white border border-gray-200 rounded-xl hover:border-teal-400 hover:bg-teal-50 transition-colors"
-              >
-                {fp.fpId} - {fp.companyName}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Auto-select Admin mode if no FP selected
+  useEffect(() => {
+    if (!selectedFp) {
+      handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' });
+    }
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -307,20 +293,33 @@ const EmployeeDetails = () => {
           <div className="relative">
             <button
               onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm hover:border-gray-300 transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm hover:border-gray-300 hover:shadow-sm transition-all"
             >
-              <div className="w-2 h-2 rounded-full bg-slate-500"></div>
-              <span className="font-medium text-gray-700">{selectedFp.fpId}</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-slate-500"></div>
+              <span className="font-medium text-gray-700">
+                {selectedFp?.id === 'all' ? 'Admin (All FPs)' : selectedFp?.fpId || 'Select FP'}
+              </span>
               <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {fpDropdownOpen && (
-              <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto">
+              <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
+                <button
+                  onClick={() => handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' })}
+                  className={`w-full text-left px-4 py-3 text-sm hover:bg-slate-50 transition-colors border-b border-gray-100 ${
+                    selectedFp?.id === 'all' ? 'bg-slate-50' : ''
+                  }`}
+                >
+                  <div className="font-medium flex items-center gap-2 text-slate-700">
+                    <Users className="w-4 h-4" />
+                    Admin (All FPs)
+                  </div>
+                </button>
                 {fpList.map(fp => (
                   <button
                     key={fp.id}
                     onClick={() => handleFpSelect(fp)}
                     className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
-                      selectedFp.id === fp.id ? 'bg-slate-50' : ''
+                      selectedFp?.id === fp.id ? 'bg-slate-50' : ''
                     }`}
                   >
                     <div className="flex items-center justify-between">
