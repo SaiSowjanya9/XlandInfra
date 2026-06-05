@@ -1130,39 +1130,45 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
 // Create estimate - dual-tag with manager_id AND franchise_partner_id
 router.post('/estimates', requireManagerScope, async (req, res) => {
   try {
-    const { clientId, propertyId, title, description, estimateType, items, subtotal, taxPercentage, discountPercentage, validUntil } = req.body;
+    const {
+      estimate_type, property_id, property_code, client_name, client_phone, client_email,
+      property_name, property_type, zone, city, address, package_id, package_name, package_price,
+      addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
+      description
+    } = req.body;
     
     const estimateId = `EST-MGR-${Date.now()}`;
-    const tax = (subtotal * (taxPercentage || 0)) / 100;
-    const discount = (subtotal * (discountPercentage || 0)) / 100;
-    const total = subtotal + tax - discount;
     const managerId = req.managerId;
-    const franchisePartnerId = req.franchisePartnerId || null;
+    const franchisePartnerId = req.franchisePartnerId || 1;
     
-    const [result] = await pool.execute(
-      `INSERT INTO estimates (estimate_id, client_id, property_id, title, description, estimate_type,
-        subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount, total_amount,
-        valid_until, status, manager_id, franchise_partner_id, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, NOW())`,
-      [estimateId, clientId || null, propertyId || null, title, description, estimateType || 'property_based',
-       subtotal, taxPercentage || 0, tax, discountPercentage || 0, discount, total,
-       validUntil || null, managerId, franchisePartnerId, req.user.id]
-    );
+    // property_id column is INT, so use null for string codes
+    const numericPropertyId = parseInt(property_id);
+    const propertyIdValue = isNaN(numericPropertyId) ? null : numericPropertyId;
 
-    // Insert line items
-    if (items && items.length > 0) {
-      for (const item of items) {
-        await pool.execute(
-          `INSERT INTO estimate_items (estimate_id, description, quantity, unit_price, total_price)
-           VALUES (?, ?, ?, ?, ?)`,
-          [result.insertId, item.description, item.quantity, item.unitPrice, item.quantity * item.unitPrice]
-        );
-      }
-    }
+    const [result] = await pool.execute(
+      `INSERT INTO fp_estimates (
+        estimate_id, franchise_partner_id, property_id, estimate_type,
+        client_name, client_phone, client_email, property_name, property_code, property_type,
+        zone, city, address, package_id, package_name, package_price,
+        subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
+        addons_data, description, created_by_id, created_by_role, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())`,
+      [
+        estimateId, franchisePartnerId, propertyIdValue, estimate_type || 'property_based',
+        client_name || '', client_phone || '', client_email || '',
+        property_name || '', property_code || property_id || '', property_type || '',
+        zone || '', city || '', address || '',
+        package_id || null, package_name || '', package_price || 0,
+        subtotal || 0, discount_percent || 0, discount_amount || 0,
+        gst_percent || 18, gst_amount || 0, total_amount || 0,
+        JSON.stringify(addons || []), description || '', managerId, 'manager'
+      ]
+    );
 
     res.json({ success: true, message: 'Estimate created', data: { id: result.insertId, estimateId } });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Manager estimate create error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create estimate: ' + error.message });
   }
 });
 

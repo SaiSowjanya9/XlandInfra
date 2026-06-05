@@ -1139,6 +1139,10 @@ router.post('/estimates', requireExecutiveScope, async (req, res) => {
     } = req.body;
 
     const estimateId = `EST-EXEC-${Date.now()}`;
+    
+    // property_id column is INT, so pass null and use property_code for string ID
+    const numericPropertyId = parseInt(property_id);
+    const propertyIdValue = isNaN(numericPropertyId) ? null : numericPropertyId;
 
     // Use fp_estimates table (has all required columns)
     const [result] = await pool.query(
@@ -1150,14 +1154,14 @@ router.post('/estimates', requireExecutiveScope, async (req, res) => {
         addons_data, description, created_by_id, created_by_role, status, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())`,
       [
-        estimateId, franchisePartnerId || 1, property_id || null, estimate_type || 'property_based',
-        client_name || null, client_phone || null, client_email || null,
-        property_name || null, property_code || null, property_type || null,
-        zone || null, city || null, address || null,
-        package_id || null, package_name || null, package_price || 0,
+        estimateId, franchisePartnerId || 1, propertyIdValue, estimate_type || 'property_based',
+        client_name || '', client_phone || '', client_email || '',
+        property_name || '', property_code || property_id || '', property_type || '',
+        zone || '', city || '', address || '',
+        package_id || null, package_name || '', package_price || 0,
         subtotal || 0, discount_percent || 0, discount_amount || 0,
         gst_percent || 18, gst_amount || 0, total_amount || 0,
-        JSON.stringify(addons || []), description || null, executiveId, 'executive'
+        JSON.stringify(addons || []), description || '', executiveId, 'executive'
       ]
     );
 
