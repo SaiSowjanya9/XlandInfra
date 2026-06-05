@@ -1304,38 +1304,52 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
 router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
   try {
     const { archived } = req.query;
-    const isArchived = archived === 'true';
+    const isArchived = archived === 'true' ? 1 : 0;
+    
+    console.log('Fetching all estimates, archived:', isArchived);
     
     // Get from main estimates table
-    const [mainEstimates] = await pool.execute(
-      `SELECT e.*, 'estimates' as source_table,
-              fp.fp_code, fp.company_name as fp_name,
-              COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), e.created_by, 'System') as created_by_name
-       FROM estimates e
-       LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
-       LEFT JOIN fp_employees fpe ON e.created_by_id = fpe.id OR e.created_by = fpe.email
-       WHERE (e.is_archived = ? OR (? = FALSE AND (e.is_archived IS NULL OR e.is_archived = 0)))
-       ORDER BY e.created_at DESC`,
-      [isArchived, isArchived]
-    );
+    let mainEstimates = [];
+    try {
+      let query;
+      if (isArchived) {
+        query = `SELECT e.*, 'estimates' as source_table, fp.fp_code, fp.company_name as fp_name
+                 FROM estimates e
+                 LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
+                 WHERE e.is_archived = 1 ORDER BY e.created_at DESC`;
+      } else {
+        query = `SELECT e.*, 'estimates' as source_table, fp.fp_code, fp.company_name as fp_name
+                 FROM estimates e
+                 LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
+                 WHERE (e.is_archived = 0 OR e.is_archived IS NULL) ORDER BY e.created_at DESC`;
+      }
+      const [results] = await pool.execute(query);
+      mainEstimates = results;
+      console.log('Main estimates found:', mainEstimates.length);
+    } catch (e) {
+      console.log('Main estimates query error:', e.message);
+    }
     
     // Get from fp_estimates table
     let fpEstimates = [];
     try {
-      const [fpEst] = await pool.execute(
-        `SELECT fe.*, 'fp_estimates' as source_table,
-                fp.fp_code, fp.company_name as fp_name,
-                COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), fe.created_by, 'System') as created_by_name
-         FROM fp_estimates fe
-         LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
-         LEFT JOIN fp_employees fpe ON fe.created_by_id = fpe.id OR fe.created_by = fpe.email
-         WHERE (fe.is_archived = ? OR (? = FALSE AND (fe.is_archived IS NULL OR fe.is_archived = 0)))
-         ORDER BY fe.created_at DESC`,
-        [isArchived, isArchived]
-      );
-      fpEstimates = fpEst;
+      let query;
+      if (isArchived) {
+        query = `SELECT fe.*, 'fp_estimates' as source_table, fp.fp_code, fp.company_name as fp_name
+                 FROM fp_estimates fe
+                 LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
+                 WHERE fe.is_archived = 1 ORDER BY fe.created_at DESC`;
+      } else {
+        query = `SELECT fe.*, 'fp_estimates' as source_table, fp.fp_code, fp.company_name as fp_name
+                 FROM fp_estimates fe
+                 LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
+                 WHERE (fe.is_archived = 0 OR fe.is_archived IS NULL) ORDER BY fe.created_at DESC`;
+      }
+      const [results] = await pool.execute(query);
+      fpEstimates = results;
+      console.log('FP estimates found:', fpEstimates.length);
     } catch (e) {
-      console.log('FP estimates table query:', e.message);
+      console.log('FP estimates query error:', e.message);
     }
     
     // Combine and sort by created_at
@@ -1343,7 +1357,7 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
       new Date(b.created_at) - new Date(a.created_at)
     );
     
-    console.log('Admin all-estimates: Found', allEstimates.length, 'estimates (archived:', isArchived, ')');
+    console.log('Admin all-estimates: Total', allEstimates.length, 'estimates');
     res.json({ success: true, data: allEstimates || [] });
   } catch (error) {
     console.error('Error fetching all estimates:', error);
@@ -1360,34 +1374,40 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
     }
     
     const { archived } = req.query;
-    const isArchived = archived === 'true';
+    const isArchived = archived === 'true' ? 1 : 0;
+    
+    console.log('Fetching estimates for FP:', fpIdNum, 'archived:', isArchived);
     
     // Get from main estimates table
-    const [mainEstimates] = await pool.execute(
-      `SELECT e.*, 'estimates' as source_table,
-              COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), e.created_by, 'System') as created_by_name
-       FROM estimates e
-       LEFT JOIN fp_employees fpe ON e.created_by_id = fpe.id OR e.created_by = fpe.email
-       WHERE e.franchise_partner_id = ? AND (e.is_archived = ? OR (? = FALSE AND (e.is_archived IS NULL OR e.is_archived = 0)))
-       ORDER BY e.created_at DESC`,
-      [fpIdNum, isArchived, isArchived]
-    );
+    let mainEstimates = [];
+    try {
+      let query;
+      if (isArchived) {
+        query = `SELECT e.*, 'estimates' as source_table FROM estimates e WHERE e.franchise_partner_id = ? AND e.is_archived = 1 ORDER BY e.created_at DESC`;
+      } else {
+        query = `SELECT e.*, 'estimates' as source_table FROM estimates e WHERE e.franchise_partner_id = ? AND (e.is_archived = 0 OR e.is_archived IS NULL) ORDER BY e.created_at DESC`;
+      }
+      const [results] = await pool.execute(query, [fpIdNum]);
+      mainEstimates = results;
+      console.log('Main estimates found:', mainEstimates.length);
+    } catch (e) {
+      console.log('Main estimates query error:', e.message);
+    }
     
     // Get from fp_estimates table
     let fpEstimates = [];
     try {
-      const [fpEst] = await pool.execute(
-        `SELECT fe.*, 'fp_estimates' as source_table,
-                COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), fe.created_by, 'System') as created_by_name
-         FROM fp_estimates fe
-         LEFT JOIN fp_employees fpe ON fe.created_by_id = fpe.id OR fe.created_by = fpe.email
-         WHERE fe.franchise_partner_id = ? AND (fe.is_archived = ? OR (? = FALSE AND (fe.is_archived IS NULL OR fe.is_archived = 0)))
-         ORDER BY fe.created_at DESC`,
-        [fpIdNum, isArchived, isArchived]
-      );
-      fpEstimates = fpEst;
+      let query;
+      if (isArchived) {
+        query = `SELECT fe.*, 'fp_estimates' as source_table FROM fp_estimates fe WHERE fe.franchise_partner_id = ? AND fe.is_archived = 1 ORDER BY fe.created_at DESC`;
+      } else {
+        query = `SELECT fe.*, 'fp_estimates' as source_table FROM fp_estimates fe WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL) ORDER BY fe.created_at DESC`;
+      }
+      const [results] = await pool.execute(query, [fpIdNum]);
+      fpEstimates = results;
+      console.log('FP estimates found:', fpEstimates.length);
     } catch (e) {
-      console.log('FP estimates table query:', e.message);
+      console.log('FP estimates query error:', e.message);
     }
     
     // Combine and sort by created_at
@@ -1395,7 +1415,7 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
       new Date(b.created_at) - new Date(a.created_at)
     );
     
-    console.log('Admin fp-view estimates: Found', allEstimates.length, 'for FP', fpIdNum);
+    console.log('Admin fp-view estimates: Total', allEstimates.length, 'for FP', fpIdNum);
     res.json({ success: true, data: allEstimates || [] });
   } catch (error) {
     console.error('Error fetching FP estimates:', error);
