@@ -264,7 +264,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
             >
               <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
               {(() => {
-                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || selectedProperty?.property_type || directForm?.propertyType;
+                const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
                 const filteredPkgs = propertyType ? amcPackages.filter(pkg => matchPropertyType(getPackagePropertyType(pkg), propertyType)) : [];
                 return (<>
                   {filteredPkgs.length > 0 && filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}
@@ -309,7 +309,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                 // Get property type from selected property, direct form, or selected AMC package
                 const selectedPkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
                 const pkgPropertyType = selectedPkg?.property_type || getPackagePropertyType(selectedPkg);
-                const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType || pkgPropertyType;
+                const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType || pkgPropertyType;
                 if (!propertyType) return <option disabled>Select property type first</option>;
                 const filteredAddons = addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType));
                 if (filteredAddons.length === 0) return <option disabled>No add-ons available for {propertyType}</option>;

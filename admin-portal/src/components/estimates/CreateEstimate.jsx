@@ -175,7 +175,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     const primaryContact = property.contacts?.[0] || {};
     
     // Auto-select AMC package based on property type
-    const propertyType = property.entryType || property.propertyType;
+    const propertyType = property.property_type || property.entryType || property.propertyType;
     if (propertyType) {
       const matchingPackage = getAMCPackageByPropertyType(propertyType);
       if (matchingPackage) {
@@ -1262,7 +1262,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
                       {/* Show packages filtered by property type first, then all packages */}
                       {(() => {
-                        const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType;
+                        const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType;
                         const filteredPkgs = propertyType 
                           ? availablePackages.filter(pkg => {
                               const pkgType = getPackagePropertyType(pkg)?.toUpperCase();
@@ -1371,7 +1371,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     >
                       <option value="">+ Select Add-on to add</option>
                       {(() => {
-                        const propertyType = selectedProperty?.entryType || selectedProperty?.propertyType;
+                        const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType;
                         const filteredAddons = propertyType 
                           ? availableAddons.filter(addon => {
                               const addonType = addon.propertyType?.toUpperCase();
