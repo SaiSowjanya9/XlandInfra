@@ -1196,37 +1196,48 @@ router.get('/fp-list', authenticate, adminOnly, async (req, res) => {
 // Get ALL properties from ALL FPs (Admin mode)
 router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
   try {
-    // Regular properties from all FPs
+    // Regular properties from all FPs - simplified query matching FP portal
     const [properties] = await pool.execute(
       `SELECT p.id, p.property_id, p.name, p.property_type,
-              COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area,
+              p.zone_id as zone_name, p.area_name as area,
               p.address, p.city, p.state, p.zip_code,
               p.contact_person, p.contact_phone, p.contact_email,
               p.created_at, p.status, 'properties' as source_table,
-              p.franchise_partner_id, fp.fp_code, fp.company_name,
+              p.franchise_partner_id as fp_id, fp.fp_code, fp.company_name as fp_name,
               COALESCE(p.category, 'residential') as category
        FROM properties p
-       LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
        LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
        ORDER BY p.created_at DESC`
     );
     
-    // Onboarded properties from all FPs
-    const [onboardedProps] = await pool.execute(
-      `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-              op.zone as zone_name, op.area_name as area,
-              op.address, op.city, op.state, op.postal_code as zip_code,
-              op.contact_person, op.contact_phone, op.contact_email,
-              op.created_at, op.status, 'onboarded_properties' as source_table,
-              op.franchise_partner_id, fp.fp_code, fp.company_name,
-              COALESCE(op.category, 'residential') as category
-       FROM onboarded_properties op
-       LEFT JOIN franchise_partners fp ON op.franchise_partner_id = fp.id
-       WHERE op.status = 'active'
-       ORDER BY op.created_at DESC`
-    );
+    console.log('Admin all-properties: Found', properties.length, 'regular properties');
     
-    res.json({ success: true, data: [...properties, ...onboardedProps] });
+    // Onboarded properties from all FPs
+    let onboardedProps = [];
+    try {
+      const [rows] = await pool.execute(
+        `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
+                op.zone as zone_name, op.area_name as area,
+                op.address, op.city, op.state, op.postal_code as zip_code,
+                op.contact_person, op.contact_phone, op.contact_email,
+                op.created_at, op.status, 'onboarded_properties' as source_table,
+                op.franchise_partner_id as fp_id, fp.fp_code, fp.company_name as fp_name,
+                COALESCE(op.category, 'residential') as category
+         FROM onboarded_properties op
+         LEFT JOIN franchise_partners fp ON op.franchise_partner_id = fp.id
+         WHERE op.status = 'active'
+         ORDER BY op.created_at DESC`
+      );
+      onboardedProps = rows;
+      console.log('Admin all-properties: Found', onboardedProps.length, 'onboarded properties');
+    } catch (e) {
+      console.log('onboarded_properties query skipped:', e.message);
+    }
+    
+    const allProps = [...properties, ...onboardedProps];
+    console.log('Admin all-properties: Total', allProps.length, 'properties');
+    
+    res.json({ success: true, data: allProps });
   } catch (error) {
     console.error('Error fetching all properties:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch properties' });
@@ -1330,36 +1341,49 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
       return res.status(400).json({ success: false, message: 'Invalid FP ID' });
     }
     
-    // Regular properties
+    console.log('Admin fp-view properties: Fetching for FP ID:', fpIdNum);
+    
+    // Regular properties - simplified query matching FP portal
     const [properties] = await pool.execute(
       `SELECT p.id, p.property_id, p.name, p.property_type,
-              COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area,
+              p.zone_id as zone_name, p.area_name as area,
               p.address, p.city, p.state, p.zip_code,
               p.contact_person, p.contact_phone, p.contact_email,
               p.created_at, p.status, 'properties' as source_table,
               COALESCE(p.category, 'residential') as category
        FROM properties p
-       LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
        WHERE p.franchise_partner_id = ?
        ORDER BY p.created_at DESC`,
       [fpIdNum]
     );
     
-    // Onboarded properties
-    const [onboardedProps] = await pool.execute(
-      `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-              op.zone as zone_name, op.area_name as area,
-              op.address, op.city, op.state, op.postal_code as zip_code,
-              op.contact_person, op.contact_phone, op.contact_email,
-              op.created_at, op.status, 'onboarded_properties' as source_table,
-              COALESCE(op.category, 'residential') as category
-       FROM onboarded_properties op
-       WHERE op.franchise_partner_id = ? AND op.status = 'active'
-       ORDER BY op.created_at DESC`,
-      [fpIdNum]
-    );
+    console.log('Admin fp-view properties: Found', properties.length, 'regular properties');
     
-    res.json({ success: true, data: [...properties, ...onboardedProps] });
+    // Onboarded properties
+    let onboardedProps = [];
+    try {
+      const [rows] = await pool.execute(
+        `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
+                op.zone as zone_name, op.area_name as area,
+                op.address, op.city, op.state, op.postal_code as zip_code,
+                op.contact_person, op.contact_phone, op.contact_email,
+                op.created_at, op.status, 'onboarded_properties' as source_table,
+                COALESCE(op.category, 'residential') as category
+         FROM onboarded_properties op
+         WHERE op.franchise_partner_id = ? AND op.status = 'active'
+         ORDER BY op.created_at DESC`,
+        [fpIdNum]
+      );
+      onboardedProps = rows;
+      console.log('Admin fp-view properties: Found', onboardedProps.length, 'onboarded properties');
+    } catch (e) {
+      console.log('onboarded_properties query skipped:', e.message);
+    }
+    
+    const allProps = [...properties, ...onboardedProps];
+    console.log('Admin fp-view properties: Total', allProps.length, 'properties for FP', fpIdNum);
+    
+    res.json({ success: true, data: allProps });
   } catch (error) {
     console.error('Error fetching FP properties:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch properties' });
