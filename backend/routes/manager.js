@@ -1052,12 +1052,31 @@ router.delete('/employees/:id', requireManagerScope, async (req, res) => {
   return res.status(403).json({ success: false, message: 'Employee management not allowed for this role' });
 });
 
-// View FP employee zone assignments (READ-ONLY for managers under FP)
+// View FP employee zone assignments (READ-ONLY for managers under FP) - ZONE-CENTRIC
 router.get('/fp-employee-zones', requireManagerScope, async (req, res) => {
   try {
     // Only available for managers under FP
     if (!req.isFPManager || !req.franchisePartnerId) {
       return res.status(403).json({ success: false, message: 'This feature is only available for FP managers' });
+    }
+
+    const employeeId = getEmployeeIdForZoneLookup(req);
+    
+    // Get manager's assigned zones for zone-centric filtering
+    const managerZones = await getAssignedZones(employeeId);
+    
+    // Build zone filter - if manager has zones, only show employees with overlapping zones
+    let employeeZoneFilter = '';
+    let employeeParams = [req.franchisePartnerId, req.franchisePartnerId];
+    
+    if (managerZones.length > 0) {
+      // Filter to only show employees who have at least one zone that overlaps with manager's zones
+      const placeholders = managerZones.map(() => '?').join(',');
+      employeeZoneFilter = ` AND e.id IN (
+        SELECT DISTINCT fp_employee_id FROM fp_employee_zones 
+        WHERE franchise_partner_id = ? AND zone_name IN (${placeholders})
+      )`;
+      employeeParams.push(req.franchisePartnerId, ...managerZones);
     }
 
     const [employees] = await pool.execute(
@@ -1066,18 +1085,26 @@ router.get('/fp-employee-zones', requireManagerScope, async (req, res) => {
               GROUP_CONCAT(DISTINCT ez.zone_name ORDER BY ez.zone_name) as zone_names
        FROM fp_employees e
        LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
-       WHERE e.franchise_partner_id = ? AND e.is_active = 1
+       WHERE e.franchise_partner_id = ? AND e.is_active = 1${employeeZoneFilter}
        GROUP BY e.id
        ORDER BY e.first_name, e.last_name`,
-      [req.franchisePartnerId, req.franchisePartnerId]
+      employeeParams
     );
 
-    // Get all zones for reference (from multiple sources)
-    const [zones] = await pool.execute(
-      `SELECT DISTINCT ez.zone_name as name FROM fp_employee_zones ez 
-       WHERE ez.franchise_partner_id = ? ORDER BY ez.zone_name`,
-      [req.franchisePartnerId]
-    );
+    // Get zones for reference - if manager has zones, only show their zones
+    let zones = [];
+    if (managerZones.length > 0) {
+      // Only show manager's assigned zones
+      zones = managerZones.map(z => ({ name: z }));
+    } else {
+      // Manager has full access - show all zones
+      const [allZones] = await pool.execute(
+        `SELECT DISTINCT ez.zone_name as name FROM fp_employee_zones ez 
+         WHERE ez.franchise_partner_id = ? ORDER BY ez.zone_name`,
+        [req.franchisePartnerId]
+      );
+      zones = allZones;
+    }
 
     res.json({ 
       success: true, 
