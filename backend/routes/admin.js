@@ -1257,6 +1257,49 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
   }
 });
 
+// Get ALL work orders from ALL FPs (Admin mode)
+router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { status } = req.query;
+    
+    let query = `
+      SELECT wo.id, wo.work_order_id, wo.title, wo.description, wo.status, wo.priority,
+             wo.created_at, wo.updated_at, wo.property_id, wo.category_id,
+             COALESCE(p.name, wo.property_name) as property_name,
+             COALESCE(c.name, wo.category_name) as category_name,
+             wo.franchise_partner_id,
+             fp.fp_code, fp.company_name as fp_name,
+             v.company_name as vendor_name,
+             COALESCE(
+               CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+               wo.created_by, 'System'
+             ) as created_by_name
+      FROM work_orders wo
+      LEFT JOIN properties p ON wo.property_id = p.id
+      LEFT JOIN categories c ON wo.category_id = c.id
+      LEFT JOIN franchise_partners fp ON wo.franchise_partner_id = fp.id
+      LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
+      LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR CAST(wo.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+      WHERE 1=1
+    `;
+    
+    if (status === 'pending') {
+      query += ` AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`;
+    } else if (status === 'completed') {
+      query += ` AND wo.status IN ('completed', 'closed')`;
+    }
+    
+    query += ` ORDER BY wo.created_at DESC`;
+    
+    const [workOrders] = await pool.execute(query);
+    console.log('Admin all-work-orders: Found', workOrders.length, 'work orders');
+    res.json({ success: true, data: workOrders || [] });
+  } catch (error) {
+    console.error('Error fetching all work orders:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch work orders' });
+  }
+});
+
 // Get FP Dashboard data
 router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res) => {
   try {
@@ -1427,13 +1470,20 @@ router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, re
     const { status } = req.query;
     
     let query = `
-      SELECT wo.*, COALESCE(p.name, wo.property_name) as property_name,
+      SELECT wo.id, wo.work_order_id, wo.title, wo.description, wo.status, wo.priority,
+             wo.created_at, wo.updated_at, wo.property_id, wo.category_id,
+             COALESCE(p.name, wo.property_name) as property_name,
              COALESCE(c.name, wo.category_name) as category_name,
-             v.company_name as vendor_name
+             v.company_name as vendor_name,
+             COALESCE(
+               CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+               wo.created_by, 'System'
+             ) as created_by_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
+      LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR CAST(wo.created_by AS CHAR) = CAST(fpe.id AS CHAR)
       WHERE wo.franchise_partner_id = ?
     `;
     const params = [fpIdNum];
@@ -1447,6 +1497,7 @@ router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, re
     query += ` ORDER BY wo.created_at DESC`;
     
     const [workOrders] = await pool.execute(query, params);
+    console.log('Admin fp-view work-orders: Found', workOrders.length, 'for FP', fpIdNum);
     res.json({ success: true, data: workOrders || [] });
   } catch (error) {
     console.error('Error fetching FP work orders:', error);
