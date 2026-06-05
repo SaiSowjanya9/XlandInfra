@@ -28,8 +28,21 @@ const PROPERTY_ICONS = {
 };
 
 const CreateEstimate = ({ admin, onSuccess, showToast }) => {
-  // Check if user is Operations Manager (restricted access)
-  const isOpsManager = false;
+  // Check if user is Operations Manager (restricted access - view only)
+  const isOpsManager = admin?.role === 'operations_manager';
+  
+  // Show view-only message for Ops Manager
+  if (isOpsManager) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
+          <Lock className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-amber-800 mb-2">View Only Access</h2>
+          <p className="text-amber-600 mb-4">Operations Manager cannot create new estimates. You can view existing estimates in All Estimates.</p>
+        </div>
+      </div>
+    );
+  }
   
   const [estimateType, setEstimateType] = useState(null);
   const [selectedProperty, setSelectedProperty] = useState(null);

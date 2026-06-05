@@ -1313,12 +1313,18 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
     try {
       let query;
       if (isArchived) {
-        query = `SELECT e.*, 'estimates' as source_table, fp.fp_code, fp.company_name as fp_name
+        query = `SELECT e.*, 'estimates' as source_table, fp.fp_code, fp.company_name as fp_name,
+                        e.estimate_id as estimateId, e.customer_name as clientName, e.customer_name as customerName,
+                        e.estimate_type as estimateType, e.property_type as propertyType,
+                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt
                  FROM estimates e
                  LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
                  WHERE e.is_archived = 1 ORDER BY e.created_at DESC`;
       } else {
-        query = `SELECT e.*, 'estimates' as source_table, fp.fp_code, fp.company_name as fp_name
+        query = `SELECT e.*, 'estimates' as source_table, fp.fp_code, fp.company_name as fp_name,
+                        e.estimate_id as estimateId, e.customer_name as clientName, e.customer_name as customerName,
+                        e.estimate_type as estimateType, e.property_type as propertyType,
+                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt
                  FROM estimates e
                  LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
                  WHERE (e.is_archived = 0 OR e.is_archived IS NULL) ORDER BY e.created_at DESC`;
@@ -1389,9 +1395,17 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
     try {
       let query;
       if (isArchived) {
-        query = `SELECT e.*, 'estimates' as source_table FROM estimates e WHERE e.franchise_partner_id = ? AND e.is_archived = 1 ORDER BY e.created_at DESC`;
+        query = `SELECT e.*, 'estimates' as source_table,
+                        e.estimate_id as estimateId, e.customer_name as clientName, e.customer_name as customerName,
+                        e.estimate_type as estimateType, e.property_type as propertyType,
+                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt
+                 FROM estimates e WHERE e.franchise_partner_id = ? AND e.is_archived = 1 ORDER BY e.created_at DESC`;
       } else {
-        query = `SELECT e.*, 'estimates' as source_table FROM estimates e WHERE e.franchise_partner_id = ? AND (e.is_archived = 0 OR e.is_archived IS NULL) ORDER BY e.created_at DESC`;
+        query = `SELECT e.*, 'estimates' as source_table,
+                        e.estimate_id as estimateId, e.customer_name as clientName, e.customer_name as customerName,
+                        e.estimate_type as estimateType, e.property_type as propertyType,
+                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt
+                 FROM estimates e WHERE e.franchise_partner_id = ? AND (e.is_archived = 0 OR e.is_archived IS NULL) ORDER BY e.created_at DESC`;
       }
       const [results] = await pool.execute(query, [fpIdNum]);
       mainEstimates = results;
