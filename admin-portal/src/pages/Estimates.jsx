@@ -146,6 +146,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
             admin={admin}
             onRefresh={handleRefresh}
             showToast={showToast}
+            selectedFp={selectedFp}
           />
         );
       default:

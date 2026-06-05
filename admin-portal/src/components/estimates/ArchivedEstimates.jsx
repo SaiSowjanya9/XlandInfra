@@ -23,9 +23,12 @@ const STATUS_STYLES = {
   Archived: 'bg-slate-100 text-slate-700'
 };
 
-const ArchivedEstimates = ({ admin, onRefresh, showToast }) => {
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
+const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = false;
+  const token = sessionStorage.getItem('pm_auth_token');
   
   const [archivedEstimates, setArchivedEstimates] = useState([]);
   const [viewEstimate, setViewEstimate] = useState(null);
@@ -34,14 +37,34 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast }) => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [selectedFp?.id]);
 
   const loadData = async () => {
     try {
-      const response = await fetch('/api/estimates-sync?archived=true');
+      let url;
+      // Use Admin endpoint for "all" mode, otherwise FP-specific endpoint
+      if (selectedFp?.id === 'all') {
+        url = `${API_BASE}/api/admin/all-estimates?archived=true`;
+      } else if (selectedFp?.id) {
+        url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/estimates?archived=true`;
+      } else {
+        // Fallback to default
+        const response = await fetch('/api/estimates-sync?archived=true');
+        const result = await response.json();
+        if (result.success) {
+          setArchivedEstimates(result.data || []);
+        }
+        return;
+      }
+      
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const result = await response.json();
       if (result.success) {
         setArchivedEstimates(result.data || []);
+      } else {
+        setArchivedEstimates([]);
       }
     } catch (error) {
       console.error('Load archived estimates error:', error);
