@@ -850,7 +850,6 @@ const CustomerSubmissions = () => {
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden md:table-cell">Zone</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden lg:table-cell">Area</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden lg:table-cell">Division</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden xl:table-cell">Units</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden xl:table-cell">Address</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden xl:table-cell">City</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap hidden xl:table-cell">Created By</th>
@@ -884,9 +883,6 @@ const CustomerSubmissions = () => {
                       </td>
                       <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden lg:table-cell">
                         {property.division || '-'}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap text-center hidden xl:table-cell">
-                        {property.units || 0}
                       </td>
                       <td className="px-3 py-3 text-gray-700 whitespace-nowrap max-w-[150px] truncate hidden xl:table-cell" title={property.address}>
                         {property.address || '-'}

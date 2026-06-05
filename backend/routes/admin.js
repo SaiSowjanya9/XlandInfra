@@ -1200,7 +1200,7 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
     const [properties] = await pool.execute(
       `SELECT p.id, p.property_id, p.name, p.property_type,
               p.zone_id as zone_name, p.area_name as area,
-              p.division_id as division, p.units,
+              p.division_id as division,
               p.address, p.city, p.state, p.zip_code,
               p.contact_person, p.contact_phone, p.contact_email,
               p.created_at, p.status, p.created_by,
@@ -1220,7 +1220,6 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                 op.zone as zone_name, op.area_name as area,
-                op.division as division, op.units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email,
                 op.created_at, op.status, op.created_by,
@@ -1351,7 +1350,7 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
     const [properties] = await pool.execute(
       `SELECT p.id, p.property_id, p.name, p.property_type,
               p.zone_id as zone_name, p.area_name as area,
-              p.division_id as division, p.units,
+              p.division_id as division,
               p.address, p.city, p.state, p.zip_code,
               p.contact_person, p.contact_phone, p.contact_email,
               p.created_at, p.status, p.created_by,
@@ -1371,7 +1370,6 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                 op.zone as zone_name, op.area_name as area,
-                op.division as division, op.units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email,
                 op.created_at, op.status, op.created_by,
