@@ -1092,8 +1092,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </td>
                     <td className="px-4 py-4 font-semibold text-gray-900">{formatCurrency(est.total_amount)}</td>
                     <td className="px-4 py-4">
-                      <div className="font-medium text-gray-900">{est.created_by_name || '-'}</div>
-                      <div className="text-xs text-gray-400 capitalize">{(est.created_by_role || '').replace(/_/g, ' ')}</div>
+                      <div className="font-medium text-gray-900">{est.created_by_name || (est.created_by_role ? est.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</div>
+                      <div className="text-xs text-gray-400 capitalize">{est.created_by_name ? (est.created_by_role || '').replace(/_/g, ' ') : ''}</div>
                     </td>
                     <td className="px-4 py-4">
                       {(() => {
