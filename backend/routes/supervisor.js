@@ -18,6 +18,13 @@ const {
   canViewPricing,
   filterPricing
 } = require('../middleware/supervisorScope');
+const {
+  getAssignedZones,
+  buildPropertyZoneFilter,
+  buildOnboardedPropertyZoneFilter,
+  buildClientZoneFilter,
+  getEmployeeIdForZoneLookup
+} = require('../middleware/zoneHelper');
 
 // =====================================================
 // SUPERVISOR LOGIN (No auth required)
@@ -255,11 +262,12 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
 });
 
 // =====================================================
-// PROPERTIES
+// PROPERTIES (ZONE-CENTRIC)
 // =====================================================
 router.get('/properties', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const employeeId = getEmployeeIdForZoneLookup(req);
     
     // Get FP ID from multiple sources
     let franchisePartnerId = req.franchisePartnerId || req.fpId || req.user?.franchisePartnerId || req.user?.fpId;
@@ -277,9 +285,13 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
       } catch (e) { /* ignore */ }
     }
     
-    console.log('[Supervisor Properties] supervisorId:', supervisorId, 'franchisePartnerId:', franchisePartnerId);
+    // Get assigned zones for zone-centric filtering
+    const assignedZones = await getAssignedZones(employeeId);
+    const zoneFilter = buildPropertyZoneFilter(assignedZones, 'p');
+    
+    console.log('[Supervisor Properties] supervisorId:', supervisorId, 'franchisePartnerId:', franchisePartnerId, 'assignedZones:', assignedZones);
 
-    // Get own, assigned, and FP properties with creator name
+    // Get own, assigned, and FP properties with creator name (with zone filtering)
     const query = `SELECT p.*, p.zone_id as zone_name, 
               COALESCE(p.area_name, p.city) as area,
               COALESCE(p.division_id, p.division, 'General') as division,
@@ -290,7 +302,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
               'properties' as source_table
        FROM properties p
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
-       WHERE (p.supervisor_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})
+       WHERE (p.supervisor_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})${zoneFilter.clause}
        UNION
        SELECT p.*, p.zone_id as zone_name,
               COALESCE(p.area_name, p.city) as area,
@@ -303,14 +315,17 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
        FROM properties p
        INNER JOIN supervisor_assigned_properties sap ON p.id = sap.property_id
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
-       WHERE sap.supervisor_id = ?
+       WHERE sap.supervisor_id = ?${zoneFilter.clause}
        ORDER BY created_at DESC`;
-    const params = franchisePartnerId ? [supervisorId, franchisePartnerId, supervisorId] : [supervisorId, supervisorId];
+    const params = franchisePartnerId 
+      ? [supervisorId, franchisePartnerId, ...zoneFilter.params, supervisorId, ...zoneFilter.params] 
+      : [supervisorId, ...zoneFilter.params, supervisorId, ...zoneFilter.params];
     const [regularProperties] = await pool.query(query, params);
 
-    // Also fetch from onboarded_properties with creator name
+    // Also fetch from onboarded_properties with creator name (with zone filtering)
     let onboardedProperties = [];
     try {
+      const onbZoneFilter = buildOnboardedPropertyZoneFilter(assignedZones, 'op');
       const scopeColumn = franchisePartnerId ? 'franchise_partner_id' : 'supervisor_id';
       const scopeId = franchisePartnerId || supervisorId;
       const [rows] = await pool.execute(
@@ -323,9 +338,9 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
-         WHERE op.${scopeColumn} = ? AND op.status = 'active'
+         WHERE op.${scopeColumn} = ? AND op.status = 'active'${onbZoneFilter.clause}
          ORDER BY op.created_at DESC`,
-        [scopeId]
+        [scopeId, ...onbZoneFilter.params]
       );
       onboardedProperties = rows;
     } catch (e) {
@@ -481,13 +496,18 @@ router.post('/properties/:id/assign-employee', requireSupervisorScope, async (re
 });
 
 // =====================================================
-// WORK ORDERS
+// WORK ORDERS (ZONE-CENTRIC)
 // =====================================================
 router.get('/work-orders', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
     const { status } = req.query;
+    const employeeId = getEmployeeIdForZoneLookup(req);
+
+    // Get assigned zones for zone-centric filtering
+    const assignedZones = await getAssignedZones(employeeId);
+    const zoneFilter = buildPropertyZoneFilter(assignedZones, 'p');
 
     // FP employees see FP work orders, standalone supervisors see their created work orders
     let query = `
@@ -496,9 +516,9 @@ router.get('/work-orders', requireSupervisorScope, async (req, res) => {
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-      WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'}
+      WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'}${zoneFilter.clause}
     `;
-    const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
+    const params = franchisePartnerId ? [franchisePartnerId, ...zoneFilter.params] : [req.user?.username || req.user?.email, ...zoneFilter.params];
 
     if (status) {
       query += ' AND wo.status = ?';
@@ -519,15 +539,20 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
+    const employeeId = getEmployeeIdForZoneLookup(req);
+
+    // Get assigned zones for zone-centric filtering
+    const assignedZones = await getAssignedZones(employeeId);
+    const zoneFilter = buildPropertyZoneFilter(assignedZones, 'p');
 
     const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')
+       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
        ORDER BY wo.created_at DESC`;
-    const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
+    const params = franchisePartnerId ? [franchisePartnerId, ...zoneFilter.params] : [req.user?.username || req.user?.email, ...zoneFilter.params];
 
     const [workOrders] = await pool.query(query, params);
 
@@ -542,15 +567,20 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
+    const employeeId = getEmployeeIdForZoneLookup(req);
+
+    // Get assigned zones for zone-centric filtering
+    const assignedZones = await getAssignedZones(employeeId);
+    const zoneFilter = buildPropertyZoneFilter(assignedZones, 'p');
 
     const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('completed', 'closed')
+       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('completed', 'closed')${zoneFilter.clause}
        ORDER BY wo.created_at DESC`;
-    const params = franchisePartnerId ? [franchisePartnerId] : [req.user?.username || req.user?.email];
+    const params = franchisePartnerId ? [franchisePartnerId, ...zoneFilter.params] : [req.user?.username || req.user?.email, ...zoneFilter.params];
 
     const [workOrders] = await pool.query(query, params);
 
@@ -655,19 +685,24 @@ router.patch('/work-orders/:id/status', requireSupervisorScope, validateOwnershi
 });
 
 // =====================================================
-// CUSTOMERS
+// CUSTOMERS (ZONE-CENTRIC)
 // =====================================================
 router.get('/customers', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
+    const employeeId = getEmployeeIdForZoneLookup(req);
 
-    const query = `SELECT c.*, p.name as property_name
+    // Get assigned zones for zone-centric filtering
+    const assignedZones = await getAssignedZones(employeeId);
+    const zoneFilter = buildPropertyZoneFilter(assignedZones, 'p');
+
+    const query = `SELECT c.*, p.name as property_name, p.zone_id as zone
        FROM clients c
        LEFT JOIN properties p ON c.property_id = p.id
-       WHERE (c.supervisor_id = ?${franchisePartnerId ? ' OR c.franchise_partner_id = ?' : ''})
+       WHERE (c.supervisor_id = ?${franchisePartnerId ? ' OR c.franchise_partner_id = ?' : ''})${zoneFilter.clause}
        ORDER BY c.created_at DESC`;
-    const params = franchisePartnerId ? [supervisorId, franchisePartnerId] : [supervisorId];
+    const params = franchisePartnerId ? [supervisorId, franchisePartnerId, ...zoneFilter.params] : [supervisorId, ...zoneFilter.params];
 
     const [customers] = await pool.query(query, params);
 
@@ -953,10 +988,23 @@ router.delete('/vendors/:id', requireSupervisorScope, validateOwnership('onboard
   }
 });
 
-// Get vendor assignments for supervisor
+// Get vendor assignments for supervisor (ZONE-CENTRIC)
 router.get('/vendors/assignments', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const employeeId = getEmployeeIdForZoneLookup(req);
+    
+    // Get assigned zones for zone-centric filtering
+    const assignedZones = await getAssignedZones(employeeId);
+    
+    // Build zone filter for vendor's zone
+    let zoneClause = '';
+    let zoneParams = [];
+    if (assignedZones.length > 0) {
+      const placeholders = assignedZones.map(() => '?').join(',');
+      zoneClause = ` AND v.zone IN (${placeholders})`;
+      zoneParams = assignedZones;
+    }
     
     // Get property-vendor assignments with full vendor details
     const [propertyAssignments] = await pool.execute(
@@ -973,9 +1021,9 @@ router.get('/vendors/assignments', requireSupervisorScope, async (req, res) => {
        LEFT JOIN properties p ON pva.property_id = p.id
        LEFT JOIN onboarded_properties op ON pva.property_id = op.id
        JOIN onboarded_vendors v ON pva.vendor_id = v.id
-       WHERE (p.supervisor_id = ? OR op.supervisor_id = ?) AND pva.is_active = TRUE
+       WHERE (p.supervisor_id = ? OR op.supervisor_id = ?) AND pva.is_active = TRUE${zoneClause}
        ORDER BY pva.assigned_at DESC`,
-      [supervisorId, supervisorId]
+      [supervisorId, supervisorId, ...zoneParams]
     );
 
     const serviceAssignments = propertyAssignments.map(a => ({
