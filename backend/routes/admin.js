@@ -1917,34 +1917,6 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
   }
 });
 
-// Get FP Estimates
-router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res) => {
-  try {
-    const fpIdNum = validateFpId(req.params.fpId);
-    if (!fpIdNum) {
-      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
-    }
-    
-    const { archived } = req.query;
-    const isArchived = archived === 'true';
-    
-    const [estimates] = await pool.execute(
-      `SELECT e.*, p.name as property_name, c.name as customer_name
-       FROM fp_estimates e
-       LEFT JOIN properties p ON e.property_id = p.id
-       LEFT JOIN clients c ON e.customer_id = c.id
-       WHERE e.franchise_partner_id = ? AND e.is_archived = ?
-       ORDER BY e.created_at DESC`,
-      [fpIdNum, isArchived]
-    );
-    
-    res.json({ success: true, data: estimates || [] });
-  } catch (error) {
-    console.error('Error fetching FP estimates:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch estimates' });
-  }
-});
-
 // Get ALL AMC Packages (Admin mode)
 router.get('/all-amc-packages', authenticate, adminOnly, async (req, res) => {
   try {
