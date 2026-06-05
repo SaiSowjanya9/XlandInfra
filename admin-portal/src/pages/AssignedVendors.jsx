@@ -39,7 +39,13 @@ const AssignedVendors = ({ user }) => {
   const isViewOnly = isCoordinator || isFPManager;
   
   // Get selected FP from context (for admin users)
-  const { selectedFp } = useFP();
+  const { selectedFp, fpList, selectFp } = useFP();
+  const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
+  
+  const handleFpSelect = (fp) => {
+    selectFp(fp);
+    setFpDropdownOpen(false);
+  };
   
   const [activeTab, setActiveTab] = useState('service'); // 'service' or 'property'
   const [assignments, setAssignments] = useState([]);
@@ -303,13 +309,30 @@ const AssignedVendors = ({ user }) => {
     return acc;
   }, {});
 
-  // Show message if admin and no FP selected
+  // Show FP selection if admin and no FP selected
   if (isAdmin && !selectedFp) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 bg-gray-50">
-        <UserCheck className="w-16 h-16 text-gray-300 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Franchise Partner</h2>
-        <p className="text-gray-400 text-sm">Choose an FP from the dropdown in the sidebar to view assigned vendors</p>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Assigned Vendors</h1>
+          <p className="text-gray-500 mt-1">Select a Franchise Partner to view vendor assignments</p>
+        </div>
+        <div className="bg-gray-50 rounded-2xl p-12 text-center">
+          <UserCheck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">Select Franchise Partner</h2>
+          <p className="text-gray-500 mb-6">Choose an FP from the list to view vendor assignments</p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {fpList.map(fp => (
+              <button
+                key={fp.id}
+                onClick={() => handleFpSelect(fp)}
+                className="px-6 py-3 bg-white border border-gray-200 rounded-xl hover:border-teal-400 hover:bg-teal-50 transition-colors"
+              >
+                {fp.fpId} - {fp.companyName}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

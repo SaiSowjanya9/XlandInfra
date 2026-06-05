@@ -40,8 +40,14 @@ const VendorDetails = () => {
   const [toast, setToast] = useState(null);
 
   // Get selected FP from context
-  const { selectedFp } = useFP();
+  const { selectedFp, fpList, selectFp } = useFP();
   const token = sessionStorage.getItem('pm_auth_token');
+  const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
+  
+  const handleFpSelect = (fp) => {
+    selectFp(fp);
+    setFpDropdownOpen(false);
+  };
 
   // Load vendors from FP-specific API
   const loadData = async () => {
@@ -275,13 +281,30 @@ const VendorDetails = () => {
     return `${Math.floor(diff / 86400)}d ago`;
   };
 
-  // Show message if no FP selected
+  // Show FP selection if no FP selected
   if (!selectedFp) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 bg-gray-50">
-        <Truck className="w-16 h-16 text-gray-300 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Franchise Partner</h2>
-        <p className="text-gray-400 text-sm">Choose an FP from the dropdown in the sidebar to view vendors</p>
+      <div className="space-y-6 p-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Vendor Details</h1>
+          <p className="text-gray-500 mt-1">Select a Franchise Partner to view vendors</p>
+        </div>
+        <div className="bg-gray-50 rounded-2xl p-12 text-center">
+          <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">Select Franchise Partner</h2>
+          <p className="text-gray-500 mb-6">Choose an FP from the list to view vendors</p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {fpList.map(fp => (
+              <button
+                key={fp.id}
+                onClick={() => handleFpSelect(fp)}
+                className="px-6 py-3 bg-white border border-gray-200 rounded-xl hover:border-teal-400 hover:bg-teal-50 transition-colors"
+              >
+                {fp.fpId} - {fp.companyName}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
