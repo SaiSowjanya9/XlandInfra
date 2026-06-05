@@ -11,7 +11,6 @@ import {
   Mail,
   MapPin,
   Calendar,
-  CreditCard,
   UserX,
   RotateCcw,
   Trash2,
@@ -300,7 +299,6 @@ const FPEmployees = ({ user }) => {
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Role</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Phone</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Email</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Aadhaar</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Assigned Zones</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Created</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Status</th>
@@ -350,9 +348,6 @@ const FPEmployees = ({ user }) => {
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         {employee.email}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
-                        {employee.aadhaar?.replace(/(\d{4})/g, '$1 ').trim() || '-'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         {hasZonesAssigned(employee) ? (
@@ -484,15 +479,6 @@ const FPEmployees = ({ user }) => {
                   <div>
                     <p className="text-xs text-gray-500">Email</p>
                     <p className="text-sm font-medium text-gray-900 truncate">{viewEmployee.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <CreditCard className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-xs text-gray-500">Aadhaar</p>
-                    <p className="text-sm font-mono font-medium text-gray-900">
-                      {viewEmployee.aadhaar?.replace(/(\d{4})/g, '$1 ').trim() || '-'}
-                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
