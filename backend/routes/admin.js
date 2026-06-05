@@ -1514,13 +1514,19 @@ router.get('/fp-view/:fpId/vendors', authenticate, adminOnly, async (req, res) =
     }
     
     const [vendors] = await pool.execute(
-      `SELECT ov.*, ov.owner_name as vendor_name, ov.owner_mobile as phone, ov.owner_email as email
+      `SELECT ov.*, ov.owner_name as vendor_name, ov.owner_mobile as phone, ov.owner_email as email,
+              COALESCE(
+                CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                ov.created_by, 'System'
+              ) as created_by_name
        FROM onboarded_vendors ov
+       LEFT JOIN fp_employees fpe ON ov.created_by = fpe.email OR CAST(ov.created_by AS CHAR) = CAST(fpe.id AS CHAR)
        WHERE ov.franchise_partner_id = ? AND ov.is_active = TRUE
        ORDER BY ov.created_at DESC`,
       [fpIdNum]
     );
     
+    console.log('Admin fp-view vendors: Found', vendors.length, 'vendors for FP', fpIdNum);
     res.json({ success: true, data: vendors || [] });
   } catch (error) {
     console.error('Error fetching FP vendors:', error);

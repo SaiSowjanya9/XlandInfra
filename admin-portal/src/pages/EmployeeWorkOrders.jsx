@@ -119,18 +119,14 @@ const EmployeeWorkOrders = ({ admin }) => {
     
     setLoading(true);
     try {
-      const status = activeTab === 'pending' ? 'pending' : activeTab === 'completed' ? 'completed' : '';
       let url;
       
       // Use Admin endpoint for "all" mode, otherwise FP-specific endpoint
+      // Fetch ALL orders to get correct counts, then filter by tab
       if (selectedFp.id === 'all') {
         url = `${API_BASE}/api/admin/all-work-orders`;
       } else {
         url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/work-orders`;
-      }
-      
-      if (status) {
-        url += `?status=${status}`;
       }
       
       const response = await fetch(url, {
@@ -138,12 +134,25 @@ const EmployeeWorkOrders = ({ admin }) => {
       });
       const result = await response.json();
       if (result.success) {
-        const orders = result.data || [];
-        setWorkOrders(orders);
-        // Calculate counts
-        const pending = orders.filter(o => ['pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(o.status)).length;
-        const completed = orders.filter(o => ['completed', 'closed'].includes(o.status)).length;
-        setCounts({ pending, completed, total: orders.length });
+        const allOrders = result.data || [];
+        
+        // Calculate counts from ALL orders
+        const pendingStatuses = ['pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'];
+        const completedStatuses = ['completed', 'closed'];
+        
+        const pendingCount = allOrders.filter(o => pendingStatuses.includes(o.status)).length;
+        const completedCount = allOrders.filter(o => completedStatuses.includes(o.status)).length;
+        setCounts({ pending: pendingCount, completed: completedCount, total: allOrders.length });
+        
+        // Filter orders based on active tab
+        let filteredOrders = allOrders;
+        if (activeTab === 'pending') {
+          filteredOrders = allOrders.filter(o => pendingStatuses.includes(o.status));
+        } else if (activeTab === 'completed') {
+          filteredOrders = allOrders.filter(o => completedStatuses.includes(o.status));
+        }
+        
+        setWorkOrders(filteredOrders);
       }
     } catch (error) {
       console.error('Error fetching work orders:', error);
