@@ -72,8 +72,8 @@ const CustomerSubmissions = () => {
   const [notifications, setNotifications] = useState([]);
   const [statusFilter, setStatusFilter] = useState('active');
   
-  // Get selected FP from context
-  const { selectedFp } = useFP();
+  // Get selected FP and property type from context
+  const { selectedFp, selectedPropertyType } = useFP();
   const token = sessionStorage.getItem('pm_auth_token');
   
   // Assignment states
@@ -98,38 +98,60 @@ const CustomerSubmissions = () => {
   const [viewAMCDetails, setViewAMCDetails] = useState(null); // AMC package details modal
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
 
-  // Load properties from FP-specific API
+  // Load properties from FP-specific API or all FPs (Admin mode)
   const loadData = async () => {
-    if (!selectedFp) {
+    // If no property type selected, show message to select
+    if (!selectedPropertyType) {
       setProperties([]);
       return;
     }
     
     try {
-      const response = await fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/properties`, {
+      let endpoint;
+      if (selectedFp) {
+        // Specific FP selected - fetch from that FP only
+        endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/properties`;
+      } else {
+        // Admin mode - fetch all properties from all FPs
+        endpoint = `${API_BASE}/api/admin/all-properties`;
+      }
+      
+      const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
       if (result.success) {
-        // Map API response to expected format
-        const props = result.data.map(p => ({
+        // Map API response to expected format and filter by property type
+        let props = result.data.map(p => ({
           id: p.id,
           propertyId: p.property_id,
           name: p.name,
           propertyType: p.property_type,
-          zone: p.zone_name,
-          area: p.area,
+          category: p.category || 'residential', // residential or commercial
+          zone: p.zone_name || p.zone,
+          area: p.area || p.area_name,
           address: p.address,
           city: p.city,
           state: p.state,
-          zipCode: p.zip_code,
+          zipCode: p.zip_code || p.postal_code,
           contactPerson: p.contact_person,
           contactPhone: p.contact_phone,
           contactEmail: p.contact_email,
           createdAt: p.created_at,
           status: p.status || 'active',
-          sourceTable: p.source_table
+          sourceTable: p.source_table,
+          fpId: p.fp_id || p.franchise_partner_id,
+          fpName: p.fp_name || p.company_name
         }));
+        
+        // Filter by selected property type (residential/commercial)
+        if (selectedPropertyType) {
+          props = props.filter(p => {
+            const cat = (p.category || 'residential').toLowerCase();
+            return cat === selectedPropertyType.toLowerCase();
+          });
+        }
+        
         setProperties(props);
       }
     } catch (error) {
@@ -139,13 +161,11 @@ const CustomerSubmissions = () => {
   };
 
   useEffect(() => {
-    if (selectedFp) {
-      loadData();
-      // Poll for new entries every 10 seconds
-      const interval = setInterval(loadData, 10000);
-      return () => clearInterval(interval);
-    }
-  }, [selectedFp, statusFilter]);
+    loadData();
+    // Poll for new entries every 10 seconds
+    const interval = setInterval(loadData, 10000);
+    return () => clearInterval(interval);
+  }, [selectedFp, selectedPropertyType, statusFilter]);
 
   // Show toast helper
   const showToast = (message, type = 'success') => {
@@ -432,71 +452,34 @@ const CustomerSubmissions = () => {
     return `${Math.floor(hrs / 24)}d ago`;
   };
 
-  // Show message if no FP selected
-  if (!selectedFp) {
+  // Show message if no property type selected (user needs to select from sidebar)
+  if (!selectedPropertyType) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 bg-gray-50">
+      <div className="flex flex-col items-center justify-center h-96 bg-gray-50 rounded-xl">
         <Building2 className="w-16 h-16 text-gray-300 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Franchise Partner</h2>
-        <p className="text-gray-400 text-sm">Choose an FP from the dropdown in the sidebar to view properties</p>
+        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select Property Type</h2>
+        <p className="text-gray-400 text-sm text-center max-w-md">
+          Click on <strong>Property Management</strong> in the sidebar, then choose <strong>Residential</strong> or <strong>Commercial</strong>, and select an FP to view properties.
+        </p>
       </div>
     );
   }
 
-  // Category Selection Screen (shown first)
-  if (!selectedCategory) {
-    return (
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-            <p className="text-gray-500 mt-1">Viewing properties for {selectedFp.companyName}</p>
-          </div>
-        </div>
+  // Get the viewing label based on selection
+  const getViewingLabel = () => {
+    if (selectedFp) {
+      return `Viewing ${selectedPropertyType} properties for ${selectedFp.companyName}`;
+    }
+    return `Viewing all ${selectedPropertyType} properties (Admin Mode)`;
+  };
 
-        {/* Category Selection Card */}
-        <div className="bg-gray-50 rounded-2xl p-12">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
-            <p className="text-gray-500 mt-2">Choose the customer category to proceed</p>
-          </div>
-
-          <div className="flex justify-center gap-8">
-            {CUSTOMER_CATEGORIES.map((category) => {
-              const Icon = category.icon;
-              return category.locked ? (
-                <div
-                  key={category.id}
-                  className="w-72 h-52 p-8 border border-gray-200 rounded-2xl bg-white relative cursor-not-allowed flex flex-col items-start justify-center"
-                >
-                  <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
-                    <Lock className="w-3.5 h-3.5 text-gray-400" />
-                    <span className="text-xs font-medium text-gray-500">Coming Soon</span>
-                  </div>
-                  <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mb-5">
-                    <Icon className="w-7 h-7 text-gray-400" />
-                  </div>
-                  <p className="text-lg font-medium text-gray-400">{category.name}</p>
-                </div>
-              ) : (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
-                >
-                  <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                    <Icon className="w-7 h-7 text-white" />
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900">{category.name}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
+  // Category Selection Screen - SKIP since we now select from sidebar
+  // Auto-set category based on selectedPropertyType
+  if (!selectedCategory && selectedPropertyType) {
+    // Auto-select category based on property type from sidebar
+    setSelectedCategory(selectedPropertyType);
   }
+
 
   // Residential Properties View (main content)
   return (
@@ -516,20 +499,13 @@ const CustomerSubmissions = () => {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Back to Categories"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Property Management</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              {properties.length} total customers
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Property Management - {selectedPropertyType ? selectedPropertyType.charAt(0).toUpperCase() + selectedPropertyType.slice(1) : ''}
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {getViewingLabel()} • {properties.length} properties
+          </p>
         </div>
         {/* Action Buttons */}
         <div className="flex items-center gap-2 mt-3 sm:mt-0">

@@ -12,6 +12,8 @@ export const useFP = () => {
       fpList: [],
       selectedFp: null,
       selectFp: () => {},
+      selectedPropertyType: null,
+      setSelectedPropertyType: () => {},
       loading: false,
       refreshFpList: () => {},
       error: null
@@ -23,6 +25,7 @@ export const useFP = () => {
 export const FPProvider = ({ children }) => {
   const [fpList, setFpList] = useState([]);
   const [selectedFp, setSelectedFp] = useState(null);
+  const [selectedPropertyType, setSelectedPropertyType] = useState(null); // 'residential' or 'commercial'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -111,6 +114,8 @@ export const FPProvider = ({ children }) => {
       fpList,
       selectedFp,
       selectFp,
+      selectedPropertyType,
+      setSelectedPropertyType,
       loading,
       refreshFpList,
       error
