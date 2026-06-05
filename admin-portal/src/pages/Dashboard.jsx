@@ -76,7 +76,6 @@ const Dashboard = () => {
           totalVendors: result.data.stats?.totalVendors || result.data.totalVendors || 0,
           totalEmployees: result.data.stats?.totalEmployees || result.data.totalEmployees || 0,
           totalEstimates: result.data.stats?.totalEstimates || result.data.totalEstimates || 0,
-          totalZones: result.data.stats?.totalZones || result.data.totalZones || 0,
           fpInfo: result.data.fpInfo
         });
         setRecentActivities(result.data.recentWorkOrders || []);
@@ -536,14 +535,10 @@ const Dashboard = () => {
               <h3 className="font-medium text-gray-800">System Overview</h3>
               <Activity className="w-4 h-4 text-gray-400" />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <p className="text-2xl font-semibold text-gray-800">{stats?.totalEstimates ?? 0}</p>
                 <p className="text-xs text-gray-500 mt-1">Estimates</p>
-              </div>
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-semibold text-gray-800">{stats?.totalZones ?? 0}</p>
-                <p className="text-xs text-gray-500 mt-1">Zones</p>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <p className="text-2xl font-semibold text-gray-800">{stats?.activeWorkOrders ?? 0}</p>
