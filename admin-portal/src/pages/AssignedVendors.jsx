@@ -30,13 +30,14 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 const AssignedVendors = ({ user }) => {
   // Check user role for view-only mode and API prefix
   const isAdmin = user?.role === 'admin' || user?.role === 'operations_manager';
+  const isOpsManager = user?.role === 'operations_manager';
   const isCoordinator = user?.role === 'coordinator' || user?.role === 'coord_supervisor' || user?.role === 'coord_executive';
   const isFPManager = user?.role === 'manager';
   const isFPUser = user?.role === 'franchise_partner' || user?.role === 'manager' || user?.role === 'fp_coordinator';
   // Coordinator uses /api/coordinator, Manager uses /api/manager, FP uses /api/fp
   const apiPrefix = isCoordinator ? '/api/coordinator' : (isFPManager ? '/api/manager' : (isFPUser ? '/api/fp' : '/api'));
-  // Coordinators and FP Managers are view-only
-  const isViewOnly = isCoordinator || isFPManager;
+  // Coordinators, FP Managers, and Ops Manager are view-only
+  const isViewOnly = isCoordinator || isFPManager || isOpsManager;
   
   // Get selected FP from context (for admin users)
   const { selectedFp, fpList, selectFp } = useFP();

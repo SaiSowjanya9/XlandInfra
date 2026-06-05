@@ -63,6 +63,10 @@ const EmployeeDetails = () => {
   const token = sessionStorage.getItem('pm_auth_token');
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
   
+  // Check if user is Operations Manager (view-only access)
+  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const isOpsManager = currentUser?.role === 'operations_manager';
+  
   const handleFpSelect = (fp) => {
     selectFp(fp);
     setFpDropdownOpen(false);
@@ -487,37 +491,41 @@ const EmployeeDetails = () => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => setEditEmployee({ ...employee, fullName: employee.fullName || employee.name })}
-                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                          title="Modify"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        {employee.status === 'active' ? (
-                          <button
-                            onClick={() => handleDeactivate(employee)}
-                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                            title="Deactivate"
-                          >
-                            <UserX className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleReactivate(employee)}
-                            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                            title="Reactivate"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </button>
+                        {!isOpsManager && (
+                          <>
+                            <button
+                              onClick={() => setEditEmployee({ ...employee, fullName: employee.fullName || employee.name })}
+                              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                              title="Modify"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            {employee.status === 'active' ? (
+                              <button
+                                onClick={() => handleDeactivate(employee)}
+                                className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                                title="Deactivate"
+                              >
+                                <UserX className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleReactivate(employee)}
+                                className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                                title="Reactivate"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setDeleteConfirm(employee)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
-                        <button
-                          onClick={() => setDeleteConfirm(employee)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>
