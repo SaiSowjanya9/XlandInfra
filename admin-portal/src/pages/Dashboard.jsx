@@ -3,7 +3,7 @@ import {
   Building2, ClipboardList, Clock, CheckCircle2, FileText, Users, 
   Package, MapPin, Wrench, UserPlus, IndianRupee, Activity,
   RefreshCw, Bell, Settings, UserCheck, Home, X, AlertCircle, Info,
-  QrCode, Download, ChevronDown, Shield
+  QrCode, Download, ChevronDown, Shield, ArrowLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFP } from '../contexts/FPContext';
@@ -295,17 +295,31 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="p-4 lg:p-6 space-y-5">
-        {/* FP Info Banner */}
-        <div className="bg-gradient-to-r from-slate-700 to-slate-800 rounded-xl p-4 text-white">
+        {/* FP Info Banner - Light Theme */}
+        <div className="bg-gradient-to-r from-slate-50 to-gray-100 rounded-xl p-4 border border-gray-200">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-300 text-xs uppercase tracking-wider">Viewing Data For</p>
-              <h2 className="text-xl font-bold">{selectedFp.id === 'all' ? 'Admin (All FPs)' : selectedFp.displayName || selectedFp.fpId}</h2>
-              <p className="text-slate-400 text-sm">
-                {selectedFp.id === 'all' ? 'Aggregated data from all franchise partners' : `${stats?.fpInfo?.city || ''}, ${stats?.fpInfo?.state || ''}`}
-              </p>
+            <div className="flex items-center gap-4">
+              {/* Back/Switch Button */}
+              <button
+                onClick={() => selectFp(null)}
+                className="p-2 hover:bg-white rounded-lg border border-gray-200 transition-colors group"
+                title="Switch Franchise Partner"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-gray-700" />
+              </button>
+              <div>
+                <p className="text-gray-500 text-xs uppercase tracking-wider font-medium">Viewing Data For</p>
+                <h2 className="text-xl font-bold text-gray-800">
+                  {selectedFp.id === 'all' ? 'Admin (All FPs)' : `${selectedFp.fpId} - ${selectedFp.companyName}`}
+                </h2>
+                {selectedFp.id !== 'all' && (
+                  <p className="text-gray-500 text-sm">
+                    {selectedFp.ownerName || `${stats?.fpInfo?.city || ''}, ${stats?.fpInfo?.state || ''}`}
+                  </p>
+                )}
+              </div>
             </div>
-            <Building2 className="w-12 h-12 text-white/20" />
+            <Building2 className="w-12 h-12 text-gray-200" />
           </div>
         </div>
 

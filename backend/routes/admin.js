@@ -1104,52 +1104,39 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
         });
     };
 
-    // Run all queries in parallel
+    // Run all queries in parallel - count ALL data from FP tables
     const [
-      // Properties - from properties table (FP properties have franchise_partner_id)
-      fpProperties,
-      // Also count onboarded_properties
-      onboardedProperties,
-      // Vendors - from onboarded_vendors (FP vendors)
-      fpVendors,
-      // Also count main vendors table
-      mainVendors,
-      // Employees - from fp_employees
+      properties,
+      onboardedVendors,
       fpEmployees,
-      // Work orders stats
       workOrderStats,
-      // Estimates
       estimates,
-      fpEstimates,
-      // Recent work orders
       recentWorkOrders
     ] = await Promise.all([
-      // FP properties
-      safeCount('SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id IS NOT NULL'),
-      // Onboarded properties
-      safeCount('SELECT COUNT(*) as count FROM onboarded_properties WHERE status = "active"'),
-      // FP onboarded vendors
-      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE is_active = TRUE'),
-      // Main vendors
-      safeCount('SELECT COUNT(*) as count FROM vendors WHERE status = "active"'),
+      // ALL properties (both with and without franchise_partner_id)
+      safeCount('SELECT COUNT(*) as count FROM properties'),
+      // Onboarded vendors (FP vendors)
+      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors'),
       // FP employees
-      safeCount('SELECT COUNT(*) as count FROM fp_employees WHERE is_active = TRUE'),
-      // Work orders - combined query
+      safeCount('SELECT COUNT(*) as count FROM fp_employees WHERE is_active = 1'),
+      // Work orders - combined query for all work orders
       pool.execute(`
         SELECT 
           COUNT(*) as total,
           SUM(CASE WHEN status NOT IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) as pending,
           SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed
         FROM work_orders
-      `).then(([[r]]) => ({ total: r.total || 0, pending: r.pending || 0, completed: r.completed || 0 }))
-        .catch(() => ({ total: 0, pending: 0, completed: 0 })),
-      // Estimates
+      `).then(([[r]]) => ({ 
+        total: Number(r.total) || 0, 
+        pending: Number(r.pending) || 0, 
+        completed: Number(r.completed) || 0 
+      })).catch(() => ({ total: 0, pending: 0, completed: 0 })),
+      // Estimates (both regular and FP estimates)
       safeCount('SELECT COUNT(*) as count FROM estimates'),
-      safeCount('SELECT COUNT(*) as count FROM fp_estimates WHERE is_archived = FALSE'),
       // Recent work orders
       pool.execute(
         `SELECT wo.id, wo.work_order_id, wo.title, wo.status, wo.priority, wo.created_at,
-                p.name as property_name, fp.company_name as fp_name
+                COALESCE(p.name, wo.property_name) as property_name, fp.company_name as fp_name
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN franchise_partners fp ON wo.franchise_partner_id = fp.id
@@ -1158,15 +1145,17 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
       ).then(([rows]) => rows).catch(() => [])
     ]);
     
+    console.log('Admin Dashboard Stats:', { properties, onboardedVendors, fpEmployees, workOrderStats, estimates });
+    
     res.json({
       success: true,
       data: {
-        totalProperties: fpProperties + onboardedProperties,
-        totalVendors: fpVendors + mainVendors,
+        totalProperties: properties,
+        totalVendors: onboardedVendors,
         totalEmployees: fpEmployees,
         pendingWorkOrders: workOrderStats.pending,
         completedWorkOrders: workOrderStats.completed,
-        totalEstimates: estimates + fpEstimates,
+        totalEstimates: estimates,
         recentWorkOrders: recentWorkOrders
       }
     });
