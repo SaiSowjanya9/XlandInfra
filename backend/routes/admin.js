@@ -1255,39 +1255,39 @@ router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res)
       return res.status(404).json({ success: false, message: 'FP not found' });
     }
     
-    // Dashboard stats - using validated fpIdNum
+    // Dashboard stats - EXACTLY matching FP dashboard queries
+    // Properties count
     const [[propCount]] = await pool.execute(
       `SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ?`,
       [fpIdNum]
     );
-    const [[onbPropCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM onboarded_properties WHERE franchise_partner_id = ? AND status = 'active'`,
-      [fpIdNum]
-    );
-    const [[woCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ?`,
-      [fpIdNum]
-    );
-    const [[pendingWoCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ? AND status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
-      [fpIdNum]
-    );
-    const [[completedWoCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ? AND status IN ('completed', 'closed')`,
-      [fpIdNum]
-    );
+    
+    // Vendors count (same as FP dashboard - no is_active filter)
     const [[vendorCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND is_active = TRUE`,
+      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ?`,
       [fpIdNum]
     );
-    const [[employeeCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND is_active = TRUE`,
-      [fpIdNum]
-    );
+    
+    // Work orders - combined query (same as FP dashboard)
+    const [[workOrderStats]] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status NOT IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed
+      FROM work_orders WHERE franchise_partner_id = ?
+    `, [fpIdNum]);
+    
+    // Estimates count (from estimates table, not fp_estimates)
     const [[estimateCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM fp_estimates WHERE franchise_partner_id = ? AND is_archived = FALSE`,
+      `SELECT COUNT(*) as count FROM estimates WHERE franchise_partner_id = ?`,
       [fpIdNum]
     );
+    
+    // Employee count (same as FP dashboard)
+    const [[employeeStats]] = await pool.execute(`
+      SELECT COUNT(*) as total
+      FROM fp_employees WHERE franchise_partner_id = ?
+    `, [fpIdNum]);
     
     // Recent work orders
     const [recentWorkOrders] = await pool.execute(
@@ -1305,12 +1305,12 @@ router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res)
       data: {
         fpInfo,
         stats: {
-          totalProperties: (propCount?.count || 0) + (onbPropCount?.count || 0),
-          totalWorkOrders: woCount?.count || 0,
-          pendingWorkOrders: pendingWoCount?.count || 0,
-          completedWorkOrders: completedWoCount?.count || 0,
+          totalProperties: propCount?.count || 0,
+          totalWorkOrders: Number(workOrderStats?.total) || 0,
+          pendingWorkOrders: Number(workOrderStats?.pending) || 0,
+          completedWorkOrders: Number(workOrderStats?.completed) || 0,
           totalVendors: vendorCount?.count || 0,
-          totalEmployees: employeeCount?.count || 0,
+          totalEmployees: Number(employeeStats?.total) || 0,
           totalEstimates: estimateCount?.count || 0
         },
         recentWorkOrders
