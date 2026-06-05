@@ -1355,6 +1355,64 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
   }
 });
 
+// Get ALL employee zones from ALL FPs (Admin mode)
+router.get('/all-employee-zones', authenticate, adminOnly, async (req, res) => {
+  try {
+    // Get employees first
+    const [employees] = await pool.execute(
+      `SELECT e.*, e.employee_code as employee_id,
+              CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
+              CASE WHEN e.is_active = 1 THEN 'active' ELSE 'inactive' END as status,
+              fp.fp_code, fp.company_name as fp_name
+       FROM fp_employees e
+       LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
+       ORDER BY e.first_name, e.last_name`
+    );
+
+    // Get all zone assignments
+    const [zoneAssignments] = await pool.execute(
+      `SELECT fp_employee_id, zone_name FROM fp_employee_zones`
+    );
+
+    // Get all zones
+    const [zones] = await pool.execute(
+      `SELECT DISTINCT zone_name as name FROM fp_employee_zones ORDER BY zone_name`
+    );
+
+    // Build a map of employee zones
+    const employeeZonesMap = {};
+    zoneAssignments.forEach(za => {
+      if (!employeeZonesMap[za.fp_employee_id]) {
+        employeeZonesMap[za.fp_employee_id] = [];
+      }
+      if (za.zone_name) {
+        employeeZonesMap[za.fp_employee_id].push(za.zone_name);
+      }
+    });
+
+    // Transform employees with their zones
+    const transformedEmployees = employees.map(emp => ({
+      ...emp,
+      employeeId: emp.employee_code,
+      assignedZones: employeeZonesMap[emp.id] || [],
+      zone_names: (employeeZonesMap[emp.id] || []).join(', ') || 'No zones assigned',
+      zone_count: (employeeZonesMap[emp.id] || []).length
+    }));
+    
+    console.log('Admin all-employee-zones: Found', transformedEmployees.length, 'employees');
+    res.json({ 
+      success: true, 
+      data: { 
+        employees: transformedEmployees, 
+        zones: zones 
+      } 
+    });
+  } catch (error) {
+    console.error('Error fetching all employee zones:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch employee zones' });
+  }
+});
+
 // Get ALL employees from ALL FPs (Admin mode)
 router.get('/all-employees', authenticate, adminOnly, async (req, res) => {
   try {
