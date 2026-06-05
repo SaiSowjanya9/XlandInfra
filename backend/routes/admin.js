@@ -1119,6 +1119,46 @@ router.get('/fp-list', authenticate, adminOnly, async (req, res) => {
   }
 });
 
+// Get ALL properties from ALL FPs (Admin mode)
+router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
+  try {
+    // Regular properties from all FPs
+    const [properties] = await pool.execute(
+      `SELECT p.id, p.property_id, p.name, p.property_type,
+              COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area,
+              p.address, p.city, p.state, p.zip_code,
+              p.contact_person, p.contact_phone, p.contact_email,
+              p.created_at, p.status, 'properties' as source_table,
+              p.franchise_partner_id, fp.fp_id, fp.company_name,
+              COALESCE(p.category, 'residential') as category
+       FROM properties p
+       LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
+       LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
+       ORDER BY p.created_at DESC`
+    );
+    
+    // Onboarded properties from all FPs
+    const [onboardedProps] = await pool.execute(
+      `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
+              op.zone as zone_name, op.area_name as area,
+              op.address, op.city, op.state, op.postal_code as zip_code,
+              op.contact_person, op.contact_phone, op.contact_email,
+              op.created_at, op.status, 'onboarded_properties' as source_table,
+              op.franchise_partner_id, fp.fp_id, fp.company_name,
+              COALESCE(op.category, 'residential') as category
+       FROM onboarded_properties op
+       LEFT JOIN franchise_partners fp ON op.franchise_partner_id = fp.id
+       WHERE op.status = 'active'
+       ORDER BY op.created_at DESC`
+    );
+    
+    res.json({ success: true, data: [...properties, ...onboardedProps] });
+  } catch (error) {
+    console.error('Error fetching all properties:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch properties' });
+  }
+});
+
 // Get FP Dashboard data
 router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res) => {
   try {
@@ -1222,7 +1262,8 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
               COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area,
               p.address, p.city, p.state, p.zip_code,
               p.contact_person, p.contact_phone, p.contact_email,
-              p.created_at, p.status, 'properties' as source_table
+              p.created_at, p.status, 'properties' as source_table,
+              COALESCE(p.category, 'residential') as category
        FROM properties p
        LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
        WHERE p.franchise_partner_id = ?
@@ -1236,7 +1277,8 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
               op.zone as zone_name, op.area_name as area,
               op.address, op.city, op.state, op.postal_code as zip_code,
               op.contact_person, op.contact_phone, op.contact_email,
-              op.created_at, op.status, 'onboarded_properties' as source_table
+              op.created_at, op.status, 'onboarded_properties' as source_table,
+              COALESCE(op.category, 'residential') as category
        FROM onboarded_properties op
        WHERE op.franchise_partner_id = ? AND op.status = 'active'
        ORDER BY op.created_at DESC`,

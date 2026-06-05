@@ -26,6 +26,7 @@ import {
   UserCog,
   Building,
   RefreshCw,
+  Home,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useFP } from '../contexts/FPContext';
@@ -34,13 +35,19 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
   
   // FP Context for selecting franchise partner
-  const { fpList, selectedFp, selectFp, loading: fpLoading, refreshFpList } = useFP();
+  const { fpList, selectedFp, selectFp, selectedPropertyType, setSelectedPropertyType, loading: fpLoading, refreshFpList } = useFP();
   
   // Check if user is Operations Manager (restricted access)
   const isOpsManager = false;
+
+  // Property Management section states
+  const [propertyMgmtOpen, setPropertyMgmtOpen] = useState(
+    location.pathname.startsWith('/employee/customer-submissions')
+  );
+  const [residentialFpDropdown, setResidentialFpDropdown] = useState(false);
+  const [commercialFpDropdown, setCommercialFpDropdown] = useState(false);
 
   const [vendorOpen, setVendorOpen] = useState(
     location.pathname.startsWith('/employee/add-vendor') ||
@@ -54,10 +61,19 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     location.pathname.startsWith('/employee/employee-zone-management')
   );
 
-  // Base nav items - filtered based on role
+  // Handle FP selection for property type
+  const handleFpSelect = (fp, propertyType) => {
+    selectFp(fp);
+    setSelectedPropertyType(propertyType);
+    setResidentialFpDropdown(false);
+    setCommercialFpDropdown(false);
+    navigate('/employee/customer-submissions');
+    if (sidebarOpen) setSidebarOpen(false);
+  };
+
+  // Base nav items - filtered based on role (removed Property Management - it's now a section)
   const allNavItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/employee/customer-submissions', icon: Building2, label: 'Property Management' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer', adminOnly: true },
     { path: '/employee/user-management', icon: Shield, label: 'User Management', adminOnly: true },
@@ -194,61 +210,156 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             </span>
           </div>
 
-          {/* FP Selector */}
-          <div className="px-4 py-3 border-b border-gray-200 bg-indigo-50">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-indigo-700 flex items-center gap-1">
-                <Building className="w-3 h-3" />
-                Viewing FP Data
-              </span>
-              <button 
-                onClick={refreshFpList}
-                className="p-1 hover:bg-indigo-100 rounded"
-                title="Refresh FP List"
-              >
-                <RefreshCw className={`w-3 h-3 text-indigo-600 ${fpLoading ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-            <div className="relative">
+          {/* Navigation */}
+          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+            {/* Dashboard only */}
+            <NavLink item={{ path: '/employee', icon: LayoutDashboard, label: 'Dashboard' }} mobile />
+
+            {/* Property Management Section with Residential/Commercial + FP Selection */}
+            <div className="mt-2">
               <button
-                onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
-                className="w-full flex items-center justify-between px-3 py-2 bg-white border border-indigo-200 rounded-lg text-sm hover:border-indigo-400 transition-colors"
+                onClick={() => setPropertyMgmtOpen(!propertyMgmtOpen)}
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
+                  location.pathname.startsWith('/employee/customer-submissions')
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
               >
-                <span className="truncate font-medium text-gray-800">
-                  {selectedFp ? selectedFp.displayName : 'Select FP...'}
-                </span>
-                <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+                <div className="flex items-center space-x-3">
+                  <Building2 className="w-5 h-5" />
+                  <span className="font-medium">Property Management</span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    propertyMgmtOpen ? 'rotate-180' : ''
+                  }`}
+                />
               </button>
-              
-              {fpDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
-                  {fpList.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-gray-500">No FPs found</div>
-                  ) : (
-                    fpList.map(fp => (
-                      <button
-                        key={fp.id}
-                        onClick={() => {
-                          selectFp(fp);
-                          setFpDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 transition-colors ${
-                          selectedFp?.id === fp.id ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700'
-                        }`}
-                      >
-                        <div className="font-medium">{fp.fpId}</div>
-                        <div className="text-xs text-gray-500">{fp.companyName}</div>
-                      </button>
-                    ))
-                  )}
+              {propertyMgmtOpen && (
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                  {/* Residential */}
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        setResidentialFpDropdown(!residentialFpDropdown);
+                        setCommercialFpDropdown(false);
+                      }}
+                      className={`flex items-center justify-between w-full px-4 py-2 rounded-lg transition-all duration-200 ${
+                        selectedPropertyType === 'residential' && location.pathname.startsWith('/employee/customer-submissions')
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Home className="w-4 h-4" />
+                        <span className="text-sm font-medium">Residential</span>
+                      </div>
+                      <ChevronDown className={`w-3 h-3 transition-transform ${residentialFpDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+                    {residentialFpDropdown && (
+                      <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                        {/* Admin option - shows all data */}
+                        <button
+                          onClick={() => handleFpSelect(null, 'residential')}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 transition-colors ${
+                            !selectedFp && selectedPropertyType === 'residential' ? 'bg-emerald-100 text-emerald-700' : 'text-gray-700'
+                          }`}
+                        >
+                          <div className="font-medium flex items-center gap-2">
+                            <Shield className="w-3 h-3" />
+                            Admin (All FPs)
+                          </div>
+                          <div className="text-xs text-gray-500">View all data</div>
+                        </button>
+                        <div className="border-t border-gray-100"></div>
+                        {fpLoading ? (
+                          <div className="px-3 py-2 text-sm text-gray-500 flex items-center gap-2">
+                            <RefreshCw className="w-3 h-3 animate-spin" /> Loading...
+                          </div>
+                        ) : fpList.length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-gray-500">No FPs found</div>
+                        ) : (
+                          fpList.map(fp => (
+                            <button
+                              key={fp.id}
+                              onClick={() => handleFpSelect(fp, 'residential')}
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 transition-colors ${
+                                selectedFp?.id === fp.id && selectedPropertyType === 'residential' ? 'bg-emerald-100 text-emerald-700' : 'text-gray-700'
+                              }`}
+                            >
+                              <div className="font-medium">{fp.fpId}</div>
+                              <div className="text-xs text-gray-500">{fp.companyName}</div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Commercial */}
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        setCommercialFpDropdown(!commercialFpDropdown);
+                        setResidentialFpDropdown(false);
+                      }}
+                      className={`flex items-center justify-between w-full px-4 py-2 rounded-lg transition-all duration-200 ${
+                        selectedPropertyType === 'commercial' && location.pathname.startsWith('/employee/customer-submissions')
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Store className="w-4 h-4" />
+                        <span className="text-sm font-medium">Commercial</span>
+                      </div>
+                      <ChevronDown className={`w-3 h-3 transition-transform ${commercialFpDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+                    {commercialFpDropdown && (
+                      <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                        {/* Admin option - shows all data */}
+                        <button
+                          onClick={() => handleFpSelect(null, 'commercial')}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors ${
+                            !selectedFp && selectedPropertyType === 'commercial' ? 'bg-blue-100 text-blue-700' : 'text-gray-700'
+                          }`}
+                        >
+                          <div className="font-medium flex items-center gap-2">
+                            <Shield className="w-3 h-3" />
+                            Admin (All FPs)
+                          </div>
+                          <div className="text-xs text-gray-500">View all data</div>
+                        </button>
+                        <div className="border-t border-gray-100"></div>
+                        {fpLoading ? (
+                          <div className="px-3 py-2 text-sm text-gray-500 flex items-center gap-2">
+                            <RefreshCw className="w-3 h-3 animate-spin" /> Loading...
+                          </div>
+                        ) : fpList.length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-gray-500">No FPs found</div>
+                        ) : (
+                          fpList.map(fp => (
+                            <button
+                              key={fp.id}
+                              onClick={() => handleFpSelect(fp, 'commercial')}
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors ${
+                                selectedFp?.id === fp.id && selectedPropertyType === 'commercial' ? 'bg-blue-100 text-blue-700' : 'text-gray-700'
+                              }`}
+                            >
+                              <div className="font-medium">{fp.fpId}</div>
+                              <div className="text-xs text-gray-500">{fp.companyName}</div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-            {navItems.map((item) => (
+            {/* Other nav items (Work Orders, etc.) */}
+            {navItems.filter(item => item.path !== '/employee').map((item) => (
               <NavLink key={item.path} item={item} mobile />
             ))}
 
