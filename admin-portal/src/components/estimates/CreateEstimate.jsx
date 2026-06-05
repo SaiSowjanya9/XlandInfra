@@ -251,7 +251,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
 
   // Get total add-ons price
   const getAddonsTotal = () => {
-    return selectedAddons.reduce((sum, addon) => {
+    const total = selectedAddons.reduce((sum, addon) => {
       const addonTotal = addon.services?.reduce((s, service) => {
         const price = parseFloat(service.price) || 0;
         const frequency = parseInt(service.frequency) || 1;
@@ -259,12 +259,13 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       }, 0) || addon.totalPrice || 0;
       return sum + addonTotal;
     }, 0);
+    return Math.round(total * 100) / 100; // Fix floating-point precision
   };
 
   const calculateSubTotal = () => {
     // For property-based: Package + Add-ons
     if (estimateType === 'property' && selectedPackage) {
-      return getPackagePrice() + getAddonsTotal();
+      return Math.round(getPackagePrice() + getAddonsTotal());
     }
     // For direct or when no package: Individual services
     const lockedTotal = lockedServices.reduce((sum, service) => {
@@ -273,7 +274,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     const newTotal = estimateForm.services.reduce((sum, service) => {
       return sum + calculateServiceTotal(service);
     }, 0);
-    return lockedTotal + newTotal;
+    return Math.round(lockedTotal + newTotal);
   };
 
   // Get discount amount (percentage of subtotal)
@@ -440,7 +441,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
 
   // Direct Estimate - Get add-ons total
   const getDirectAddonsTotal = () => {
-    return directSelectedAddons.reduce((sum, addon) => {
+    const total = directSelectedAddons.reduce((sum, addon) => {
       const addonTotal = addon.services?.reduce((s, service) => {
         const price = parseFloat(service.price) || 0;
         const frequency = parseInt(service.frequency) || 1;
@@ -448,11 +449,12 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       }, 0) || addon.totalPrice || 0;
       return sum + addonTotal;
     }, 0);
+    return Math.round(total * 100) / 100; // Fix floating-point precision
   };
 
   // Direct Estimate - Calculate subtotal
   const calculateDirectSubTotal = () => {
-    return getDirectPackagePrice() + getDirectAddonsTotal();
+    return Math.round(getDirectPackagePrice() + getDirectAddonsTotal());
   };
 
   // Direct Estimate - Get discount amount

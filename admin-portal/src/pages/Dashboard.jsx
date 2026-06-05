@@ -173,7 +173,7 @@ const Dashboard = () => {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0
-    }).format(value);
+    }).format(Math.round(value));
   };
 
   if (loading) {
