@@ -415,8 +415,8 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                             </td>
                             <td className="py-4 px-4">
                               <div>
-                                <p className="font-medium text-gray-900">{estimate.created_by_name || 'System'}</p>
-                                <p className="text-xs text-blue-600">{(estimate.created_by_role || 'supervisor').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+                                <p className="font-medium text-gray-900">{estimate.created_by_name || (estimate.created_by_role ? estimate.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'System')}</p>
+                                <p className="text-xs text-blue-600">{estimate.created_by_name ? (estimate.created_by_role || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : ''}</p>
                               </div>
                             </td>
                             <td className="py-4 px-4">
