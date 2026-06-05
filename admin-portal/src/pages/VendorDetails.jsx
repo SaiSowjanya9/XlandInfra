@@ -7,6 +7,9 @@ import {
   FileCheck, Edit3, Save
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useFP } from '../contexts/FPContext';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Service Type Tabs (like Client Submissions tabs)
 const TABS = [
@@ -36,14 +39,22 @@ const VendorDetails = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Get selected FP from context
+  const { selectedFp } = useFP();
   const token = sessionStorage.getItem('pm_auth_token');
 
-  // Load vendors from backend API
+  // Load vendors from FP-specific API
   const loadData = async () => {
+    if (!selectedFp) {
+      setVendors([]);
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     setFetchError(null);
     try {
-      const response = await fetch(`/api/vendors?status=${statusFilter}`, {
+      const response = await fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/vendors`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -55,17 +66,19 @@ const VendorDetails = () => {
       setNotifications([]);
     } catch (error) {
       console.error('Error fetching vendors:', error);
-      setFetchError('Failed to load vendors. Please check if the backend server is running.');
+      setFetchError('Failed to load vendors.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 10000);
-    return () => clearInterval(interval);
-  }, [statusFilter]);
+    if (selectedFp) {
+      loadData();
+      const interval = setInterval(loadData, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedFp, statusFilter]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -262,6 +275,17 @@ const VendorDetails = () => {
     return `${Math.floor(diff / 86400)}d ago`;
   };
 
+  // Show message if no FP selected
+  if (!selectedFp) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 bg-gray-50">
+        <Truck className="w-16 h-16 text-gray-300 mb-4" />
+        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Franchise Partner</h2>
+        <p className="text-gray-400 text-sm">Choose an FP from the dropdown in the sidebar to view vendors</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
       {/* Toast Notification */}
@@ -277,7 +301,7 @@ const VendorDetails = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Vendor Details</h1>
-          <p className="text-gray-500 text-sm mt-1">{vendors.length} total vendors</p>
+          <p className="text-gray-500 text-sm mt-1">{vendors.length} vendors for {selectedFp.companyName}</p>
         </div>
         <div className="flex items-center gap-3">
           <button

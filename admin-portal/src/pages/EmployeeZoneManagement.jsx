@@ -16,6 +16,9 @@ import {
   Layers,
   RefreshCw,
 } from 'lucide-react';
+import { useFP } from '../contexts/FPContext';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const EmployeeZoneManagement = () => {
   const [employees, setEmployees] = useState([]);
@@ -28,47 +31,51 @@ const EmployeeZoneManagement = () => {
   const [assignedZonesMap, setAssignedZonesMap] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // Get selected FP from context
+  const { selectedFp } = useFP();
   const token = sessionStorage.getItem('pm_auth_token');
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (selectedFp) {
+      loadData();
+    }
+  }, [selectedFp]);
 
   const loadData = async () => {
+    if (!selectedFp) {
+      setEmployees([]);
+      setZones([]);
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
-      // Fetch employees and zones from API
-      const [empResponse, zoneResponse] = await Promise.all([
-        fetch('/api/staff', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/zones', { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      
-      const empResult = await empResponse.json();
-      const zoneResult = await zoneResponse.json();
-      
-      const allEmployees = empResult.success ? (empResult.data || []).filter(e => 
-        (e.status || (e.is_active ? 'active' : 'inactive')) === 'active'
-      ) : [];
-      const allZones = zoneResult.success ? (zoneResult.data || []).filter(z => z.status === 'active' || z.is_active) : [];
-      
-      setEmployees(allEmployees);
-      setZones(allZones);
-      
-      // Build a map of which zones are assigned to which employees
-      const zoneMap = {};
-      allEmployees.forEach(emp => {
-        const empZones = emp.assignedZones || emp.assigned_zones;
-        if (empZones === 'all') {
-          allZones.forEach(zone => {
-            zoneMap[zone.name] = { employeeId: emp.id, employeeName: emp.name || `${emp.first_name} ${emp.last_name}` };
-          });
-        } else if (Array.isArray(empZones)) {
-          empZones.forEach(zoneName => {
-            zoneMap[zoneName] = { employeeId: emp.id, employeeName: emp.name || `${emp.first_name} ${emp.last_name}` };
-          });
-        }
+      // Fetch employee zones from FP-specific API
+      const response = await fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/employee-zones`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      setAssignedZonesMap(zoneMap);
+      const result = await response.json();
+      
+      if (result.success) {
+        const allEmployees = result.data.employees || [];
+        const allZones = result.data.zones || [];
+        
+        setEmployees(allEmployees);
+        setZones(allZones);
+        
+        // Build a map of which zones are assigned to which employees
+        const zoneMap = {};
+        allEmployees.forEach(emp => {
+          const empZones = emp.zone_names;
+          if (empZones && empZones !== 'No zones assigned') {
+            empZones.split(',').forEach(zoneName => {
+              zoneMap[zoneName.trim()] = { employeeId: emp.id, employeeName: emp.name };
+            });
+          }
+        });
+        setAssignedZonesMap(zoneMap);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       showToast('Failed to load data', 'error');
@@ -223,6 +230,17 @@ const EmployeeZoneManagement = () => {
     e.assignedZones === 'all' || (Array.isArray(e.assignedZones) && e.assignedZones.length > 0)
   ).length;
 
+  // Show message if no FP selected
+  if (!selectedFp) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 bg-gray-50">
+        <MapPin className="w-16 h-16 text-gray-300 mb-4" />
+        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Franchise Partner</h2>
+        <p className="text-gray-400 text-sm">Choose an FP from the dropdown in the sidebar to manage employee zones</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Toast */}
@@ -243,7 +261,7 @@ const EmployeeZoneManagement = () => {
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Employee Zone Management</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Assign and manage zones for employees • {employees.length} employees
+            {employees.length} employees for {selectedFp.companyName}
           </p>
         </div>
       </div>

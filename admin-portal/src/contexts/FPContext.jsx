@@ -1,13 +1,21 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-const FPContext = createContext();
+const FPContext = createContext(null);
 
 export const useFP = () => {
   const context = useContext(FPContext);
   if (!context) {
-    throw new Error('useFP must be used within FPProvider');
+    // Return safe defaults if context is not available (graceful fallback)
+    return {
+      fpList: [],
+      selectedFp: null,
+      selectFp: () => {},
+      loading: false,
+      refreshFpList: () => {},
+      error: null
+    };
   }
   return context;
 };
@@ -16,57 +24,87 @@ export const FPProvider = ({ children }) => {
   const [fpList, setFpList] = useState([]);
   const [selectedFp, setSelectedFp] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const token = sessionStorage.getItem('pm_auth_token');
-
-  const fetchFpList = async () => {
+  const fetchFpList = useCallback(async () => {
+    // Get token fresh each time to handle login state changes
+    const token = sessionStorage.getItem('pm_auth_token');
+    
     if (!token) {
       setLoading(false);
+      setFpList([]);
+      setSelectedFp(null);
       return;
     }
+    
+    setLoading(true);
+    setError(null);
     
     try {
       const response = await fetch(`${API_BASE}/api/admin/fp-list`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const result = await response.json();
-      if (result.success && result.data) {
-        setFpList(result.data);
-        // Auto-select first FP if none selected
-        if (!selectedFp && result.data.length > 0) {
-          const savedFp = sessionStorage.getItem('selectedFpId');
-          if (savedFp) {
-            const fp = result.data.find(f => f.id.toString() === savedFp);
-            if (fp) setSelectedFp(fp);
-            else setSelectedFp(result.data[0]);
-          } else {
-            setSelectedFp(result.data[0]);
-          }
-        }
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    } catch (error) {
-      console.error('Error fetching FP list:', error);
+      
+      const result = await response.json();
+      
+      if (result.success && Array.isArray(result.data)) {
+        setFpList(result.data);
+        
+        // Auto-select FP if none selected
+        if (result.data.length > 0) {
+          const savedFpId = sessionStorage.getItem('selectedFpId');
+          let fpToSelect = null;
+          
+          if (savedFpId) {
+            fpToSelect = result.data.find(f => f.id?.toString() === savedFpId);
+          }
+          
+          // If saved FP not found or no saved FP, select first one
+          if (!fpToSelect) {
+            fpToSelect = result.data[0];
+          }
+          
+          setSelectedFp(fpToSelect);
+          if (fpToSelect) {
+            sessionStorage.setItem('selectedFpId', fpToSelect.id.toString());
+          }
+        } else {
+          setSelectedFp(null);
+        }
+      } else {
+        setFpList([]);
+        setError(result.message || 'Failed to load franchise partners');
+      }
+    } catch (err) {
+      console.error('Error fetching FP list:', err);
+      setError(err.message || 'Network error');
+      setFpList([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchFpList();
-  }, [token]);
+  }, [fetchFpList]);
 
-  const selectFp = (fp) => {
-    setSelectedFp(fp);
-    if (fp) {
+  const selectFp = useCallback((fp) => {
+    if (fp && fp.id) {
+      setSelectedFp(fp);
       sessionStorage.setItem('selectedFpId', fp.id.toString());
     } else {
+      setSelectedFp(null);
       sessionStorage.removeItem('selectedFpId');
     }
-  };
+  }, []);
 
-  const refreshFpList = () => {
+  const refreshFpList = useCallback(() => {
     fetchFpList();
-  };
+  }, [fetchFpList]);
 
   return (
     <FPContext.Provider value={{
@@ -74,7 +112,8 @@ export const FPProvider = ({ children }) => {
       selectedFp,
       selectFp,
       loading,
-      refreshFpList
+      refreshFpList,
+      error
     }}>
       {children}
     </FPContext.Provider>

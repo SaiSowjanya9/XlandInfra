@@ -23,8 +23,13 @@ import {
   UserCheck,
   Filter,
 } from 'lucide-react';
+import { useFP } from '../contexts/FPContext';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const AssignedVendors = ({ user }) => {
   // Check user role for view-only mode and API prefix
+  const isAdmin = user?.role === 'admin' || user?.role === 'operations_manager';
   const isCoordinator = user?.role === 'coordinator' || user?.role === 'coord_supervisor' || user?.role === 'coord_executive';
   const isFPManager = user?.role === 'manager';
   const isFPUser = user?.role === 'franchise_partner' || user?.role === 'manager' || user?.role === 'fp_coordinator';
@@ -32,6 +37,9 @@ const AssignedVendors = ({ user }) => {
   const apiPrefix = isCoordinator ? '/api/coordinator' : (isFPManager ? '/api/manager' : (isFPUser ? '/api/fp' : '/api'));
   // Coordinators and FP Managers are view-only
   const isViewOnly = isCoordinator || isFPManager;
+  
+  // Get selected FP from context (for admin users)
+  const { selectedFp } = useFP();
   
   const [activeTab, setActiveTab] = useState('service'); // 'service' or 'property'
   const [assignments, setAssignments] = useState([]);
@@ -50,8 +58,12 @@ const AssignedVendors = ({ user }) => {
   const token = sessionStorage.getItem('pm_auth_token');
 
   useEffect(() => {
-    loadData();
-  }, [statusFilter]);
+    if (isAdmin && selectedFp) {
+      loadData();
+    } else if (!isAdmin) {
+      loadData();
+    }
+  }, [statusFilter, selectedFp]);
 
   // Refresh data when page becomes visible (handles navigation back to this page)
   useEffect(() => {
@@ -63,11 +75,44 @@ const AssignedVendors = ({ user }) => {
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [statusFilter]);
+  }, [statusFilter, selectedFp]);
 
   const loadData = async () => {
+    // For admin users, use FP-specific endpoint
+    if (isAdmin) {
+      if (!selectedFp) {
+        setAssignments([]);
+        setVendors([]);
+        return;
+      }
+      
+      try {
+        const [assignResponse, vendorResponse] = await Promise.all([
+          fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/vendor-assignments`, { 
+            headers: { 'Authorization': `Bearer ${token}` } 
+          }),
+          fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/vendors`, { 
+            headers: { 'Authorization': `Bearer ${token}` } 
+          })
+        ]);
+        
+        const assignResult = await assignResponse.json();
+        const vendorResult = await vendorResponse.json();
+        
+        if (assignResult.success) {
+          setAssignments(assignResult.data || []);
+        }
+        if (vendorResult.success) {
+          setVendors(vendorResult.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+      return;
+    }
+    
     try {
-      // Load vendor assignments from API
+      // Load vendor assignments from API (for non-admin users)
       const [assignResponse, vendorResponse] = await Promise.all([
         fetch(`${apiPrefix}/vendors/assignments?status=${statusFilter}`, { 
           headers: { 'Authorization': `Bearer ${token}` } 
@@ -258,6 +303,17 @@ const AssignedVendors = ({ user }) => {
     return acc;
   }, {});
 
+  // Show message if admin and no FP selected
+  if (isAdmin && !selectedFp) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 bg-gray-50">
+        <UserCheck className="w-16 h-16 text-gray-300 mb-4" />
+        <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Franchise Partner</h2>
+        <p className="text-gray-400 text-sm">Choose an FP from the dropdown in the sidebar to view assigned vendors</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Toast */}
@@ -278,7 +334,7 @@ const AssignedVendors = ({ user }) => {
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Assigned Vendors</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {serviceAssignments.length + assignments.length} total assignments • Manage vendors assigned to properties and services
+            {serviceAssignments.length + assignments.length} assignments{isAdmin && selectedFp ? ` for ${selectedFp.companyName}` : ''}
           </p>
         </div>
         <button
