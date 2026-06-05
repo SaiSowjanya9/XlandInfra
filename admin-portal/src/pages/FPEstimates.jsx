@@ -98,7 +98,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
   const formatCurrency = (amt) => {
     const num = parseFloat(amt);
-    const value = isNaN(num) ? 0 : num;
+    const value = isNaN(num) ? 0 : Math.round(num);
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(value);
   };
 

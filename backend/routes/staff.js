@@ -554,7 +554,7 @@ router.post('/reset-password', async (req, res) => {
 
     // Check users table
     const [users] = await conn.execute(
-      `SELECT id, user_id, email, first_name, role, reset_token_expires, reset_temp_password_hash
+      `SELECT id, user_id, email, first_name, role, reset_token_expires, reset_temp_password_hash, password_hash
        FROM users 
        WHERE reset_token = ? AND is_active = TRUE`,
       [token]
@@ -570,7 +570,7 @@ router.post('/reset-password', async (req, res) => {
     if (!user) {
       const [fpUsers] = await conn.execute(
         `SELECT id, partner_id as user_id, email, contact_person as first_name, 'franchise_partner' as role,
-                reset_token_expires, reset_temp_password_hash
+                reset_token_expires, reset_temp_password_hash, password_hash
          FROM franchise_partners 
          WHERE reset_token = ? AND is_active = TRUE`,
         [token]
@@ -608,6 +608,18 @@ router.post('/reset-password', async (req, res) => {
         success: false,
         message: 'Invalid temporary password'
       });
+    }
+
+    // Check if new password is same as old password
+    if (user.password_hash) {
+      const isSameAsOldPassword = await bcrypt.compare(newPassword, user.password_hash);
+      if (isSameAsOldPassword) {
+        await conn.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'New password cannot be the same as your old password. Please choose a different password.'
+        });
+      }
     }
 
     // Hash new password and update
