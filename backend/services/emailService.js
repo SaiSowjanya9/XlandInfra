@@ -1070,11 +1070,7 @@ const sendPasswordResetSuccess = async (userData) => {
           
           <!-- Main Content -->
           <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none; text-align: center;">
-            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 50%; margin: 0 auto 25px auto; display: flex; align-items: center; justify-content: center;">
-              <span style="font-size: 40px; color: white;">✓</span>
-            </div>
-            
-            <h2 style="color: #22c55e; margin: 0 0 20px 0; font-size: 24px; font-weight: 400;">Password Reset Successful!</h2>
+            <h2 style="color: #D8B25C; margin: 0 0 20px 0; font-size: 24px; font-weight: 400;">Password Reset Successful!</h2>
             
             <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 30px 0;">
               Hi ${firstName || 'User'}, your password for the <strong style="color: #D8B25C;">${portalName}</strong> has been successfully reset. 
