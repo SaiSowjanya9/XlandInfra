@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Download, Mail, Calendar, Filter, Home, Building2, User } from 'lucide-react';
+import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Download, Calendar, Filter, Home, Building2, User } from 'lucide-react';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
@@ -726,15 +726,13 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-6 py-4"><span className="font-semibold text-gray-900">{pkg.name || 'Unnamed Package'}</span></td>
-                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{getPropertyTypeLabel(pkg.property_type)}</span></td>
+                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{getPropertyTypeLabel(getPackagePropertyType(pkg))}</span></td>
                               <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getBillingBadgeColor(pkg.billing_duration)}`}>{BILLING_DURATIONS.find(d => d.value === pkg.billing_duration)?.label || 'Monthly'}</span></td>
                               <td className="px-4 py-4 max-w-xs"><p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText}</p></td>
                               <td className="px-4 py-4 text-right"><span className="text-lg font-bold text-slate-800">{formatCurrency(getPackagePrice(pkg))}</span></td>
                               <td className="px-4 py-4">
                                 <div className="flex items-center justify-center gap-1">
                                   <button className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button>
-                                  <button className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Export PDF"><Download className="w-4 h-4" /></button>
-                                  <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Email"><Mail className="w-4 h-4" /></button>
                                 </div>
                               </td>
                             </tr>
