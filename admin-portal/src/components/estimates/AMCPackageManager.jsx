@@ -45,7 +45,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Check if user is Operations Manager (restricted access - view only)
-  const isOpsManager = false;
+  const isOpsManager = admin?.role === 'operations_manager';
   const token = sessionStorage.getItem('pm_auth_token');
   
   // Operations Manager defaults to 'all-packages' tab (no create access)

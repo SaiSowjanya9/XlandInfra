@@ -42,6 +42,10 @@ const VendorDetails = () => {
   // Get selected FP from context
   const { selectedFp, fpList, selectFp } = useFP();
   const token = sessionStorage.getItem('pm_auth_token');
+  
+  // Check if user is Operations Manager (view-only access)
+  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const isOpsManager = currentUser?.role === 'operations_manager';
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
   
   const handleFpSelect = (fp) => {
@@ -620,52 +624,56 @@ const VendorDetails = () => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleOpenEdit(vendor)}
-                          className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                          title="Modify vendor"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleExportVendor(vendor)}
-                          className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                          title="Export to Excel"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                        {(vendor.status === 'deleted' || vendor.is_active === 0 || vendor.is_active === false) ? (
-                          <button
-                            onClick={async () => {
-                              try {
-                                const response = await fetch(`/api/vendors/${vendor.id || vendor.vendorId}/restore`, {
-                                  method: 'PUT',
-                                  headers: { 'Authorization': `Bearer ${token}` }
-                                });
-                                const result = await response.json();
-                                if (result.success) {
-                                  showToast('Vendor restored successfully');
-                                  loadData();
-                                } else {
-                                  showToast(result.message || 'Failed to restore vendor', 'error');
-                                }
-                              } catch (error) {
-                                showToast('Failed to restore vendor', 'error');
-                              }
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                            title="Restore Vendor"
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setDeleteConfirm(vendor)}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        {!isOpsManager && (
+                          <>
+                            <button
+                              onClick={() => handleOpenEdit(vendor)}
+                              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                              title="Modify vendor"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleExportVendor(vendor)}
+                              className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                              title="Export to Excel"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                            {(vendor.status === 'deleted' || vendor.is_active === 0 || vendor.is_active === false) ? (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const response = await fetch(`/api/vendors/${vendor.id || vendor.vendorId}/restore`, {
+                                      method: 'PUT',
+                                      headers: { 'Authorization': `Bearer ${token}` }
+                                    });
+                                    const result = await response.json();
+                                    if (result.success) {
+                                      showToast('Vendor restored successfully');
+                                      loadData();
+                                    } else {
+                                      showToast(result.message || 'Failed to restore vendor', 'error');
+                                    }
+                                  } catch (error) {
+                                    showToast('Failed to restore vendor', 'error');
+                                  }
+                                }}
+                                className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                                title="Restore Vendor"
+                              >
+                                <RefreshCw className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setDeleteConfirm(vendor)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>

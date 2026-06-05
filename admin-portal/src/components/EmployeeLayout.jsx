@@ -39,8 +39,8 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   // FP Context for selecting franchise partner
   const { fpList, selectedFp, selectFp, selectedPropertyType, setSelectedPropertyType, loading: fpLoading, refreshFpList } = useFP();
   
-  // Check if user is Operations Manager (restricted access)
-  const isOpsManager = false;
+  // Check if user is Operations Manager (restricted access - view only)
+  const isOpsManager = admin?.role === 'operations_manager';
 
   const [vendorOpen, setVendorOpen] = useState(
     location.pathname.startsWith('/employee/add-vendor') ||
