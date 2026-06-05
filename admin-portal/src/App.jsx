@@ -87,7 +87,7 @@ import UserManagement from './pages/UserManagement';
 import QRManagement from './pages/QRManagement';
 import EstimateAction from './pages/EstimateAction';
 import ResetPassword from './pages/ResetPassword';
-import FPView from './pages/FPView';
+import { FPProvider } from './contexts/FPContext';
 
 // Session timeout in milliseconds (30 minutes)
 const SESSION_TIMEOUT = 30 * 60 * 1000;
@@ -270,32 +270,33 @@ function App() {
   // Step 3: Logged in → show that portal's layout + routes
   if (portal === 'employee') {
     return (
-      <Router>
-        <EmployeeLayout admin={user} onLogout={handleLogout}>
-          <Routes>
-            <Route path="/employee" element={<Dashboard />} />
-            <Route path="/employee/customer-submissions" element={<CustomerSubmissions />} />
-            <Route path="/employee/work-orders" element={<EmployeeWorkOrders admin={user} />} />
-            <Route path="/employee/create-customer" element={<CreateCustomer admin={user} />} />
-            <Route path="/employee/add-vendor" element={<AddVendor admin={user} />} />
-            <Route path="/employee/vendor-details" element={<VendorDetails />} />
-            <Route path="/employee/assigned-vendors" element={<AssignedVendors user={user} />} />
-            <Route path="/employee/add-employee" element={<AddEmployee admin={user} />} />
-            <Route path="/employee/employee-details" element={<EmployeeDetails />} />
-            <Route path="/employee/employee-zone-management" element={<EmployeeZoneManagement />} />
-            <Route path="/employee/user-management" element={<UserManagement />} />
-            <Route path="/employee/qr-management" element={<QRManagement />} />
-            <Route path="/employee/estimates" element={<Navigate to="/employee/estimates/list" replace />} />
-            <Route path="/employee/estimates/create" element={<Estimates admin={user} defaultTab="create" />} />
-            <Route path="/employee/estimates/list" element={<Estimates admin={user} defaultTab="list" />} />
-            <Route path="/employee/estimates/amc-manager" element={<Estimates admin={user} defaultTab="amc-manager" />} />
-            <Route path="/employee/estimates/addons" element={<Estimates admin={user} defaultTab="addons" />} />
-            <Route path="/employee/estimates/archived" element={<Estimates admin={user} defaultTab="archived" />} />
-            <Route path="/employee/fp-view" element={<FPView admin={user} />} />
-            <Route path="*" element={<Navigate to="/employee" replace />} />
-          </Routes>
-        </EmployeeLayout>
-      </Router>
+      <FPProvider>
+        <Router>
+          <EmployeeLayout admin={user} onLogout={handleLogout}>
+            <Routes>
+              <Route path="/employee" element={<Dashboard />} />
+              <Route path="/employee/customer-submissions" element={<CustomerSubmissions />} />
+              <Route path="/employee/work-orders" element={<EmployeeWorkOrders admin={user} />} />
+              <Route path="/employee/create-customer" element={<CreateCustomer admin={user} />} />
+              <Route path="/employee/add-vendor" element={<AddVendor admin={user} />} />
+              <Route path="/employee/vendor-details" element={<VendorDetails />} />
+              <Route path="/employee/assigned-vendors" element={<AssignedVendors user={user} />} />
+              <Route path="/employee/add-employee" element={<AddEmployee admin={user} />} />
+              <Route path="/employee/employee-details" element={<EmployeeDetails />} />
+              <Route path="/employee/employee-zone-management" element={<EmployeeZoneManagement />} />
+              <Route path="/employee/user-management" element={<UserManagement />} />
+              <Route path="/employee/qr-management" element={<QRManagement />} />
+              <Route path="/employee/estimates" element={<Navigate to="/employee/estimates/list" replace />} />
+              <Route path="/employee/estimates/create" element={<Estimates admin={user} defaultTab="create" />} />
+              <Route path="/employee/estimates/list" element={<Estimates admin={user} defaultTab="list" />} />
+              <Route path="/employee/estimates/amc-manager" element={<Estimates admin={user} defaultTab="amc-manager" />} />
+              <Route path="/employee/estimates/addons" element={<Estimates admin={user} defaultTab="addons" />} />
+              <Route path="/employee/estimates/archived" element={<Estimates admin={user} defaultTab="archived" />} />
+              <Route path="*" element={<Navigate to="/employee" replace />} />
+            </Routes>
+          </EmployeeLayout>
+        </Router>
+      </FPProvider>
     );
   }
 
