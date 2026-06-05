@@ -24,6 +24,7 @@ import {
   MapPin,
   QrCode,
   UserCog,
+  Eye,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -50,6 +51,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   // Base nav items - filtered based on role
   const allNavItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/employee/fp-view', icon: Eye, label: 'FP Data Viewer', adminOnly: true },
     { path: '/employee/customer-submissions', icon: Building2, label: 'Property Management' },
     { path: '/employee/work-orders', icon: ClipboardList, label: 'Work Orders' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer', adminOnly: true },

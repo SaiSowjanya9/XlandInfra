@@ -1081,6 +1081,382 @@ router.put('/notifications/read-all', async (req, res) => {
   res.json({ success: true, message: 'All notifications marked as read' });
 });
 
+// ============================================
+// FP VIEW MODE - Admin views FP data (READ-ONLY)
+// ============================================
+
+// Get list of all FPs for dropdown selection
+router.get('/fp-list', authenticate, adminOnly, async (req, res) => {
+  try {
+    const [fps] = await pool.execute(
+      `SELECT id, fp_id, company_name, owner_name, city, state, is_active 
+       FROM franchise_partners 
+       WHERE is_active = TRUE 
+       ORDER BY company_name ASC`
+    );
+    
+    res.json({ 
+      success: true, 
+      data: fps.map(fp => ({
+        id: fp.id,
+        fpId: fp.fp_id,
+        companyName: fp.company_name,
+        ownerName: fp.owner_name,
+        city: fp.city,
+        state: fp.state,
+        displayName: `${fp.fp_id} - ${fp.company_name}`
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching FP list:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get FP Dashboard data
+router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId } = req.params;
+    
+    // Get FP info
+    const [[fpInfo]] = await pool.execute(
+      `SELECT id, fp_id, company_name, owner_name, city, state FROM franchise_partners WHERE id = ?`,
+      [fpId]
+    );
+    
+    if (!fpInfo) {
+      return res.status(404).json({ success: false, message: 'FP not found' });
+    }
+    
+    // Dashboard stats
+    const [[propCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ?`,
+      [fpId]
+    );
+    const [[onbPropCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM onboarded_properties WHERE franchise_partner_id = ? AND status = 'active'`,
+      [fpId]
+    );
+    const [[woCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ?`,
+      [fpId]
+    );
+    const [[pendingWoCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ? AND status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
+      [fpId]
+    );
+    const [[completedWoCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM work_orders WHERE franchise_partner_id = ? AND status IN ('completed', 'closed')`,
+      [fpId]
+    );
+    const [[vendorCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND is_active = TRUE`,
+      [fpId]
+    );
+    const [[employeeCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND is_active = TRUE`,
+      [fpId]
+    );
+    const [[estimateCount]] = await pool.execute(
+      `SELECT COUNT(*) as count FROM fp_estimates WHERE franchise_partner_id = ? AND is_archived = FALSE`,
+      [fpId]
+    );
+    
+    // Recent work orders
+    const [recentWorkOrders] = await pool.execute(
+      `SELECT wo.id, wo.work_order_id, wo.title, wo.status, wo.priority, wo.created_at,
+              COALESCE(p.name, wo.property_name) as property_name
+       FROM work_orders wo
+       LEFT JOIN properties p ON wo.property_id = p.id
+       WHERE wo.franchise_partner_id = ?
+       ORDER BY wo.created_at DESC LIMIT 5`,
+      [fpId]
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        fpInfo,
+        stats: {
+          totalProperties: (propCount?.count || 0) + (onbPropCount?.count || 0),
+          totalWorkOrders: woCount?.count || 0,
+          pendingWorkOrders: pendingWoCount?.count || 0,
+          completedWorkOrders: completedWoCount?.count || 0,
+          totalVendors: vendorCount?.count || 0,
+          totalEmployees: employeeCount?.count || 0,
+          totalEstimates: estimateCount?.count || 0
+        },
+        recentWorkOrders
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching FP dashboard:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get FP Properties
+router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId } = req.params;
+    
+    // Regular properties
+    const [properties] = await pool.execute(
+      `SELECT p.id, p.property_id, p.name, p.property_type,
+              COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area,
+              p.address, p.city, p.state, p.zip_code,
+              p.contact_person, p.contact_phone, p.contact_email,
+              p.created_at, p.status, 'properties' as source_table
+       FROM properties p
+       LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
+       WHERE p.franchise_partner_id = ?
+       ORDER BY p.created_at DESC`,
+      [fpId]
+    );
+    
+    // Onboarded properties
+    const [onboardedProps] = await pool.execute(
+      `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
+              op.zone as zone_name, op.area_name as area,
+              op.address, op.city, op.state, op.postal_code as zip_code,
+              op.contact_person, op.contact_phone, op.contact_email,
+              op.created_at, op.status, 'onboarded_properties' as source_table
+       FROM onboarded_properties op
+       WHERE op.franchise_partner_id = ? AND op.status = 'active'
+       ORDER BY op.created_at DESC`,
+      [fpId]
+    );
+    
+    res.json({ success: true, data: [...properties, ...onboardedProps] });
+  } catch (error) {
+    console.error('Error fetching FP properties:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get FP Work Orders
+router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId } = req.params;
+    const { status } = req.query;
+    
+    let query = `
+      SELECT wo.*, COALESCE(p.name, wo.property_name) as property_name,
+             COALESCE(c.name, wo.category_name) as category_name,
+             v.company_name as vendor_name
+      FROM work_orders wo
+      LEFT JOIN properties p ON wo.property_id = p.id
+      LEFT JOIN categories c ON wo.category_id = c.id
+      LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
+      WHERE wo.franchise_partner_id = ?
+    `;
+    const params = [fpId];
+    
+    if (status === 'pending') {
+      query += ` AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`;
+    } else if (status === 'completed') {
+      query += ` AND wo.status IN ('completed', 'closed')`;
+    }
+    
+    query += ` ORDER BY wo.created_at DESC`;
+    
+    const [workOrders] = await pool.execute(query, params);
+    res.json({ success: true, data: workOrders });
+  } catch (error) {
+    console.error('Error fetching FP work orders:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get FP Vendors
+router.get('/fp-view/:fpId/vendors', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId } = req.params;
+    
+    const [vendors] = await pool.execute(
+      `SELECT ov.*, ov.owner_name as vendor_name, ov.owner_mobile as phone, ov.owner_email as email
+       FROM onboarded_vendors ov
+       WHERE ov.franchise_partner_id = ? AND ov.is_active = TRUE
+       ORDER BY ov.created_at DESC`,
+      [fpId]
+    );
+    
+    res.json({ success: true, data: vendors });
+  } catch (error) {
+    console.error('Error fetching FP vendors:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get FP Vendor Assignments
+router.get('/fp-view/:fpId/vendor-assignments', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId } = req.params;
+    
+    const [assignments] = await pool.execute(
+      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+              COALESCE(p.name, op.community_name) as property_name,
+              COALESCE(p.property_id, op.property_id) as propertyId,
+              v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
+              v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
+              v.zone as zone_name
+       FROM property_vendor_assignments pva
+       LEFT JOIN properties p ON pva.property_id = p.id
+       LEFT JOIN onboarded_properties op ON pva.property_id = op.id
+       JOIN onboarded_vendors v ON pva.vendor_id = v.id
+       WHERE (p.franchise_partner_id = ? OR op.franchise_partner_id = ?) AND pva.is_active = TRUE
+       ORDER BY pva.assigned_at DESC`,
+      [fpId, fpId]
+    );
+    
+    res.json({ success: true, data: assignments });
+  } catch (error) {
+    console.error('Error fetching FP vendor assignments:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get FP Employees
+router.get('/fp-view/:fpId/employees', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId } = req.params;
+    
+    const [employees] = await pool.execute(
+      `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name,
+              GROUP_CONCAT(DISTINCT ez.zone_name ORDER BY ez.zone_name) as zone_names
+       FROM fp_employees e
+       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
+       WHERE e.franchise_partner_id = ? AND e.is_active = TRUE
+       GROUP BY e.id
+       ORDER BY e.first_name, e.last_name`,
+      [fpId, fpId]
+    );
+    
+    res.json({ success: true, data: employees });
+  } catch (error) {
+    console.error('Error fetching FP employees:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get FP Employee Zones
+router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId } = req.params;
+    
+    const [employees] = await pool.execute(
+      `SELECT e.id, e.first_name, e.last_name, CONCAT(e.first_name, ' ', e.last_name) as name,
+              e.email, e.phone, e.role, e.is_active,
+              GROUP_CONCAT(DISTINCT ez.zone_name ORDER BY ez.zone_name) as zone_names
+       FROM fp_employees e
+       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
+       WHERE e.franchise_partner_id = ? AND e.is_active = TRUE
+       GROUP BY e.id
+       ORDER BY e.first_name, e.last_name`,
+      [fpId, fpId]
+    );
+    
+    const [zones] = await pool.execute(
+      `SELECT DISTINCT ez.zone_name as name FROM fp_employee_zones ez 
+       WHERE ez.franchise_partner_id = ? ORDER BY ez.zone_name`,
+      [fpId]
+    );
+    
+    res.json({ 
+      success: true, 
+      data: {
+        employees: employees.map(emp => ({
+          ...emp,
+          zone_names: emp.zone_names || 'No zones assigned'
+        })),
+        zones
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching FP employee zones:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get FP Estimates
+router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId } = req.params;
+    const { archived } = req.query;
+    const isArchived = archived === 'true';
+    
+    const [estimates] = await pool.execute(
+      `SELECT e.*, p.name as property_name, c.name as customer_name
+       FROM fp_estimates e
+       LEFT JOIN properties p ON e.property_id = p.id
+       LEFT JOIN clients c ON e.customer_id = c.id
+       WHERE e.franchise_partner_id = ? AND e.is_archived = ?
+       ORDER BY e.created_at DESC`,
+      [fpId, isArchived]
+    );
+    
+    res.json({ success: true, data: estimates });
+  } catch (error) {
+    console.error('Error fetching FP estimates:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get FP AMC Packages
+router.get('/fp-view/:fpId/amc-packages', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId } = req.params;
+    
+    const [packages] = await pool.execute(
+      `SELECT * FROM amc_packages WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
+      [fpId]
+    );
+    
+    res.json({ success: true, data: packages });
+  } catch (error) {
+    console.error('Error fetching FP AMC packages:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get FP Add-ons
+router.get('/fp-view/:fpId/addons', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId } = req.params;
+    
+    const [addons] = await pool.execute(
+      `SELECT * FROM addons WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
+      [fpId]
+    );
+    
+    res.json({ success: true, data: addons });
+  } catch (error) {
+    console.error('Error fetching FP addons:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get FP Customers
+router.get('/fp-view/:fpId/customers', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId } = req.params;
+    
+    const [customers] = await pool.execute(
+      `SELECT c.*, p.name as property_name
+       FROM clients c
+       LEFT JOIN properties p ON c.property_id = p.id
+       WHERE c.franchise_partner_id = ?
+       ORDER BY c.created_at DESC`,
+      [fpId]
+    );
+    
+    res.json({ success: true, data: customers });
+  } catch (error) {
+    console.error('Error fetching FP customers:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Migration: Update all existing estimates with created_by_name
 router.post('/migrate-estimate-names', async (req, res) => {
   try {

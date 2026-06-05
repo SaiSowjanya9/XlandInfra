@@ -87,6 +87,7 @@ import UserManagement from './pages/UserManagement';
 import QRManagement from './pages/QRManagement';
 import EstimateAction from './pages/EstimateAction';
 import ResetPassword from './pages/ResetPassword';
+import FPView from './pages/FPView';
 
 // Session timeout in milliseconds (30 minutes)
 const SESSION_TIMEOUT = 30 * 60 * 1000;
@@ -290,6 +291,7 @@ function App() {
             <Route path="/employee/estimates/amc-manager" element={<Estimates admin={user} defaultTab="amc-manager" />} />
             <Route path="/employee/estimates/addons" element={<Estimates admin={user} defaultTab="addons" />} />
             <Route path="/employee/estimates/archived" element={<Estimates admin={user} defaultTab="archived" />} />
+            <Route path="/employee/fp-view" element={<FPView admin={user} />} />
             <Route path="*" element={<Navigate to="/employee" replace />} />
           </Routes>
         </EmployeeLayout>
