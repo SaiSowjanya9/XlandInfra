@@ -1158,38 +1158,39 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
 router.post('/estimates', requireCoordinatorScope, async (req, res) => {
   try {
     const coordinatorId = req.coordinatorId;
-    const franchisePartnerId = req.franchisePartnerId;
-    const { clientId, propertyId, title, description, estimateType, subtotal, taxPercentage, discountPercentage, validUntil, items } = req.body;
+    const franchisePartnerId = req.franchisePartnerId || 1;
+    const {
+      estimate_type, property_id, property_code, client_name, client_phone, client_email,
+      property_name, property_type, zone, city, address, package_id, package_name, package_price,
+      addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
+      description
+    } = req.body;
 
     const estimateId = `EST-COORD-${Date.now()}`;
-    const tax = (subtotal * (taxPercentage || 0)) / 100;
-    const discount = (subtotal * (discountPercentage || 0)) / 100;
-    const totalAmount = subtotal + tax - discount;
+    
+    // property_id column is INT, so use null for string codes
+    const numericPropertyId = parseInt(property_id);
+    const propertyIdValue = isNaN(numericPropertyId) ? null : numericPropertyId;
 
     const [result] = await pool.query(
-      `INSERT INTO estimates (estimate_id, client_id, property_id, title, description, estimate_type,
-        subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount, total_amount,
-        valid_until, coordinator_id, franchise_partner_id, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
-      [estimateId, clientId || null, propertyId || null, title, description, estimateType || 'property_based',
-        subtotal, taxPercentage || 0, tax, discountPercentage || 0, discount, totalAmount,
-        validUntil || null, coordinatorId, franchisePartnerId]
+      `INSERT INTO fp_estimates (
+        estimate_id, franchise_partner_id, property_id, estimate_type,
+        client_name, client_phone, client_email, property_name, property_code, property_type,
+        zone, city, address, package_id, package_name, package_price,
+        subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
+        addons_data, description, created_by_id, created_by_role, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())`,
+      [
+        estimateId, franchisePartnerId, propertyIdValue, estimate_type || 'property_based',
+        client_name || '', client_phone || '', client_email || '',
+        property_name || '', property_code || property_id || '', property_type || '',
+        zone || '', city || '', address || '',
+        package_id || null, package_name || '', package_price || 0,
+        subtotal || 0, discount_percent || 0, discount_amount || 0,
+        gst_percent || 18, gst_amount || 0, total_amount || 0,
+        JSON.stringify(addons || []), description || '', coordinatorId, 'coordinator'
+      ]
     );
-
-    // Insert line items
-    if (items && items.length > 0) {
-      const itemValues = items.map(item => [
-        result.insertId,
-        item.description,
-        item.quantity,
-        item.unitPrice,
-        item.totalPrice || (item.quantity * item.unitPrice)
-      ]);
-      await pool.query(
-        'INSERT INTO estimate_items (estimate_id, description, quantity, unit_price, total_price) VALUES ?',
-        [itemValues]
-      );
-    }
 
     res.json({
       success: true,
@@ -1197,8 +1198,8 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
       data: { id: result.insertId, estimateId }
     });
   } catch (error) {
-    console.error('Estimate create error:', error);
-    res.status(500).json({ success: false, message: 'Failed to create estimate' });
+    console.error('Coordinator estimate create error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create estimate: ' + error.message });
   }
 });
 
