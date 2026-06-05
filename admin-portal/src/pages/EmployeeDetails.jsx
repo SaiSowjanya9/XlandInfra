@@ -89,10 +89,19 @@ const EmployeeDetails = () => {
       });
       const result = await response.json();
       if (result.success) {
-        let empList = result.data || [];
+        // Map API fields to frontend expected format
+        let empList = (result.data || []).map(e => ({
+          ...e,
+          employeeId: e.employee_id,
+          fullName: e.name || `${e.first_name} ${e.last_name || ''}`.trim(),
+          assignedZones: e.zone_names ? e.zone_names.split(',').map(z => z.trim()) : [],
+          zoneCount: e.zone_count || 0,
+          createdAt: e.created_at,
+          status: e.status || (e.is_active ? 'active' : 'inactive')
+        }));
         // Filter by status
         if (statusFilter !== 'all') {
-          empList = empList.filter(e => (e.status || (e.is_active ? 'active' : 'inactive')) === statusFilter);
+          empList = empList.filter(e => e.status === statusFilter);
         }
         setEmployees(empList);
       } else {
@@ -371,47 +380,38 @@ const EmployeeDetails = () => {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Employee</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Role</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Username</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Email</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Phone</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Assigned Zones</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Status</th>
-                  <th className="px-4 py-3 text-center font-medium text-gray-600 whitespace-nowrap">Actions</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Employee</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Employee ID</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Role</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Phone</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Email</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Assigned Zones</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Created</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-600 whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredEmployees.map((employee) => (
                   <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-indigo-100 rounded-full flex items-center justify-center">
-                          <span className="text-indigo-600 font-semibold text-sm">
-                            {(employee.fullName || employee.name)?.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-900 block">{employee.fullName || employee.name}</span>
-                          <span className="text-xs text-gray-400 font-mono">{employee.employeeId}</span>
-                        </div>
-                      </div>
+                      <span className="font-medium text-gray-900">{employee.fullName || employee.name}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      <span className="text-xs text-gray-500 font-mono">{employee.employeeId || '-'}</span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium ${
                         EMPLOYEE_ROLES[employee.role]?.color || 'bg-gray-100 text-gray-700'
                       }`}>
                         {EMPLOYEE_ROLES[employee.role]?.label || employee.roleLabel || 'Employee'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                      <span className="font-mono text-sm">@{employee.username || '-'}</span>
+                      {employee.phone ? `+91 ${employee.phone}` : '-'}
                     </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                      {employee.email}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                      {employee.phone || '-'}
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap truncate max-w-[180px]" title={employee.email}>
+                      {employee.email || '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {hasZonesAssigned(employee) ? (
@@ -434,6 +434,9 @@ const EmployeeDetails = () => {
                           Assign Zones
                         </button>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-sm">
+                      {formatDate(employee.createdAt)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${

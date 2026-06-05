@@ -1568,16 +1568,22 @@ router.get('/fp-view/:fpId/employees', authenticate, adminOnly, async (req, res)
     }
     
     const [employees] = await pool.execute(
-      `SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as name,
-              GROUP_CONCAT(DISTINCT ez.zone_name ORDER BY ez.zone_name) as zone_names
+      `SELECT e.id, e.employee_id, e.first_name, e.last_name,
+              CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
+              e.email, e.phone, e.role, e.is_active,
+              CASE WHEN e.is_active = 1 THEN 'active' ELSE 'inactive' END as status,
+              e.created_at,
+              GROUP_CONCAT(DISTINCT ez.zone_name ORDER BY ez.zone_name) as zone_names,
+              COUNT(DISTINCT ez.zone_name) as zone_count
        FROM fp_employees e
        LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
-       WHERE e.franchise_partner_id = ? AND e.is_active = TRUE
+       WHERE e.franchise_partner_id = ?
        GROUP BY e.id
        ORDER BY e.first_name, e.last_name`,
       [fpIdNum, fpIdNum]
     );
     
+    console.log('Admin fp-view employees: Found', employees.length, 'employees for FP', fpIdNum);
     res.json({ success: true, data: employees || [] });
   } catch (error) {
     console.error('Error fetching FP employees:', error);
