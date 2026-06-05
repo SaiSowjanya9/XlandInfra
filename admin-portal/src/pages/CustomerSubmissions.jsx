@@ -468,37 +468,46 @@ const CustomerSubmissions = () => {
     return `Viewing all properties (Admin Mode)`;
   };
 
-  // Step 1: Show Property Type Selection (Residential/Commercial) - Clean Design
+  // Step 1: Show Property Type Selection (Residential/Commercial) - Matching Add Customer design
   if (!selectedCategory) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[500px] bg-gray-50 rounded-xl p-8">
+      <div className="space-y-6">
         {/* Header */}
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Select Category</h1>
-        <p className="text-gray-500 text-sm mb-8">Choose the customer category to proceed</p>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
+          <p className="text-gray-500 mt-1">View and manage customer properties</p>
+        </div>
 
-        {/* Property Type Selection */}
-        <div className="flex gap-6">
-          {/* Residential */}
-          <button
-            onClick={() => setSelectedCategory('residential')}
-            className="flex flex-col items-start p-6 w-56 bg-emerald-50 rounded-2xl border-2 border-emerald-200 hover:border-emerald-400 hover:shadow-md transition-all"
-          >
-            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-4">
-              <Home className="w-6 h-6 text-emerald-600" />
-            </div>
-            <h3 className="text-base font-semibold text-gray-800">Residential</h3>
-          </button>
+        {/* Category Selection Card */}
+        <div className="bg-gray-50 rounded-2xl p-12">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
+            <p className="text-gray-500 mt-2">Choose the customer category to proceed</p>
+          </div>
 
-          {/* Commercial - Coming Soon */}
-          <div className="relative flex flex-col items-start p-6 w-56 bg-white rounded-2xl border-2 border-gray-200 cursor-not-allowed">
-            <span className="absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">
-              <Lock className="w-3 h-3" />
-              Coming Soon
-            </span>
-            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
-              <Store className="w-6 h-6 text-gray-400" />
+          <div className="flex justify-center gap-8">
+            {/* Residential */}
+            <button
+              onClick={() => setSelectedCategory('residential')}
+              className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
+            >
+              <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                <Home className="w-7 h-7 text-white" />
+              </div>
+              <p className="text-lg font-semibold text-gray-900">Residential</p>
+            </button>
+
+            {/* Commercial - Coming Soon */}
+            <div className="w-72 h-52 p-8 border border-gray-200 rounded-2xl bg-white relative cursor-not-allowed flex flex-col items-start justify-center">
+              <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
+                <Lock className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-xs font-medium text-gray-500">Coming Soon</span>
+              </div>
+              <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mb-5">
+                <Store className="w-7 h-7 text-gray-400" />
+              </div>
+              <p className="text-lg font-medium text-gray-400">Commercial</p>
             </div>
-            <h3 className="text-base font-semibold text-gray-400">Commercial</h3>
           </div>
         </div>
       </div>
