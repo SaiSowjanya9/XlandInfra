@@ -1,7 +1,7 @@
 # Customer Portal - Project Documentation
 
-> **Last Updated:** May 19, 2026 at 9:15 PM (UTC-05:00)
-> **Version:** 2.1.0
+> **Last Updated:** June 5, 2026 at 3:50 PM (UTC-05:00)
+> **Version:** 3.0.0
 > **Status:** In Development
 
 ---
@@ -91,11 +91,12 @@ The Customer Portal is a comprehensive property management system designed for r
 │                     FRONTEND LAYER                               │
 ├─────────────────────────────┬───────────────────────────────────┤
 │  Public Website (React)     │   Admin Portal (React)            │
-│  Port: 3000                 │   Port: 3001                      │
+│  Port: 3000                 │   Port: 3001/3002                 │
 │  - Landing Page             │   - System Administration Portal  │
-│  - Service Browsing         │   - Employee Portal               │
-│  - Login to Portal          │   - Customer Portal               │
-│                             │   - Vendor Portal                 │
+│  - Service Browsing         │   - FP Manager Portal             │
+│  - Login to Portal          │   - Manager/Coordinator Portal    │
+│                             │   - Supervisor/Executive Portal   │
+│                             │   - Customer/Vendor Portal        │
 └─────────────────────────────┴───────────────────────────────────┘
                               │
                               ▼
@@ -105,16 +106,17 @@ The Customer Portal is a comprehensive property management system designed for r
 │                     Port: 5000                                   │
 ├─────────────────────────────────────────────────────────────────┤
 │  Routes:                                                         │
-│  - /api/admin/*        (Admin operations)                       │
-│  - /api/residents/*    (Resident auth & profile)                │
-│  - /api/units/*        (Unit management)                        │
-│  - /api/properties/*   (Property management)                    │
-│  - /api/categories/*   (Work order categories)                  │
-│  - /api/work-orders/*  (Work order CRUD)                        │
-│  - /api/vendors/*      (Vendor management)                      │
-│  - /api/onboarding/*   (Property onboarding)                    │
-│  - /api/estimates/*    (Estimate management)                    │
-│  - /api/schedules/*    (Schedule management)                    │
+│  - /api/admin/*            (Admin operations)                   │
+│  - /api/franchise-partner/*(FP Manager operations)              │
+│  - /api/manager/*          (Manager operations)                 │
+│  - /api/coordinator/*      (Coordinator operations)             │
+│  - /api/supervisor/*       (Supervisor operations)              │
+│  - /api/executive/*        (Executive operations)               │
+│  - /api/vendors/*          (Vendor management)                  │
+│  - /api/estimates/*        (Estimate management)                │
+│  - /api/work-orders/*      (Work order CRUD)                    │
+│  - /api/qr/*               (QR tracking)                        │
+│  - /api/onboarding/*       (Property onboarding)                │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -126,8 +128,9 @@ The Customer Portal is a comprehensive property management system designed for r
 │  Tables:                                                         │
 │  - onboarded_properties, onboarded_vendors                      │
 │  - work_orders, work_order_attachments, work_order_history      │
-│  - property_contacts, categories, subcategories                 │
-│  - admin_users, audit_logs                                       │
+│  - fp_estimates, fp_employees, fp_employee_zones                │
+│  - zones, categories, subcategories                             │
+│  - admin_users, audit_logs, qr_scans                            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -145,80 +148,116 @@ The Customer Portal is a comprehensive property management system designed for r
 ## 4. Directory Structure
 
 ```
-customer-portal/
+XlandInfra/
 ├── backend/                          # Backend API Server
 │   ├── config/
 │   │   ├── database.js               # MySQL connection pool
-│   │   └── categories.js             # Static category data
+│   │   ├── categories.js             # Static category data
+│   │   └── realtime.js               # Real-time configuration
 │   ├── database/
+│   │   ├── migrations/               # Database migrations
 │   │   ├── schema.sql                # Original database schema
 │   │   └── schema_v2.sql             # Updated schema with all tables
+│   ├── middleware/
+│   │   ├── auth.js                   # Authentication middleware
+│   │   ├── coordinatorScope.js       # Coordinator data scoping
+│   │   ├── executiveScope.js         # Executive data scoping
+│   │   └── zoneHelper.js             # Zone filtering utilities
 │   ├── routes/
 │   │   ├── admin.js                  # Admin CRUD & auth routes
 │   │   ├── categories.js             # Category routes
-│   │   ├── properties.js             # Property routes
-│   │   ├── residents.js              # Resident auth routes
-│   │   ├── units.js                  # Unit routes
+│   │   ├── coordinator.js            # Coordinator portal routes
+│   │   ├── estimates.js              # Estimate routes
+│   │   ├── estimatesSync.js          # Estimate sync utilities
+│   │   ├── executive.js              # Executive portal routes
+│   │   ├── franchisePartner.js       # FP Manager routes
+│   │   ├── manager.js                # Manager portal routes
+│   │   ├── qr.js                     # QR tracking routes
+│   │   ├── supervisor.js             # Supervisor portal routes
+│   │   ├── vendors.js                # Vendor management routes
 │   │   └── workOrders.js             # Work order routes
 │   ├── uploads/                      # Uploaded files directory
-│   ├── .env                          # Environment variables
 │   ├── .env.example                  # Environment template
 │   ├── package.json                  # Backend dependencies
 │   └── server.js                     # Express server entry point
 │
-├── frontend/                         # Customer Portal Frontend
-│   ├── public/
-│   │   └── vite.svg                  # App icon
+├── frontend/                         # Public Website Frontend
+│   ├── public/                       # Static assets
 │   ├── src/
-│   │   ├── components/
-│   │   │   └── Layout.jsx            # Main layout with navigation
-│   │   ├── data/
-│   │   │   └── categories.js         # Frontend category data
-│   │   ├── pages/
-│   │   │   ├── Contact.jsx           # Contact/Help page
-│   │   │   ├── Dashboard.jsx         # Home dashboard
-│   │   │   ├── Login.jsx             # User login page
-│   │   │   ├── Payment.jsx           # Payment page (placeholder)
-│   │   │   ├── Register.jsx          # User registration page
-│   │   │   ├── Schedule.jsx          # Schedule page (placeholder)
-│   │   │   └── WorkOrder.jsx         # Work order submission form
-│   │   ├── services/
-│   │   │   └── api.js                # Axios API client
+│   │   ├── components/               # Reusable UI components
+│   │   ├── data/                     # Static data files
+│   │   ├── pages/                    # Page components
 │   │   ├── App.jsx                   # Main app with routing
 │   │   ├── index.css                 # Global styles
 │   │   └── main.jsx                  # React entry point
-│   ├── index.html                    # HTML template
-│   ├── package.json                  # Frontend dependencies
-│   ├── postcss.config.js             # PostCSS configuration
-│   ├── tailwind.config.js            # TailwindCSS configuration
-│   └── vite.config.js                # Vite configuration
+│   └── package.json                  # Frontend dependencies
 │
-├── admin-portal/                     # Admin Portal Frontend
-│   ├── public/
-│   │   └── vite.svg                  # Admin app icon
+├── admin-portal/                     # Admin & Employee Portal Frontend
+│   ├── public/                       # Static assets
 │   ├── src/
 │   │   ├── components/
-│   │   │   └── Layout.jsx            # Admin layout with sidebar
+│   │   │   ├── estimates/            # Estimate components
+│   │   │   ├── EmployeeLayout.jsx    # Employee portal layout
+│   │   │   ├── Layout.jsx            # Admin layout with sidebar
+│   │   │   └── VendorDetails.jsx     # Vendor details modal
 │   │   ├── pages/
-│   │   │   ├── Dashboard.jsx         # Admin dashboard with stats
-│   │   │   ├── Login.jsx             # Admin login page
-│   │   │   ├── Properties.jsx        # Property management
-│   │   │   ├── Residents.jsx         # Resident management
-│   │   │   ├── Units.jsx             # Unit management
-│   │   │   ├── WorkOrders.jsx        # Work order management
-│   │   │   ├── Categories.jsx        # Category management
-│   │   │   └── ServicePortal.jsx     # Task 2 Data Entry module
+│   │   │   ├── Dashboard.jsx         # Admin dashboard
+│   │   │   ├── QRManagement.jsx      # QR tracking dashboard
+│   │   │   ├── UserManagement.jsx    # User management
+│   │   │   │
+│   │   │   │ # FP Manager Portal
+│   │   │   ├── FPDashboard.jsx       # FP Manager dashboard
+│   │   │   ├── FPEstimates.jsx       # FP estimates management
+│   │   │   ├── FPProperties.jsx      # FP properties
+│   │   │   ├── FPVendors.jsx         # FP vendors
+│   │   │   ├── FPWorkOrders.jsx      # FP work orders
+│   │   │   ├── FPEmployees.jsx       # FP employee management
+│   │   │   ├── FPEmployeeZones.jsx   # Zone assignments
+│   │   │   │
+│   │   │   │ # Manager Portal
+│   │   │   ├── ManagerDashboard.jsx  # Manager dashboard
+│   │   │   ├── ManagerEstimates.jsx  # Manager estimates
+│   │   │   ├── ManagerProperties.jsx # Manager properties
+│   │   │   ├── ManagerVendors.jsx    # Manager vendors
+│   │   │   ├── ManagerWorkOrders.jsx # Manager work orders
+│   │   │   │
+│   │   │   │ # Coordinator Portal
+│   │   │   ├── CoordinatorDashboard.jsx   # Coordinator dashboard
+│   │   │   ├── CoordinatorEstimates.jsx   # Coordinator estimates
+│   │   │   ├── CoordinatorProperties.jsx  # Coordinator properties
+│   │   │   ├── CoordinatorVendors.jsx     # Coordinator vendors
+│   │   │   ├── CoordinatorWorkOrders.jsx  # Coordinator work orders
+│   │   │   ├── CoordinatorEmployees.jsx   # Coordinator employees
+│   │   │   │
+│   │   │   │ # Supervisor Portal
+│   │   │   ├── SupervisorDashboard.jsx    # Supervisor dashboard
+│   │   │   ├── SupervisorEstimates.jsx    # Supervisor estimates (view-only)
+│   │   │   ├── SupervisorProperties.jsx   # Supervisor properties
+│   │   │   ├── SupervisorVendors.jsx      # Supervisor vendors
+│   │   │   ├── SupervisorWorkOrders.jsx   # Supervisor work orders
+│   │   │   │
+│   │   │   │ # Executive Portal
+│   │   │   ├── ExecutiveDashboard.jsx     # Executive dashboard
+│   │   │   ├── ExecutiveEstimates.jsx     # Executive estimates
+│   │   │   ├── ExecutiveProperties.jsx    # Executive properties
+│   │   │   ├── ExecutiveVendors.jsx       # Executive vendors
+│   │   │   └── ExecutiveWorkOrders.jsx    # Executive work orders
+│   │   │
+│   │   ├── utils/                    # Utility stores and helpers
 │   │   ├── App.jsx                   # Admin app with routing
 │   │   ├── index.css                 # Admin global styles
 │   │   └── main.jsx                  # React entry point
-│   ├── index.html                    # HTML template
-│   ├── package.json                  # Admin dependencies
-│   ├── postcss.config.js             # PostCSS configuration
-│   ├── tailwind.config.js            # TailwindCSS configuration
-│   └── vite.config.js                # Vite configuration
+│   └── package.json                  # Admin dependencies
+│
+├── qr-service/                       # QR Code Service
+│   ├── nginx/                        # Nginx configuration
+│   ├── qr-codes/                     # Generated QR codes
+│   └── server.js                     # QR service server
 │
 ├── Project_Documentation.md          # This documentation file
-└── README.md                         # Project README
+├── README.md                         # Project README
+├── DEPLOYMENT_GUIDE.md               # Deployment instructions
+└── VPS_DEPLOYMENT_GUIDE.md           # VPS deployment guide
 ```
 
 ---
@@ -735,11 +774,23 @@ New residents must verify their information matches leasing records:
 
 | Role | Display Name | Description |
 |------|--------------|-------------|
-| admin | Admin | Full system control, manage users, override all actions |
+| admin | System Admin | Full system control, manage users, override all actions |
+| fp_manager | FP Manager | Franchise Partner manager with full FP access |
 | manager | Operations Manager | Estimates, schedules, assigns vendor, closes work |
+| coordinator | Coordinator | Property/vendor management, employee zone assignments |
 | supervisor | Site Supervisor | Raises request and tracks work |
-| executive | Data Entry Executive | Enters basic data only |
+| executive | Executive | Enters basic data, view properties and work orders |
 | vendor | Vendor | Executes work and updates status |
+
+### 9.1.1 Zone-Based Access
+
+| Portal | Zone Filtering |
+|--------|----------------|
+| FP Manager | Access to all zones under franchise |
+| Manager | Access to assigned zones |
+| Coordinator | Access to assigned zones |
+| Supervisor | Access to assigned zones (view-only for estimates) |
+| Executive | Access to assigned zones (limited features) |
 
 ### 9.2 Exact Workflows
 
@@ -1272,6 +1323,302 @@ npm run dev
 ---
 
 ## 14. Change Log
+
+### Version 3.0.0 (June 5, 2026)
+
+#### Franchise Partner (FP) Portal System
+
+**1. Complete Multi-Role FP Portal**
+- Implemented full Franchise Partner portal system with four employee roles:
+  - **FP Manager**: Full access to properties, vendors, employees, estimates, work orders
+  - **Coordinator**: Property and vendor management, employee zone assignments
+  - **Supervisor**: View-only estimates, work order tracking and requests
+  - **Executive**: Data entry, property viewing, basic work order access
+- Each role has dedicated login, dashboard, and role-specific functionality
+- Elegant gold/amber theme throughout FP portal
+
+**2. Zone-Centric Data Architecture**
+- Implemented zone-based data filtering across all portals
+- Employees see only data from their assigned zones
+- Zone helper middleware (`zoneHelper.js`) for consistent zone filtering
+- Employee zone management for Managers and Coordinators
+- Zone display on dashboards showing assigned zones
+
+**3. Created By Tracking**
+- All estimates, properties, vendors, and work orders track creator
+- `created_by_name` field shows employee name (not just ID)
+- Creator lookup from `fp_employees` table
+- Visible in all portal list views and detail modals
+
+**Files Added:**
+- `admin-portal/src/pages/FPDashboard.jsx` - FP Manager dashboard
+- `admin-portal/src/pages/FPEstimates.jsx` - FP estimates management
+- `admin-portal/src/pages/FPProperties.jsx` - FP properties
+- `admin-portal/src/pages/FPVendors.jsx` - FP vendors
+- `admin-portal/src/pages/FPWorkOrders.jsx` - FP work orders
+- `admin-portal/src/pages/FPEmployees.jsx` - FP employee management
+- `admin-portal/src/pages/FPEmployeeZones.jsx` - Zone assignments
+- `admin-portal/src/pages/CoordinatorDashboard.jsx` - Coordinator portal
+- `admin-portal/src/pages/CoordinatorEstimates.jsx` - Coordinator estimates
+- `admin-portal/src/pages/CoordinatorProperties.jsx` - Coordinator properties
+- `admin-portal/src/pages/CoordinatorVendors.jsx` - Coordinator vendors
+- `admin-portal/src/pages/CoordinatorWorkOrders.jsx` - Coordinator work orders
+- `admin-portal/src/pages/CoordinatorEmployees.jsx` - Coordinator employee view
+- `backend/routes/coordinator.js` - Coordinator API routes
+- `backend/middleware/zoneHelper.js` - Zone filtering utilities
+
+---
+
+#### Estimates System Overhaul
+
+**1. Created By Column**
+- Added `created_by_name` to all estimate routes
+- Shows employee name in all estimate tables
+- Admin migration endpoint to update existing estimates
+
+**2. Archive/Restore Functionality**
+- Full archive and restore for estimates
+- Archived date tracking (`archived_at` column)
+- Archive/Restore buttons in all portals (Manager, Coordinator, FP)
+- Archived estimates view with restore option
+
+**3. PDF Export Improvements**
+- Clean ESTIMATE TOTAL layout (heading left, price right)
+- Gold XI logo in PDF header
+- Property type filtering in PDF content
+- Customer details box styling matching portal
+- Fixed page overflow issues
+- Proper add-ons parsing and display
+
+**4. Add-ons Filtering by Property Type**
+- Add-ons dropdown filtered by selected property type
+- Only matching add-ons shown in selection
+- Consistent filtering across all portals
+
+**5. fp_estimates Table Integration**
+- All employee portals use `fp_estimates` table
+- Proper `property_id` handling
+- Packages and addons stored as JSON
+- Sync with admin portal estimates
+
+**Files Modified:**
+- `admin-portal/src/pages/ManagerEstimates.jsx` - Created By, archive/restore
+- `admin-portal/src/pages/CoordinatorEstimates.jsx` - Synced with Manager
+- `admin-portal/src/pages/SupervisorEstimates.jsx` - View-only updates
+- `admin-portal/src/pages/ExecutiveEstimates.jsx` - Property auto-populate
+- `admin-portal/src/pages/FPEstimates.jsx` - Full FP implementation
+- `backend/routes/estimates.js` - Archive/restore endpoints
+- `backend/routes/estimatesSync.js` - Sync utilities
+
+---
+
+#### Vendor Management Updates
+
+**1. Unified Vendor Schema**
+- Migrated all vendors to `onboarded_vendors` table
+- Added fields: GST, PAN, license, rating, login credentials
+- Consistent schema across all portals
+
+**2. Service Type Badges**
+- Colored badges for service types (AMC, Ad-hoc, Contract)
+- Filter tabs by service type
+- Consistent styling across all portals
+
+**3. Vendor Display Updates**
+- Name on top, Vendor ID below in all tables
+- Detailed view modals with full information
+- Zone and area display in vendor details
+- Coverage/Day column centered
+- Removed Rate/Visit from certain portals
+
+**4. Zone-Based Vendor Assignments**
+- Vendors filtered by employee's assigned zones
+- Assigned vendors endpoint for all portals
+- Vendor-property assignments by zone
+
+**Files Modified:**
+- `admin-portal/src/pages/ManagerVendors.jsx` - Service type badges
+- `admin-portal/src/pages/CoordinatorVendors.jsx` - Zone filtering
+- `admin-portal/src/pages/SupervisorVendors.jsx` - View updates
+- `admin-portal/src/pages/ExecutiveVendors.jsx` - Service type filter tabs
+- `admin-portal/src/pages/FPVendors.jsx` - Full vendor management
+- `backend/routes/vendors.js` - Unified schema routes
+
+---
+
+#### Work Order Improvements
+
+**1. Email Notifications**
+- Automatic email on work order creation
+- Completion notification emails
+- Implemented for all portal types
+
+**2. Action Buttons Enhancement**
+- Edit, assign, and delete functionality
+- Status dropdown for updates
+- Always visible action buttons
+- View modal with all work order details
+
+**3. Status and Filtering**
+- Default to pending view
+- Filter by status (Pending, In Progress, Completed)
+- Status badges with color coding
+- Lowercase status support
+
+**4. Customer Name Display**
+- COALESCE logic for proper client name
+- Handles both work_orders and onboarded_properties tables
+- Consistent display across all portals
+
+**Files Modified:**
+- `admin-portal/src/pages/ManagerWorkOrders.jsx` - Full action buttons
+- `admin-portal/src/pages/CoordinatorWorkOrders.jsx` - Status filters
+- `admin-portal/src/pages/SupervisorWorkOrders.jsx` - View modal updates
+- `admin-portal/src/pages/ExecutiveWorkOrders.jsx` - Simplified view
+- `admin-portal/src/pages/FPWorkOrders.jsx` - Full implementation
+- `backend/routes/workOrders.js` - Email notifications
+
+---
+
+#### QR Code Tracking System
+
+**1. Page Visit Tracking**
+- Track every QR code scan
+- Unique user identification
+- Timestamp and visit count
+
+**2. Geo/Timezone Data**
+- Capture geographic location
+- Timezone information
+- Browser and device data
+
+**3. Real-Time Updates**
+- Live scan tracking on dashboard
+- QR management page with analytics
+- Main website vs customer portal detection
+
+**Files Added/Modified:**
+- `admin-portal/src/pages/QRManagement.jsx` - QR management dashboard
+- `admin-portal/src/pages/Dashboard.jsx` - QR tracking integration
+- `backend/routes/qr.js` - QR tracking API
+- `qr-service/` - QR code service
+
+---
+
+#### Dashboard Synchronization
+
+**1. All FP Dashboards Synced**
+- Manager, Coordinator, Supervisor, Executive dashboards match layout
+- Consistent statistics cards
+- Work Order Summary section
+- Quick actions by role
+
+**2. Auto-Refresh**
+- 30-second auto-refresh on Manager dashboard
+- Syncs with FP updates in real-time
+
+**3. Zone Display**
+- Employee's assigned zones shown on dashboard
+- Zone-filtered statistics
+
+**Files Modified:**
+- `admin-portal/src/pages/ManagerDashboard.jsx`
+- `admin-portal/src/pages/CoordinatorDashboard.jsx`
+- `admin-portal/src/pages/SupervisorDashboard.jsx`
+- `admin-portal/src/pages/ExecutiveDashboard.jsx`
+- `admin-portal/src/pages/FPDashboard.jsx`
+
+---
+
+#### UI/UX Improvements
+
+**1. Modal Headers**
+- Full gray background with rounded corners
+- Consistent styling across all modals
+- VendorDetails modal header fix
+
+**2. Property Type Utilities**
+- Shared utility for property type display
+- Consistent label formatting (GC, Apt, Villa, Flat, Plot)
+- Used across all portals
+
+**3. Status Badges**
+- Lowercase status support
+- Color-coded badges by status type
+- Consistent styling
+
+**4. View-Only Buttons**
+- Consistent styling for view buttons
+- Removed action buttons from view-only portals
+- Eye icon for view actions
+
+**5. Portal Theme Updates**
+- FP Portal: Soft gold/amber theme
+- Reverted FP Portal to original amber/gray theme
+- Employee Login icon and button softer gold shades
+
+**Files Modified:**
+- Multiple portal pages for consistent styling
+- `admin-portal/src/components/VendorDetails.jsx`
+- Various CSS and component updates
+
+---
+
+#### Employee Portal Restructure
+
+**1. Role Rename**
+- "Data Entry Executive" renamed to "Executive"
+- Updated across all UI labels and code
+
+**2. Property Table Updates**
+- Removed Units column from Executive Properties table
+- Keep Units in view modals only
+- Added zone, area, division fields to queries
+
+**3. AMC Packages Display**
+- Supervisor AMC Packages show actual data like Manager
+- Property Type, Services, Total Rate visible
+- Proper JSON parsing for services
+
+**Files Modified:**
+- `admin-portal/src/pages/ExecutiveProperties.jsx`
+- `admin-portal/src/pages/SupervisorEstimates.jsx`
+- `backend/routes/executive.js`
+- `backend/routes/supervisor.js`
+
+---
+
+#### Backend Enhancements
+
+**1. New Routes Added**
+- `backend/routes/coordinator.js` - Full coordinator routes
+- Vendor assignments routes for all portals
+- Admin vendors, employees, delete work order routes
+
+**2. Middleware Updates**
+- `coordinatorScope.js` - Coordinator data scoping
+- `executiveScope.js` - Executive data scoping
+- `zoneHelper.js` - Zone filtering helper
+
+**3. Database Queries**
+- Zone joins for properties, vendors, work orders
+- FP ID lookup improvements
+- COALESCE for customer names
+- Proper column aliases
+
+**Files Added:**
+- `backend/middleware/zoneHelper.js`
+- `backend/routes/coordinator.js`
+
+**Files Modified:**
+- `backend/routes/manager.js`
+- `backend/routes/supervisor.js`
+- `backend/routes/executive.js`
+- `backend/routes/franchisePartner.js`
+- `backend/routes/admin.js`
+- `backend/routes/vendors.js`
+
+---
 
 ### Version 2.1.0 (May 19, 2026)
 
