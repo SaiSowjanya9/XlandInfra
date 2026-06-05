@@ -54,20 +54,29 @@ const Dashboard = () => {
     }
     
     try {
-      // Fetch FP-specific dashboard data
-      const response = await fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/dashboard`, {
+      let endpoint;
+      if (selectedFp.id === 'all') {
+        // Admin mode - fetch aggregated data from all sources
+        endpoint = `${API_BASE}/api/admin/dashboard-stats`;
+      } else {
+        // Specific FP selected
+        endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/dashboard`;
+      }
+      
+      const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
       if (result.success) {
-        // Map FP dashboard data to stats format
+        // Map dashboard data to stats format
         setStats({
-          totalProperties: result.data.stats.totalProperties || 0,
-          pendingWorkOrders: result.data.stats.pendingWorkOrders || 0,
-          completedWorkOrders: result.data.stats.completedWorkOrders || 0,
-          totalVendors: result.data.stats.totalVendors || 0,
-          totalEmployees: result.data.stats.totalEmployees || 0,
-          totalEstimates: result.data.stats.totalEstimates || 0,
+          totalProperties: result.data.stats?.totalProperties || result.data.totalProperties || 0,
+          pendingWorkOrders: result.data.stats?.pendingWorkOrders || result.data.pendingWorkOrders || 0,
+          completedWorkOrders: result.data.stats?.completedWorkOrders || result.data.completedWorkOrders || 0,
+          totalVendors: result.data.stats?.totalVendors || result.data.totalVendors || 0,
+          totalEmployees: result.data.stats?.totalEmployees || result.data.totalEmployees || 0,
+          totalEstimates: result.data.stats?.totalEstimates || result.data.totalEstimates || 0,
+          totalZones: result.data.stats?.totalZones || result.data.totalZones || 0,
           fpInfo: result.data.fpInfo
         });
         setRecentActivities(result.data.recentWorkOrders || []);
@@ -251,8 +260,11 @@ const Dashboard = () => {
                     }}
                     className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
                   >
-                    <div className="font-medium text-gray-800">{fp.fpId}</div>
-                    <div className="text-xs text-gray-500">{fp.companyName}</div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-gray-800">{fp.fpId}</span>
+                      <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded">FP</span>
+                    </div>
+                    <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
                   </button>
                 ))
               )}
@@ -285,14 +297,16 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="p-4 lg:p-6 space-y-5">
         {/* FP Info Banner */}
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 text-white">
+        <div className="bg-gradient-to-r from-slate-700 to-slate-800 rounded-xl p-4 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-indigo-100 text-xs uppercase tracking-wider">Viewing Data For</p>
-              <h2 className="text-xl font-bold">{selectedFp.displayName}</h2>
-              <p className="text-indigo-200 text-sm">{stats?.fpInfo?.city}, {stats?.fpInfo?.state}</p>
+              <p className="text-slate-300 text-xs uppercase tracking-wider">Viewing Data For</p>
+              <h2 className="text-xl font-bold">{selectedFp.id === 'all' ? 'Admin (All FPs)' : selectedFp.displayName || selectedFp.fpId}</h2>
+              <p className="text-slate-400 text-sm">
+                {selectedFp.id === 'all' ? 'Aggregated data from all franchise partners' : `${stats?.fpInfo?.city || ''}, ${stats?.fpInfo?.state || ''}`}
+              </p>
             </div>
-            <Building2 className="w-12 h-12 text-white/30" />
+            <Building2 className="w-12 h-12 text-white/20" />
           </div>
         </div>
 

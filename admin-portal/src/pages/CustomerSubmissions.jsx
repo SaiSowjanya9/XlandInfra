@@ -521,8 +521,11 @@ const CustomerSubmissions = () => {
                       onClick={() => handleFpSelect(fp)}
                       className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
                     >
-                      <div className="font-medium text-gray-800">{fp.fpId}</div>
-                      <div className="text-xs text-gray-500">{fp.companyName}</div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-gray-800">{fp.fpId}</span>
+                        <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded">FP</span>
+                      </div>
+                      <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
                     </button>
                   ))
                 )}
@@ -614,8 +617,11 @@ const CustomerSubmissions = () => {
                         selectedFp.id === fp.id ? 'bg-emerald-50' : ''
                       }`}
                     >
-                      <div className="font-medium text-gray-800">{fp.fpId}</div>
-                      <div className="text-xs text-gray-500">{fp.companyName}</div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-gray-800">{fp.fpId}</span>
+                        <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded">FP</span>
+                      </div>
+                      <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
                     </button>
                   ))
                 )}
