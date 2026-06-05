@@ -41,9 +41,12 @@ const PROPERTY_TYPE_OPTIONS = [
 
 // FREQUENCY_COUNT_MAP imported from estimateStore
 
-const AMCPackageManager = ({ admin, showToast }) => {
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
+const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = false;
+  const token = sessionStorage.getItem('pm_auth_token');
   
   // Operations Manager defaults to 'all-packages' tab (no create access)
   const [activeTab, setActiveTab] = useState(isOpsManager ? 'all-packages' : 'create'); // 'create' or 'all-packages'
@@ -68,14 +71,40 @@ const AMCPackageManager = ({ admin, showToast }) => {
   });
 
   const loadData = async () => {
-    // Fetch packages from API
-    const currentPackages = await fetchAMCPackages();
-    setAmcPackages(currentPackages);
+    try {
+      let url;
+      // Use Admin endpoint for "all" mode, otherwise FP-specific endpoint
+      if (selectedFp?.id === 'all') {
+        url = `${API_BASE}/api/admin/all-amc-packages`;
+      } else if (selectedFp?.id) {
+        url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/amc-packages`;
+      } else {
+        // Fallback to default fetch
+        const currentPackages = await fetchAMCPackages();
+        setAmcPackages(currentPackages);
+        return;
+      }
+      
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setAmcPackages(result.data || []);
+      } else {
+        setAmcPackages([]);
+      }
+    } catch (error) {
+      console.error('Error loading AMC packages:', error);
+      // Fallback to default fetch
+      const currentPackages = await fetchAMCPackages();
+      setAmcPackages(currentPackages);
+    }
   };
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [selectedFp]);
 
 
   // Calculate price

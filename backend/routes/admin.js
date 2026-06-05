@@ -1945,6 +1945,24 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
   }
 });
 
+// Get ALL AMC Packages (Admin mode)
+router.get('/all-amc-packages', authenticate, adminOnly, async (req, res) => {
+  try {
+    const [packages] = await pool.execute(
+      `SELECT p.*, fp.fp_code, fp.company_name as fp_name
+       FROM amc_packages p
+       LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
+       ORDER BY p.created_at DESC`
+    );
+    
+    console.log('Admin all-amc-packages: Found', packages.length, 'packages');
+    res.json({ success: true, data: packages || [] });
+  } catch (error) {
+    console.error('Error fetching all AMC packages:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch AMC packages' });
+  }
+});
+
 // Get FP AMC Packages
 router.get('/fp-view/:fpId/amc-packages', authenticate, adminOnly, async (req, res) => {
   try {
@@ -1958,10 +1976,29 @@ router.get('/fp-view/:fpId/amc-packages', authenticate, adminOnly, async (req, r
       [fpIdNum]
     );
     
+    console.log('Admin fp-view amc-packages: Found', packages.length, 'for FP', fpIdNum);
     res.json({ success: true, data: packages || [] });
   } catch (error) {
     console.error('Error fetching FP AMC packages:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch AMC packages' });
+  }
+});
+
+// Get ALL Add-ons (Admin mode)
+router.get('/all-addons', authenticate, adminOnly, async (req, res) => {
+  try {
+    const [addons] = await pool.execute(
+      `SELECT a.*, fp.fp_code, fp.company_name as fp_name
+       FROM addons a
+       LEFT JOIN franchise_partners fp ON a.franchise_partner_id = fp.id
+       ORDER BY a.created_at DESC`
+    );
+    
+    console.log('Admin all-addons: Found', addons.length, 'addons');
+    res.json({ success: true, data: addons || [] });
+  } catch (error) {
+    console.error('Error fetching all addons:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch addons' });
   }
 });
 
@@ -1978,6 +2015,7 @@ router.get('/fp-view/:fpId/addons', authenticate, adminOnly, async (req, res) =>
       [fpIdNum]
     );
     
+    console.log('Admin fp-view addons: Found', addons.length, 'for FP', fpIdNum);
     res.json({ success: true, data: addons || [] });
   } catch (error) {
     console.error('Error fetching FP addons:', error);

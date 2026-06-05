@@ -134,11 +134,11 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
         );
       case 'amc-manager':
         return (
-          <AMCPackageManager admin={admin} showToast={showToast} />
+          <AMCPackageManager admin={admin} showToast={showToast} selectedFp={selectedFp} onRefresh={handleRefresh} />
         );
       case 'addons':
         return (
-          <AddonsManager admin={admin} showToast={showToast} />
+          <AddonsManager admin={admin} showToast={showToast} selectedFp={selectedFp} onRefresh={handleRefresh} />
         );
       case 'archived':
         return (

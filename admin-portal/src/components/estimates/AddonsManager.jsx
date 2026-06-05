@@ -14,9 +14,12 @@ const PROPERTY_TYPE_OPTIONS = [
   { id: 'Plot', label: 'Plot' },
 ];
 
-const AddonsManager = ({ admin, showToast }) => {
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
+const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = false;
+  const token = sessionStorage.getItem('pm_auth_token');
   
   // Operations Manager defaults to 'all-addons' tab (no create access)
   const [activeTab, setActiveTab] = useState(isOpsManager ? 'all-addons' : 'create'); // 'create' or 'all-addons'
@@ -51,13 +54,41 @@ const AddonsManager = ({ admin, showToast }) => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [selectedFp]);
 
   const loadData = async () => {
-    // Fetch addons from API (synced across devices)
-    const currentAddons = await fetchAddons();
-    setAddons(currentAddons);
-    setServices(getServices());
+    try {
+      let url;
+      // Use Admin endpoint for "all" mode, otherwise FP-specific endpoint
+      if (selectedFp?.id === 'all') {
+        url = `${API_BASE}/api/admin/all-addons`;
+      } else if (selectedFp?.id) {
+        url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/addons`;
+      } else {
+        // Fallback to default fetch
+        const currentAddons = await fetchAddons();
+        setAddons(currentAddons);
+        setServices(getServices());
+        return;
+      }
+      
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setAddons(result.data || []);
+      } else {
+        setAddons([]);
+      }
+      setServices(getServices());
+    } catch (error) {
+      console.error('Error loading addons:', error);
+      // Fallback to default fetch
+      const currentAddons = await fetchAddons();
+      setAddons(currentAddons);
+      setServices(getServices());
+    }
   };
 
   // Filter addons by selected property type
