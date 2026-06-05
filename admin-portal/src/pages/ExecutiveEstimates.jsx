@@ -171,6 +171,12 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           total_amount: priceSummary.totalAmount
         })
       });
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error('API Error:', res.status, errText);
+        setMessage({ type: 'error', text: `API Error ${res.status}: ${errText}` });
+        return;
+      }
       const result = await res.json();
       if (result.success) {
         setMessage({ type: 'success', text: 'Estimate created successfully!' });
@@ -181,7 +187,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
         setMessage({ type: 'error', text: result.message || 'Failed to create estimate' });
       }
     } catch (e) {
-      setMessage({ type: 'error', text: 'Failed to create estimate' });
+      console.error('Estimate save error:', e);
+      setMessage({ type: 'error', text: 'Failed to create estimate: ' + e.message });
     }
   };
 
