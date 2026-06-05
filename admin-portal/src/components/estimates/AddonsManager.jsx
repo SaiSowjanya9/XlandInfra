@@ -54,7 +54,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
 
   useEffect(() => {
     loadData();
-  }, [selectedFp]);
+  }, [selectedFp?.id]);
 
   const loadData = async () => {
     try {

@@ -104,7 +104,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
 
   useEffect(() => {
     loadData();
-  }, [selectedFp]);
+  }, [selectedFp?.id]);
 
 
   // Calculate price
