@@ -3,7 +3,7 @@ import {
   Building2, ClipboardList, Clock, CheckCircle2, FileText, Users, 
   Package, MapPin, Wrench, UserPlus, IndianRupee, Activity,
   RefreshCw, Bell, Settings, UserCheck, Home, X, AlertCircle, Info,
-  QrCode, Download
+  QrCode, Download, ChevronDown, Shield
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFP } from '../contexts/FPContext';
@@ -21,9 +21,10 @@ const Dashboard = () => {
   const notificationRef = useRef(null);
   const navigate = useNavigate();
   
-  // Get selected FP from context
-  const { selectedFp } = useFP();
+  // Get FP list and selected FP from context
+  const { fpList, selectedFp, selectFp, loading: fpLoading, refreshFpList } = useFP();
   const token = sessionStorage.getItem('pm_auth_token');
+  const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (selectedFp) {
@@ -199,13 +200,74 @@ const Dashboard = () => {
     }).format(Math.round(value));
   };
 
-  // Show message if no FP selected
+  // Show FP selection dropdown if no FP selected
   if (!selectedFp) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 bg-gray-50">
+      <div className="flex flex-col items-center justify-center min-h-[500px] bg-gray-50 rounded-xl p-8">
         <Building2 className="w-16 h-16 text-gray-300 mb-4" />
         <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Franchise Partner</h2>
-        <p className="text-gray-400 text-sm">Choose an FP from the dropdown in the sidebar to view their dashboard</p>
+        <p className="text-gray-400 text-sm mb-6">Choose an FP to view their dashboard</p>
+        
+        {/* FP Dropdown */}
+        <div className="relative w-80">
+          <button
+            onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm hover:border-indigo-400 transition-colors shadow-sm"
+          >
+            <span className="text-gray-600">Select Franchise Partner...</span>
+            <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {fpDropdownOpen && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto">
+              {/* Admin option */}
+              <button
+                onClick={() => {
+                  selectFp({ id: 'all', fpId: 'ADMIN', companyName: 'All Franchise Partners', displayName: 'Admin (All FPs)' });
+                  setFpDropdownOpen(false);
+                }}
+                className="w-full text-left px-4 py-3 text-sm hover:bg-indigo-50 transition-colors border-b border-gray-100"
+              >
+                <div className="font-medium flex items-center gap-2 text-indigo-600">
+                  <Shield className="w-4 h-4" />
+                  Admin (All FPs)
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">View aggregated data from all FPs</div>
+              </button>
+              
+              {fpLoading ? (
+                <div className="px-4 py-3 text-sm text-gray-500 flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" /> Loading franchise partners...
+                </div>
+              ) : fpList.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-gray-500">No franchise partners found</div>
+              ) : (
+                fpList.map(fp => (
+                  <button
+                    key={fp.id}
+                    onClick={() => {
+                      selectFp(fp);
+                      setFpDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                  >
+                    <div className="font-medium text-gray-800">{fp.fpId}</div>
+                    <div className="text-xs text-gray-500">{fp.companyName}</div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Refresh button */}
+        <button
+          onClick={refreshFpList}
+          className="mt-4 flex items-center gap-2 text-sm text-gray-500 hover:text-indigo-600 transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${fpLoading ? 'animate-spin' : ''}`} />
+          Refresh FP List
+        </button>
       </div>
     );
   }
