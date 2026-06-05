@@ -175,18 +175,77 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   useEffect(() => { fetchData(); }, []);
 
   const handleEstimateSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setMessage({ type: '', text: '' });
-    const subtotal = estimateForm.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+    
+    // Property-based estimate
+    if (estimateForm.estimateType === 'property_based') {
+      if (!propertyIdInput || !selectedProperty) {
+        setMessage({ type: 'error', text: 'Please select a property' }); return;
+      }
+      if (!selectedAmcPackage) {
+        setMessage({ type: 'error', text: 'Please select an AMC package' }); return;
+      }
+    }
+    
+    const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
+    const pkgPrice = getPackagePrice(pkg);
+    const addonsTotal = selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0);
+    const subtotal = pkgPrice + addonsTotal;
+    const discountAmt = (subtotal * discountPercent) / 100;
+    const afterDiscount = subtotal - discountAmt;
+    const gstAmt = (afterDiscount * gstPercent) / 100;
+    const total = afterDiscount + gstAmt;
+    
     try {
+      const payload = {
+        estimate_type: estimateForm.estimateType || 'property_based',
+        property_id: selectedProperty?.id || propertyIdInput,
+        property_code: selectedProperty?.property_id || '',
+        client_name: selectedProperty?.contact_person || selectedProperty?.contact_name || '',
+        client_phone: selectedProperty?.contact_phone || '',
+        client_email: selectedProperty?.contact_email || '',
+        property_name: selectedProperty?.name || selectedProperty?.community_name || '',
+        property_type: selectedProperty?.property_type || '',
+        zone: selectedProperty?.zone_name || selectedProperty?.zoneName || selectedProperty?.zone || '',
+        city: selectedProperty?.city || '',
+        address: selectedProperty?.address || '',
+        package_id: selectedAmcPackage,
+        package_name: pkg?.name || '',
+        package_price: pkgPrice,
+        addons: selectedAddons.map(id => {
+          const addon = addons.find(a => getAddonId(a) === id);
+          return addon ? { id: getAddonId(addon), name: getAddonName(addon), price: getAddonPrice(addon) } : null;
+        }).filter(Boolean),
+        subtotal: subtotal,
+        discount_percent: discountPercent,
+        discount_amount: discountAmt,
+        gst_percent: gstPercent,
+        gst_amount: gstAmt,
+        total_amount: total
+      };
+      
       const response = await fetch('/api/supervisor/estimates', {
         method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...estimateForm, subtotal, items: estimateForm.items.map(item => ({ ...item, totalPrice: item.quantity * item.unitPrice })) })
+        body: JSON.stringify(payload)
       });
       const result = await response.json();
-      if (result.success) { setMessage({ type: 'success', text: 'Estimate created successfully!' }); resetEstimateForm(); fetchData(); setActiveTab('list'); }
+      if (result.success) { 
+        setMessage({ type: 'success', text: 'Estimate created successfully!' }); 
+        resetEstimateForm(); 
+        setPropertyIdInput('');
+        setSelectedProperty(null);
+        setSelectedAmcPackage('');
+        setSelectedAddons([]);
+        setDiscountPercent(0);
+        fetchData(); 
+        setActiveTab('list'); 
+      }
       else setMessage({ type: 'error', text: result.message || 'Operation failed' });
-    } catch (error) { setMessage({ type: 'error', text: 'Failed to create estimate' }); }
+    } catch (error) { 
+      console.error('Save error:', error);
+      setMessage({ type: 'error', text: 'Failed to create estimate: ' + error.message }); 
+    }
   };
 
   const handleAmcSubmit = async (e) => {
