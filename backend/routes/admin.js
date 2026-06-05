@@ -1300,6 +1300,32 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
   }
 });
 
+// Get ALL vendor assignments from ALL FPs (Admin mode)
+router.get('/all-vendor-assignments', authenticate, adminOnly, async (req, res) => {
+  try {
+    const [assignments] = await pool.execute(
+      `SELECT va.*, 
+              ov.owner_name as vendor_name, ov.service_type, ov.zone as vendor_zone,
+              p.name as property_name, p.property_type, p.zone_name as property_zone,
+              fp.fp_code, fp.company_name as fp_name,
+              COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), va.assigned_by, 'System') as assigned_by_name
+       FROM vendor_assignments va
+       LEFT JOIN onboarded_vendors ov ON va.vendor_id = ov.id
+       LEFT JOIN properties p ON va.property_id = p.id
+       LEFT JOIN franchise_partners fp ON va.franchise_partner_id = fp.id
+       LEFT JOIN fp_employees fpe ON va.assigned_by = fpe.email OR va.assigned_by = fpe.username
+       WHERE va.status = 'active'
+       ORDER BY va.created_at DESC`
+    );
+    
+    console.log('Admin all-vendor-assignments: Found', assignments.length, 'assignments');
+    res.json({ success: true, data: assignments || [] });
+  } catch (error) {
+    console.error('Error fetching all vendor assignments:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch vendor assignments' });
+  }
+});
+
 // Get ALL vendors from ALL FPs (Admin mode)
 router.get('/all-vendors', authenticate, adminOnly, async (req, res) => {
   try {

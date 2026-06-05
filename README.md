@@ -1,6 +1,8 @@
-# Customer Portal - Property Management System
+# XLand Infra - Property Management System
 
 A comprehensive full-stack web application for property management, work orders, vendor management, and AMC (Annual Maintenance Contract) packages, built with React, Node.js, and MySQL.
+
+> **Last Updated:** June 5, 2026
 
 ## Features
 
@@ -13,17 +15,27 @@ A comprehensive full-stack web application for property management, work orders,
 
 ### Admin Portal
 - **Property Management**: Manage properties (GC, APT, VILLA, FLAT, PLOT) with full CRUD operations
-- **Vendor Management**: Track and manage vendors with service assignments
-- **Employee Management**: Manage employees with zone-based assignments
+- **Vendor Management**: Track and manage vendors with GST, PAN, license, rating fields
+- **Employee Management**: Manage employees with zone-based assignments and FP association
+- **QR Code Management**: Track QR code scans with real-time analytics and geo data
+- **User Management**: Full CRUD for admin users with role-based permissions
 - **Estimates Module**:
   - **Create Estimate**: Property-based and direct estimates with auto-population
   - **AMC Package Manager**: Create and manage AMC packages with reusable templates
   - **AMC Templates**: Create templates per property type (AMC-GC, AMC-APT, AMC-VILLA) that auto-populate
-  - **Add-ons**: Additional service management
-  - **All Estimates**: View and manage all estimates
-  - **Archived**: Access archived estimates
+  - **Add-ons**: Additional service management with property type filtering
+  - **All Estimates**: View and manage all estimates with archive/restore
+  - **Archived**: Access archived estimates with restore functionality
 - **Contact Auto-Population**: Contact name, phone, and email auto-populate from Property Management
 - **AMC Integration**: View AMC packages directly from Property Management table
+
+### Franchise Partner (FP) Portal
+- **Manager Portal**: Full access to properties, vendors, employees, estimates, work orders
+- **Coordinator Portal**: Property and vendor management, employee zone assignments
+- **Supervisor Portal**: View-only access to estimates, work order tracking and requests
+- **Executive Portal**: Data entry, property viewing, basic work order access
+- **Zone-Based Data Filtering**: Employees see only data from their assigned zones
+- **Created By Tracking**: All records show creator name for accountability
 
 ### Responsive Design
 - Works on desktop, tablet, and mobile devices
@@ -151,6 +163,28 @@ customer-portal/
 
 ## API Endpoints
 
+### Employee Portal Routes
+- `POST /api/manager/login` - Manager authentication
+- `POST /api/coordinator/login` - Coordinator authentication
+- `POST /api/supervisor/login` - Supervisor authentication
+- `POST /api/executive/login` - Executive authentication
+- `GET /api/manager/dashboard` - Manager dashboard stats
+- `GET /api/coordinator/dashboard` - Coordinator dashboard stats
+- `GET /api/supervisor/dashboard` - Supervisor dashboard stats
+- `GET /api/executive/dashboard` - Executive dashboard stats
+
+### Franchise Partner Routes
+- `POST /api/franchise-partner/login` - FP Manager login
+- `GET /api/franchise-partner/estimates` - FP estimates with zone filtering
+- `GET /api/franchise-partner/vendors` - FP vendors by zone
+- `GET /api/franchise-partner/properties` - FP properties by zone
+- `GET /api/franchise-partner/work-orders` - FP work orders by zone
+
+### QR Code Routes
+- `GET /api/qr/scan/:code` - Track QR code scan
+- `GET /api/qr/stats` - QR scan statistics
+- `GET /api/qr/codes` - List all QR codes
+
 ### Categories
 - `GET /api/categories` - Get all categories
 - `GET /api/categories/:id/subcategories` - Get subcategories for a category
@@ -214,7 +248,64 @@ The application is fully responsive and works on:
 - Tablets
 - Mobile phones
 
-## Recent Updates (May 2026)
+## Recent Updates (June 2026)
+
+### Franchise Partner (FP) Portal System
+- **Multi-Role Employee Portal**: Complete FP portal with Manager, Coordinator, Supervisor, and Executive roles
+- **Zone-Centric Architecture**: Data filtering based on employee assigned zones
+- **Created By Tracking**: All estimates, properties, vendors, and work orders track creator with employee name
+- **Elegant Gold Theme**: Soft amber/gold color palette for FP portal with modern UI
+- **Auto-Refresh**: Dashboards sync every 30 seconds with real-time updates
+
+### Employee Portal Restructure
+- **Role Rename**: "Data Entry Executive" renamed to "Executive" across all portals
+- **Coordinator Role**: New Coordinator role with property, vendor, and employee management
+- **Portal Synchronization**: All FP employee dashboards match Manager layout exactly
+- **Zone Assignment Management**: Employees can be assigned to specific zones for data scoping
+
+### Estimates System Enhancements
+- **Created By Column**: Shows employee name who created the estimate in all portals
+- **Archive/Restore**: Full archive and restore functionality with archived date tracking
+- **PDF Export Improvements**: Clean layout with gold XI logo, property type filtering
+- **Add-ons Filtering**: Only show add-ons matching selected property type
+- **Status Badges**: Color-coded status badges with proper styling
+- **fp_estimates Table**: Unified estimate storage with proper property_id handling
+
+### Vendor Management Updates
+- **Unified Vendor Schema**: Added GST, PAN, license, rating fields to onboarded_vendors
+- **Service Type Badges**: Colored service type badges (AMC, Ad-hoc, Contract)
+- **Zone-Based Assignments**: Vendors filtered by employee's assigned zones
+- **Detailed View Modals**: Full vendor details with address, contact, and service info
+- **Vendor ID Display**: Name on top, Vendor ID below in consistent format
+
+### Work Order Improvements
+- **Email Notifications**: Automatic emails on work order creation and completion
+- **Action Buttons**: Edit, assign, and delete functionality for all portals
+- **Status Filters**: Default to pending view with filter options
+- **Customer Name Display**: COALESCE logic for proper client name display
+
+### QR Code Tracking System
+- **Page Visit Tracking**: Count every scan with unique user tracking
+- **Geo/Timezone Data**: Capture location and timezone information
+- **Real-Time Updates**: Live scan tracking on QR management dashboard
+- **Main Website Detection**: Differentiate between main website and customer portal visits
+
+### Dashboard Enhancements
+- **Work Order Summary**: Statistics cards showing pending, in-progress, completed counts
+- **Consistent Layout**: All portals share same dashboard structure
+- **Quick Actions**: Role-appropriate quick action buttons
+- **Zone Display**: Employee's assigned zones shown on dashboard
+
+### UI/UX Improvements
+- **Modal Headers**: Full gray background with rounded corners
+- **Property Type Utilities**: Shared utility for consistent property type display
+- **Status Badges**: Lowercase support with color coding
+- **View-Only Buttons**: Consistent styling across all view modals
+- **Responsive Vendor Tables**: Name/ID display with service type badges
+
+---
+
+## Previous Updates (May 2026)
 
 ### Estimates & Add-ons UI Enhancements
 - **Table Layout for All Add-ons**: Converted card layout to structured table with columns:
@@ -254,7 +345,7 @@ Implemented throughout Create Estimate and Create Work Order sections:
 
 ---
 
-## Previous Updates (April 2026)
+## Previous Updates (April-May 2026)
 
 ### AMC Package Manager Enhancements
 - **Property Type Selection**: Select GC, APT, VILLA, FLAT, or PLOT before creating AMC package
@@ -295,13 +386,19 @@ Implemented throughout Create Estimate and Create Work Order sections:
 
 > **Note**: Demo credentials are configured via environment variables. See `backend/.env.example` for setup instructions.
 
+## Completed Features
+
+- ✅ **PDF Export**: Export estimates to PDF with branded header
+- ✅ **Email Integration**: Work order email notifications on creation and completion
+- ✅ **QR Code Tracking**: Real-time scan analytics with geo data
+- ✅ **Zone-Based Access**: Employees see data from assigned zones only
+
 ## Future Features (Coming Soon)
 
 - **Schedule**: View and manage appointments
 - **Payment**: Make payments and view billing history
 - **Live Chat**: Real-time support
-- **PDF Export**: Export AMC packages and estimates to PDF
-- **Email Integration**: Send estimates directly to customers
+- **Advanced Reporting**: Custom reports with date ranges and filters
 
 ## License
 
