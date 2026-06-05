@@ -1300,6 +1300,61 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
   }
 });
 
+// Get ALL estimates from ALL FPs (Admin mode)
+router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { archived } = req.query;
+    const isArchived = archived === 'true';
+    
+    const [estimates] = await pool.execute(
+      `SELECT e.*, 
+              fp.fp_code, fp.company_name as fp_name,
+              COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), e.created_by, 'System') as created_by_name
+       FROM estimates e
+       LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
+       LEFT JOIN fp_employees fpe ON e.created_by_id = fpe.id OR e.created_by = fpe.email
+       WHERE e.is_archived = ?
+       ORDER BY e.created_at DESC`,
+      [isArchived]
+    );
+    
+    console.log('Admin all-estimates: Found', estimates.length, 'estimates (archived:', isArchived, ')');
+    res.json({ success: true, data: estimates || [] });
+  } catch (error) {
+    console.error('Error fetching all estimates:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch estimates' });
+  }
+});
+
+// Get FP-specific estimates
+router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res) => {
+  try {
+    const fpIdNum = validateFpId(req.params.fpId);
+    if (!fpIdNum) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
+    
+    const { archived } = req.query;
+    const isArchived = archived === 'true';
+    
+    const [estimates] = await pool.execute(
+      `SELECT e.*, 
+              COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), e.created_by, 'System') as created_by_name
+       FROM estimates e
+       LEFT JOIN fp_employees fpe ON e.created_by_id = fpe.id OR e.created_by = fpe.email
+       WHERE e.franchise_partner_id = ? AND e.is_archived = ?
+       ORDER BY e.created_at DESC`,
+      [fpIdNum, isArchived]
+    );
+    
+    console.log('Admin fp-view estimates: Found', estimates.length, 'for FP', fpIdNum);
+    res.json({ success: true, data: estimates || [] });
+  } catch (error) {
+    console.error('Error fetching FP estimates:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch estimates' });
+  }
+});
+
 // Get ALL employees from ALL FPs (Admin mode)
 router.get('/all-employees', authenticate, adminOnly, async (req, res) => {
   try {
