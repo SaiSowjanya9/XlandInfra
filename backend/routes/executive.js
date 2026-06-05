@@ -1131,37 +1131,31 @@ router.post('/estimates', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
-    const { clientId, propertyId, title, description, estimateType, subtotal, taxPercentage, discountPercentage, validUntil, items } = req.body;
+    const { 
+      estimate_type, property_id, property_code, client_name, client_phone, client_email,
+      property_name, property_type, zone, city, address, package_id, package_name, package_price,
+      addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
+      description
+    } = req.body;
 
     const estimateId = `EST-EXEC-${Date.now()}`;
-    const tax = (subtotal * (taxPercentage || 0)) / 100;
-    const discount = (subtotal * (discountPercentage || 0)) / 100;
-    const totalAmount = subtotal + tax - discount;
 
     const [result] = await pool.query(
-      `INSERT INTO estimates (estimate_id, client_id, property_id, title, description, estimate_type,
-        subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount, total_amount,
-        valid_until, executive_id, franchise_partner_id, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
-      [estimateId, clientId || null, propertyId || null, title, description, estimateType || 'property_based',
-        subtotal, taxPercentage || 0, tax, discountPercentage || 0, discount, totalAmount,
-        validUntil || null, executiveId, franchisePartnerId]
+      `INSERT INTO estimates (
+        estimate_id, property_id, property_code, client_name, client_phone, client_email,
+        property_name, property_type, zone, city, address, package_id, package_name, package_price,
+        addons_data, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
+        estimate_type, description, executive_id, franchise_partner_id, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())`,
+      [
+        estimateId, property_id || null, property_code || null, client_name || null, client_phone || null, client_email || null,
+        property_name || null, property_type || null, zone || null, city || null, address || null,
+        package_id || null, package_name || null, package_price || 0,
+        JSON.stringify(addons || []), subtotal || 0, discount_percent || 0, discount_amount || 0,
+        gst_percent || 18, gst_amount || 0, total_amount || 0,
+        estimate_type || 'property_based', description || null, executiveId, franchisePartnerId
+      ]
     );
-
-    // Insert line items
-    if (items && items.length > 0) {
-      const itemValues = items.map(item => [
-        result.insertId,
-        item.description,
-        item.quantity,
-        item.unitPrice,
-        item.totalPrice || (item.quantity * item.unitPrice)
-      ]);
-      await pool.query(
-        'INSERT INTO estimate_items (estimate_id, description, quantity, unit_price, total_price) VALUES ?',
-        [itemValues]
-      );
-    }
 
     res.json({
       success: true,
@@ -1170,7 +1164,7 @@ router.post('/estimates', requireExecutiveScope, async (req, res) => {
     });
   } catch (error) {
     console.error('Estimate create error:', error);
-    res.status(500).json({ success: false, message: 'Failed to create estimate' });
+    res.status(500).json({ success: false, message: 'Failed to create estimate: ' + error.message });
   }
 });
 
