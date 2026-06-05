@@ -59,19 +59,23 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
     if (selectedFp) {
       loadStats();
     }
-  }, [defaultTab, selectedFp]);
+  }, [defaultTab, selectedFp?.id]);
 
   const loadStats = async () => {
     try {
-      let estUrl, archUrl;
+      let estUrl, archUrl, pkgUrl, addUrl;
       
       // Use Admin endpoint for "all" mode, otherwise FP-specific endpoint
       if (selectedFp?.id === 'all') {
         estUrl = `${API_BASE}/api/admin/all-estimates?archived=false`;
         archUrl = `${API_BASE}/api/admin/all-estimates?archived=true`;
+        pkgUrl = `${API_BASE}/api/admin/all-amc-packages`;
+        addUrl = `${API_BASE}/api/admin/all-addons`;
       } else if (selectedFp?.id) {
         estUrl = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/estimates?archived=false`;
         archUrl = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/estimates?archived=true`;
+        pkgUrl = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/amc-packages`;
+        addUrl = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/addons`;
       } else {
         return;
       }
@@ -79,20 +83,26 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
       const [estRes, archRes, pkgRes, addRes] = await Promise.all([
         fetch(estUrl, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(archUrl, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetchAMCPackages(),
-        fetchAddons()
+        fetch(pkgUrl, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(addUrl, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       const estData = await estRes.json();
       const archData = await archRes.json();
+      const pkgData = await pkgRes.json();
+      const addData = await addRes.json();
+      
       const estArr = estData.success ? estData.data : [];
       const archArr = archData.success ? archData.data : [];
+      const pkgArr = pkgData.success ? pkgData.data : [];
+      const addArr = addData.success ? addData.data : [];
+      
       setEstimates(estArr);
       setArchivedEstimates(archArr);
       setStats({
         estimates: estArr.length,
         archived: archArr.length,
-        amcPackages: pkgRes.length,
-        addons: addRes.length
+        amcPackages: pkgArr.length,
+        addons: addArr.length
       });
     } catch (error) {
       console.error('Load stats error:', error);
