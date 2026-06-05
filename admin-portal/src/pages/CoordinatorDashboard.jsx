@@ -13,7 +13,6 @@ import {
   MapPin,
   AlertCircle
 } from 'lucide-react';
-import FPEmployeeZonesView from '../components/FPEmployeeZonesView';
 
 const CoordinatorDashboard = ({ user }) => {
   const navigate = useNavigate();
@@ -245,13 +244,6 @@ const CoordinatorDashboard = ({ user }) => {
         )}
       </div>
 
-      {/* FP Employee Zone Assignments - Only visible for FP Coordinators */}
-      {(user?.franchise_partner_id || user?.franchisePartnerId) && (
-        <FPEmployeeZonesView 
-          apiEndpoint="/api/coordinator/fp-employee-zones"
-          title="Team Zone Assignments"
-        />
-      )}
     </div>
   );
 };

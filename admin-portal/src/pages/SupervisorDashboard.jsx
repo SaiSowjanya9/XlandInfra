@@ -12,7 +12,6 @@ import {
   ArrowRight,
   MapPin
 } from 'lucide-react';
-import FPEmployeeZonesView from '../components/FPEmployeeZonesView';
 
 const SupervisorDashboard = ({ user }) => {
   const navigate = useNavigate();
@@ -241,13 +240,6 @@ const SupervisorDashboard = ({ user }) => {
         )}
       </div>
 
-      {/* FP Employee Zone Assignments - Only visible for FP Supervisors */}
-      {(user?.franchise_partner_id || user?.franchisePartnerId) && (
-        <FPEmployeeZonesView 
-          apiEndpoint="/api/supervisor/fp-employee-zones"
-          title="Team Zone Assignments"
-        />
-      )}
     </div>
   );
 };
