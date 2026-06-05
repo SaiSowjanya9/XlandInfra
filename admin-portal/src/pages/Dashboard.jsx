@@ -66,22 +66,34 @@ const Dashboard = () => {
       const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
       const result = await response.json();
-      if (result.success) {
-        // Map dashboard data to stats format
+      if (result.success && result.data) {
+        const data = result.data;
+        // Map dashboard data to stats format with safe defaults
         setStats({
-          totalProperties: result.data.stats?.totalProperties || result.data.totalProperties || 0,
-          pendingWorkOrders: result.data.stats?.pendingWorkOrders || result.data.pendingWorkOrders || 0,
-          completedWorkOrders: result.data.stats?.completedWorkOrders || result.data.completedWorkOrders || 0,
-          totalVendors: result.data.stats?.totalVendors || result.data.totalVendors || 0,
-          totalEmployees: result.data.stats?.totalEmployees || result.data.totalEmployees || 0,
-          totalEstimates: result.data.stats?.totalEstimates || result.data.totalEstimates || 0,
-          fpInfo: result.data.fpInfo
+          totalProperties: data.stats?.totalProperties ?? data.totalProperties ?? 0,
+          pendingWorkOrders: data.stats?.pendingWorkOrders ?? data.pendingWorkOrders ?? 0,
+          completedWorkOrders: data.stats?.completedWorkOrders ?? data.completedWorkOrders ?? 0,
+          totalVendors: data.stats?.totalVendors ?? data.totalVendors ?? 0,
+          totalEmployees: data.stats?.totalEmployees ?? data.totalEmployees ?? 0,
+          totalEstimates: data.stats?.totalEstimates ?? data.totalEstimates ?? 0,
+          fpInfo: data.fpInfo || null
         });
-        setRecentActivities(result.data.recentWorkOrders || []);
+        setRecentActivities(Array.isArray(data.recentWorkOrders) ? data.recentWorkOrders : []);
+      } else {
+        // Set empty defaults if no data
+        setStats(null);
+        setRecentActivities([]);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setStats(null);
+      setRecentActivities([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
