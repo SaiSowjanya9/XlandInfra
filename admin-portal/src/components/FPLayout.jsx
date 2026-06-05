@@ -116,27 +116,27 @@ const FPLayout = ({ admin, onLogout, children }) => {
       <Link
         to={item.path}
         onClick={handleClick}
-        className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${
+        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
           isActive
-            ? 'bg-gradient-to-r from-softgold-100 to-softgold-50 text-softgold-700 shadow-sm border border-softgold-200/50'
-            : 'text-warmstone-600 hover:bg-cream-100 hover:text-warmstone-700'
+            ? 'bg-amber-100 text-amber-900'
+            : 'text-gray-600 hover:bg-gray-50'
         }`}
       >
-        <Icon className={`w-5 h-5 ${isActive ? 'text-softgold-600' : ''}`} />
-        <span className="font-medium text-sm">{item.label}</span>
+        <Icon className="w-5 h-5" />
+        <span className="font-medium">{item.label}</span>
       </Link>
     );
   };
 
   return (
-    <div className="min-h-screen bg-cream-50">
+    <div className="min-h-screen bg-gray-100">
       {/* Mobile Header */}
-      <header className="lg:hidden bg-cream-100 shadow-sm border-b border-warmstone-200/50 sticky top-0 z-40">
+      <header className="lg:hidden bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
         <div className="flex items-center justify-between px-4 h-14">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-cream-200 transition-colors">
-            <Menu className="w-5 h-5 text-warmstone-600" />
+          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100">
+            <Menu className="w-5 h-5 text-gray-600" />
           </button>
-          <span className="px-3 py-1.5 text-sm font-medium text-softgold-700 bg-softgold-100 rounded-full border border-softgold-200/50">
+          <span className="px-3 py-1 text-sm font-medium text-teal-700 bg-teal-50 rounded-full">
             Franchise Partner
           </span>
           <div className="w-10" />
@@ -145,46 +145,46 @@ const FPLayout = ({ admin, onLogout, children }) => {
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
-        <div className="lg:hidden fixed inset-0 bg-warmstone-900/30 backdrop-blur-sm z-40" onClick={() => setSidebarOpen(false)} />
+        <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-cream-50 via-cream-100 to-warmstone-50 shadow-xl z-50 transform transition-transform duration-300 lg:translate-x-0 border-r border-warmstone-200/50 ${
+        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Top - Logged in as with badge */}
-          <div className="px-5 py-5 border-b border-warmstone-200/50 bg-cream-100/50">
-            <p className="text-xs text-warmstone-400 mb-2 uppercase tracking-wider font-medium">Logged in as</p>
-            <span className="inline-block px-3 py-1.5 text-sm font-semibold text-softgold-700 bg-gradient-to-r from-softgold-100 to-softgold-50 rounded-lg border border-softgold-200/50 shadow-sm">
+          <div className="px-6 py-5 border-b border-gray-100">
+            <p className="text-sm text-gray-400 mb-1.5">Logged in as</p>
+            <span className="inline-block px-3 py-1 text-sm font-medium text-teal-700 bg-teal-50 rounded-full">
               Franchise Partner
             </span>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden absolute right-4 top-4 p-2 rounded-lg hover:bg-warmstone-100 transition-colors">
-              <X className="w-5 h-5 text-warmstone-500" />
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden absolute right-4 top-4 p-2 rounded-lg hover:bg-gray-100">
+              <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
+          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
             {navItems.map((item) => (
               <NavLink key={item.path} item={item} mobile />
             ))}
 
             {/* Vendor Management Section */}
-            <div className="mt-3 pt-3 border-t border-warmstone-200/40">
+            <div className="mt-2">
               <button
                 onClick={() => setVendorOpen(!vendorOpen)}
-                className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
                   isVendorSectionActive && !vendorOpen
-                    ? 'bg-cream-200 text-warmstone-700'
-                    : 'text-warmstone-600 hover:bg-cream-100'
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 <div className="flex items-center space-x-3">
                   <Store className="w-5 h-5" />
-                  <span className="font-medium text-sm">Vendor Management</span>
+                  <span className="font-medium">Vendor Management</span>
                 </div>
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-200 ${
@@ -193,7 +193,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 />
               </button>
               {vendorOpen && (
-                <div className="ml-4 mt-1.5 space-y-0.5 border-l-2 border-softgold-200 pl-2">
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
                   {vendorSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
                   ))}
@@ -202,18 +202,18 @@ const FPLayout = ({ admin, onLogout, children }) => {
             </div>
 
             {/* Employee Management Section */}
-            <div className="mt-1">
+            <div className="mt-2">
               <button
                 onClick={() => setEmployeeOpen(!employeeOpen)}
-                className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
                   isEmployeeSectionActive && !employeeOpen
-                    ? 'bg-cream-200 text-warmstone-700'
-                    : 'text-warmstone-600 hover:bg-cream-100'
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 <div className="flex items-center space-x-3">
                   <Users className="w-5 h-5" />
-                  <span className="font-medium text-sm">Employee Management</span>
+                  <span className="font-medium">Employee Management</span>
                 </div>
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-200 ${
@@ -222,7 +222,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 />
               </button>
               {employeeOpen && (
-                <div className="ml-4 mt-1.5 space-y-0.5 border-l-2 border-softgold-200 pl-2">
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
                   {employeeSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
                   ))}
@@ -231,18 +231,18 @@ const FPLayout = ({ admin, onLogout, children }) => {
             </div>
 
             {/* Estimates Section */}
-            <div className="mt-1">
+            <div className="mt-2">
               <button
                 onClick={() => setEstimatesOpen(!estimatesOpen)}
-                className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
+                className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-all duration-200 ${
                   isEstimatesSectionActive && !estimatesOpen
-                    ? 'bg-cream-200 text-warmstone-700'
-                    : 'text-warmstone-600 hover:bg-cream-100'
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 <div className="flex items-center space-x-3">
                   <FileText className="w-5 h-5" />
-                  <span className="font-medium text-sm">Estimates / AMC</span>
+                  <span className="font-medium">Estimates / AMC</span>
                 </div>
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-200 ${
@@ -251,7 +251,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 />
               </button>
               {estimatesOpen && (
-                <div className="ml-4 mt-1.5 space-y-0.5 border-l-2 border-softgold-200 pl-2">
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
                   {estimatesSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
                   ))}
@@ -262,13 +262,13 @@ const FPLayout = ({ admin, onLogout, children }) => {
           </nav>
 
           {/* Bottom - Logout */}
-          <div className="px-4 py-3 border-t border-warmstone-200/50 bg-warmstone-50/30">
+          <div className="px-4 py-3 border-t border-gray-100">
             <button
               onClick={onLogout}
-              className="flex items-center space-x-2 px-3 py-2.5 text-warmstone-500 hover:text-dustyrose-500 hover:bg-dustyrose-50 rounded-xl transition-all duration-200 text-sm w-full"
+              className="flex items-center space-x-2 px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200 text-sm w-full"
             >
               <LogOut className="w-4 h-4" />
-              <span className="font-medium">Logout</span>
+              <span>Logout</span>
             </button>
           </div>
         </div>
