@@ -1567,11 +1567,14 @@ router.get('/addons', requireManagerScope, async (req, res) => {
     const table = req.isFPManager ? 'fp_addons' : 'manager_addons';
     const scopeColumn = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
     
+    console.log('[Manager Addons] isFPManager:', req.isFPManager, 'scopeId:', scopeId, 'franchisePartnerId:', req.franchisePartnerId, 'table:', table);
+    
     const [addons] = await pool.execute(
       `SELECT * FROM ${table} WHERE ${scopeColumn} = ? ORDER BY created_at DESC`,
       [scopeId]
     );
     
+    console.log('[Manager Addons] Found:', addons.length, 'addons');
     res.json({ success: true, data: addons.map(transformAddon) });
   } catch (error) {
     console.error('Addons fetch error:', error.message);
