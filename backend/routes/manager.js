@@ -812,7 +812,7 @@ router.post('/customers', requireManagerScope, async (req, res) => {
         `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
           property_id, manager_id, franchise_partner_id, created_by, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [clientId, contactName || communityName, contactEmail || '', `${contact.countryCode || '+91'}${contactPhone || ''}`,
+        [clientId, contactName || communityName, contactEmail || '', `${contactCountryCode}${contactPhone || ''}`,
          address || '', city || '', state || '', postalCode || '',
          propertyResult.insertId, managerId, franchisePartnerId, req.user?.username || req.user?.email || '']
       );
