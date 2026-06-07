@@ -1316,11 +1316,11 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
       if (isArchived) {
         query = `SELECT e.*, 'estimates' as source_table, NULL as fp_code, NULL as fp_name,
                         e.estimate_id as estimateId, 
-                        COALESCE(e.customer_name, e.title) as clientName, 
-                        COALESCE(e.customer_name, e.title) as customerName,
+                        COALESCE(e.customer_name, e.property_name, 'Direct Estimate') as clientName, 
+                        COALESCE(e.customer_name, e.property_name, 'Direct Estimate') as customerName,
                         COALESCE(e.estimate_type, 'direct') as estimateType, 
                         e.property_type as propertyType,
-                        COALESCE(e.total, e.total_amount) as totalPrice, 
+                        COALESCE(e.total, e.total_amount, 0) as totalPrice, 
                         e.archived_at as archivedAt, 
                         e.created_at as createdAt,
                         amc.service_rows as packageServices
@@ -1330,11 +1330,11 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
       } else {
         query = `SELECT e.*, 'estimates' as source_table, NULL as fp_code, NULL as fp_name,
                         e.estimate_id as estimateId, 
-                        COALESCE(e.customer_name, e.title) as clientName, 
-                        COALESCE(e.customer_name, e.title) as customerName,
+                        COALESCE(e.customer_name, e.property_name, 'Direct Estimate') as clientName, 
+                        COALESCE(e.customer_name, e.property_name, 'Direct Estimate') as customerName,
                         COALESCE(e.estimate_type, 'direct') as estimateType, 
                         e.property_type as propertyType,
-                        COALESCE(e.total, e.total_amount) as totalPrice, 
+                        COALESCE(e.total, e.total_amount, 0) as totalPrice, 
                         e.archived_at as archivedAt, 
                         e.created_at as createdAt,
                         amc.service_rows as packageServices
