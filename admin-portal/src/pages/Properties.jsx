@@ -281,6 +281,37 @@ const Properties = () => {
     showToast('Property exported successfully');
   };
 
+  // Export all properties to Excel
+  const exportAllProperties = () => {
+    if (filteredProperties.length === 0) {
+      showToast('No properties to export');
+      return;
+    }
+
+    const exportData = filteredProperties.map(property => ({
+      'Property ID': property.propertyId || '',
+      'Name': property.name || '',
+      'Type': TYPE_LABELS[property.entryType] || '',
+      'Zone': property.zone || '',
+      'Division': property.division || '',
+      'Area Name': property.areaName || '',
+      'Address': property.address || '',
+      'City': property.city || '',
+      'State': property.state || '',
+      'Postal Code': property.postalCode || '',
+      'Total Units': property.totalUnits || 0,
+      'Status': property.status || 'Active',
+      'Created By': property.createdBy || '',
+      'Created At': property.createdAt ? new Date(property.createdAt).toLocaleDateString('en-IN') : ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Properties');
+    XLSX.writeFile(wb, `all_properties_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast(`Exported ${filteredProperties.length} properties`);
+  };
+
   // Derived data
   const divisions = [...new Set(properties.map(p => p.division).filter(Boolean))];
   const zones = [...new Set(properties.map(p => p.zone).filter(Boolean))];
@@ -415,6 +446,15 @@ const Properties = () => {
         </div>
         {/* Action Buttons */}
         <div className="flex items-center gap-2 mt-3 sm:mt-0">
+          {/* Export All Button */}
+          <button
+            onClick={exportAllProperties}
+            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+            title="Export All Properties"
+          >
+            <Download className="w-4 h-4" />
+            Export All
+          </button>
           {/* Notification Bell */}
           <div className="relative">
             <button
