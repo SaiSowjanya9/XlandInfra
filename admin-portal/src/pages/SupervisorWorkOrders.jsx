@@ -39,10 +39,8 @@ const SupervisorWorkOrders = ({ user }) => {
   const fetchWorkOrders = async () => {
     setLoading(true);
     try {
-      let endpoint = '/api/supervisor/work-orders';
-      if (activeTab === 'pending') endpoint = '/api/supervisor/work-orders/pending';
-      else if (activeTab === 'completed') endpoint = '/api/supervisor/work-orders/completed';
-      const response = await fetch(endpoint, { headers: { 'Authorization': `Bearer ${token}` } });
+      // Always fetch ALL work orders for accurate tab counts
+      const response = await fetch('/api/supervisor/work-orders', { headers: { 'Authorization': `Bearer ${token}` } });
       const result = await response.json();
       if (result.success) setWorkOrders(result.data || []);
     } catch (error) {
@@ -219,7 +217,15 @@ const SupervisorWorkOrders = ({ user }) => {
 
   const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
-  const filteredWorkOrders = workOrders.filter(wo =>
+  // Filter by tab (pending/completed) first, then by search
+  const pendingStatuses = ['pending', 'requested', 'assigned', 'in_progress'];
+  const tabFilteredWorkOrders = activeTab === 'pending' 
+    ? workOrders.filter(wo => pendingStatuses.includes(wo.status))
+    : activeTab === 'completed'
+    ? workOrders.filter(wo => wo.status === 'completed')
+    : workOrders;
+  
+  const filteredWorkOrders = tabFilteredWorkOrders.filter(wo =>
     wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
