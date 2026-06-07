@@ -951,16 +951,18 @@ const Properties = () => {
                 <div className="px-6 py-5">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold text-gray-800">Vendor Assignments</h3>
-                    <button
-                      onClick={() => {
-                        handleClosePropertyView();
-                        setVendorAssignmentProperty(viewProperty);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Assign Vendors
-                    </button>
+                    {!isOpsManager && (
+                      <button
+                        onClick={() => {
+                          handleClosePropertyView();
+                          setVendorAssignmentProperty(viewProperty);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Assign Vendors
+                      </button>
+                    )}
                   </div>
 
                   {(() => {
@@ -1038,19 +1040,23 @@ const Properties = () => {
 
             {/* Modal Footer */}
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-              <button
-                onClick={() => { setDeleteConfirm(viewProperty); handleClosePropertyView(); }}
-                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-md text-sm font-medium transition-colors"
-              >
-                <Trash2 className="w-4 h-4" /> Delete
-              </button>
-              <div className="flex items-center gap-2">
+              {!isOpsManager ? (
                 <button
-                  onClick={() => handleExportProperty(viewProperty)}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 transition-colors"
+                  onClick={() => { setDeleteConfirm(viewProperty); handleClosePropertyView(); }}
+                  className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-md text-sm font-medium transition-colors"
                 >
-                  <Download className="w-4 h-4" /> Export
+                  <Trash2 className="w-4 h-4" /> Delete
                 </button>
+              ) : <div />}
+              <div className="flex items-center gap-2">
+                {!isOpsManager && (
+                  <button
+                    onClick={() => handleExportProperty(viewProperty)}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 transition-colors"
+                  >
+                    <Download className="w-4 h-4" /> Export
+                  </button>
+                )}
                 <button
                   onClick={handleClosePropertyView}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors"
