@@ -685,12 +685,22 @@ const FPAddVendor = ({ user }) => {
               <input
                 type="text"
                 value={formData.gstNumber}
-                onChange={(e) => updateField('gstNumber', e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                  if (value.length <= 15) {
+                    updateField('gstNumber', value);
+                  }
+                }}
                 placeholder="22AAAAA0000A1Z5"
                 maxLength={15}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-500 focus:outline-none"
               />
-              <p className="text-xs text-gray-400 mt-1">15-digit GST identification number</p>
+              {formData.gstNumber && formData.gstNumber.length !== 15 && (
+                <p className="text-xs text-red-500 mt-1">GST must be 15 characters</p>
+              )}
+              {(!formData.gstNumber || formData.gstNumber.length === 15) && (
+                <p className="text-xs text-gray-400 mt-1">15-digit GST identification number</p>
+              )}
             </div>
 
             {/* PAN Number */}
