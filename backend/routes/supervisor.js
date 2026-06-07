@@ -903,7 +903,54 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
           clientType || 'individual', companyName, propertyId || null, gstNumber, supervisorId, franchisePartnerId,
           req.user?.username || req.user?.email || '']
       );
-      res.json({ success: true, message: 'Customer created successfully', data: { id: result.insertId, clientId } });
+
+      // Create customer account and send activation email if email provided
+      let emailSent = false;
+      if (email) {
+        const tempPassword = generateTempPassword();
+        const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+        const activationToken = generateActivationToken();
+        const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
+        
+        const [existing] = await pool.query(
+          'SELECT id, is_activated FROM customer_accounts WHERE email = ?', [email.toLowerCase()]
+        );
+        
+        if (existing.length === 0) {
+          await pool.query(
+            `INSERT INTO customer_accounts (customer_id, first_name, last_name, email, phone, temp_password_hash,
+              activation_token, activation_expires, is_activated, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [clientId, name, '', email.toLowerCase(), phone || '', tempPasswordHash, activationToken, activationExpires, 0, 'supervisor']
+          );
+          
+          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
+          console.log('📧 Sending activation email (supervisor simple create) to:', email.toLowerCase());
+          try {
+            const emailResult = await sendCustomerActivationEmail({
+              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA'
+            });
+            emailSent = emailResult.success;
+          } catch (emailError) {
+            console.error('📧 Email sending failed:', emailError);
+          }
+        } else if (!existing[0].is_activated) {
+          await pool.query(
+            `UPDATE customer_accounts SET temp_password_hash = ?, activation_token = ?, activation_expires = ?, updated_at = NOW() WHERE id = ?`,
+            [tempPasswordHash, activationToken, activationExpires, existing[0].id]
+          );
+          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
+          try {
+            const emailResult = await sendCustomerActivationEmail({
+              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA'
+            });
+            emailSent = emailResult.success;
+          } catch (emailError) {
+            console.error('📧 Email resend failed:', emailError);
+          }
+        }
+      }
+
+      res.json({ success: true, message: 'Customer created' + (emailSent ? ', activation email sent' : ''), data: { id: result.insertId, clientId, emailSent } });
     }
   } catch (error) {
     console.error('Customer create error:', error);
