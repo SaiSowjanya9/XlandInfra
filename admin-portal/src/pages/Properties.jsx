@@ -3,7 +3,8 @@ import {
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Briefcase, Lock, 
   ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, FileText,
-  Package, Plus, Calendar, DollarSign, Receipt, Tag, Users, UserCheck, RefreshCw
+  Package, Plus, Calendar, DollarSign, Receipt, Tag, Users, UserCheck, RefreshCw,
+  Edit2, Save
 } from 'lucide-react';
 import VendorAssignmentModal from '../components/VendorAssignmentModal';
 import * as XLSX from 'xlsx';
@@ -68,6 +69,10 @@ const Properties = () => {
   
   // Vendor assignment modal state
   const [vendorAssignmentProperty, setVendorAssignmentProperty] = useState(null);
+  
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({});
 
   const token = sessionStorage.getItem('pm_auth_token');
   
@@ -126,6 +131,50 @@ const Properties = () => {
       showToast('Failed to delete property', 'error');
     }
     setDeleteConfirm(null);
+  };
+
+  // Open edit modal
+  const openEditModal = (property) => {
+    setEditFormData({
+      id: property.id,
+      name: property.name || property.community_name || '',
+      zone: property.zone || '',
+      area: property.areaName || property.area_name || '',
+      division: property.division || '',
+      address: property.address || '',
+      city: property.city || '',
+      state: property.state || '',
+      contactPerson: property.contactPerson || property.contact_person || '',
+      contactPhone: property.contactPhone || property.contact_phone || '',
+      contactEmail: property.contactEmail || property.contact_email || ''
+    });
+    setShowEditModal(true);
+  };
+
+  // Save edit
+  const handleSaveEdit = async () => {
+    try {
+      const response = await fetch(`/api/onboarding/${editFormData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(editFormData)
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('Property updated successfully');
+        setShowEditModal(false);
+        setEditFormData({});
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to update property', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating property:', error);
+      showToast('Failed to update property', 'error');
+    }
   };
 
   // Handle viewing a property - load its estimates
@@ -575,6 +624,24 @@ const Properties = () => {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+                          {!isOpsManager && (
+                            <>
+                              <button
+                                onClick={() => openEditModal(property)}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Edit"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm(property)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1228,6 +1295,64 @@ const Properties = () => {
                 className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Property Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Edit Property</h2>
+              <button onClick={() => { setShowEditModal(false); setEditFormData({}); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Name *</label>
+                  <input type="text" value={editFormData.name || ''} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                  <input type="text" value={editFormData.zone || ''} onChange={(e) => setEditFormData({ ...editFormData, zone: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Area</label>
+                  <input type="text" value={editFormData.area || ''} onChange={(e) => setEditFormData({ ...editFormData, area: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Division</label>
+                  <input type="text" value={editFormData.division || ''} onChange={(e) => setEditFormData({ ...editFormData, division: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <input type="text" value={editFormData.city || ''} onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                  <input type="text" value={editFormData.address || ''} onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                  <input type="text" value={editFormData.contactPerson || ''} onChange={(e) => setEditFormData({ ...editFormData, contactPerson: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+                  <input type="text" value={editFormData.contactPhone || ''} onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
+              <button onClick={() => { setShowEditModal(false); setEditFormData({}); }} className="px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+                Cancel
+              </button>
+              <button onClick={handleSaveEdit} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                <Save className="w-4 h-4" /> Save Changes
               </button>
             </div>
           </div>
