@@ -2118,4 +2118,59 @@ router.post('/migrate-estimate-names', async (req, res) => {
   }
 });
 
+// Migration: Link existing estimates to AMC packages by matching package_name
+router.post('/migrate-estimate-packages', authenticate, adminOnly, async (req, res) => {
+  try {
+    // Update fp_estimates: match package_name to amc_packages and set package_id
+    const [fpResult] = await pool.execute(`
+      UPDATE fp_estimates fe
+      JOIN amc_packages amc ON fe.package_name = amc.package_name
+      SET fe.package_id = amc.id
+      WHERE fe.package_name IS NOT NULL 
+        AND fe.package_name != ''
+        AND (fe.package_id IS NULL OR fe.package_id = 0)
+    `);
+    
+    // Update main estimates table if it has package_name column
+    let mainResult = { affectedRows: 0 };
+    try {
+      const [columns] = await pool.execute(`SHOW COLUMNS FROM estimates LIKE 'package_name'`);
+      if (columns.length > 0) {
+        [mainResult] = await pool.execute(`
+          UPDATE estimates e
+          JOIN amc_packages amc ON e.package_name = amc.package_name
+          SET e.package_id = amc.id
+          WHERE e.package_name IS NOT NULL 
+            AND e.package_name != ''
+            AND (e.package_id IS NULL OR e.package_id = 0)
+        `);
+      }
+    } catch (e) {
+      console.log('Main estimates table update skipped:', e.message);
+    }
+    
+    // Get counts for reporting
+    const [fpCount] = await pool.execute(`
+      SELECT COUNT(*) as count FROM fp_estimates WHERE package_id IS NOT NULL AND package_id > 0
+    `);
+    const [amcCount] = await pool.execute(`
+      SELECT COUNT(*) as count FROM amc_packages
+    `);
+    
+    res.json({ 
+      success: true, 
+      message: `Migration complete. Updated ${fpResult.affectedRows} FP estimates and ${mainResult.affectedRows} main estimates.`,
+      details: {
+        fpEstimatesUpdated: fpResult.affectedRows,
+        mainEstimatesUpdated: mainResult.affectedRows,
+        totalLinkedFpEstimates: fpCount[0]?.count || 0,
+        totalAmcPackages: amcCount[0]?.count || 0
+      }
+    });
+  } catch (error) {
+    console.error('Package migration error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;
