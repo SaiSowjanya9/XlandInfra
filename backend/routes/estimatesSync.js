@@ -152,8 +152,9 @@ router.post('/', async (req, res) => {
         property_type, property_name, property_address,
         services, addons, subtotal, discount, tax, total,
         notes, status, valid_until,
-        property_id, community_name, zone, division, no_of_visits, description, package_name, package_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        property_id, community_name, zone, division, no_of_visits, description, package_name, package_id,
+        is_active, is_archived, estimate_type
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         estimateId,
         customerName || null,
@@ -178,7 +179,10 @@ router.post('/', async (req, res) => {
         noOfVisits || null,
         finalDescription,
         packageName || null,
-        packageId || null
+        packageId || null,
+        1,  // is_active = true
+        0,  // is_archived = false
+        'direct'  // estimate_type
       ]
     );
     
