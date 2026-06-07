@@ -1699,6 +1699,98 @@ router.delete('/zones/:id', requireManagerScope, async (req, res) => {
   }
 });
 
+// ============================================
+// DIVISIONS - FP-specific divisions shared across employees
+// ============================================
+router.get('/divisions', requireManagerScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.franchisePartnerId;
+    
+    // Get FP-specific divisions
+    let divisions = [];
+    if (franchisePartnerId) {
+      const [fpDivisions] = await pool.execute(
+        'SELECT id, name FROM fp_divisions WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY name',
+        [franchisePartnerId]
+      );
+      divisions = fpDivisions;
+    }
+    
+    // Also get divisions from existing properties/vendors for this FP
+    const [propertyDivisions] = await pool.execute(
+      `SELECT DISTINCT division as name FROM properties 
+       WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''
+       UNION
+       SELECT DISTINCT division as name FROM onboarded_vendors 
+       WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''`,
+      [franchisePartnerId || 0, franchisePartnerId || 0]
+    );
+    
+    // Combine and deduplicate
+    const allDivisionNames = new Set(divisions.map(d => d.name));
+    propertyDivisions.forEach(d => {
+      if (d.name && !allDivisionNames.has(d.name)) {
+        allDivisionNames.add(d.name);
+        divisions.push({ id: `custom-${d.name}`, name: d.name });
+      }
+    });
+    
+    divisions.sort((a, b) => a.name.localeCompare(b.name));
+    res.json({ success: true, data: divisions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/divisions', requireManagerScope, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Division name is required' });
+    }
+    
+    const franchisePartnerId = req.franchisePartnerId;
+    if (!franchisePartnerId) {
+      return res.status(400).json({ success: false, message: 'FP context required' });
+    }
+    
+    // Check if division already exists
+    const [existing] = await pool.execute(
+      'SELECT id FROM fp_divisions WHERE name = ? AND franchise_partner_id = ?',
+      [name, franchisePartnerId]
+    );
+    
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Division already exists' });
+    }
+    
+    const [result] = await pool.execute(
+      'INSERT INTO fp_divisions (name, franchise_partner_id, created_by, is_active) VALUES (?, ?, ?, 1)',
+      [name, franchisePartnerId, req.user?.email || req.user?.username || '']
+    );
+    
+    res.json({ success: true, message: 'Division created', data: { id: result.insertId, name } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/divisions/:id', requireManagerScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const franchisePartnerId = req.franchisePartnerId;
+    
+    await pool.execute(
+      'UPDATE fp_divisions SET is_active = 0 WHERE id = ? AND franchise_partner_id = ?',
+      [id, franchisePartnerId]
+    );
+    
+    res.json({ success: true, message: 'Division deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.get('/categories', requireManagerScope, async (req, res) => {
   try {
     const categoriesConfig = require('../config/categories');
