@@ -146,13 +146,31 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     });
   };
 
-  const handleDeleteAddon = async (addonId) => {
+  const handleDeleteAddon = async (addon) => {
     if (window.confirm('Are you sure you want to delete this add-on?')) {
       try {
-        await deleteAddon(addonId);
-        setAddons(prevAddons => prevAddons.filter(addon => addon.addonId !== addonId));
-        showToast('Add-on deleted');
+        // Use admin endpoint for fp_addons (uses numeric id), else use addonId
+        const deleteId = addon.id || addon.addonId;
+        const url = addon.id 
+          ? `${API_BASE}/api/admin/addons/${addon.id}`
+          : `${API_BASE}/api/addons/${addon.addonId}`;
+        
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          setAddons(prevAddons => prevAddons.filter(a => 
+            (a.id !== addon.id) && (a.addonId !== addon.addonId)
+          ));
+          showToast('Add-on deleted');
+        } else {
+          throw new Error(result.message);
+        }
       } catch (error) {
+        console.error('Delete error:', error);
         showToast('Failed to delete add-on', 'error');
       }
     }
@@ -466,7 +484,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                                 <Edit2 className="w-5 h-5" />
                               </button>
                               <button
-                                onClick={() => handleDeleteAddon(addon.addonId)}
+                                onClick={() => handleDeleteAddon(addon)}
                                 className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                 title="Delete"
                               >
@@ -630,7 +648,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                                     <Edit2 className="w-4 h-4" />
                                   </button>
                                   <button
-                                    onClick={() => handleDeleteAddon(addon.addonId)}
+                                    onClick={() => handleDeleteAddon(addon)}
                                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                     title="Delete"
                                   >
