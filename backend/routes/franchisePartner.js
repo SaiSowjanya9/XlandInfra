@@ -181,7 +181,7 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
         .catch(() => ({ total: 0, pending: 0, completed: 0 })),
       
       // Estimates count
-      safeCount('SELECT COUNT(*) as count FROM estimates WHERE franchise_partner_id = ?', [fpId]),
+      safeCount('SELECT COUNT(*) as count FROM fp_estimates WHERE franchise_partner_id = ?', [fpId]),
       
       // Employee stats - combined query
       pool.execute(`
