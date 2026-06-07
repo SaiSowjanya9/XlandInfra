@@ -148,6 +148,17 @@ router.post('/', async (req, res) => {
     const pool = db.pool;
     const titleValue = customerName || propertyName || communityName || 'Direct Estimate';
     
+    // Get admin user ID for created_by (required NOT NULL field)
+    let createdById = 1; // Default to admin user ID 1
+    try {
+      const [adminUsers] = await pool.execute(`SELECT id FROM users WHERE role = 'admin' LIMIT 1`);
+      if (adminUsers.length > 0) {
+        createdById = adminUsers[0].id;
+      }
+    } catch (e) {
+      console.log('Could not fetch admin user, using default ID 1');
+    }
+    
     await pool.execute(
       `INSERT INTO estimates (
         estimate_id, title, customer_name, customer_email, customer_phone,
@@ -155,8 +166,8 @@ router.post('/', async (req, res) => {
         services, addons, subtotal, discount, tax, total,
         notes, status, valid_until,
         property_id, community_name, zone, division, no_of_visits, description, package_name, package_id,
-        is_active, is_archived, estimate_type
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        is_active, is_archived, estimate_type, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         estimateId,
         titleValue,  // title is NOT NULL
@@ -185,7 +196,8 @@ router.post('/', async (req, res) => {
         packageId || null,
         1,  // is_active = true
         0,  // is_archived = false
-        'direct'  // estimate_type
+        'direct',  // estimate_type
+        createdById  // created_by is NOT NULL
       ]
     );
     
