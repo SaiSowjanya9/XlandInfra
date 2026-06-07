@@ -1141,14 +1141,14 @@ router.get('/employees', requireExecutiveScope, async (req, res) => {
     const executiveId = req.executiveId;
 
     const [employees] = await pool.query(
-      `SELECT ee.*, GROUP_CONCAT(z.name) as zone_names
-       FROM executive_employees ee
-       LEFT JOIN executive_employee_zones eez ON ee.id = eez.executive_employee_id
-       LEFT JOIN zones z ON eez.zone_id = z.id
-       WHERE ee.executive_id = ?
-       GROUP BY ee.id
-       ORDER BY ee.created_at DESC`,
-      [executiveId]
+      `SELECT fpe.*, GROUP_CONCAT(z.name) as zone_names
+       FROM fp_employees fpe
+       LEFT JOIN fp_employee_zones fez ON fpe.id = fez.fp_employee_id
+       LEFT JOIN zones z ON fez.zone_id = z.id
+       WHERE fpe.franchise_partner_id = ?
+       GROUP BY fpe.id
+       ORDER BY fpe.created_at DESC`,
+      [req.franchisePartnerId]
     );
 
     res.json({ success: true, data: employees });
@@ -1164,13 +1164,13 @@ router.get('/employees/:id', requireExecutiveScope, async (req, res) => {
     const executiveId = req.executiveId;
 
     const [employees] = await pool.query(
-      `SELECT ee.*, GROUP_CONCAT(z.id) as zone_ids, GROUP_CONCAT(z.name) as zone_names
-       FROM executive_employees ee
-       LEFT JOIN executive_employee_zones eez ON ee.id = eez.executive_employee_id
-       LEFT JOIN zones z ON eez.zone_id = z.id
-       WHERE ee.id = ? AND ee.executive_id = ?
-       GROUP BY ee.id`,
-      [id, executiveId]
+      `SELECT fpe.*, GROUP_CONCAT(z.id) as zone_ids, GROUP_CONCAT(z.name) as zone_names
+       FROM fp_employees fpe
+       LEFT JOIN fp_employee_zones fez ON fpe.id = fez.fp_employee_id
+       LEFT JOIN zones z ON fez.zone_id = z.id
+       WHERE fpe.id = ? AND fpe.franchise_partner_id = ?
+       GROUP BY fpe.id`,
+      [id, req.franchisePartnerId]
     );
 
     if (employees.length === 0) {
@@ -1185,99 +1185,15 @@ router.get('/employees/:id', requireExecutiveScope, async (req, res) => {
 });
 
 router.post('/employees', requireExecutiveScope, async (req, res) => {
-  try {
-    const executiveId = req.executiveId;
-    const franchisePartnerId = req.franchisePartnerId;
-    const { firstName, lastName, email, phone, role, assignedZones } = req.body;
-
-    const employeeCode = `EMP-EXEC-${Date.now()}`;
-
-    const [result] = await pool.query(
-      `INSERT INTO executive_employees (executive_id, franchise_partner_id, employee_code, first_name, last_name, email, phone, role)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [executiveId, franchisePartnerId, employeeCode, firstName, lastName, email, phone, role || 'exec_assistant']
-    );
-
-    // Assign zones
-    if (assignedZones && assignedZones.length > 0) {
-      const zoneValues = assignedZones.map(zoneId => [result.insertId, zoneId]);
-      await pool.query(
-        'INSERT INTO executive_employee_zones (executive_employee_id, zone_id) VALUES ?',
-        [zoneValues]
-      );
-    }
-
-    res.json({
-      success: true,
-      message: 'Employee created successfully',
-      data: { id: result.insertId, employeeCode }
-    });
-  } catch (error) {
-    console.error('Employee create error:', error);
-    res.status(500).json({ success: false, message: 'Failed to create employee' });
-  }
+  return res.status(403).json({ success: false, message: 'Employee management not allowed for this role. Use FP Portal.' });
 });
 
 router.put('/employees/:id', requireExecutiveScope, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const executiveId = req.executiveId;
-    const { firstName, lastName, email, phone, role, assignedZones } = req.body;
-
-    // Verify ownership
-    const [existing] = await pool.query(
-      'SELECT id FROM executive_employees WHERE id = ? AND executive_id = ?',
-      [id, executiveId]
-    );
-
-    if (existing.length === 0) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
-    }
-
-    await pool.query(
-      `UPDATE executive_employees SET first_name = ?, last_name = ?, email = ?, phone = ?, role = ?
-       WHERE id = ?`,
-      [firstName, lastName, email, phone, role, id]
-    );
-
-    // Update zones
-    if (assignedZones) {
-      await pool.query('DELETE FROM executive_employee_zones WHERE executive_employee_id = ?', [id]);
-      if (assignedZones.length > 0) {
-        const zoneValues = assignedZones.map(zoneId => [id, zoneId]);
-        await pool.query(
-          'INSERT INTO executive_employee_zones (executive_employee_id, zone_id) VALUES ?',
-          [zoneValues]
-        );
-      }
-    }
-
-    res.json({ success: true, message: 'Employee updated successfully' });
-  } catch (error) {
-    console.error('Employee update error:', error);
-    res.status(500).json({ success: false, message: 'Failed to update employee' });
-  }
+  return res.status(403).json({ success: false, message: 'Employee management not allowed for this role. Use FP Portal.' });
 });
 
 router.delete('/employees/:id', requireExecutiveScope, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const executiveId = req.executiveId;
-
-    const [result] = await pool.query(
-      'DELETE FROM executive_employees WHERE id = ? AND executive_id = ?',
-      [id, executiveId]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
-    }
-
-    res.json({ success: true, message: 'Employee deleted successfully' });
-  } catch (error) {
-    console.error('Employee delete error:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete employee' });
-  }
+  return res.status(403).json({ success: false, message: 'Employee management not allowed for this role. Use FP Portal.' });
 });
 
 // =====================================================
@@ -1738,16 +1654,14 @@ router.get('/export/vendors', requireExecutiveScope, async (req, res) => {
 
 router.get('/export/employees', requireExecutiveScope, async (req, res) => {
   try {
-    const executiveId = req.executiveId;
-
     const [employees] = await pool.query(
-      `SELECT ee.*, GROUP_CONCAT(z.name) as zone_names
-       FROM executive_employees ee
-       LEFT JOIN executive_employee_zones eez ON ee.id = eez.executive_employee_id
-       LEFT JOIN zones z ON eez.zone_id = z.id
-       WHERE ee.executive_id = ?
-       GROUP BY ee.id`,
-      [executiveId]
+      `SELECT fpe.*, GROUP_CONCAT(z.name) as zone_names
+       FROM fp_employees fpe
+       LEFT JOIN fp_employee_zones fez ON fpe.id = fez.fp_employee_id
+       LEFT JOIN zones z ON fez.zone_id = z.id
+       WHERE fpe.franchise_partner_id = ?
+       GROUP BY fpe.id`,
+      [req.franchisePartnerId]
     );
 
     res.json({ success: true, data: employees, exportedAt: new Date().toISOString() });
