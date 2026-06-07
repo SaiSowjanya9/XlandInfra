@@ -146,17 +146,20 @@ router.post('/', async (req, res) => {
     const finalDescription = description || notes || null;
     
     const pool = db.pool;
+    const titleValue = customerName || propertyName || communityName || 'Direct Estimate';
+    
     await pool.execute(
       `INSERT INTO estimates (
-        estimate_id, customer_name, customer_email, customer_phone,
+        estimate_id, title, customer_name, customer_email, customer_phone,
         property_type, property_name, property_address,
         services, addons, subtotal, discount, tax, total,
         notes, status, valid_until,
         property_id, community_name, zone, division, no_of_visits, description, package_name, package_id,
         is_active, is_archived, estimate_type
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         estimateId,
+        titleValue,  // title is NOT NULL
         customerName || null,
         customerEmail || null,
         customerPhone || null,
