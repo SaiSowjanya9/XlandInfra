@@ -1309,27 +1309,36 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
     console.log('Fetching all estimates, archived:', isArchived);
     
     // Get from main estimates table with AMC package services
+    // Note: estimates table uses customer_name, total (not total_amount), and may not have franchise_partner_id
     let mainEstimates = [];
     try {
       let query;
       if (isArchived) {
-        query = `SELECT e.*, 'estimates' as source_table, fp.fp_code, fp.company_name as fp_name,
-                        e.estimate_id as estimateId, e.customer_name as clientName, e.customer_name as customerName,
-                        e.estimate_type as estimateType, e.property_type as propertyType,
-                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt,
+        query = `SELECT e.*, 'estimates' as source_table, NULL as fp_code, NULL as fp_name,
+                        e.estimate_id as estimateId, 
+                        COALESCE(e.customer_name, e.title) as clientName, 
+                        COALESCE(e.customer_name, e.title) as customerName,
+                        COALESCE(e.estimate_type, 'direct') as estimateType, 
+                        e.property_type as propertyType,
+                        COALESCE(e.total, e.total_amount) as totalPrice, 
+                        e.archived_at as archivedAt, 
+                        e.created_at as createdAt,
                         amc.service_rows as packageServices
                  FROM estimates e
-                 LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
                  LEFT JOIN amc_packages amc ON e.package_id = amc.id
                  WHERE e.is_archived = 1 ORDER BY e.created_at DESC`;
       } else {
-        query = `SELECT e.*, 'estimates' as source_table, fp.fp_code, fp.company_name as fp_name,
-                        e.estimate_id as estimateId, e.customer_name as clientName, e.customer_name as customerName,
-                        e.estimate_type as estimateType, e.property_type as propertyType,
-                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt,
+        query = `SELECT e.*, 'estimates' as source_table, NULL as fp_code, NULL as fp_name,
+                        e.estimate_id as estimateId, 
+                        COALESCE(e.customer_name, e.title) as clientName, 
+                        COALESCE(e.customer_name, e.title) as customerName,
+                        COALESCE(e.estimate_type, 'direct') as estimateType, 
+                        e.property_type as propertyType,
+                        COALESCE(e.total, e.total_amount) as totalPrice, 
+                        e.archived_at as archivedAt, 
+                        e.created_at as createdAt,
                         amc.service_rows as packageServices
                  FROM estimates e
-                 LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
                  LEFT JOIN amc_packages amc ON e.package_id = amc.id
                  WHERE (e.is_archived = 0 OR e.is_archived IS NULL) ORDER BY e.created_at DESC`;
       }
