@@ -354,13 +354,28 @@ router.get('/lookup/:propertyId', async (req, res) => {
 // ============================================
 // DELETE /api/onboarding/:id  — Soft-delete a property
 // ============================================
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const [result] = await pool.execute(
+    console.log('[Delete Property] Attempting to delete property with id:', id);
+    
+    // Try to delete by numeric id first
+    let result;
+    [result] = await pool.execute(
       `UPDATE onboarded_properties SET status = 'deleted' WHERE id = ?`,
       [id]
     );
+
+    // If no rows affected, try by property_id (string)
+    if (result.affectedRows === 0) {
+      console.log('[Delete Property] No match by id, trying property_id...');
+      [result] = await pool.execute(
+        `UPDATE onboarded_properties SET status = 'deleted' WHERE property_id = ?`,
+        [id]
+      );
+    }
+
+    console.log('[Delete Property] Result:', result.affectedRows, 'rows affected');
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Property not found' });
