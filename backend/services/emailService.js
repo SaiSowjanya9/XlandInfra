@@ -255,6 +255,15 @@ const sendRegistrationNotification = async (userData) => {
 const sendCustomerActivationEmail = async (customerData) => {
   const { email, firstName, tempPassword, activationLink, propertyName } = customerData;
   
+  console.log('📧 sendCustomerActivationEmail called with:', { email, firstName, propertyName, activationLink: activationLink?.substring(0, 50) + '...' });
+  console.log('📧 EMAIL_USER configured:', process.env.EMAIL_USER ? 'Yes' : 'NO - MISSING!');
+  console.log('📧 EMAIL_PASS configured:', process.env.EMAIL_PASS ? 'Yes' : 'NO - MISSING!');
+  
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error('❌ Email credentials not configured! Set EMAIL_USER and EMAIL_PASS in .env');
+    return { success: false, error: 'Email credentials not configured' };
+  }
+  
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
     replyTo: process.env.EMAIL_USER,
@@ -344,11 +353,13 @@ const sendCustomerActivationEmail = async (customerData) => {
   };
 
   try {
+    console.log('📧 Attempting to send email via transporter...');
     const info = await transporter.sendMail(mailOptions);
-    console.log(`📧 Customer activation email sent to ${email} (Message ID: ${info.messageId})`);
+    console.log(`✅ Customer activation email sent to ${email} (Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Error sending customer activation email:', error.message);
+    console.error('❌ Error sending customer activation email:', error.message);
+    console.error('❌ Full error:', error);
     return { success: false, error: error.message };
   }
 };
