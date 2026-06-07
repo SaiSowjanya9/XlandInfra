@@ -79,6 +79,8 @@ const Properties = () => {
   // Check if user is Operations Manager (view-only access)
   const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
   const isOpsManager = currentUser?.role === 'operations_manager';
+  // Admin and super_admin should always have full access
+  const hasFullAccess = !isOpsManager || currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
   // Load properties from backend API (onboarding endpoint)
   const loadData = async () => {
@@ -664,7 +666,7 @@ const Properties = () => {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {!isOpsManager && (
+                          {hasFullAccess && (
                             <>
                               <button
                                 onClick={() => openEditModal(property)}
@@ -1025,7 +1027,7 @@ const Properties = () => {
                 <div className="px-6 py-5">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold text-gray-800">Vendor Assignments</h3>
-                    {!isOpsManager && (
+                    {hasFullAccess && (
                       <button
                         onClick={() => {
                           handleClosePropertyView();
@@ -1114,7 +1116,7 @@ const Properties = () => {
 
             {/* Modal Footer */}
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-              {!isOpsManager ? (
+              {hasFullAccess ? (
                 <button
                   onClick={() => { setDeleteConfirm(viewProperty); handleClosePropertyView(); }}
                   className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-md text-sm font-medium transition-colors"
@@ -1123,7 +1125,7 @@ const Properties = () => {
                 </button>
               ) : <div />}
               <div className="flex items-center gap-2">
-                {!isOpsManager && (
+                {hasFullAccess && (
                   <button
                     onClick={() => handleExportProperty(viewProperty)}
                     className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 transition-colors"
