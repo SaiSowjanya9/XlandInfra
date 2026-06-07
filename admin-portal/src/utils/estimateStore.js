@@ -387,9 +387,15 @@ export const getAddons = () => {
 };
 
 // Async function to fetch addons from API
+// Uses admin endpoint for transformed data with proper property types
 export const fetchAddons = async () => {
   try {
-    const response = await fetch(`${API_URL}/api/addons`);
+    const token = sessionStorage.getItem('pm_auth_token');
+    // Use admin endpoint if token available (admin portal)
+    const endpoint = token ? `${API_URL}/api/admin/all-addons` : `${API_URL}/api/addons`;
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    const response = await fetch(endpoint, { headers });
     const result = await response.json();
     if (result.success) {
       addonsCache = result.data || [];

@@ -1364,6 +1364,19 @@ router.post('/amc-packages', requireCoordinatorScope, async (req, res) => {
 // =====================================================
 // ADD-ONS - FP Coordinators use FP addons (read-only)
 // =====================================================
+
+// Transform addon to frontend format
+const transformAddon = (addon) => ({
+  id: addon.id,
+  addonId: addon.addon_code || `ADDON-${addon.id}`,
+  propertyType: addon.property_type === 'AP' ? 'APT' : addon.property_type === 'VL' ? 'VILLA' : addon.property_type === 'FL' ? 'FLAT' : addon.property_type === 'PL' ? 'PLOT' : addon.property_type,
+  propertyTypeName: addon.property_type === 'GC' ? 'Gated Community' : addon.property_type === 'AP' || addon.property_type === 'APT' ? 'Apartment' : addon.property_type === 'VL' || addon.property_type === 'VILLA' ? 'Villa' : addon.property_type === 'FL' || addon.property_type === 'FLAT' ? 'Flat' : addon.property_type === 'PL' || addon.property_type === 'PLOT' ? 'Plot' : addon.property_type,
+  services: [{ name: addon.service_name || addon.name || '', frequency: addon.frequency_count || 1, frequencyType: addon.frequency_type || 'Monthly', price: parseFloat(addon.price) || 0, description: addon.description || '' }],
+  totalPrice: parseFloat(addon.price) || 0,
+  billingCycle: addon.billing_cycle || 'Monthly',
+  createdAt: addon.created_at
+});
+
 router.get('/addons', requireCoordinatorScope, async (req, res) => {
   try {
     const scopeId = getScopeId(req);
@@ -1377,7 +1390,7 @@ router.get('/addons', requireCoordinatorScope, async (req, res) => {
       [scopeId]
     );
 
-    res.json({ success: true, data: addons });
+    res.json({ success: true, data: addons.map(transformAddon) });
   } catch (error) {
     console.error('Addons fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch addons' });

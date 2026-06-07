@@ -1345,6 +1345,19 @@ router.post('/amc-packages', requireExecutiveScope, async (req, res) => {
 // =====================================================
 // ADD-ONS - FP Executives use FP addons
 // =====================================================
+
+// Transform addon to frontend format
+const transformAddon = (addon) => ({
+  id: addon.id,
+  addonId: addon.addon_code || `ADDON-${addon.id}`,
+  propertyType: addon.property_type === 'AP' ? 'APT' : addon.property_type === 'VL' ? 'VILLA' : addon.property_type === 'FL' ? 'FLAT' : addon.property_type === 'PL' ? 'PLOT' : addon.property_type,
+  propertyTypeName: addon.property_type === 'GC' ? 'Gated Community' : addon.property_type === 'AP' || addon.property_type === 'APT' ? 'Apartment' : addon.property_type === 'VL' || addon.property_type === 'VILLA' ? 'Villa' : addon.property_type === 'FL' || addon.property_type === 'FLAT' ? 'Flat' : addon.property_type === 'PL' || addon.property_type === 'PLOT' ? 'Plot' : addon.property_type,
+  services: [{ name: addon.service_name || addon.name || '', frequency: addon.frequency_count || 1, frequencyType: addon.frequency_type || 'Monthly', price: parseFloat(addon.price) || 0, description: addon.description || '' }],
+  totalPrice: parseFloat(addon.price) || 0,
+  billingCycle: addon.billing_cycle || 'Monthly',
+  createdAt: addon.created_at
+});
+
 router.get('/addons', requireExecutiveScope, async (req, res) => {
   try {
     const franchisePartnerId = req.franchisePartnerId;
@@ -1355,7 +1368,7 @@ router.get('/addons', requireExecutiveScope, async (req, res) => {
         `SELECT * FROM fp_addons WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
         [franchisePartnerId]
       );
-      return res.json({ success: true, data: addons });
+      return res.json({ success: true, data: addons.map(transformAddon) });
     }
     
     res.json({ success: true, data: [] });
