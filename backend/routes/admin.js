@@ -2024,12 +2024,12 @@ router.get('/fp-view/:fpId/amc-packages', authenticate, adminOnly, async (req, r
   }
 });
 
-// Get ALL Add-ons (Admin mode)
+// Get ALL Add-ons (Admin mode) - from fp_addons table
 router.get('/all-addons', authenticate, adminOnly, async (req, res) => {
   try {
     const [addons] = await pool.execute(
       `SELECT a.*, fp.fp_code, fp.company_name as fp_name
-       FROM addons a
+       FROM fp_addons a
        LEFT JOIN franchise_partners fp ON a.franchise_partner_id = fp.id
        ORDER BY a.created_at DESC`
     );
@@ -2051,7 +2051,7 @@ router.get('/fp-view/:fpId/addons', authenticate, adminOnly, async (req, res) =>
     }
     
     const [addons] = await pool.execute(
-      `SELECT * FROM addons WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
+      `SELECT * FROM fp_addons WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
       [fpIdNum]
     );
     
