@@ -179,8 +179,8 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         completed: r.completed || 0 
       })).catch(() => ({ total: 0, pending: 0, completed: 0 })),
       
-      // Estimates count
-      pool.execute(`SELECT COUNT(*) as count FROM estimates WHERE ${scopeColumn} = ?`, [scopeId])
+      // Estimates count - FP managers use fp_estimates
+      pool.execute(`SELECT COUNT(*) as count FROM fp_estimates WHERE ${scopeColumn} = ?`, [scopeId])
         .then(([r]) => r[0].count).catch(() => 0),
       
       // Recent work orders - FP managers see FP work orders

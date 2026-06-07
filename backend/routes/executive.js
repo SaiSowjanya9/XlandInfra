@@ -186,7 +186,7 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
     );
 
     const [estimatesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM estimates WHERE franchise_partner_id = ?`,
+      `SELECT COUNT(*) as count FROM fp_estimates WHERE franchise_partner_id = ?`,
       [franchisePartnerId]
     );
 
