@@ -2033,6 +2033,51 @@ router.get('/fp-view/:fpId/amc-packages', authenticate, adminOnly, async (req, r
   }
 });
 
+// Map backend property type codes to frontend codes
+const mapPropertyType = (dbType) => {
+  const mapping = {
+    'GC': 'GC',
+    'AP': 'APT', 'APT': 'APT', 'Apartment': 'APT',
+    'VL': 'VILLA', 'VILLA': 'VILLA', 'Villa': 'VILLA', 'Villas': 'VILLA',
+    'FL': 'FLAT', 'FLAT': 'FLAT', 'Flat': 'FLAT', 'Flats': 'FLAT',
+    'PL': 'PLOT', 'PLOT': 'PLOT', 'Plot': 'PLOT', 'Plots': 'PLOT'
+  };
+  return mapping[dbType] || dbType;
+};
+
+const getPropertyTypeName = (type) => {
+  const names = {
+    'GC': 'Gated Community',
+    'APT': 'Apartment', 'AP': 'Apartment',
+    'VILLA': 'Villa', 'VL': 'Villa',
+    'FLAT': 'Flat', 'FL': 'Flat',
+    'PLOT': 'Plot', 'PL': 'Plot'
+  };
+  return names[type] || type;
+};
+
+// Transform fp_addons row to frontend format
+const transformAddon = (addon) => ({
+  id: addon.id,
+  addonId: addon.addon_code || `ADDON-${addon.id}`,
+  propertyType: mapPropertyType(addon.property_type),
+  propertyTypeName: getPropertyTypeName(addon.property_type),
+  services: [{
+    name: addon.service_name || '',
+    frequency: addon.frequency_count || 1,
+    frequencyType: addon.frequency_type || 'Monthly',
+    price: parseFloat(addon.price) || 0,
+    description: addon.description || ''
+  }],
+  totalPrice: parseFloat(addon.price) || 0,
+  billingCycle: addon.billing_cycle || 'Monthly',
+  franchisePartnerId: addon.franchise_partner_id,
+  fpCode: addon.fp_code,
+  fpName: addon.fp_name,
+  createdAt: addon.created_at,
+  updatedAt: addon.updated_at
+});
+
 // Get ALL Add-ons (Admin mode) - from fp_addons table
 router.get('/all-addons', authenticate, adminOnly, async (req, res) => {
   try {
@@ -2043,8 +2088,9 @@ router.get('/all-addons', authenticate, adminOnly, async (req, res) => {
        ORDER BY a.created_at DESC`
     );
     
-    console.log('Admin all-addons: Found', addons.length, 'addons');
-    res.json({ success: true, data: addons || [] });
+    const transformedAddons = addons.map(transformAddon);
+    console.log('Admin all-addons: Found', transformedAddons.length, 'addons');
+    res.json({ success: true, data: transformedAddons || [] });
   } catch (error) {
     console.error('Error fetching all addons:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch addons' });
@@ -2064,8 +2110,9 @@ router.get('/fp-view/:fpId/addons', authenticate, adminOnly, async (req, res) =>
       [fpIdNum]
     );
     
-    console.log('Admin fp-view addons: Found', addons.length, 'for FP', fpIdNum);
-    res.json({ success: true, data: addons || [] });
+    const transformedAddons = addons.map(transformAddon);
+    console.log('Admin fp-view addons: Found', transformedAddons.length, 'for FP', fpIdNum);
+    res.json({ success: true, data: transformedAddons || [] });
   } catch (error) {
     console.error('Error fetching FP addons:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch addons' });
