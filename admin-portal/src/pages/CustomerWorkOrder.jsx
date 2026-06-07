@@ -452,25 +452,15 @@ const CustomerWorkOrder = ({ user }) => {
               {needsBlockFlat && (
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Block <span className="text-red-500">*</span></label>
-                  <select
+                  <input
+                    type="text"
                     value={formData.block}
                     onChange={(e) => setFormData(prev => ({ ...prev, block: e.target.value }))}
+                    placeholder="Enter block number (e.g., A, B, 1, 2)"
                     className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
                       formErrors.block ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
                     }`}
-                  >
-                    <option value="">Select Block</option>
-                    {selectedProperty?.blockNames && (
-                      Array.isArray(selectedProperty.blockNames) 
-                        ? selectedProperty.blockNames.map((blockName, idx) => (
-                            <option key={idx} value={blockName}>{blockName}</option>
-                          ))
-                        : Object.values(selectedProperty.blockNames).map((blockName, idx) => (
-                            <option key={idx} value={blockName}>{blockName}</option>
-                          ))
-                    )}
-                    <option value="N/A">N/A</option>
-                  </select>
+                  />
                   {formErrors.block && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.block}</p>}
                 </div>
               )}
