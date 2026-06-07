@@ -3413,10 +3413,19 @@ router.delete('/amc-packages/:id', requireFPScope, async (req, res) => {
   }
 });
 
-// Transform addon to frontend format
+// Transform addon to frontend format - include both transformed and raw fields
 const transformAddon = (addon) => ({
   id: addon.id,
   addonId: addon.addon_code || `ADDON-${addon.id}`,
+  // Raw fields for frontend compatibility
+  service_name: addon.service_name || '',
+  property_type: addon.property_type,
+  frequency_type: addon.frequency_type || 'Monthly',
+  frequency_count: addon.frequency_count || 1,
+  price: parseFloat(addon.price) || 0,
+  description: addon.description || '',
+  billing_cycle: addon.billing_cycle || 'Monthly',
+  // Transformed fields
   propertyType: addon.property_type === 'AP' ? 'APT' : addon.property_type === 'VL' ? 'VILLA' : addon.property_type === 'FL' ? 'FLAT' : addon.property_type === 'PL' ? 'PLOT' : addon.property_type,
   propertyTypeName: addon.property_type === 'GC' ? 'Gated Community' : addon.property_type === 'AP' || addon.property_type === 'APT' ? 'Apartment' : addon.property_type === 'VL' || addon.property_type === 'VILLA' ? 'Villa' : addon.property_type === 'FL' || addon.property_type === 'FLAT' ? 'Flat' : addon.property_type === 'PL' || addon.property_type === 'PLOT' ? 'Plot' : addon.property_type,
   services: [{ name: addon.service_name || '', frequency: addon.frequency_count || 1, frequencyType: addon.frequency_type || 'Monthly', price: parseFloat(addon.price) || 0, description: addon.description || '' }],
