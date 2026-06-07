@@ -589,9 +589,19 @@ const CoordinatorVendors = ({ user }) => {
                   <input
                     type="text"
                     value={formData.gstNumber}
-                    onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                      if (value.length <= 15) {
+                        setFormData({ ...formData, gstNumber: value });
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
+                    placeholder="22AAAAA0000A1Z5"
+                    maxLength={15}
                   />
+                  {formData.gstNumber && formData.gstNumber.length !== 15 && (
+                    <p className="text-xs text-red-500 mt-1">GST must be 15 characters</p>
+                  )}
                 </div>
 
                 <div>

@@ -1100,11 +1100,19 @@ const VendorDetails = () => {
                     <input
                       type="text"
                       value={editForm.gstNumber || ''}
-                      onChange={(e) => handleEditFormChange('gstNumber', e.target.value.toUpperCase())}
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        if (value.length <= 15) {
+                          handleEditFormChange('gstNumber', value);
+                        }
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
                       placeholder="22AAAAA0000A1Z5"
                       maxLength={15}
                     />
+                    {editForm.gstNumber && editForm.gstNumber.length !== 15 && (
+                      <p className="text-xs text-red-500 mt-1">GST must be 15 characters</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">PAN Number</label>

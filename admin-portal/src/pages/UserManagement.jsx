@@ -792,10 +792,20 @@ const UserManagement = () => {
                         <input
                           type="text"
                           value={formData.gstNumber}
-                          onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value.toUpperCase() })}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                            if (value.length <= 15) {
+                              setFormData({ ...formData, gstNumber: value });
+                            }
+                          }}
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
                           placeholder="22AAAAA0000A1Z5"
+                          maxLength={15}
+                          pattern="[A-Z0-9]{15}"
                         />
+                        {formData.gstNumber && formData.gstNumber.length !== 15 && (
+                          <p className="text-xs text-red-500 mt-1">GST must be 15 characters</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">PAN Number</label>
