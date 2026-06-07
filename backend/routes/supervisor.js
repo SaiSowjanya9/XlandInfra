@@ -7,7 +7,28 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const { sendCustomerActivationEmail } = require('../services/emailService');
+
+// Constants for customer activation
+const ACTIVATION_EXPIRY_HOURS = 72;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://xlandinfra.com';
+
+// Generate secure temporary password (8 chars, alphanumeric)
+const generateTempPassword = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let password = '';
+  for (let i = 0; i < 8; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
+// Generate secure activation token
+const generateActivationToken = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
 const { authenticate } = require('../middleware/auth');
 const {
   attachSupervisorScope,
@@ -807,28 +828,60 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
       );
 
       let customerResult = null;
+      let emailSent = false;
       if (contactEmail) {
-        const tempPassword = Math.random().toString(36).slice(-8);
-        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        const tempPassword = generateTempPassword();
+        const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+        const activationToken = generateActivationToken();
+        const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
         
-        const [existing] = await pool.query('SELECT id FROM customer_accounts WHERE email = ?', [contactEmail]);
+        const [existing] = await pool.query('SELECT id, is_activated FROM customer_accounts WHERE email = ?', [contactEmail.toLowerCase()]);
         
         if (existing.length === 0) {
           [customerResult] = await pool.query(
             `INSERT INTO customer_accounts (
-              customer_id, name, email, phone, password_hash, property_id,
-              supervisor_id, franchise_partner_id, is_activated, temp_password
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [clientId, contactName, contactEmail, `${contactCountryCode}${contactPhone}`,
-              hashedPassword, propertyResult.insertId, supervisorId, franchisePartnerId, 0, tempPassword]
+              customer_id, first_name, last_name, email, phone, temp_password_hash, property_id,
+              activation_token, activation_expires, is_activated, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [clientId, contactName, '', contactEmail.toLowerCase(), `${contactCountryCode}${contactPhone}`,
+              tempPasswordHash, propertyResult.insertId, activationToken, activationExpires, 0, 'supervisor']
           );
+          
+          // Send activation email
+          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
+          const emailResult = await sendCustomerActivationEmail({
+            email: contactEmail.toLowerCase(),
+            firstName: contactName,
+            tempPassword,
+            activationLink,
+            propertyName: communityName
+          });
+          emailSent = emailResult.success;
+        } else if (!existing[0].is_activated) {
+          // Resend activation email for inactive account
+          await pool.query(
+            `UPDATE customer_accounts 
+             SET temp_password_hash = ?, activation_token = ?, activation_expires = ?, updated_at = NOW()
+             WHERE id = ?`,
+            [tempPasswordHash, activationToken, activationExpires, existing[0].id]
+          );
+          
+          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
+          const emailResult = await sendCustomerActivationEmail({
+            email: contactEmail.toLowerCase(),
+            firstName: contactName,
+            tempPassword,
+            activationLink,
+            propertyName: communityName
+          });
+          emailSent = emailResult.success;
         }
       }
 
       res.status(201).json({
         success: true,
-        message: 'Property and customer created successfully',
-        data: { propertyId: propertyIdGen, clientId, customerId: customerResult?.insertId || null }
+        message: 'Property and customer created successfully' + (emailSent ? ', activation email sent' : ''),
+        data: { propertyId: propertyIdGen, clientId, customerId: customerResult?.insertId || null, emailSent }
       });
     } else {
       const clientId = `CLT-SUP-${Date.now()}`;
@@ -848,11 +901,13 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
 });
 
 // =====================================================
-// VENDORS
+// VENDORS (ZONE-CENTRIC + OWN CREATED)
 // =====================================================
 router.get('/vendors', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
+    const employeeId = getEmployeeIdForZoneLookup(req);
+    const creatorEmail = getCreatorIdentifier(req);
     
     // Get FP ID from multiple sources (same as properties route)
     let franchisePartnerId = req.franchisePartnerId || req.fpId || req.user?.franchisePartnerId || req.user?.fpId;
@@ -870,24 +925,27 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
       } catch (e) { /* ignore */ }
     }
     
-    console.log('[Supervisor Vendors] supervisorId:', supervisorId, 'franchisePartnerId:', franchisePartnerId);
+    console.log('[Supervisor Vendors] supervisorId:', supervisorId, 'franchisePartnerId:', franchisePartnerId, 'creatorEmail:', creatorEmail);
 
-    // For FP employees, show all FP vendors (zone-based like Manager)
+    // For FP employees, show zone-centric + own created vendors
     if (franchisePartnerId) {
-      // Get employee's assigned zones from fp_employee_zones table
-      let assignedZones = [];
-      try {
-        const [zones] = await pool.execute(
-          `SELECT zone_name FROM fp_employee_zones WHERE fp_employee_id = ?`,
-          [req.user?.id || supervisorId]
-        );
-        assignedZones = zones.map(z => z.zone_name);
-      } catch (e) {
-        console.log('Zone fetch error:', e.message);
+      // Get employee's assigned zones
+      const assignedZones = await getAssignedZones(employeeId);
+
+      // Build zone + creator filter
+      let zoneClause = '';
+      let zoneParams = [];
+      if (assignedZones.length > 0) {
+        const placeholders = assignedZones.map(() => '?').join(',');
+        zoneClause = ` AND (ov.zone IN (${placeholders}) OR ov.created_by = ? OR ov.created_by = ?)`;
+        zoneParams = [...assignedZones, creatorEmail, req.user?.username || ''];
+      } else {
+        // No zones = only see own created
+        zoneClause = ` AND (ov.created_by = ? OR ov.created_by = ?)`;
+        zoneParams = [creatorEmail, req.user?.username || ''];
       }
 
-      // Get all FP vendors like Manager portal
-      let vendorQuery = `
+      const vendorQuery = `
         SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
                ov.zone, ov.zone as zone_name, ov.area_name, ov.area_name as area, ov.division,
                ov.owner_name, ov.owner_name as company_name, ov.owner_name as contact_person,
@@ -907,24 +965,16 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
                'fp' as vendor_type, FALSE as can_modify, FALSE as can_delete
         FROM onboarded_vendors ov
         LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
-        WHERE ov.franchise_partner_id = ?
+        WHERE ov.franchise_partner_id = ?${zoneClause}
+        ORDER BY ov.created_at DESC
       `;
-      let params = [franchisePartnerId];
 
-      // Filter by zones if assigned
-      if (assignedZones.length > 0) {
-        vendorQuery += ` AND ov.zone IN (${assignedZones.map(() => '?').join(',')})`;
-        params.push(...assignedZones);
-      }
-
-      vendorQuery += ` ORDER BY ov.created_at DESC`;
-
-      const [allVendors] = await pool.query(vendorQuery, params);
+      const [allVendors] = await pool.query(vendorQuery, [franchisePartnerId, ...zoneParams]);
 
       return res.json({
         success: true,
         data: {
-          own: [],
+          own: allVendors,
           assigned: [],
           all: allVendors
         }
@@ -1249,7 +1299,7 @@ router.delete('/employees/:id', requireSupervisorScope, async (req, res) => {
 });
 
 // =====================================================
-// ESTIMATES - Supervisor sees FP estimates from fp_estimates table
+// ESTIMATES - Supervisor sees zone-centric + own created estimates
 // =====================================================
 router.get('/estimates', requireSupervisorScope, async (req, res) => {
   try {
@@ -1257,11 +1307,29 @@ router.get('/estimates', requireSupervisorScope, async (req, res) => {
     const isArchived = archived === 'true';
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
+    const employeeId = getEmployeeIdForZoneLookup(req);
+    const creatorEmail = getCreatorIdentifier(req);
     
     let estimates = [];
     
     // If supervisor is linked to an FP, fetch from fp_estimates table
     if (franchisePartnerId) {
+      // Get assigned zones
+      const assignedZones = await getAssignedZones(employeeId);
+      
+      // Build zone + creator filter
+      let zoneClause = '';
+      let zoneParams = [];
+      if (assignedZones.length > 0) {
+        const placeholders = assignedZones.map(() => '?').join(',');
+        zoneClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_name = ? OR e.created_by_name = ?)`;
+        zoneParams = [...assignedZones, creatorEmail, req.user?.username || ''];
+      } else {
+        // No zones = only see own created
+        zoneClause = ` AND (e.created_by_name = ? OR e.created_by_name = ?)`;
+        zoneParams = [creatorEmail, req.user?.username || ''];
+      }
+      
       const [fpEstimates] = await pool.query(
         `SELECT e.*, amc.service_rows as packageServices,
                 COALESCE(
@@ -1273,9 +1341,9 @@ router.get('/estimates', requireSupervisorScope, async (req, res) => {
          LEFT JOIN fp_employees fpe ON e.created_by_name = fpe.email OR e.created_by_name = fpe.username
          LEFT JOIN users u ON e.created_by_name = u.email
          LEFT JOIN amc_packages amc ON e.package_id = amc.id
-         WHERE e.franchise_partner_id = ? AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}
+         WHERE e.franchise_partner_id = ? AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}${zoneClause}
          ORDER BY e.created_at DESC`,
-        [franchisePartnerId]
+        [franchisePartnerId, ...zoneParams]
       );
       
       // Enrich estimates with property_code and parse addons

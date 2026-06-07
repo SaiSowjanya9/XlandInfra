@@ -163,6 +163,30 @@ function buildVendorAssignmentZoneFilter(zones, vendorAlias = 'v') {
 }
 
 /**
+ * Build zone filter with "OR created_by" logic for vendors
+ * If no zones assigned: only show own created data
+ * @param {string[]} zones - Array of zone names
+ * @param {string} createdBy - Creator identifier (email/username)
+ * @param {string} tableAlias - Table alias (e.g., 'ov')
+ * @returns {{ clause: string, params: string[] }} SQL clause and parameters
+ */
+function buildVendorZoneOrCreatorFilter(zones, createdBy, tableAlias = 'ov') {
+  // If no zones assigned, only show own created data
+  if (!zones || zones.length === 0) {
+    return { 
+      clause: ` AND (${tableAlias}.created_by = ? OR ${tableAlias}.created_by_id = ?)`, 
+      params: [createdBy, createdBy] 
+    };
+  }
+  
+  const placeholders = zones.map(() => '?').join(',');
+  return {
+    clause: ` AND (${tableAlias}.zone IN (${placeholders}) OR ${tableAlias}.created_by = ? OR ${tableAlias}.created_by_id = ?)`,
+    params: [...zones, createdBy, createdBy]
+  };
+}
+
+/**
  * Get employee ID for zone lookup from request object
  * Handles different portal contexts (Manager, Coordinator, Supervisor, Executive)
  * @param {object} req - Express request object
@@ -191,14 +215,19 @@ async function hasZoneRestrictions(employeeId) {
 /**
  * Build zone filter with "OR created_by" logic for properties
  * Employees see: zone-centric data + their own created data
+ * If no zones assigned: only show own created data
  * @param {string[]} zones - Array of zone names
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} tableAlias - Table alias (e.g., 'p' for properties)
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p') {
+  // If no zones assigned, only show own created data
   if (!zones || zones.length === 0) {
-    return { clause: '', params: [] };
+    return { 
+      clause: ` AND ${tableAlias}.created_by = ?`, 
+      params: [createdBy] 
+    };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -210,14 +239,19 @@ function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p') {
 
 /**
  * Build zone filter with "OR created_by" logic for onboarded_properties
+ * If no zones assigned: only show own created data
  * @param {string[]} zones - Array of zone names
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} tableAlias - Table alias (e.g., 'op')
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'op') {
+  // If no zones assigned, only show own created data
   if (!zones || zones.length === 0) {
-    return { clause: '', params: [] };
+    return { 
+      clause: ` AND ${tableAlias}.created_by = ?`, 
+      params: [createdBy] 
+    };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -229,6 +263,7 @@ function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias 
 
 /**
  * Build zone filter with "OR created_by" logic for work orders
+ * If no zones assigned: only show own created data
  * @param {string[]} zones - Array of zone names
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} propertyAlias - Property table alias
@@ -236,8 +271,12 @@ function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias 
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p', workOrderAlias = 'wo') {
+  // If no zones assigned, only show own created data
   if (!zones || zones.length === 0) {
-    return { clause: '', params: [] };
+    return { 
+      clause: ` AND ${workOrderAlias}.created_by = ?`, 
+      params: [createdBy] 
+    };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -249,6 +288,7 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
 
 /**
  * Build zone filter with "OR created_by" logic for clients/customers
+ * If no zones assigned: only show own created data
  * @param {string[]} zones - Array of zone names
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} clientAlias - Client table alias
@@ -256,8 +296,12 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', propertyAlias = 'p') {
+  // If no zones assigned, only show own created data
   if (!zones || zones.length === 0) {
-    return { clause: '', params: [] };
+    return { 
+      clause: ` AND ${clientAlias}.created_by = ?`, 
+      params: [createdBy] 
+    };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -269,6 +313,7 @@ function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', pro
 
 /**
  * Build zone filter with "OR created_by" logic for estimates
+ * If no zones assigned: only show own created data
  * @param {string[]} zones - Array of zone names
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} estimateAlias - Estimate table alias
@@ -276,8 +321,12 @@ function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', pro
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildEstimateZoneOrCreatorFilter(zones, createdBy, estimateAlias = 'e', propertyAlias = 'p') {
+  // If no zones assigned, only show own created data
   if (!zones || zones.length === 0) {
-    return { clause: '', params: [] };
+    return { 
+      clause: ` AND ${estimateAlias}.created_by = ?`, 
+      params: [createdBy] 
+    };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -312,6 +361,7 @@ module.exports = {
   buildOnboardedPropertyZoneOrCreatorFilter,
   buildWorkOrderZoneOrCreatorFilter,
   buildClientZoneOrCreatorFilter,
+  buildVendorZoneOrCreatorFilter,
   buildEstimateZoneOrCreatorFilter,
   getCreatorIdentifier
 };
