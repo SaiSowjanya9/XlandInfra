@@ -741,17 +741,16 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {(filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType))).map((pkg) => {
-                          // Handle services - could be string, array, or object
-                          let servicesText = '-';
-                          if (typeof pkg.services === 'string') {
-                            servicesText = pkg.services;
-                          } else if (Array.isArray(pkg.services)) {
-                            servicesText = pkg.services.map(s => typeof s === 'string' ? s : s.name || s.service || '').join(', ');
-                          } else if (pkg.services_data && Array.isArray(pkg.services_data)) {
-                            servicesText = pkg.services_data.map(s => s.name || s.service || '').join(', ');
-                          } else if (pkg.serviceRows && Array.isArray(pkg.serviceRows)) {
-                            servicesText = pkg.serviceRows.map(s => s.service || s.name || '').join(', ');
+                          // Parse services JSON if it's a string, or use directly if object
+                          let servicesData = pkg.services;
+                          if (typeof servicesData === 'string') {
+                            try { servicesData = JSON.parse(servicesData); } catch(e) { servicesData = null; }
                           }
+                          // Extract service names from serviceRows array
+                          const serviceRows = servicesData?.serviceRows || pkg.serviceRows || servicesData || [];
+                          const servicesText = Array.isArray(serviceRows) 
+                            ? serviceRows.map(s => s.name || s.service || 'Service').filter(Boolean).join(', ') 
+                            : '-';
                           const getBillingBadgeColor = (billing) => {
                             switch(billing) {
                               case 'monthly': return 'bg-blue-100 text-blue-700 border-blue-200';
