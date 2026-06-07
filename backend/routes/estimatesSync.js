@@ -353,15 +353,28 @@ router.delete('/archived/delete-all', async (req, res) => {
     }
     
     const pool = db.pool;
-    // Delete all estimates that are archived (is_archived = 1 OR status = 'Archived')
-    const [result] = await pool.execute(
+    let totalDeleted = 0;
+    
+    // Delete from estimates table
+    const [result1] = await pool.execute(
       `DELETE FROM estimates WHERE is_archived = 1 OR status = 'Archived'`
     );
+    totalDeleted += result1.affectedRows;
+    
+    // Also delete from fp_estimates table
+    try {
+      const [result2] = await pool.execute(
+        `DELETE FROM fp_estimates WHERE is_archived = 1`
+      );
+      totalDeleted += result2.affectedRows;
+    } catch (e) { 
+      console.log('FP estimates delete:', e.message); 
+    }
     
     res.json({ 
       success: true, 
-      message: `${result.affectedRows} archived estimates deleted`,
-      deletedCount: result.affectedRows
+      message: `${totalDeleted} archived estimates deleted`,
+      deletedCount: totalDeleted
     });
   } catch (error) {
     console.error('Delete all archived estimates error:', error);

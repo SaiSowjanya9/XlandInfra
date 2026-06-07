@@ -451,11 +451,15 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             ? pkg.addons.reduce((sum, a) => sum + (parseFloat(a.cost) || 0), 0) 
                             : 0;
                           const totalRate = (pkg.rate || 0) + addonsTotal;
-                          const servicesText = typeof pkg.services === 'string' 
-                            ? pkg.services 
-                            : Array.isArray(pkg.services) 
-                              ? pkg.services.map(s => s.name).filter(Boolean).join(', ')
-                              : '';
+                          // Get services text from services field or serviceRows fallback
+                          let servicesText = '';
+                          if (typeof pkg.services === 'string' && pkg.services.trim()) {
+                            servicesText = pkg.services;
+                          } else if (Array.isArray(pkg.services) && pkg.services.length > 0) {
+                            servicesText = pkg.services.map(s => typeof s === 'string' ? s : s.name).filter(Boolean).join(', ');
+                          } else if (Array.isArray(pkg.serviceRows) && pkg.serviceRows.length > 0) {
+                            servicesText = pkg.serviceRows.map(r => r.service || r.name).filter(Boolean).join(', ');
+                          }
                           
                           return (
                             <tr key={pkg.packageId} className="hover:bg-gray-50 transition-colors">
