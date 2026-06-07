@@ -245,9 +245,10 @@ function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p') {
   }
   
   const placeholders = zones.map(() => '?').join(',');
+  // properties table uses zone_id column only
   return {
-    clause: ` AND ((${tableAlias}.zone_id IN (${placeholders}) OR ${tableAlias}.zone IN (${placeholders})) OR ${tableAlias}.created_by = ?)`,
-    params: [...zones, ...zones, createdBy]
+    clause: ` AND (${tableAlias}.zone_id IN (${placeholders}) OR ${tableAlias}.created_by = ?)`,
+    params: [...zones, createdBy]
   };
 }
 
@@ -294,8 +295,9 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
   }
   
   const placeholders = zones.map(() => '?').join(',');
+  // properties table uses zone_id column, work orders may have zone column
   return {
-    clause: ` AND ((${propertyAlias}.zone_id IN (${placeholders}) OR ${propertyAlias}.zone IN (${placeholders})) OR ${workOrderAlias}.created_by = ?)`,
+    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${workOrderAlias}.zone IN (${placeholders}) OR ${workOrderAlias}.created_by = ?)`,
     params: [...zones, ...zones, createdBy]
   };
 }
@@ -319,9 +321,10 @@ function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', pro
   }
   
   const placeholders = zones.map(() => '?').join(',');
+  // properties table uses zone_id column only
   return {
-    clause: ` AND ((${propertyAlias}.zone_id IN (${placeholders}) OR ${propertyAlias}.zone IN (${placeholders})) OR ${clientAlias}.created_by = ?)`,
-    params: [...zones, ...zones, createdBy]
+    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${clientAlias}.created_by = ?)`,
+    params: [...zones, createdBy]
   };
 }
 
@@ -344,9 +347,10 @@ function buildEstimateZoneOrCreatorFilter(zones, createdBy, estimateAlias = 'e',
   }
   
   const placeholders = zones.map(() => '?').join(',');
+  // properties table uses zone_id column only
   return {
-    clause: ` AND ((${propertyAlias}.zone_id IN (${placeholders}) OR ${propertyAlias}.zone IN (${placeholders})) OR ${estimateAlias}.created_by = ?)`,
-    params: [...zones, ...zones, createdBy]
+    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${estimateAlias}.created_by = ?)`,
+    params: [...zones, createdBy]
   };
 }
 

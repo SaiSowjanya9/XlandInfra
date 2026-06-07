@@ -236,14 +236,35 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     resetForm();
   };
 
-  const handleDeletePackage = (packageId) => {
+  const handleDeletePackage = async (pkg) => {
     if (window.confirm('Are you sure you want to delete this AMC package?')) {
-      // Delete from storage
-      deleteAMCPackage(packageId);
-      // Update local state immediately (without calling loadData to avoid any re-seeding)
-      setAmcPackages(prevPackages => prevPackages.filter(pkg => pkg.packageId !== packageId));
-      showToast?.('AMC Package deleted', 'success');
-      if (showEditModal) setShowEditModal(false);
+      try {
+        // Use admin endpoint for fp_amc_packages (uses numeric id), else use packageId
+        const deleteId = pkg.id || pkg.packageId;
+        const url = pkg.id 
+          ? `${API_BASE}/api/admin/amc-packages/${pkg.id}`
+          : `${API_BASE}/api/amc-packages/${pkg.packageId}`;
+        
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          // Update local state immediately
+          setAmcPackages(prevPackages => prevPackages.filter(p => 
+            (p.id !== pkg.id) && (p.packageId !== pkg.packageId)
+          ));
+          showToast?.('AMC Package deleted', 'success');
+          if (showEditModal) setShowEditModal(false);
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        showToast?.('Failed to delete AMC package', 'error');
+      }
     }
   };
 
@@ -515,7 +536,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                                       <Mail className="w-4 h-4" />
                                     </button>
                                     <button
-                                      onClick={() => handleDeletePackage(pkg.packageId)}
+                                      onClick={() => handleDeletePackage(pkg)}
                                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                       title="Delete"
                                     >
@@ -987,7 +1008,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
             {/* Modal Footer */}
             <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 sticky bottom-0">
               <button
-                onClick={() => handleDeletePackage(editingPackage.packageId)}
+                onClick={() => handleDeletePackage(editingPackage)}
                 className="px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 flex items-center justify-center gap-2 order-last sm:order-first"
               >
                 <Trash2 className="w-4 h-4" />

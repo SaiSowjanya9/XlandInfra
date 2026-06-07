@@ -2037,6 +2037,29 @@ router.get('/all-amc-packages', authenticate, adminOnly, async (req, res) => {
   }
 });
 
+// DELETE AMC Package (Admin mode) - deletes from fp_amc_packages table
+router.delete('/amc-packages/:id', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Delete from fp_amc_packages table
+    const [result] = await pool.execute(
+      'DELETE FROM fp_amc_packages WHERE id = ?',
+      [id]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'AMC Package not found' });
+    }
+    
+    console.log('Admin deleted AMC package:', id);
+    res.json({ success: true, message: 'AMC Package deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting AMC package:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete AMC package' });
+  }
+});
+
 // Get FP AMC Packages
 router.get('/fp-view/:fpId/amc-packages', authenticate, adminOnly, async (req, res) => {
   try {
@@ -2120,6 +2143,29 @@ router.get('/all-addons', authenticate, adminOnly, async (req, res) => {
   } catch (error) {
     console.error('Error fetching all addons:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch addons' });
+  }
+});
+
+// DELETE Add-on (Admin mode) - deletes from fp_addons table
+router.delete('/addons/:id', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Delete from fp_addons table
+    const [result] = await pool.execute(
+      'DELETE FROM fp_addons WHERE id = ?',
+      [id]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Add-on not found' });
+    }
+    
+    console.log('Admin deleted addon:', id);
+    res.json({ success: true, message: 'Add-on deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting addon:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete addon' });
   }
 });
 
