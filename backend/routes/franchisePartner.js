@@ -2795,21 +2795,24 @@ router.get('/estimates', requireFPScope, async (req, res) => {
       } catch (e) { /* ignore */ }
     }
 
-    let query = `SELECT * FROM fp_estimates WHERE franchise_partner_id = ?`;
+    let query = `SELECT fe.*, amc.service_rows as packageServices 
+                 FROM fp_estimates fe 
+                 LEFT JOIN amc_packages amc ON fe.package_id = amc.id
+                 WHERE fe.franchise_partner_id = ?`;
     const params = [req.fpId];
 
     if (status) {
-      query += ' AND status = ?';
+      query += ' AND fe.status = ?';
       params.push(status);
     }
 
     if (archived === 'true') {
-      query += ' AND is_archived = 1';
+      query += ' AND fe.is_archived = 1';
     } else {
-      query += ' AND (is_archived = 0 OR is_archived IS NULL)';
+      query += ' AND (fe.is_archived = 0 OR fe.is_archived IS NULL)';
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY fe.created_at DESC';
 
     const [estimates] = await pool.execute(query, params);
 

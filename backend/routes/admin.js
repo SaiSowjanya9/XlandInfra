@@ -1308,7 +1308,7 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
     
     console.log('Fetching all estimates, archived:', isArchived);
     
-    // Get from main estimates table
+    // Get from main estimates table with AMC package services
     let mainEstimates = [];
     try {
       let query;
@@ -1316,17 +1316,21 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
         query = `SELECT e.*, 'estimates' as source_table, fp.fp_code, fp.company_name as fp_name,
                         e.estimate_id as estimateId, e.customer_name as clientName, e.customer_name as customerName,
                         e.estimate_type as estimateType, e.property_type as propertyType,
-                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt
+                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt,
+                        amc.service_rows as packageServices
                  FROM estimates e
                  LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
+                 LEFT JOIN amc_packages amc ON e.package_id = amc.id
                  WHERE e.is_archived = 1 ORDER BY e.created_at DESC`;
       } else {
         query = `SELECT e.*, 'estimates' as source_table, fp.fp_code, fp.company_name as fp_name,
                         e.estimate_id as estimateId, e.customer_name as clientName, e.customer_name as customerName,
                         e.estimate_type as estimateType, e.property_type as propertyType,
-                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt
+                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt,
+                        amc.service_rows as packageServices
                  FROM estimates e
                  LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
+                 LEFT JOIN amc_packages amc ON e.package_id = amc.id
                  WHERE (e.is_archived = 0 OR e.is_archived IS NULL) ORDER BY e.created_at DESC`;
       }
       const [results] = await pool.execute(query);
@@ -1336,7 +1340,7 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
       console.log('Main estimates query error:', e.message);
     }
     
-    // Get from fp_estimates table
+    // Get from fp_estimates table with AMC package services
     let fpEstimates = [];
     try {
       let query;
@@ -1344,17 +1348,21 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
         query = `SELECT fe.*, 'fp_estimates' as source_table, fp.fp_code, fp.company_name as fp_name,
                         fe.estimate_id as estimateId, fe.client_name as clientName, fe.client_name as customerName,
                         fe.estimate_type as estimateType, fe.property_type as propertyType,
-                        fe.total_amount as totalPrice, fe.archived_at as archivedAt, fe.created_at as createdAt
+                        fe.total_amount as totalPrice, fe.archived_at as archivedAt, fe.created_at as createdAt,
+                        amc.service_rows as packageServices
                  FROM fp_estimates fe
                  LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
+                 LEFT JOIN amc_packages amc ON fe.package_id = amc.id
                  WHERE fe.is_archived = 1 ORDER BY fe.created_at DESC`;
       } else {
         query = `SELECT fe.*, 'fp_estimates' as source_table, fp.fp_code, fp.company_name as fp_name,
                         fe.estimate_id as estimateId, fe.client_name as clientName, fe.client_name as customerName,
                         fe.estimate_type as estimateType, fe.property_type as propertyType,
-                        fe.total_amount as totalPrice, fe.archived_at as archivedAt, fe.created_at as createdAt
+                        fe.total_amount as totalPrice, fe.archived_at as archivedAt, fe.created_at as createdAt,
+                        amc.service_rows as packageServices
                  FROM fp_estimates fe
                  LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
+                 LEFT JOIN amc_packages amc ON fe.package_id = amc.id
                  WHERE (fe.is_archived = 0 OR fe.is_archived IS NULL) ORDER BY fe.created_at DESC`;
       }
       const [results] = await pool.execute(query);
@@ -1390,7 +1398,7 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
     
     console.log('Fetching estimates for FP:', fpIdNum, 'archived:', isArchived);
     
-    // Get from main estimates table
+    // Get from main estimates table with AMC package services
     let mainEstimates = [];
     try {
       let query;
@@ -1398,14 +1406,20 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
         query = `SELECT e.*, 'estimates' as source_table,
                         e.estimate_id as estimateId, e.customer_name as clientName, e.customer_name as customerName,
                         e.estimate_type as estimateType, e.property_type as propertyType,
-                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt
-                 FROM estimates e WHERE e.franchise_partner_id = ? AND e.is_archived = 1 ORDER BY e.created_at DESC`;
+                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt,
+                        amc.service_rows as packageServices
+                 FROM estimates e
+                 LEFT JOIN amc_packages amc ON e.package_id = amc.id
+                 WHERE e.franchise_partner_id = ? AND e.is_archived = 1 ORDER BY e.created_at DESC`;
       } else {
         query = `SELECT e.*, 'estimates' as source_table,
                         e.estimate_id as estimateId, e.customer_name as clientName, e.customer_name as customerName,
                         e.estimate_type as estimateType, e.property_type as propertyType,
-                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt
-                 FROM estimates e WHERE e.franchise_partner_id = ? AND (e.is_archived = 0 OR e.is_archived IS NULL) ORDER BY e.created_at DESC`;
+                        e.total_amount as totalPrice, e.archived_at as archivedAt, e.created_at as createdAt,
+                        amc.service_rows as packageServices
+                 FROM estimates e
+                 LEFT JOIN amc_packages amc ON e.package_id = amc.id
+                 WHERE e.franchise_partner_id = ? AND (e.is_archived = 0 OR e.is_archived IS NULL) ORDER BY e.created_at DESC`;
       }
       const [results] = await pool.execute(query, [fpIdNum]);
       mainEstimates = results;
@@ -1414,7 +1428,7 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
       console.log('Main estimates query error:', e.message);
     }
     
-    // Get from fp_estimates table
+    // Get from fp_estimates table with AMC package services
     let fpEstimates = [];
     try {
       let query;
@@ -1422,14 +1436,20 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
         query = `SELECT fe.*, 'fp_estimates' as source_table,
                         fe.estimate_id as estimateId, fe.client_name as clientName, fe.client_name as customerName,
                         fe.estimate_type as estimateType, fe.property_type as propertyType,
-                        fe.total_amount as totalPrice, fe.archived_at as archivedAt, fe.created_at as createdAt
-                 FROM fp_estimates fe WHERE fe.franchise_partner_id = ? AND fe.is_archived = 1 ORDER BY fe.created_at DESC`;
+                        fe.total_amount as totalPrice, fe.archived_at as archivedAt, fe.created_at as createdAt,
+                        amc.service_rows as packageServices
+                 FROM fp_estimates fe
+                 LEFT JOIN amc_packages amc ON fe.package_id = amc.id
+                 WHERE fe.franchise_partner_id = ? AND fe.is_archived = 1 ORDER BY fe.created_at DESC`;
       } else {
         query = `SELECT fe.*, 'fp_estimates' as source_table,
                         fe.estimate_id as estimateId, fe.client_name as clientName, fe.client_name as customerName,
                         fe.estimate_type as estimateType, fe.property_type as propertyType,
-                        fe.total_amount as totalPrice, fe.archived_at as archivedAt, fe.created_at as createdAt
-                 FROM fp_estimates fe WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL) ORDER BY fe.created_at DESC`;
+                        fe.total_amount as totalPrice, fe.archived_at as archivedAt, fe.created_at as createdAt,
+                        amc.service_rows as packageServices
+                 FROM fp_estimates fe
+                 LEFT JOIN amc_packages amc ON fe.package_id = amc.id
+                 WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL) ORDER BY fe.created_at DESC`;
       }
       const [results] = await pool.execute(query, [fpIdNum]);
       fpEstimates = results;
