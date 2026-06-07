@@ -575,39 +575,6 @@ const Properties = () => {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {!isOpsManager && (
-                            <>
-                              <button
-                                onClick={() => setVendorAssignmentProperty(property)}
-                                className={`p-1.5 rounded transition-colors ${
-                                  hasVendorAssignments(property.propertyId)
-                                    ? 'text-green-500 hover:text-green-700 hover:bg-green-50'
-                                    : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'
-                                }`}
-                                title={hasVendorAssignments(property.propertyId) ? "View/Edit Vendor Assignments" : "Assign Vendors"}
-                              >
-                                {hasVendorAssignments(property.propertyId) ? (
-                                  <UserCheck className="w-4 h-4" />
-                                ) : (
-                                  <Users className="w-4 h-4" />
-                                )}
-                              </button>
-                              <button
-                                onClick={() => handleExportProperty(property)}
-                                className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                                title="Export to Excel"
-                              >
-                                <Download className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setDeleteConfirm(property)}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
                         </div>
                       </td>
                     </tr>

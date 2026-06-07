@@ -914,34 +914,6 @@ const CustomerSubmissions = () => {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => openAssignVendorModal(property)}
-                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                            title="Assign Vendor"
-                          >
-                            <Hammer className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => openAssignEmployeeModal(property)}
-                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                            title="Assign Employee"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleExportProperty(property)}
-                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                            title="Export to Excel"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirm(property)}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -960,18 +932,6 @@ const CustomerSubmissions = () => {
         )}
       </div>
 
-      {/* Export All Button */}
-      {filteredProperties.length > 0 && (
-        <div className="flex justify-end">
-          <button
-            onClick={handleExportAll}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Export All Properties
-          </button>
-        </div>
-      )}
 
       {/* View Property Modal */}
       {viewProperty && (

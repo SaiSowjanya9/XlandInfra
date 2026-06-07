@@ -34,6 +34,10 @@ const EmployeeZoneManagement = () => {
   // Get selected FP from context
   const { selectedFp, fpList, selectFp } = useFP();
   const token = sessionStorage.getItem('pm_auth_token');
+  
+  // Check if user is Operations Manager (view-only access)
+  const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
+  const isOpsManager = currentUser?.role === 'operations_manager';
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
   
   const handleFpSelect = (fp) => {
@@ -477,11 +481,15 @@ const EmployeeZoneManagement = () => {
                 {/* Action Button */}
                 <button
                   onClick={() => openAssignModal(employee)}
+                  disabled={isOpsManager}
                   className={`w-full py-2.5 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
-                    hasZones
-                      ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-                      : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-200'
+                    isOpsManager
+                      ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                      : hasZones
+                        ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                        : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-200'
                   }`}
+                  title={isOpsManager ? 'View-only access' : ''}
                 >
                   <Edit3 className="w-4 h-4" />
                   {hasZones ? 'Modify Zones' : 'Assign Zones'}
