@@ -1340,7 +1340,9 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
                         amc.service_rows as packageServices
                  FROM estimates e
                  LEFT JOIN amc_packages amc ON e.package_id = amc.id
-                 WHERE (e.is_archived = 0 OR e.is_archived IS NULL) ORDER BY e.created_at DESC`;
+                 WHERE (e.is_archived = 0 OR e.is_archived IS NULL) 
+                   AND (e.is_active = 1 OR e.is_active IS NULL)
+                 ORDER BY e.created_at DESC`;
       }
       const [results] = await pool.execute(query);
       mainEstimates = results;
