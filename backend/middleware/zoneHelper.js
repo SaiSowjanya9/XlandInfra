@@ -18,10 +18,24 @@ async function getAssignedZones(employeeId) {
   if (!employeeId) return [];
   
   try {
-    const [zones] = await pool.execute(
+    // First try direct lookup by fp_employee_id
+    let [zones] = await pool.execute(
       `SELECT zone_name FROM fp_employee_zones WHERE fp_employee_id = ?`,
       [employeeId]
     );
+    
+    // If no zones found, try lookup via user_id in fp_employees table
+    if (zones.length === 0) {
+      [zones] = await pool.execute(
+        `SELECT fez.zone_name 
+         FROM fp_employee_zones fez
+         INNER JOIN fp_employees fpe ON fez.fp_employee_id = fpe.id
+         WHERE fpe.user_id = ?`,
+        [employeeId]
+      );
+    }
+    
+    console.log('[ZoneHelper] employeeId:', employeeId, 'zones found:', zones.map(z => z.zone_name));
     return zones.map(z => z.zone_name).filter(Boolean);
   } catch (e) {
     console.log('[ZoneHelper] Zone fetch error:', e.message);
