@@ -1029,11 +1029,11 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
       address, city, state, pincode, bankName, accountNumber, ifscCode, commissionRate
     } = req.body;
 
-    // Validation - password is NOT required (auto-generated)
-    if (!username || !email || !firstName || !lastName || !role) {
+    // Validation - password is NOT required (auto-generated), lastName is optional
+    if (!username || !email || !firstName || !role) {
       return res.status(400).json({
         success: false,
-        message: 'Username, email, first name, last name, and role are required'
+        message: 'Username, email, first name, and role are required'
       });
     }
 
