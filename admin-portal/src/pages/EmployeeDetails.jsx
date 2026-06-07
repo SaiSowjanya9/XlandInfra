@@ -572,13 +572,6 @@ const EmployeeDetails = () => {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <AtSign className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-xs text-gray-500">Username</p>
-                    <p className="text-sm font-mono font-medium text-gray-900">@{viewEmployee.username || '-'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <Mail className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className="text-xs text-gray-500">Email</p>

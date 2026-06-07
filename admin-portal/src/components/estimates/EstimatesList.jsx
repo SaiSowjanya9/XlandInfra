@@ -124,6 +124,30 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
           } catch (e) { console.log('Addon parse error:', e); }
         }
         
+        // Parse AMC package services from backend
+        let servicesArray = [];
+        if (estimate.packageServices) {
+          try {
+            const parsed = typeof estimate.packageServices === 'string' ? JSON.parse(estimate.packageServices) : estimate.packageServices;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              servicesArray = parsed.map(s => ({
+                name: s.service || s.name || 'Service',
+                frequencyCount: s.frequencyCount || s.frequency || 1,
+                frequencyType: s.frequencyType || 'Monthly'
+              }));
+            }
+          } catch (e) { console.log('Package services parse error:', e); }
+        }
+        
+        // Fallback to package name if no services found
+        if (servicesArray.length === 0 && (estimate.packageName || estimate.package_name)) {
+          servicesArray = [{
+            name: estimate.packageName || estimate.package_name,
+            frequencyCount: 1,
+            frequencyType: 'Yearly'
+          }];
+        }
+        
         // Prepare estimate data for PDF (same mapping as FP portal)
         const pdfData = {
           ...estimate,
@@ -146,12 +170,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
           totalPrice: parseFloat(estimate.totalPrice || estimate.total || estimate.total_amount) || 0,
           discount: parseFloat(estimate.discount || estimate.discount_percent) || 0,
           description: estimate.description || estimate.notes || '',
-          services: estimate.services || (estimate.packageName || estimate.package_name ? [{
-            name: estimate.packageName || estimate.package_name,
-            frequencyCount: 1,
-            frequencyType: 'Yearly',
-            price: parseFloat(estimate.packagePrice || estimate.package_price || estimate.subtotal) || 0
-          }] : []),
+          services: servicesArray,
           addons: addonsArray.map(a => ({
             name: a.name || a.service_name || a.serviceName || 'Add-on',
             price: parseFloat(a.price) || 0,

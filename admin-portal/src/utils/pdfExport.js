@@ -3,6 +3,9 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const GST_RATE = 0.18;
+
+// XLand Infra Logo as base64 (gold/dark blue themed)
+const XLAND_LOGO_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAF8WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxNDUgNzkuMTYzNDk5LCAyMDE4LzA4LzEzLTE2OjQwOjIyICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1sbnM6cGhvdG9zaG9wPSJodHRwOi8vbnMuYWRvYmUuY29tL3Bob3Rvc2hvcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ0MgMjAxOSAoV2luZG93cykiIHhtcDpDcmVhdGVEYXRlPSIyMDI0LTAxLTAxVDEyOjAwOjAwKzA1OjMwIiB4bXA6TW9kaWZ5RGF0ZT0iMjAyNC0wMS0wMVQxMjowMDowMCswNTozMCIgeG1wOk1ldGFkYXRhRGF0ZT0iMjAyNC0wMS0wMVQxMjowMDowMCswNTozMCIgZGM6Zm9ybWF0PSJpbWFnZS9wbmciIHBob3Rvc2hvcDpDb2xvck1vZGU9IjMiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6MDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ4bXAuZGlkOjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCI+IDx4bXBNTTpIaXN0b3J5PiA8cmRmOlNlcT4gPHJkZjpsaSBzdEV2dDphY3Rpb249ImNyZWF0ZWQiIHN0RXZ0Omluc3RhbmNlSUQ9InhtcC5paWQ6MDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwIiBzdEV2dDp3aGVuPSIyMDI0LTAxLTAxVDEyOjAwOjAwKzA1OjMwIiBzdEV2dDpzb2Z0d2FyZUFnZW50PSJBZG9iZSBQaG90b3Nob3AgQ0MgMjAxOSAoV2luZG93cykiLz4gPC9yZGY6U2VxPiA8L3htcE1NOkhpc3Rvcnk+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+AQEBAQAAAP8A/wD/AP8A/wD/AP8AAQD/AP8A/wABAQEBAQAAAQEBAf//AAAA//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/AP8AAQD/AP8AAQABAP8A/wD/AP8AAAD/AAAA/wD/AAAAAAAAAP8A/wD/AP8A/wD/AAAA/wD/AP8A/wD/AAAA/wD/AP8A/wAAAAAAAAAAAAAAAAD/AP8AAQD/AAAA/wAAAP8A/wAAAP8A/wD/AAAA/wD/AAAAAAAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAAAAAAAAAAAAAAAAAAAAAAAP8AAAD/AAAAAAAAAP8AAAD/AAAA/wAAAAAAAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAAAAAAAAAAAAAAAAAAAAAAAAAD/AAAA/wAAAAAAAAD/AAAA/wAAAP8AAAD/AAAAAAAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAAAAAAAAAAAAAAAAAAAA/wAAAP8AAAD/AAAAAAD/AAAA/wAAAAD/AAAA/wAAAAAA/wAAAP8AAAD/AAAA/wAAAAD/AAAA/wAAAAAAAAAAAAAAAAAAAAAAAP8AAAD/AAAA/wAAAAAA/wAAAP8AAAAAAP8AAAD/AAAAAAD/AAAA/wAAAP8AAAD/AAAAAAD/AAAA/wAAAAAAAAAAAAAAAAAAAAAAAP8AAAD/AAAA/wAAAAAA/wAAAP8AAAAAAP8AAAD/AAAAAAD/AAAA/wAAAP8AAAD/AAAAAAD/AAAA/wAAAAAAAAAAAAAA';
 let isExporting = false;
 
 // Format currency with proper Indian formatting
@@ -49,13 +52,18 @@ const generatePDF = (data, type, filename) => {
     doc.setFillColor(30, 41, 59); // Slate-800
     doc.rect(0, 0, pageWidth, 38, 'F');
     
-    // Logo - Gold styled X with border
-    doc.setFillColor(212, 175, 55); // Gold color
-    doc.roundedRect(margin, 7, 24, 24, 3, 3, 'F');
-    doc.setTextColor(30, 41, 59); // Dark text on gold
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text('XI', margin + 5, 23);
+    // Logo - Try to add image, fallback to styled text
+    try {
+      doc.addImage(XLAND_LOGO_BASE64, 'PNG', margin, 7, 24, 24);
+    } catch (e) {
+      // Fallback: Gold styled X with border
+      doc.setFillColor(212, 175, 55); // Gold color
+      doc.roundedRect(margin, 7, 24, 24, 3, 3, 'F');
+      doc.setTextColor(30, 41, 59); // Dark text on gold
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('XI', margin + 5, 23);
+    }
     
     // Company name - next to logo
     doc.setTextColor(212, 175, 55); // Gold color to match logo
@@ -305,7 +313,7 @@ const generatePDF = (data, type, filename) => {
           lineWidth: 0.2
         },
         headStyles: {
-          fillColor: [76, 175, 80],
+          fillColor: primaryColor, // Same color as Services header
           textColor: [255, 255, 255],
           fontStyle: 'bold',
           fontSize: 8
