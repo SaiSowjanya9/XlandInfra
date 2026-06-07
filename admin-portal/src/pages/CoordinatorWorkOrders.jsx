@@ -104,12 +104,8 @@ const CoordinatorWorkOrders = ({ user }) => {
   const fetchWorkOrders = async () => {
     setLoading(true);
     try {
-      let endpoint = '/api/coordinator/work-orders';
-      if (viewType === 'pending') endpoint = '/api/coordinator/work-orders/pending';
-      else if (viewType === 'completed') endpoint = '/api/coordinator/work-orders/completed';
-      else if (statusFilter) endpoint += `?status=${statusFilter}`;
-      
-      const response = await fetch(endpoint, {
+      // Always fetch ALL work orders for accurate tab counts
+      const response = await fetch('/api/coordinator/work-orders', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -397,7 +393,15 @@ const CoordinatorWorkOrders = ({ user }) => {
     });
   };
 
-  const filteredWorkOrders = workOrders.filter(wo =>
+  // Filter by tab (pending/completed) first, then by search
+  const pendingStatuses = ['pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'];
+  const tabFilteredWorkOrders = viewType === 'pending' 
+    ? workOrders.filter(wo => pendingStatuses.includes(wo.status))
+    : viewType === 'completed'
+    ? workOrders.filter(wo => wo.status === 'completed')
+    : workOrders;
+  
+  const filteredWorkOrders = tabFilteredWorkOrders.filter(wo =>
     wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase())
