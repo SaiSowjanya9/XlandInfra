@@ -219,10 +219,11 @@ const SupervisorWorkOrders = ({ user }) => {
 
   // Filter by tab (pending/completed) first, then by search
   const pendingStatuses = ['pending', 'requested', 'assigned', 'in_progress'];
+  const completedStatuses = ['completed', 'closed'];
   const tabFilteredWorkOrders = activeTab === 'pending' 
     ? workOrders.filter(wo => pendingStatuses.includes(wo.status))
     : activeTab === 'completed'
-    ? workOrders.filter(wo => wo.status === 'completed')
+    ? workOrders.filter(wo => completedStatuses.includes(wo.status))
     : workOrders;
   
   const filteredWorkOrders = tabFilteredWorkOrders.filter(wo =>
@@ -233,7 +234,7 @@ const SupervisorWorkOrders = ({ user }) => {
   );
 
   const pendingCount = workOrders.filter(wo => ['pending', 'requested', 'assigned', 'in_progress'].includes(wo.status)).length;
-  const completedCount = workOrders.filter(wo => wo.status === 'completed').length;
+  const completedCount = workOrders.filter(wo => ['completed', 'closed'].includes(wo.status)).length;
 
   return (
     <div className="space-y-6">
