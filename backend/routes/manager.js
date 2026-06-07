@@ -807,6 +807,16 @@ router.post('/customers', requireManagerScope, async (req, res) => {
         ]
       );
 
+      // Also create a record in clients table for Property Management listing
+      await pool.execute(
+        `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
+          property_id, manager_id, franchise_partner_id, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [clientId, contactName || communityName, contactEmail || '', `${contact.countryCode || '+91'}${contactPhone || ''}`,
+         address || '', city || '', state || '', postalCode || '',
+         propertyResult.insertId, managerId, franchisePartnerId, req.user?.username || req.user?.email || '']
+      );
+
       // Create customer account if email provided
       let customerResult = null;
       let emailSent = false;
@@ -834,14 +844,22 @@ router.post('/customers', requireManagerScope, async (req, res) => {
           
           // Send activation email
           const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          const emailResult = await sendCustomerActivationEmail({
-            email: contactEmail.toLowerCase(),
-            firstName: contactName,
-            tempPassword,
-            activationLink,
-            propertyName: communityName
-          });
-          emailSent = emailResult.success;
+          console.log('📧 Sending customer activation email to:', contactEmail.toLowerCase());
+          console.log('📧 Activation link:', activationLink);
+          try {
+            const emailResult = await sendCustomerActivationEmail({
+              email: contactEmail.toLowerCase(),
+              firstName: contactName,
+              tempPassword,
+              activationLink,
+              propertyName: communityName
+            });
+            emailSent = emailResult.success;
+            console.log('📧 Email result:', emailResult);
+          } catch (emailError) {
+            console.error('📧 Email sending failed:', emailError);
+            emailSent = false;
+          }
         } else if (!existing[0].is_activated) {
           // Resend activation email for inactive account
           await pool.execute(
@@ -852,14 +870,21 @@ router.post('/customers', requireManagerScope, async (req, res) => {
           );
           
           const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          const emailResult = await sendCustomerActivationEmail({
-            email: contactEmail.toLowerCase(),
-            firstName: contactName,
-            tempPassword,
-            activationLink,
-            propertyName: communityName
-          });
-          emailSent = emailResult.success;
+          console.log('📧 Resending activation email to existing inactive account:', contactEmail.toLowerCase());
+          try {
+            const emailResult = await sendCustomerActivationEmail({
+              email: contactEmail.toLowerCase(),
+              firstName: contactName,
+              tempPassword,
+              activationLink,
+              propertyName: communityName
+            });
+            emailSent = emailResult.success;
+            console.log('📧 Resend email result:', emailResult);
+          } catch (emailError) {
+            console.error('📧 Resend email failed:', emailError);
+            emailSent = false;
+          }
         }
       }
 
