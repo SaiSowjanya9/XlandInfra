@@ -887,10 +887,11 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
       const clientId = `CLT-SUP-${Date.now()}`;
       const [result] = await pool.query(
         `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
-          zip_code, client_type, company_name, property_id, gst_number, supervisor_id, franchise_partner_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          zip_code, client_type, company_name, property_id, gst_number, supervisor_id, franchise_partner_id, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
-          clientType || 'individual', companyName, propertyId || null, gstNumber, supervisorId, franchisePartnerId]
+          clientType || 'individual', companyName, propertyId || null, gstNumber, supervisorId, franchisePartnerId,
+          req.user?.username || req.user?.email || '']
       );
       res.json({ success: true, message: 'Customer created successfully', data: { id: result.insertId, clientId } });
     }

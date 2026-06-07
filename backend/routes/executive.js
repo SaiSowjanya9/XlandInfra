@@ -807,10 +807,11 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
       const clientId = `CLT-EXEC-${Date.now()}`;
       const [result] = await pool.query(
         `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
-          zip_code, client_type, company_name, property_id, gst_number, executive_id, franchise_partner_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          zip_code, client_type, company_name, property_id, gst_number, executive_id, franchise_partner_id, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
-          clientType || 'individual', companyName, propertyId || null, gstNumber, executiveId, franchisePartnerId]
+          clientType || 'individual', companyName, propertyId || null, gstNumber, executiveId, franchisePartnerId,
+          req.user?.username || req.user?.email || '']
       );
       res.json({ success: true, message: 'Customer created successfully', data: { id: result.insertId, clientId } });
     }

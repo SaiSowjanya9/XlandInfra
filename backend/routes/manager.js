@@ -799,7 +799,7 @@ router.post('/customers', requireManagerScope, async (req, res) => {
           propertyIdGen, communityName, propertyType || 'residential', address, city, state, postalCode || '',
           contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
           zone || null, division || null,
-          managerId, franchisePartnerId, req.user.id, 
+          managerId, franchisePartnerId, req.user?.username || req.user?.email || req.user.id, 
           mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
           entryType || null, category || null, areaName || '',
           numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}),
@@ -879,10 +879,11 @@ router.post('/customers', requireManagerScope, async (req, res) => {
       
       const [result] = await pool.execute(
         `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
-          zip_code, client_type, company_name, property_id, gst_number, manager_id, franchise_partner_id, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+          zip_code, client_type, company_name, property_id, gst_number, manager_id, franchise_partner_id, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
-         clientType || 'individual', companyName, propertyId || null, gstNumber, managerId, franchisePartnerId]
+         clientType || 'individual', companyName, propertyId || null, gstNumber, managerId, franchisePartnerId, 
+         req.user?.username || req.user?.email || '']
       );
 
       res.json({ success: true, message: 'Customer created', data: { id: result.insertId, clientId } });
