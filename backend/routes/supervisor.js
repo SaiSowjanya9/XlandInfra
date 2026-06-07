@@ -819,12 +819,22 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
           propertyIdGen, communityName, propertyType || 'residential', address, city, state, postalCode || '',
           contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
           zone || null, division || null,
-          supervisorId, franchisePartnerId, req.user.id, 
+          supervisorId, franchisePartnerId, req.user?.username || req.user?.email || req.user.id, 
           mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
           entryType || null, category || null, areaName || '',
           numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}),
           JSON.stringify(blockNames || {}), numberOfUnits || null, villaPlotNumber || '', blockInfo || ''
         ]
+      );
+
+      // Also create a record in clients table for Property Management listing
+      await pool.execute(
+        `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
+          property_id, supervisor_id, franchise_partner_id, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [clientId, contactName || communityName, contactEmail || '', `${contactCountryCode}${contactPhone || ''}`,
+         address || '', city || '', state || '', postalCode || '',
+         propertyResult.insertId, supervisorId, franchisePartnerId, req.user?.username || req.user?.email || '']
       );
 
       let customerResult = null;
