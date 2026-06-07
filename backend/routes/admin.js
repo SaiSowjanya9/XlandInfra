@@ -1994,18 +1994,41 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
   }
 });
 
-// Get ALL AMC Packages (Admin mode)
+// Transform AMC package to frontend format
+const transformPackage = (pkg) => ({
+  id: pkg.id,
+  packageId: pkg.package_code || `PKG-${pkg.id}`,
+  packageName: pkg.name || pkg.package_name,
+  name: pkg.name || pkg.package_name,
+  description: pkg.description || '',
+  propertyType: pkg.property_type === 'AP' ? 'APT' : pkg.property_type === 'VL' ? 'VILLA' : pkg.property_type === 'FL' ? 'FLAT' : pkg.property_type === 'PL' ? 'PLOT' : pkg.property_type || 'GC',
+  price: parseFloat(pkg.base_price || pkg.price) || 0,
+  rate: parseFloat(pkg.base_price || pkg.price) || 0,
+  services: pkg.services ? (typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services) : [],
+  serviceRows: pkg.service_rows ? (typeof pkg.service_rows === 'string' ? JSON.parse(pkg.service_rows) : pkg.service_rows) : [],
+  durationMonths: pkg.duration_months || 12,
+  billingCycle: pkg.billing_duration || 'Annual',
+  termsConditions: pkg.terms_conditions || '',
+  franchisePartnerId: pkg.franchise_partner_id,
+  fpCode: pkg.fp_code,
+  fpName: pkg.fp_name,
+  createdAt: pkg.created_at,
+  updatedAt: pkg.updated_at
+});
+
+// Get ALL AMC Packages (Admin mode) - from fp_amc_packages table
 router.get('/all-amc-packages', authenticate, adminOnly, async (req, res) => {
   try {
     const [packages] = await pool.execute(
       `SELECT p.*, fp.fp_code, fp.company_name as fp_name
-       FROM amc_packages p
+       FROM fp_amc_packages p
        LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
        ORDER BY p.created_at DESC`
     );
     
-    console.log('Admin all-amc-packages: Found', packages.length, 'packages');
-    res.json({ success: true, data: packages || [] });
+    const transformedPackages = packages.map(transformPackage);
+    console.log('Admin all-amc-packages: Found', transformedPackages.length, 'packages');
+    res.json({ success: true, data: transformedPackages || [] });
   } catch (error) {
     console.error('Error fetching all AMC packages:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch AMC packages' });
@@ -2021,12 +2044,13 @@ router.get('/fp-view/:fpId/amc-packages', authenticate, adminOnly, async (req, r
     }
     
     const [packages] = await pool.execute(
-      `SELECT * FROM amc_packages WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
+      `SELECT * FROM fp_amc_packages WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
       [fpIdNum]
     );
     
-    console.log('Admin fp-view amc-packages: Found', packages.length, 'for FP', fpIdNum);
-    res.json({ success: true, data: packages || [] });
+    const transformedPackages = packages.map(transformPackage);
+    console.log('Admin fp-view amc-packages: Found', transformedPackages.length, 'for FP', fpIdNum);
+    res.json({ success: true, data: transformedPackages || [] });
   } catch (error) {
     console.error('Error fetching FP AMC packages:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch AMC packages' });

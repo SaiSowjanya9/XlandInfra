@@ -1787,19 +1787,13 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Block Number</label>
-                  <select
+                  <input
+                    type="text"
                     value={estimateForm.blockNumber || ''}
                     onChange={(e) => setEstimateForm({ ...estimateForm, blockNumber: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  >
-                    <option value="">Select Block</option>
-                    <option value="N/A">N/A</option>
-                    <option value="A">Block A</option>
-                    <option value="B">Block B</option>
-                    <option value="C">Block C</option>
-                    <option value="D">Block D</option>
-                    <option value="E">Block E</option>
-                  </select>
+                    placeholder="e.g., A, B, 1, 2"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Block Name</label>
@@ -1839,19 +1833,13 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Block Number</label>
-                  <select
+                  <input
+                    type="text"
                     value={estimateForm.blockNumber || ''}
                     onChange={(e) => setEstimateForm({ ...estimateForm, blockNumber: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  >
-                    <option value="">Select Block</option>
-                    <option value="N/A">N/A (Not Applicable)</option>
-                    <option value="A">Block A</option>
-                    <option value="B">Block B</option>
-                    <option value="C">Block C</option>
-                    <option value="D">Block D</option>
-                    <option value="E">Block E</option>
-                  </select>
+                    placeholder="e.g., A, B, 1, 2"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Flat/Unit Number</label>

@@ -3184,6 +3184,23 @@ router.delete('/estimates/archived/delete-all', requireFPScope, async (req, res)
   }
 });
 
+// Transform AMC package to frontend format
+const transformPackage = (pkg) => ({
+  id: pkg.id,
+  packageId: pkg.package_code || `PKG-${pkg.id}`,
+  packageName: pkg.name || pkg.package_name,
+  name: pkg.name || pkg.package_name,
+  description: pkg.description || '',
+  propertyType: pkg.property_type === 'AP' ? 'APT' : pkg.property_type === 'VL' ? 'VILLA' : pkg.property_type === 'FL' ? 'FLAT' : pkg.property_type === 'PL' ? 'PLOT' : pkg.property_type || 'GC',
+  price: parseFloat(pkg.base_price || pkg.price) || 0,
+  rate: parseFloat(pkg.base_price || pkg.price) || 0,
+  services: pkg.services ? (typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services) : [],
+  serviceRows: pkg.service_rows ? (typeof pkg.service_rows === 'string' ? JSON.parse(pkg.service_rows) : pkg.service_rows) : [],
+  durationMonths: pkg.duration_months || 12,
+  billingCycle: pkg.billing_duration || 'Annual',
+  createdAt: pkg.created_at
+});
+
 // Get FP AMC packages - Scoped to each FP
 router.get('/amc-packages', requireFPScope, async (req, res) => {
   try {
@@ -3197,7 +3214,7 @@ router.get('/amc-packages', requireFPScope, async (req, res) => {
 
     res.json({
       success: true,
-      data: packages
+      data: packages.map(transformPackage)
     });
   } catch (error) {
     console.error('Get AMC packages error:', error);

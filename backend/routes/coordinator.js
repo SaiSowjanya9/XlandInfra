@@ -1312,6 +1312,24 @@ router.delete('/estimates/:id', requireCoordinatorScope, async (req, res) => {
 // =====================================================
 // AMC PACKAGES - FP Coordinators use FP packages (read-only)
 // =====================================================
+
+// Transform AMC package to frontend format
+const transformPackage = (pkg) => ({
+  id: pkg.id,
+  packageId: pkg.package_code || `PKG-${pkg.id}`,
+  packageName: pkg.name || pkg.package_name,
+  name: pkg.name || pkg.package_name,
+  description: pkg.description || '',
+  propertyType: pkg.property_type === 'AP' ? 'APT' : pkg.property_type === 'VL' ? 'VILLA' : pkg.property_type === 'FL' ? 'FLAT' : pkg.property_type === 'PL' ? 'PLOT' : pkg.property_type || 'GC',
+  price: parseFloat(pkg.base_price || pkg.price) || 0,
+  rate: parseFloat(pkg.base_price || pkg.price) || 0,
+  services: pkg.services ? (typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services) : [],
+  serviceRows: pkg.service_rows ? (typeof pkg.service_rows === 'string' ? JSON.parse(pkg.service_rows) : pkg.service_rows) : [],
+  durationMonths: pkg.duration_months || 12,
+  billingCycle: pkg.billing_duration || 'Annual',
+  createdAt: pkg.created_at
+});
+
 router.get('/amc-packages', requireCoordinatorScope, async (req, res) => {
   try {
     const scopeId = getScopeId(req);
@@ -1325,7 +1343,7 @@ router.get('/amc-packages', requireCoordinatorScope, async (req, res) => {
       [scopeId]
     );
 
-    res.json({ success: true, data: packages });
+    res.json({ success: true, data: packages.map(transformPackage) });
   } catch (error) {
     console.error('AMC packages fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch AMC packages' });

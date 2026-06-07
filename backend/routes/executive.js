@@ -1298,6 +1298,24 @@ router.delete('/estimates/:id', requireExecutiveScope, async (req, res) => {
 // =====================================================
 // AMC PACKAGES - FP Executives use FP packages
 // =====================================================
+
+// Transform AMC package to frontend format
+const transformPackage = (pkg) => ({
+  id: pkg.id,
+  packageId: pkg.package_code || `PKG-${pkg.id}`,
+  packageName: pkg.name || pkg.package_name,
+  name: pkg.name || pkg.package_name,
+  description: pkg.description || '',
+  propertyType: pkg.property_type === 'AP' ? 'APT' : pkg.property_type === 'VL' ? 'VILLA' : pkg.property_type === 'FL' ? 'FLAT' : pkg.property_type === 'PL' ? 'PLOT' : pkg.property_type || 'GC',
+  price: parseFloat(pkg.base_price || pkg.price) || 0,
+  rate: parseFloat(pkg.base_price || pkg.price) || 0,
+  services: pkg.services ? (typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services) : [],
+  serviceRows: pkg.service_rows ? (typeof pkg.service_rows === 'string' ? JSON.parse(pkg.service_rows) : pkg.service_rows) : [],
+  durationMonths: pkg.duration_months || 12,
+  billingCycle: pkg.billing_duration || 'Annual',
+  createdAt: pkg.created_at
+});
+
 router.get('/amc-packages', requireExecutiveScope, async (req, res) => {
   try {
     const franchisePartnerId = req.franchisePartnerId;
@@ -1308,7 +1326,7 @@ router.get('/amc-packages', requireExecutiveScope, async (req, res) => {
         `SELECT * FROM fp_amc_packages WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
         [franchisePartnerId]
       );
-      return res.json({ success: true, data: packages });
+      return res.json({ success: true, data: packages.map(transformPackage) });
     }
     
     res.json({ success: true, data: [] });
