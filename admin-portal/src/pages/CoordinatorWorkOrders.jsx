@@ -395,10 +395,11 @@ const CoordinatorWorkOrders = ({ user }) => {
 
   // Filter by tab (pending/completed) first, then by search
   const pendingStatuses = ['pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'];
+  const completedStatuses = ['completed', 'closed'];
   const tabFilteredWorkOrders = viewType === 'pending' 
     ? workOrders.filter(wo => pendingStatuses.includes(wo.status))
     : viewType === 'completed'
-    ? workOrders.filter(wo => wo.status === 'completed')
+    ? workOrders.filter(wo => completedStatuses.includes(wo.status))
     : workOrders;
   
   const filteredWorkOrders = tabFilteredWorkOrders.filter(wo =>
@@ -423,7 +424,7 @@ const CoordinatorWorkOrders = ({ user }) => {
 
   // Get pending and completed counts
   const pendingCount = workOrders.filter(wo => ['pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)).length;
-  const completedCount = workOrders.filter(wo => wo.status === 'completed').length;
+  const completedCount = workOrders.filter(wo => ['completed', 'closed'].includes(wo.status)).length;
 
   // Filter properties based on search
   const filteredProperties = properties.filter(p =>
