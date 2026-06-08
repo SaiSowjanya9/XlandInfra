@@ -1271,10 +1271,11 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
   }
 });
 
-// Delete staff member (permanent delete)
+// Delete staff member (permanent delete) - handles both users and fp_employees tables
 router.delete('/:id', authenticate, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
+    let deleted = false;
 
     // Prevent self-deletion
     if (parseInt(id) === req.user.id) {
@@ -1284,48 +1285,53 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
       });
     }
 
-    // Check if user exists
+    // Check if user exists in users table
     const [existing] = await pool.execute(
       `SELECT id, email, role FROM users WHERE id = ?`,
       [id]
     );
 
-    if (existing.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Staff member not found'
-      });
-    }
-
-    const userToDelete = existing[0];
-    
-    // If franchise partner, also delete from franchise_partners table
-    if (userToDelete.role === 'franchise_partner' || userToDelete.role === 'franchise') {
-      try {
-        await pool.execute(
-          `DELETE FROM franchise_partners WHERE email = ?`,
-          [userToDelete.email]
-        );
-        console.log(`🗑️ Franchise partner record deleted for email: ${userToDelete.email}`);
-      } catch (fpError) {
-        console.log(`Note: No franchise_partners record found for ${userToDelete.email}`);
+    if (existing.length > 0) {
+      const userToDelete = existing[0];
+      
+      // If franchise partner, also delete from franchise_partners table
+      if (userToDelete.role === 'franchise_partner' || userToDelete.role === 'franchise') {
+        try {
+          await pool.execute(
+            `DELETE FROM franchise_partners WHERE email = ?`,
+            [userToDelete.email]
+          );
+          console.log(`🗑️ Franchise partner record deleted for email: ${userToDelete.email}`);
+        } catch (fpError) {
+          console.log(`Note: No franchise_partners record found for ${userToDelete.email}`);
+        }
       }
+      
+      // Permanently delete the user from database
+      const [result] = await pool.execute(
+        `DELETE FROM users WHERE id = ?`,
+        [id]
+      );
+      if (result.affectedRows > 0) deleted = true;
     }
     
-    // Permanently delete the user from database
-    const [result] = await pool.execute(
-      `DELETE FROM users WHERE id = ?`,
-      [id]
-    );
+    // Also try to delete from fp_employees table
+    try {
+      const [fpResult] = await pool.execute(
+        `DELETE FROM fp_employees WHERE id = ?`,
+        [id]
+      );
+      if (fpResult.affectedRows > 0) deleted = true;
+    } catch (e) { console.log('fp_employees delete skipped:', e.message); }
 
-    if (result.affectedRows === 0) {
+    if (!deleted) {
       return res.status(404).json({
         success: false,
         message: 'Staff member not found'
       });
     }
 
-    console.log(`🗑️ User permanently deleted: ID ${id}, Email: ${userToDelete.email}`);
+    console.log(`🗑️ Staff member permanently deleted: ID ${id}`);
 
     res.json({
       success: true,
