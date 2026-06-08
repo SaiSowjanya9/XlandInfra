@@ -135,7 +135,27 @@ const AssignedVendors = ({ user }) => {
     } catch (err) {
       console.error('Error loading data:', err);
     }
-  };
+  }, [isAdmin, selectedFp, apiPrefix, statusFilter, token]);
+
+  useEffect(() => {
+    if (isAdmin && selectedFp) {
+      loadData();
+    } else if (!isAdmin) {
+      loadData();
+    }
+  }, [loadData, isAdmin, selectedFp]);
+
+  // Refresh data when page becomes visible (handles navigation back to this page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [loadData]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
