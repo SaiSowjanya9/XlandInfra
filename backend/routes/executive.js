@@ -1278,19 +1278,22 @@ router.post('/estimates', requireExecutiveScope, async (req, res) => {
     const numericPropertyId = parseInt(property_id);
     const propertyIdValue = isNaN(numericPropertyId) ? null : numericPropertyId;
 
-    // Get creator name from user info or database
+    // Get creator name - check fp_employees first, then users table
     let creatorName = 'Executive';
     try {
-      const [[userInfo]] = await pool.query(
-        'SELECT first_name, last_name, name FROM users WHERE id = ?',
-        [executiveId]
+      // Try fp_employees table first (for FP-created employees)
+      const [[fpEmp]] = await pool.query(
+        'SELECT first_name, last_name FROM fp_employees WHERE id = ? OR user_id = ?',
+        [executiveId, executiveId]
       );
-      if (userInfo) {
-        creatorName = userInfo.first_name && userInfo.last_name 
-          ? `${userInfo.first_name} ${userInfo.last_name}`.trim()
-          : userInfo.name || 'Executive';
+      if (fpEmp && (fpEmp.first_name || fpEmp.last_name)) {
+        creatorName = `${fpEmp.first_name || ''} ${fpEmp.last_name || ''}`.trim() || 'Executive';
+      } else {
+        // Fall back to users table
+        const [[userInfo]] = await pool.query('SELECT first_name, last_name, name FROM users WHERE id = ?', [executiveId]);
+        if (userInfo) creatorName = userInfo.first_name && userInfo.last_name ? `${userInfo.first_name} ${userInfo.last_name}`.trim() : userInfo.name || 'Executive';
       }
-    } catch (e) { console.log('Could not fetch executive name'); }
+    } catch (e) { console.log('Creator name lookup error:', e.message); }
 
     // Use fp_estimates table (has all required columns)
     const [result] = await pool.query(
