@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText, Plus, List, Package, PlusCircle, Archive, Check, X, AlertCircle,
@@ -55,13 +55,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
     }
   }, []);
 
-  useEffect(() => {
-    if (selectedFp) {
-      loadStats();
-    }
-  }, [defaultTab, selectedFp?.id]);
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       let estUrl, archUrl, pkgUrl, addUrl;
       
@@ -107,7 +101,13 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
     } catch (error) {
       console.error('Load stats error:', error);
     }
-  };
+  }, [selectedFp, token]);
+
+  useEffect(() => {
+    if (selectedFp) {
+      loadStats();
+    }
+  }, [loadStats, defaultTab, selectedFp]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
