@@ -82,8 +82,8 @@ const generatePDF = (data, type, filename) => {
     doc.setTextColor(20, 20, 20);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    // Center text: x = badgeX + badgeWidth/2, y = badgeY + badgeHeight/2 + fontSize*0.35
-    doc.text(docType, badgeX + badgeWidth/2, badgeY + badgeHeight/2 + 2.8, { align: 'center' });
+    // Center text vertically: badgeY + badgeHeight/2 + 1 (slight offset for baseline)
+    doc.text(docType, badgeX + badgeWidth/2, badgeY + badgeHeight/2 + 1, { align: 'center' });
 
     y = headerHeight + 6;
 
@@ -229,14 +229,14 @@ const generatePDF = (data, type, filename) => {
       head: [['#', 'Service Description', 'Frequency', 'Visits']],
       body: tableBody,
       margin: { left: margin, right: margin },
-      styles: { fontSize: 8, cellPadding: 3, lineColor: [50, 50, 50], lineWidth: 0.3 },
-      headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50] },
+      styles: { fontSize: 8, cellPadding: 3, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center' },
+      headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
       bodyStyles: { textColor: darkText, lineColor: [100, 100, 100] },
       columnStyles: {
-        0: { cellWidth: 10, halign: 'center' },
-        1: { cellWidth: 'auto', halign: 'center' },
-        2: { cellWidth: 25, halign: 'center' },
-        3: { cellWidth: 20, halign: 'center' }
+        0: { cellWidth: 10 },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 20 }
       },
       alternateRowStyles: { fillColor: [252, 252, 253] }
     });
@@ -263,14 +263,14 @@ const generatePDF = (data, type, filename) => {
         head: [['#', 'Add-on Service', 'Frequency', 'Visits']],
         body: addonsBody,
         margin: { left: margin, right: margin },
-        styles: { fontSize: 8, cellPadding: 3, lineColor: [50, 50, 50], lineWidth: 0.3 },
-        headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50] },
+        styles: { fontSize: 8, cellPadding: 3, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center' },
+        headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
         bodyStyles: { textColor: darkText, lineColor: [100, 100, 100] },
         columnStyles: {
-          0: { cellWidth: 10, halign: 'center' },
-          1: { cellWidth: 'auto', halign: 'center' },
-          2: { cellWidth: 25, halign: 'center' },
-          3: { cellWidth: 20, halign: 'center' }
+          0: { cellWidth: 10 },
+          1: { cellWidth: 'auto' },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 20 }
         },
         alternateRowStyles: { fillColor: [252, 252, 253] }
       });
