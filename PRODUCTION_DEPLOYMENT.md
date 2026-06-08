@@ -182,6 +182,26 @@ INSERT INTO franchise_partners (name, email, city_id) VALUES ('XYZ Partner', 'xy
 - JWT authentication compatible
 - Role-based endpoints remain same
 
+## Latest Updates (June 8, 2026)
+
+### PDF Export Updates
+- **Add-ons Table**: Now includes "No. of Visits" column matching services table
+- **New Header**: White background with gold logo, gold accent line, professional branding
+- **New File**: `admin-portal/src/utils/logoBase64.js` - XLand Infra gold logo base64
+
+### Files Changed
+| File | Description |
+|------|-------------|
+| `admin-portal/src/utils/pdfExport.js` | Updated header design, add-ons table with No. of Visits |
+| `admin-portal/src/utils/logoBase64.js` | New file - Gold logo base64 for PDF |
+
+### Deploy Command (Admin Portal)
+```bash
+cd /var/www/app/admin && git pull origin main && npm install && npm run build
+```
+
+---
+
 ## Maintenance
 
 ### Database Backups

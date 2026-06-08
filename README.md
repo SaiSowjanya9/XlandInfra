@@ -2,7 +2,7 @@
 
 A comprehensive full-stack web application for property management, work orders, vendor management, and AMC (Annual Maintenance Contract) packages, built with React, Node.js, and MySQL.
 
-> **Last Updated:** June 5, 2026
+> **Last Updated:** June 8, 2026
 
 ## Features
 
@@ -248,7 +248,26 @@ The application is fully responsive and works on:
 - Tablets
 - Mobile phones
 
-## Recent Updates (June 2026)
+## Recent Updates (June 8, 2026)
+
+### PDF Export Enhancements
+- **Add-ons "No. of Visits" Column**: Add-ons table now matches services table with #, Add-on Service, Frequency, and No. of Visits columns
+- **New Header Design**: Clean white header with XLand Infra gold logo, gold accent line, and professional layout
+- **Logo Integration**: Created `logoBase64.js` with full XLand Infra gold logo for PDF embedding
+- **Existing Records Support**: Fixed add-on frequency parsing to extract from nested `services[0].frequency` structure
+- **Header Layout**: Company name "XLAND INFRA" with tagline "Property Management Solutions" and "PVT LTD"
+- **Document Badge**: Dark slate background with gold "ESTIMATE" text
+
+### Add-ons Display Rules (All Portals)
+- Individual add-on prices are NOT displayed in Create Estimates
+- Add-on dropdowns show only add-on name (no price)
+- Selected add-ons table shows: Service, Frequency, No. of Visits, Action columns only
+- Only "Total Add-ons Price" row displayed at bottom
+- View estimate modals show add-on names and frequency with Total Add-ons Price
+
+---
+
+## Previous Updates (June 2026)
 
 ### Franchise Partner (FP) Portal System
 - **Multi-Role Employee Portal**: Complete FP portal with Manager, Coordinator, Supervisor, and Executive roles
