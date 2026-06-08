@@ -35,22 +35,20 @@ const Login = ({ onLogin }) => {
         // Check if user must change password (first login)
         if (userData.mustChangePassword) {
           setPendingUser({
-            ...userData,
-            name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
-            email: userData.email,
+            ...userData.user,
+            name: `${userData.user.firstName || ''} ${userData.user.lastName || ''}`.trim(),
+            email: userData.user.email,
             portal: 'admin'
           });
           setShowSetPassword(true);
         } else {
           // Store token and proceed
-          if (result.token) {
-            sessionStorage.setItem('pm_auth_token', result.token);
+          if (userData.token) {
+            sessionStorage.setItem('pm_auth_token', userData.token);
           }
           const user = {
-            ...userData,
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+            ...userData.user,
+            name: `${userData.user.firstName || ''} ${userData.user.lastName || ''}`.trim(),
             portal: 'admin'
           };
           sessionStorage.setItem('pm_current_user', JSON.stringify(user));

@@ -40,8 +40,6 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
         const user = {
           id: result.data.user?.id || result.data.id,
           username: result.data.user?.username || result.data.username,
-          firstName: result.data.user?.firstName || result.data.firstName || '',
-          lastName: result.data.user?.lastName || result.data.lastName || '',
           name: `${result.data.user?.firstName || result.data.firstName || ''} ${result.data.user?.lastName || result.data.lastName || ''}`.trim(),
           email: result.data.user?.email || result.data.email,
           role: userRole,
