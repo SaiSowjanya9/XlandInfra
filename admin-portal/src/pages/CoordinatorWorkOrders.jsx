@@ -951,6 +951,19 @@ const CoordinatorWorkOrders = ({ user }) => {
                           <Eye className="w-4 h-4" />
                         </button>
                         
+                        {/* Change Status Dropdown - Always visible */}
+                        <select
+                          value={wo.status}
+                          onChange={(e) => handleStatusUpdate(wo.id, e.target.value)}
+                          className="px-2 py-1 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="assigned">Assigned</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                        
                         {/* PENDING TAB ACTIONS */}
                         {viewType === 'pending' && (
                           <div className="flex items-center gap-1">
