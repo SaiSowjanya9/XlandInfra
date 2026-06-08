@@ -58,39 +58,15 @@ const generateOrderNumber = () => {
 
 // ============================================
 // GET CATEGORIES (Public - for customer portal)
+// Always returns config file categories with embedded subcategories for consistency
 // ============================================
 router.get('/categories', async (req, res) => {
   try {
-    // Try to get from database first
-    try {
-      const [categories] = await pool.execute(
-        `SELECT c.id, c.name, c.sort_order 
-         FROM categories c 
-         WHERE c.is_active = TRUE 
-         ORDER BY c.sort_order`
-      );
-      
-      // Get subcategories for each category
-      for (let cat of categories) {
-        const [subcats] = await pool.execute(
-          `SELECT id, name, sort_order 
-           FROM subcategories 
-           WHERE category_id = ? AND is_active = TRUE 
-           ORDER BY sort_order`,
-          [cat.id]
-        );
-        cat.subcategories = subcats;
-      }
-      
-      return res.json({ success: true, data: categories });
-    } catch (dbError) {
-      // Fallback to config file
-      console.log('Using config categories (DB not available)');
-      return res.json({ success: true, data: categoriesConfig });
-    }
+    // Always use config file for categories (most reliable, has embedded subcategories)
+    return res.json({ success: true, data: categoriesConfig });
   } catch (error) {
     console.error('Error fetching categories:', error);
-    res.status(500).json({ success: false, message: 'Error fetching categories' });
+    res.json({ success: true, data: categoriesConfig });
   }
 });
 

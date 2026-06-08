@@ -123,7 +123,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     try {
       const [propRes, catRes, custRes, vendRes, empRes] = await Promise.all([
         fetch('/api/coordinator/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/coordinator/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/coordinator/customers', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/coordinator/vendors', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/coordinator/employees', { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ json: () => ({ success: false }) }))
