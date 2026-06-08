@@ -12,7 +12,10 @@ const SupervisorWorkOrders = ({ user }) => {
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelNote, setCancelNote] = useState('');
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [attachments, setAttachments] = useState([]);
@@ -85,7 +88,14 @@ const SupervisorWorkOrders = ({ user }) => {
   };
 
   const selectProperty = (property) => {
-    setFormData({ ...formData, propertyId: property.id, propertySearch: property.name || property.property_id });
+    setFormData({ 
+      ...formData, 
+      propertyId: property.id, 
+      propertySearch: property.name || property.property_id,
+      customerName: property.contact_person || property.contactPerson || property.owner_name || '',
+      customerEmail: property.contact_email || property.contactEmail || property.email || '',
+      customerPhone: property.contact_phone || property.contactPhone || property.phone || property.mobile || ''
+    });
     setShowPropertyDropdown(false);
   };
 
@@ -217,16 +227,22 @@ const SupervisorWorkOrders = ({ user }) => {
 
   const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
-  // Filter by tab (pending/completed) first, then by search
+  // Filter by tab (pending/completed) first, then by status filter, then by search
   const pendingStatuses = ['pending', 'requested', 'assigned', 'in_progress'];
-  const completedStatuses = ['completed', 'closed'];
+  const completedStatuses = ['completed'];
   const tabFilteredWorkOrders = activeTab === 'pending' 
     ? workOrders.filter(wo => pendingStatuses.includes(wo.status))
     : activeTab === 'completed'
     ? workOrders.filter(wo => completedStatuses.includes(wo.status))
     : workOrders;
   
-  const filteredWorkOrders = tabFilteredWorkOrders.filter(wo =>
+  // Apply status filter
+  const statusFilteredWorkOrders = statusFilter 
+    ? tabFilteredWorkOrders.filter(wo => wo.status === statusFilter)
+    : tabFilteredWorkOrders;
+  
+  // Apply search filter
+  const filteredWorkOrders = statusFilteredWorkOrders.filter(wo =>
     wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -234,7 +250,7 @@ const SupervisorWorkOrders = ({ user }) => {
   );
 
   const pendingCount = workOrders.filter(wo => ['pending', 'requested', 'assigned', 'in_progress'].includes(wo.status)).length;
-  const completedCount = workOrders.filter(wo => ['completed', 'closed'].includes(wo.status)).length;
+  const completedCount = workOrders.filter(wo => ['completed'].includes(wo.status)).length;
 
   return (
     <div className="space-y-6">
@@ -625,7 +641,20 @@ const SupervisorWorkOrders = ({ user }) => {
               <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
                 <Search className="w-4 h-4" /> Search
               </button>
-              <button onClick={() => setSearchTerm('')} className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+              {/* Status Filter Dropdown */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
+              >
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="assigned">Assigned</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <button onClick={() => { setSearchTerm(''); setStatusFilter(''); }} className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-2">
                 <RefreshCw className="w-4 h-4" /> Clear
               </button>
             </div>
@@ -679,6 +708,25 @@ const SupervisorWorkOrders = ({ user }) => {
                             >
                               <Eye className="w-4 h-4" />
                             </button>
+                            {/* Change Status Dropdown */}
+                            <select
+                              value={wo.status}
+                              onChange={(e) => {
+                                if (e.target.value === 'cancelled') {
+                                  setSelectedWorkOrder(wo);
+                                  setShowCancelModal(true);
+                                } else {
+                                  handleStatusChange(wo, e.target.value);
+                                }
+                              }}
+                              className="px-2 py-1 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="assigned">Assigned</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="completed">Completed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
                           </div>
                         </td>
                       </tr>
@@ -751,6 +799,67 @@ const SupervisorWorkOrders = ({ user }) => {
                   className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Modal - for entering cancellation note */}
+      {showCancelModal && selectedWorkOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Cancel Work Order</h2>
+              <p className="text-sm text-gray-500 mt-1">Please provide a reason for cancellation</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cancellation Note <span className="text-red-500">*</span></label>
+                <textarea
+                  value={cancelNote}
+                  onChange={(e) => setCancelNote(e.target.value)}
+                  placeholder="Enter reason for cancellation..."
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => { setShowCancelModal(false); setCancelNote(''); }}
+                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!cancelNote.trim()) {
+                      setMessage({ type: 'error', text: 'Cancellation note is required' });
+                      return;
+                    }
+                    try {
+                      const response = await fetch(`/api/supervisor/work-orders/${selectedWorkOrder.id}/status`, {
+                        method: 'PATCH',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'cancelled', cancelNote })
+                      });
+                      const result = await response.json();
+                      if (result.success) {
+                        setMessage({ type: 'success', text: 'Work order cancelled' });
+                        setShowCancelModal(false);
+                        setCancelNote('');
+                        fetchWorkOrders();
+                      } else {
+                        setMessage({ type: 'error', text: result.message || 'Failed to cancel' });
+                      }
+                    } catch (error) {
+                      setMessage({ type: 'error', text: 'Failed to cancel work order' });
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Confirm Cancel
                 </button>
               </div>
             </div>

@@ -88,13 +88,21 @@ const EmployeeZoneManagement = () => {
         setEmployees(allEmployees);
         setZones(allZones);
         
-        // Build a map of which zones are assigned to which employees
+        // Build a map of which zones are assigned to which employees (by role)
+        // Structure: { zoneName: { role: { employeeId, employeeName, role } } }
         const zoneMap = {};
         allEmployees.forEach(emp => {
           const empZones = emp.zone_names;
+          const empRole = emp.role || emp.employee_type || 'employee';
+          
           if (empZones && empZones !== 'No zones assigned') {
             empZones.split(',').forEach(zoneName => {
-              zoneMap[zoneName.trim()] = { employeeId: emp.id, employeeName: emp.name };
+              const trimmedName = zoneName.trim();
+              if (!zoneMap[trimmedName]) {
+                zoneMap[trimmedName] = {};
+              }
+              // Store by role - only one employee per role per zone
+              zoneMap[trimmedName][empRole] = { employeeId: emp.id, employeeName: emp.name, role: empRole };
             });
           }
         });
@@ -129,13 +137,25 @@ const EmployeeZoneManagement = () => {
     setSelectedZones([]);
   };
 
-  const isZoneLockedForEmployee = (zoneName, employeeId) => {
-    const assigned = assignedZonesMap[zoneName];
-    return assigned && assigned.employeeId !== employeeId;
+  const isZoneLockedForEmployee = (zoneName, employeeId, employeeRole) => {
+    // Zones are exclusive PER ROLE - lock if assigned to another employee of SAME role
+    const zoneAssignments = assignedZonesMap[zoneName];
+    if (!zoneAssignments) return false;
+    
+    // Check if this zone is assigned to another employee of the same role
+    const sameRoleAssignment = zoneAssignments[employeeRole];
+    return sameRoleAssignment && sameRoleAssignment.employeeId !== employeeId;
+  };
+
+  const getZoneAssignedTo = (zoneName, employeeRole) => {
+    const zoneAssignments = assignedZonesMap[zoneName];
+    if (!zoneAssignments) return null;
+    return zoneAssignments[employeeRole];
   };
 
   const toggleZone = (zoneName) => {
-    if (isZoneLockedForEmployee(zoneName, selectedEmployee?.id)) {
+    const empRole = selectedEmployee?.role || selectedEmployee?.employee_type || 'employee';
+    if (isZoneLockedForEmployee(zoneName, selectedEmployee?.id, empRole)) {
       return; // Silently ignore - locked zones are non-interactive
     }
     
@@ -148,7 +168,8 @@ const EmployeeZoneManagement = () => {
 
   const getAvailableZonesForCurrentEmployee = () => {
     if (!selectedEmployee) return [];
-    return zones.filter(zone => !isZoneLockedForEmployee(zone.name, selectedEmployee.id));
+    const empRole = selectedEmployee.role || selectedEmployee.employee_type || 'employee';
+    return zones.filter(zone => !isZoneLockedForEmployee(zone.name, selectedEmployee.id, empRole));
   };
 
   const handleSelectAllAvailable = () => {
@@ -561,29 +582,37 @@ const EmployeeZoneManagement = () => {
               {/* Zone Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {zones.map((zone) => {
+                  const empRole = selectedEmployee.role || selectedEmployee.employee_type || 'employee';
                   const isSelected = selectedZones.includes(zone.name);
-                  const isLocked = isZoneLockedForEmployee(zone.name, selectedEmployee.id);
+                  const isLocked = isZoneLockedForEmployee(zone.name, selectedEmployee.id, empRole);
+                  const assignedTo = getZoneAssignedTo(zone.name, empRole);
                   
                   return (
                     <div
                       key={zone.id}
                       onClick={() => !isLocked && toggleZone(zone.name)}
+                      title={isLocked ? `Assigned to ${assignedTo?.employeeName || 'another ' + empRole}` : ''}
                       className={`relative p-4 rounded-xl border-2 transition-all ${
                         isLocked
-                          ? 'border-gray-100 bg-gray-50/50 cursor-not-allowed select-none'
+                          ? 'border-red-100 bg-red-50/30 cursor-not-allowed select-none opacity-60'
                           : isSelected
                           ? 'border-emerald-500 bg-emerald-50 shadow-md cursor-pointer'
                           : 'border-gray-200 hover:border-indigo-300 hover:shadow-sm cursor-pointer'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <p className={`font-medium text-sm ${
-                          isLocked ? 'text-gray-300' : isSelected ? 'text-emerald-700' : 'text-gray-700'
-                        }`}>
-                          {zone.name}
-                        </p>
+                        <div>
+                          <p className={`font-medium text-sm ${
+                            isLocked ? 'text-gray-400' : isSelected ? 'text-emerald-700' : 'text-gray-700'
+                          }`}>
+                            {zone.name}
+                          </p>
+                          {isLocked && assignedTo && (
+                            <p className="text-xs text-red-400 mt-0.5">Assigned to {assignedTo.employeeName}</p>
+                          )}
+                        </div>
                         {isLocked ? (
-                          <Lock className="w-4 h-4 text-gray-300" />
+                          <Lock className="w-4 h-4 text-red-300" />
                         ) : (
                           <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                             isSelected

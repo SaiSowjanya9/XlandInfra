@@ -591,8 +591,8 @@ const FPVendors = ({ user }) => {
       {/* View Vendor Modal */}
       {viewVendor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setViewVendor(null)}>
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-6 bg-gray-50 rounded-t-xl flex items-center justify-between">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-6 bg-gray-50 rounded-t-xl flex items-center justify-between flex-shrink-0">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">{viewVendor.ownerName || viewVendor.owner_name}</h2>
                 <p className="text-sm text-gray-500 font-mono">{viewVendor.vendorId || viewVendor.vendor_id}</p>
@@ -601,7 +601,7 @@ const FPVendors = ({ user }) => {
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Service Info */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Service Information</h3>
@@ -620,7 +620,7 @@ const FPVendors = ({ user }) => {
               {/* Location Info */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Location</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-xs text-gray-500">Zone</p>
                     <p className="font-medium">{viewVendor.zone_name || viewVendor.zone || '-'}</p>
@@ -628,6 +628,10 @@ const FPVendors = ({ user }) => {
                   <div>
                     <p className="text-xs text-gray-500">Area</p>
                     <p className="font-medium">{viewVendor.area || viewVendor.areaName || viewVendor.area_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Division</p>
+                    <p className="font-medium">{viewVendor.division || '-'}</p>
                   </div>
                 </div>
               </div>

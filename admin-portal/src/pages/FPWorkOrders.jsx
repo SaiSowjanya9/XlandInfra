@@ -254,6 +254,12 @@ const FPWorkOrders = ({ user }) => {
     setSubcategories(category?.subcategories || []);
   };
 
+  // Fetch subcategories for edit modal (uses embedded data from categories)
+  const fetchSubcategories = (categoryId) => {
+    const category = categories.find(c => c.id === parseInt(categoryId));
+    setSubcategories(category?.subcategories || []);
+  };
+
   // Handle property selection and auto-populate customer details
   const handlePropertySelect = async (property) => {
     setFormData(prev => ({ 
