@@ -15,7 +15,7 @@ const USERS = [
   {
     username: 'admin',
     email: 'xlandinfra@gmail.com',
-    firstName: 'System',
+    firstName: 'Super',
     lastName: 'Admin',
     phone: '+91 9999999901',
     role: 'admin'

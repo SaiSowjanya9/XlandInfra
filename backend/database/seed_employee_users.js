@@ -12,7 +12,7 @@ const DEFAULT_PASSWORD = 'Password@123';
 const ADMIN_PASSWORD = 'Password$123';  // Production admin password
 
 const users = [
-  { username: 'XL_admin', email: 'xlandinfra@gmail.com', firstName: 'XLand', lastName: 'Admin', phone: '+91 9999999901', role: 'admin', isMainAdmin: true },
+  { username: 'XL_admin', email: 'xlandinfra@gmail.com', firstName: 'Super', lastName: 'Admin', phone: '+91 9999999901', role: 'admin', isMainAdmin: true },
   { username: 'ops_manager', email: 'ops@pmportal.com', firstName: 'Operations', lastName: 'Manager', phone: '+91 9999999907', role: 'operations_manager' },
   { username: 'manager_admin', email: 'manager@pmportal.com', firstName: 'Operations', lastName: 'Manager', phone: '+91 9999999902', role: 'manager' },
   { username: 'coordinator_admin', email: 'coordinator@pmportal.com', firstName: 'Field', lastName: 'Coordinator', phone: '+91 9999999903', role: 'coordinator' },

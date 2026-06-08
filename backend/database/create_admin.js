@@ -11,7 +11,7 @@ const ADMIN_USER = {
   email: 'xlandinfra@gmail.com',
   // Password: Password$123 (pre-hashed with bcrypt)
   password_hash: '$2a$10$mNm4vcgibG.g/KcN2eX3guJpXv6fjTNO7.aYkkRwRBW6TiF/j920u',
-  first_name: 'XLand',
+  first_name: 'Super',
   last_name: 'Admin',
   phone: '+91 9999999901',
   role: 'admin'

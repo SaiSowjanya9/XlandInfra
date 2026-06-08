@@ -36,7 +36,7 @@ async function reactivateAdmin() {
       console.log('User not found in users table, creating...');
       await connection.execute(`
         INSERT INTO users (username, email, password_hash, first_name, last_name, phone, role, is_active)
-        VALUES ('XL_admin', 'xlandinfra@gmail.com', ?, 'XLand', 'Admin', '+91 9999999901', 'admin', TRUE)
+        VALUES ('XL_admin', 'xlandinfra@gmail.com', ?, 'Super', 'Admin', '+91 9999999901', 'admin', TRUE)
       `, [PASSWORD_HASH]);
       console.log('✅ XL_admin CREATED in users table!');
     }
@@ -53,7 +53,7 @@ async function reactivateAdmin() {
       console.log('User not found in admin_users table, creating...');
       await connection.execute(`
         INSERT INTO admin_users (username, email, password_hash, first_name, last_name, role, is_active)
-        VALUES ('XL_admin', 'xlandinfra@gmail.com', ?, 'XLand', 'Admin', 'admin', TRUE)
+        VALUES ('XL_admin', 'xlandinfra@gmail.com', ?, 'Super', 'Admin', 'admin', TRUE)
       `, [PASSWORD_HASH]);
       console.log('✅ XL_admin CREATED in admin_users table!');
     }
