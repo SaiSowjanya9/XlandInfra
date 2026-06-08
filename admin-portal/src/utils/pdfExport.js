@@ -48,43 +48,48 @@ const generatePDF = (data, type, filename) => {
     };
 
     // ===== HEADER =====
-    // Dark blue header background
-    doc.setFillColor(30, 41, 59); // Slate-800
-    doc.rect(0, 0, pageWidth, 38, 'F');
+    // Clean white header with gold accent line
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, 45, 'F');
     
-    // Logo - Try to add image, fallback to styled text
+    // Gold accent line at bottom of header
+    doc.setFillColor(212, 175, 55); // Gold
+    doc.rect(0, 43, pageWidth, 2, 'F');
+    
+    // Add XLand Infra Gold Logo
     try {
-      doc.addImage(XLAND_LOGO_BASE64, 'PNG', margin, 7, 24, 24);
+      doc.addImage(XLAND_LOGO, 'PNG', margin, 4, 36, 36);
     } catch (e) {
-      // Fallback: Gold styled X with border
-      doc.setFillColor(212, 175, 55); // Gold color
-      doc.roundedRect(margin, 7, 24, 24, 3, 3, 'F');
-      doc.setTextColor(30, 41, 59); // Dark text on gold
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.text('XI', margin + 5, 23);
+      console.log('Logo failed to load, using text fallback');
     }
     
-    // Company name - next to logo
-    doc.setTextColor(212, 175, 55); // Gold color to match logo
-    doc.setFontSize(16);
+    // Company name - positioned after logo
+    doc.setTextColor(30, 41, 59); // Dark slate
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', margin + 30, 18);
-    doc.setFontSize(8);
+    doc.text('XLAND INFRA', margin + 42, 20);
+    
+    // Tagline
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139); // Slate-500
+    doc.text('Property Management Solutions', margin + 42, 28);
+    
+    // PVT LTD text
+    doc.setFontSize(7);
     doc.setTextColor(148, 163, 184); // Slate-400
-    doc.text('Property Management Solutions', margin + 30, 27);
+    doc.text('PVT LTD', margin + 42, 35);
 
-    // Document type badge - right aligned
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(pageWidth - margin - 50, 12, 50, 18, 3, 3, 'F');
-    doc.setTextColor(30, 41, 59); // Slate-800
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
+    // Document type - right aligned with gold background
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
-    doc.text(docType, pageWidth - margin - 25, 24, { align: 'center' });
+    doc.setFillColor(30, 41, 59); // Dark slate background
+    doc.roundedRect(pageWidth - margin - 55, 12, 55, 22, 3, 3, 'F');
+    doc.setTextColor(212, 175, 55); // Gold text
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(docType, pageWidth - margin - 27.5, 26, { align: 'center' });
 
-    y = 48;
+    y = 52;
 
     // ===== DOCUMENT INFO =====
     doc.setTextColor(...darkText);
@@ -294,16 +299,18 @@ const generatePDF = (data, type, filename) => {
 
       const addonsBody = data.addons.map((addon, idx) => {
         const addonName = addon.name || addon.serviceName || addon.service_name || 'Additional Service';
+        const addonVisits = addon.frequencyCount || addon.visits || addon.noOfVisits || addon.no_of_visits || '-';
         return [
           String(idx + 1),
           addonName,
-          addon.frequencyType || addon.frequency || 'One-time'
+          addon.frequencyType || addon.frequency || 'One-time',
+          String(addonVisits)
         ];
       });
 
       autoTable(doc, {
         startY: y,
-        head: [['#', 'Add-on Service', 'Frequency']],
+        head: [['#', 'Add-on Service', 'Frequency', 'No. of Visits']],
         body: addonsBody,
         margin: { left: margin, right: margin },
         styles: {
@@ -324,7 +331,8 @@ const generatePDF = (data, type, filename) => {
         columnStyles: {
           0: { cellWidth: 12, halign: 'center' },
           1: { cellWidth: 'auto' },
-          2: { cellWidth: 35, halign: 'center' }
+          2: { cellWidth: 28, halign: 'center' },
+          3: { cellWidth: 28, halign: 'center' }
         },
         alternateRowStyles: { fillColor: [250, 251, 252] }
       });
@@ -547,7 +555,8 @@ export const exportEstimateToPDF = (estimate) => {
     if (estimate.addons && Array.isArray(estimate.addons) && estimate.addons.length > 0) {
       addons = estimate.addons.map(a => ({
         name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
-        frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time'
+        frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time',
+        frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || 1
       }));
     }
     // Try addons_data JSON string (from backend)
@@ -557,7 +566,8 @@ export const exportEstimateToPDF = (estimate) => {
         if (Array.isArray(parsed) && parsed.length > 0) {
           addons = parsed.map(a => ({
             name: a.name || a.serviceName || a.service_name || 'Add-on',
-            frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time'
+            frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time',
+            frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || 1
           }));
         }
       } catch (e) { console.log('[PDF] addons_data parse error:', e); }
@@ -566,7 +576,8 @@ export const exportEstimateToPDF = (estimate) => {
     if (addons.length === 0 && estimate.selectedAddons && Array.isArray(estimate.selectedAddons) && estimate.selectedAddons.length > 0) {
       addons = estimate.selectedAddons.map(a => ({
         name: a.name || a.serviceName || a.service_name || 'Add-on',
-        frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time'
+        frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time',
+        frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || 1
       }));
     }
     
