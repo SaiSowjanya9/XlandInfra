@@ -1647,9 +1647,11 @@ router.get('/all-vendor-assignments', authenticate, adminOnly, async (req, res) 
   try {
     const [assignments] = await pool.execute(
       `SELECT va.*, 
-              ov.owner_name as vendor_name, ov.service_type, ov.zone as vendor_zone,
+              ov.vendor_id as vendor_code, ov.owner_name as vendor_name, ov.service_type, 
+              ov.zone as vendor_zone, ov.area, ov.rate_per_visit, ov.coverage_per_day,
               p.name as property_name, p.property_type, p.zone_name as property_zone,
               fp.fp_code, fp.company_name as fp_name,
+              va.created_at as assigned_date,
               COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), va.assigned_by, 'System') as assigned_by_name
        FROM vendor_assignments va
        LEFT JOIN onboarded_vendors ov ON va.vendor_id = ov.id

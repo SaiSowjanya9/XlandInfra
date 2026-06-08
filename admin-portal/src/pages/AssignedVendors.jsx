@@ -526,7 +526,7 @@ const AssignedVendors = ({ user }) => {
                   {filteredServiceAssignments.map((assignment) => (
                     <tr key={assignment.id} className="hover:bg-gray-50 transition-colors">
                       <td className="py-4 px-4">
-                        <span className="text-sm font-mono text-blue-600">{assignment.vendor_id || assignment.vendorId || '-'}</span>
+                        <span className="text-sm font-mono text-blue-600">{assignment.vendor_code || assignment.vendor_id || assignment.vendorId || '-'}</span>
                       </td>
                       <td className="py-4 px-4">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
