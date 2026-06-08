@@ -2012,26 +2012,65 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
 });
 
 // Transform AMC package to frontend format
-const transformPackage = (pkg) => ({
-  id: pkg.id,
-  packageId: pkg.package_code || `PKG-${pkg.id}`,
-  packageName: pkg.name || pkg.package_name,
-  name: pkg.name || pkg.package_name,
-  description: pkg.description || '',
-  propertyType: pkg.property_type === 'AP' ? 'APT' : pkg.property_type === 'VL' ? 'VILLA' : pkg.property_type === 'FL' ? 'FLAT' : pkg.property_type === 'PL' ? 'PLOT' : pkg.property_type || 'GC',
-  price: parseFloat(pkg.base_price || pkg.price) || 0,
-  rate: parseFloat(pkg.base_price || pkg.price) || 0,
-  services: pkg.services ? (typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services) : [],
-  serviceRows: pkg.service_rows ? (typeof pkg.service_rows === 'string' ? JSON.parse(pkg.service_rows) : pkg.service_rows) : [],
-  durationMonths: pkg.duration_months || 12,
-  billingCycle: pkg.billing_duration || 'Annual',
-  termsConditions: pkg.terms_conditions || '',
-  franchisePartnerId: pkg.franchise_partner_id,
-  fpCode: pkg.fp_code,
-  fpName: pkg.fp_name,
-  createdAt: pkg.created_at,
-  updatedAt: pkg.updated_at
-});
+const transformPackage = (pkg) => {
+  // Parse services - handle both string and JSON formats
+  let parsedServices = [];
+  let servicesString = '';
+  let serviceRows = [];
+  
+  if (pkg.services) {
+    if (typeof pkg.services === 'string') {
+      try {
+        parsedServices = JSON.parse(pkg.services);
+        // If it's an array of objects with 'name', extract names
+        if (Array.isArray(parsedServices)) {
+          servicesString = parsedServices.map(s => typeof s === 'string' ? s : (s.name || s.service || '')).filter(Boolean).join(', ');
+        }
+      } catch (e) {
+        // If not JSON, treat as comma-separated string
+        servicesString = pkg.services;
+        parsedServices = pkg.services.split(',').map(s => s.trim());
+      }
+    } else if (Array.isArray(pkg.services)) {
+      parsedServices = pkg.services;
+      servicesString = pkg.services.map(s => typeof s === 'string' ? s : (s.name || s.service || '')).filter(Boolean).join(', ');
+    }
+  }
+  
+  if (pkg.service_rows) {
+    try {
+      serviceRows = typeof pkg.service_rows === 'string' ? JSON.parse(pkg.service_rows) : pkg.service_rows;
+      // Also build services string from serviceRows if services is empty
+      if (!servicesString && Array.isArray(serviceRows) && serviceRows.length > 0) {
+        servicesString = serviceRows.map(r => r.service || r.name || '').filter(Boolean).join(', ');
+      }
+    } catch (e) {
+      serviceRows = [];
+    }
+  }
+  
+  return {
+    id: pkg.id,
+    packageId: pkg.package_code || `PKG-${pkg.id}`,
+    packageName: pkg.name || pkg.package_name,
+    name: pkg.name || pkg.package_name,
+    description: pkg.description || '',
+    propertyType: pkg.property_type === 'AP' ? 'APT' : pkg.property_type === 'VL' ? 'VILLA' : pkg.property_type === 'FL' ? 'FLAT' : pkg.property_type === 'PL' ? 'PLOT' : pkg.property_type || 'GC',
+    price: parseFloat(pkg.base_price || pkg.price) || 0,
+    rate: parseFloat(pkg.base_price || pkg.price) || 0,
+    services: servicesString, // String for display
+    servicesArray: parsedServices, // Array for processing
+    serviceRows: serviceRows,
+    durationMonths: pkg.duration_months || 12,
+    billingCycle: pkg.billing_duration || 'Annual',
+    termsConditions: pkg.terms_conditions || '',
+    franchisePartnerId: pkg.franchise_partner_id,
+    fpCode: pkg.fp_code,
+    fpName: pkg.fp_name,
+    createdAt: pkg.created_at,
+    updatedAt: pkg.updated_at
+  };
+};
 
 // Get ALL AMC Packages (Admin mode) - from fp_amc_packages table
 router.get('/all-amc-packages', authenticate, adminOnly, async (req, res) => {
