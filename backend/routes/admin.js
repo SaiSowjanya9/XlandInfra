@@ -1799,26 +1799,26 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
     
     console.log('Admin fp-view properties: Fetching for FP ID:', fpIdNum);
     
-    // Regular properties - all fields with creator name (exclude deleted)
-    const [properties] = await pool.execute(
-      `SELECT p.id, p.property_id, p.name, p.property_type,
-              p.zone_id as zone_name, p.area_name as area,
-              p.division_id as division,
-              p.address, p.city, p.state, p.zip_code,
-              p.contact_person, p.contact_phone, p.contact_email,
-              p.created_at, p.status,
-              COALESCE(
-                CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
-                p.created_by, 'System'
-              ) as created_by,
-              'properties' as source_table,
-              COALESCE(p.category, 'residential') as category
-       FROM properties p
-       LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
-       WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted')
-       ORDER BY p.created_at DESC`,
-      [fpIdNum]
-    );
+    // Regular properties - use SELECT * to avoid column name issues
+    let properties = [];
+    try {
+      const [rows] = await pool.execute(
+        `SELECT p.*, 'properties' as source_table
+         FROM properties p
+         WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted')
+         ORDER BY p.created_at DESC`,
+        [fpIdNum]
+      );
+      properties = rows.map(p => ({
+        ...p,
+        zone_name: p.zone_id || p.zone_name || p.zone,
+        area: p.area_name || p.area,
+        division: p.division_id || p.division,
+        category: p.category || 'residential'
+      }));
+    } catch (e) {
+      console.log('Properties query error:', e.message);
+    }
     
     console.log('Admin fp-view properties: Found', properties.length, 'regular properties');
     
@@ -1826,24 +1826,20 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
     let onboardedProps = [];
     try {
       const [rows] = await pool.execute(
-        `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                op.zone as zone_name, op.area_name as area,
-                op.address, op.city, op.state, op.postal_code as zip_code,
-                op.contact_person, op.contact_phone, op.contact_email,
-                op.created_at, op.status,
-                COALESCE(
-                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
-                  op.created_by, 'System'
-                ) as created_by,
-                'onboarded_properties' as source_table,
-                COALESCE(op.category, 'residential') as category
+        `SELECT op.*, 'onboarded_properties' as source_table
          FROM onboarded_properties op
-         LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR CAST(op.created_by AS CHAR) = CAST(fpe.id AS CHAR)
-         WHERE op.franchise_partner_id = ? AND (op.status IS NULL OR op.status = 'active' OR op.status != 'deleted')
+         WHERE op.franchise_partner_id = ? AND (op.status IS NULL OR op.status != 'deleted')
          ORDER BY op.created_at DESC`,
         [fpIdNum]
       );
-      onboardedProps = rows;
+      onboardedProps = rows.map(op => ({
+        ...op,
+        name: op.community_name || op.name,
+        zone_name: op.zone || op.zone_name,
+        area: op.area_name || op.area,
+        zip_code: op.postal_code || op.zip_code,
+        category: op.category || 'residential'
+      }));
       console.log('Admin fp-view properties: Found', onboardedProps.length, 'onboarded properties');
     } catch (e) {
       console.log('onboarded_properties query skipped:', e.message);
