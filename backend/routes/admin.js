@@ -424,7 +424,7 @@ router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
     // Try to delete from properties table first
     try {
       const [result1] = await pool.execute(
-        `UPDATE properties SET status = 'deleted', is_active = FALSE WHERE id = ?`,
+        `UPDATE properties SET status = 'deleted' WHERE id = ?`,
         [id]
       );
       if (result1.affectedRows > 0) deleted = true;
@@ -1228,7 +1228,7 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
        FROM properties p
        LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
-       WHERE (p.status IS NULL OR p.status != 'deleted') AND (p.is_active IS NULL OR p.is_active != 0)
+       WHERE (p.status IS NULL OR p.status != 'deleted')
        ORDER BY p.created_at DESC`
     );
     
