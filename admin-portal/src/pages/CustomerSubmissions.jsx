@@ -182,10 +182,18 @@ const CustomerSubmissions = () => {
     setNotifications(getNotifications());
   }, [selectedFp, token]);
 
+  // Auto-select residential category when FP is selected (for seamless FP switching)
+  useEffect(() => {
+    if (selectedFp && !selectedCategory) {
+      setSelectedCategory('residential');
+    }
+  }, [selectedFp, selectedCategory]);
+
   // Reload data when entering main view or when FP/filters change
   useEffect(() => {
     // Only load data when both category and FP are selected (main view)
     if (selectedCategory && selectedFp) {
+      console.log('CustomerSubmissions: Loading data for FP:', selectedFp.id, selectedFp.companyName);
       loadData();
     }
     // Poll for new entries every 10 seconds
