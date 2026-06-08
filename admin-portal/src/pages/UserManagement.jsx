@@ -90,6 +90,7 @@ const UserManagement = () => {
             mustChangePassword: u.mustChangePassword,
             status: u.isActive ? 'active' : 'inactive',
             isActive: u.isActive,
+            isSuperAdmin: u.isSuperAdmin || false,
             lastLogin: u.lastLogin,
             createdAt: u.createdAt,
             createdBy: u.createdBy,
@@ -598,13 +599,21 @@ const UserManagement = () => {
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => setShowDeleteConfirm(user)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {/* Hide delete button for Super Admins */}
+                      {!user.isSuperAdmin && (
+                        <button
+                          onClick={() => setShowDeleteConfirm(user)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {user.isSuperAdmin && (
+                        <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full font-medium" title="Super Admin - Cannot be deleted">
+                          Protected
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>

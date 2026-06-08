@@ -932,6 +932,7 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
           canClose: s.can_close
         },
         isActive: s.is_active,
+        isSuperAdmin: s.is_super_admin || false,
         mustChangePassword: s.must_change_password,
         lastLogin: s.last_login,
         createdBy: s.created_by_name,
@@ -1002,6 +1003,7 @@ router.get('/:id', authenticate, adminOnly, async (req, res) => {
           canClose: s.can_close
         },
         isActive: s.is_active,
+        isSuperAdmin: s.is_super_admin || false,
         lastLogin: s.last_login,
         createdBy: s.created_by_name,
         createdAt: s.created_at
@@ -1287,12 +1289,20 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
 
     // Check if user exists in users table
     const [existing] = await pool.execute(
-      `SELECT id, email, role FROM users WHERE id = ?`,
+      `SELECT id, email, role, is_super_admin FROM users WHERE id = ?`,
       [id]
     );
 
     if (existing.length > 0) {
       const userToDelete = existing[0];
+      
+      // SUPER ADMIN PROTECTION: Cannot delete super admin accounts from UI
+      if (userToDelete.is_super_admin) {
+        return res.status(403).json({
+          success: false,
+          message: 'Super Admin accounts cannot be deleted from the portal. Contact database administrator.'
+        });
+      }
       
       // If franchise partner, also delete from franchise_partners table
       if (userToDelete.role === 'franchise_partner' || userToDelete.role === 'franchise') {
