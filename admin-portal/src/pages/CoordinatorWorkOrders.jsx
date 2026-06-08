@@ -345,24 +345,17 @@ const CoordinatorWorkOrders = ({ user }) => {
     setPropertySearch('');
   };
 
-  // Handle category change to load subcategories
-  const fetchSubcategories = async (categoryId) => {
-    if (categoryId) {
-      try {
-        const response = await fetch(`/api/categories/${categoryId}/subcategories`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const result = await response.json();
-        if (result.success) {
-          setSubcategories(result.data || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch subcategories:', error);
-        setSubcategories([]);
-      }
-    } else {
-      setSubcategories([]);
-    }
+  // Handle category change to load subcategories from embedded data
+  const handleCategoryChange = (categoryId) => {
+    setFormData({ ...formData, categoryId, subcategoryId: '' });
+    const category = categories.find(c => c.id === parseInt(categoryId));
+    setSubcategories(category?.subcategories || []);
+  };
+
+  // Fetch subcategories (uses embedded data from categories)
+  const fetchSubcategories = (categoryId) => {
+    const category = categories.find(c => c.id === parseInt(categoryId));
+    setSubcategories(category?.subcategories || []);
   };
 
   const getStatusColor = (status) => {
