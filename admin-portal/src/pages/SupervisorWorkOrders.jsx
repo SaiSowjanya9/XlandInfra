@@ -12,6 +12,7 @@ const SupervisorWorkOrders = ({ user }) => {
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -224,16 +225,22 @@ const SupervisorWorkOrders = ({ user }) => {
 
   const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
-  // Filter by tab (pending/completed) first, then by search
+  // Filter by tab (pending/completed) first, then by status filter, then by search
   const pendingStatuses = ['pending', 'requested', 'assigned', 'in_progress'];
-  const completedStatuses = ['completed', 'closed'];
+  const completedStatuses = ['completed'];
   const tabFilteredWorkOrders = activeTab === 'pending' 
     ? workOrders.filter(wo => pendingStatuses.includes(wo.status))
     : activeTab === 'completed'
     ? workOrders.filter(wo => completedStatuses.includes(wo.status))
     : workOrders;
   
-  const filteredWorkOrders = tabFilteredWorkOrders.filter(wo =>
+  // Apply status filter
+  const statusFilteredWorkOrders = statusFilter 
+    ? tabFilteredWorkOrders.filter(wo => wo.status === statusFilter)
+    : tabFilteredWorkOrders;
+  
+  // Apply search filter
+  const filteredWorkOrders = statusFilteredWorkOrders.filter(wo =>
     wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -241,7 +248,7 @@ const SupervisorWorkOrders = ({ user }) => {
   );
 
   const pendingCount = workOrders.filter(wo => ['pending', 'requested', 'assigned', 'in_progress'].includes(wo.status)).length;
-  const completedCount = workOrders.filter(wo => ['completed', 'closed'].includes(wo.status)).length;
+  const completedCount = workOrders.filter(wo => ['completed'].includes(wo.status)).length;
 
   return (
     <div className="space-y-6">
@@ -632,7 +639,20 @@ const SupervisorWorkOrders = ({ user }) => {
               <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
                 <Search className="w-4 h-4" /> Search
               </button>
-              <button onClick={() => setSearchTerm('')} className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+              {/* Status Filter Dropdown */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
+              >
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="assigned">Assigned</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <button onClick={() => { setSearchTerm(''); setStatusFilter(''); }} className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-2">
                 <RefreshCw className="w-4 h-4" /> Clear
               </button>
             </div>
