@@ -3,7 +3,7 @@ import {
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Hammer, Lock, 
   ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, UserPlus, Users,
-  FileText, Store, Package, Shield, RefreshCw
+  FileText, Store, Package, Shield, RefreshCw, Edit2, Truck
 } from 'lucide-react';
 import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
 import { getZoneNames, createZone } from '../utils/zoneStore';
@@ -909,10 +909,45 @@ const CustomerSubmissions = () => {
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => handleViewProperty(property)}
-                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="View details"
+                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="View Details"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-4 h-4 text-gray-500" />
+                          </button>
+                          <button
+                            onClick={() => handleExportProperty(property)}
+                            className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Export to CSV"
+                          >
+                            <Download className="w-4 h-4 text-gray-400 hover:text-emerald-600" />
+                          </button>
+                          <button
+                            onClick={() => handleViewProperty(property)}
+                            className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Property"
+                          >
+                            <Edit2 className="w-4 h-4 text-blue-500" />
+                          </button>
+                          <button
+                            onClick={() => { setSelectedProperty(property); setShowAssignVendor(true); }}
+                            className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
+                            title="Assign Vendor"
+                          >
+                            <Truck className="w-4 h-4 text-purple-500" />
+                          </button>
+                          <button
+                            onClick={() => { setSelectedProperty(property); setShowAssignEmployee(true); }}
+                            className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Assign Employee"
+                          >
+                            <UserPlus className="w-4 h-4 text-green-500" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm(property)}
+                            className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
                           </button>
                         </div>
                       </td>
