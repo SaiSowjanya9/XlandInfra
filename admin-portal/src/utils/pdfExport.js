@@ -3,6 +3,10 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { XLAND_LOGO } from './logoBase64.js';
 
+// Debug logger - only logs in development
+const isDev = import.meta.env.DEV;
+const debug = (...args) => isDev && console.log(...args);
+
 const GST_RATE = 0.18;
 let isExporting = false;
 
@@ -67,16 +71,19 @@ const generatePDF = (data, type, filename) => {
     doc.setTextColor(180, 180, 180);
     doc.text('Property Management Solutions Pvt. Ltd.', margin + 20, 16);
 
-    // Document Badge (right side)
+    // Document Badge (right side) - centered text
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
-    const badgeWidth = 26;
+    const badgeWidth = 28;
+    const badgeHeight = 10;
     const badgeX = pageWidth - margin - badgeWidth;
+    const badgeY = 6;
     doc.setFillColor(...gold);
-    doc.roundedRect(badgeX, 5, badgeWidth, 12, 1.5, 1.5, 'F');
+    doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 1.5, 1.5, 'F');
     doc.setTextColor(20, 20, 20);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.text(docType, badgeX + badgeWidth/2, 13, { align: 'center' });
+    // Center text: x = badgeX + badgeWidth/2, y = badgeY + badgeHeight/2 + fontSize*0.35
+    doc.text(docType, badgeX + badgeWidth/2, badgeY + badgeHeight/2 + 2.8, { align: 'center' });
 
     y = headerHeight + 6;
 
@@ -227,7 +234,7 @@ const generatePDF = (data, type, filename) => {
       bodyStyles: { textColor: darkText, lineColor: [100, 100, 100] },
       columnStyles: {
         0: { cellWidth: 10, halign: 'center' },
-        1: { cellWidth: 'auto' },
+        1: { cellWidth: 'auto', halign: 'center' },
         2: { cellWidth: 25, halign: 'center' },
         3: { cellWidth: 20, halign: 'center' }
       },
@@ -261,7 +268,7 @@ const generatePDF = (data, type, filename) => {
         bodyStyles: { textColor: darkText, lineColor: [100, 100, 100] },
         columnStyles: {
           0: { cellWidth: 10, halign: 'center' },
-          1: { cellWidth: 'auto' },
+          1: { cellWidth: 'auto', halign: 'center' },
           2: { cellWidth: 25, halign: 'center' },
           3: { cellWidth: 20, halign: 'center' }
         },
@@ -339,7 +346,7 @@ const generatePDF = (data, type, filename) => {
 
 // Export estimate to PDF
 export const exportEstimateToPDF = (estimate) => {
-  console.log('[PDF] exportEstimateToPDF called for:', estimate?.estimateId || estimate?.estimate_id);
+  debug('[PDF] exportEstimateToPDF called for:', estimate?.estimateId || estimate?.estimate_id);
 
   try {
     if (!estimate) {
@@ -350,12 +357,12 @@ export const exportEstimateToPDF = (estimate) => {
     // Prepare services from various possible formats
     let services = [];
     
-    console.log('[PDF] Estimate type:', estimate.estimateType || estimate.estimate_type);
-    console.log('[PDF] Package services:', estimate.packageServices);
+    debug('[PDF] Estimate type:', estimate.estimateType || estimate.estimate_type);
+    debug('[PDF] Package services:', estimate.packageServices);
     
     // PRIORITY 1: Check packageServices (services from selected AMC package)
     if (estimate.packageServices && Array.isArray(estimate.packageServices) && estimate.packageServices.length > 0) {
-      console.log('[PDF] Using packageServices:', estimate.packageServices);
+      debug('[PDF] Using packageServices:', estimate.packageServices);
       services = estimate.packageServices.map(s => ({
         name: s.service || s.name || s.serviceName || 'Service',
         frequencyCount: s.frequencyCount || s.frequency || s.visits || 1,
@@ -372,7 +379,7 @@ export const exportEstimateToPDF = (estimate) => {
     }
     // PRIORITY 3: Check services array (from database or form)
     else if (estimate.services && Array.isArray(estimate.services) && estimate.services.length > 0) {
-      console.log('[PDF] Processing services array:', estimate.services);
+      debug('[PDF] Processing services array:', estimate.services);
       services = estimate.services.map(s => {
         // Handle nested package structure with services inside
         if (s.services && Array.isArray(s.services)) {
@@ -394,7 +401,7 @@ export const exportEstimateToPDF = (estimate) => {
     // If package name exists and no services, show package name as fallback
     if (services.length === 0 && (estimate.packageName || estimate.package_name)) {
       const pkgName = estimate.packageName || estimate.package_name;
-      console.log('[PDF] Adding package as service:', pkgName);
+      debug('[PDF] Adding package as service:', pkgName);
       services.push({
         name: pkgName + ' - AMC Services',
         frequencyCount: 12,
@@ -404,7 +411,7 @@ export const exportEstimateToPDF = (estimate) => {
     
     // Final fallback - if still no services but has a total, add a placeholder
     if (services.length === 0 && (estimate.total || estimate.totalPrice || estimate.subtotal)) {
-      console.log('[PDF] No services found, adding placeholder');
+      debug('[PDF] No services found, adding placeholder');
       services.push({
         name: estimate.propertyType ? `${estimate.propertyType} Service` : 'Estimate Services',
         frequencyCount: 1,
@@ -412,7 +419,7 @@ export const exportEstimateToPDF = (estimate) => {
       });
     }
     
-    console.log('[PDF] Final services:', services);
+    debug('[PDF] Final services:', services);
 
     // Parse addons from various formats (no prices - only names and frequency)
     let addons = [];
@@ -436,7 +443,7 @@ export const exportEstimateToPDF = (estimate) => {
             frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1
           }));
         }
-      } catch (e) { console.log('[PDF] addons_data parse error:', e); }
+      } catch (e) { debug('[PDF] addons_data parse error:', e); }
     }
     // Try selectedAddons array (from form)
     if (addons.length === 0 && estimate.selectedAddons && Array.isArray(estimate.selectedAddons) && estimate.selectedAddons.length > 0) {
@@ -447,7 +454,7 @@ export const exportEstimateToPDF = (estimate) => {
       }));
     }
     
-    console.log('[PDF] Parsed addons:', addons);
+    debug('[PDF] Parsed addons:', addons);
 
     const exportData = {
       estimateId: estimate.estimateId || estimate.estimate_id || estimate.id || 'EST-' + Date.now(),
@@ -485,9 +492,9 @@ export const exportEstimateToPDF = (estimate) => {
       createdAt: estimate.createdAt || estimate.created_at || new Date().toISOString()
     };
 
-    console.log('[PDF] Generating PDF for:', exportData.estimateId);
+    debug('[PDF] Generating PDF for:', exportData.estimateId);
     const result = generatePDF(exportData, 'estimate', `Estimate-${exportData.estimateId}.pdf`);
-    console.log('[PDF] generatePDF result:', result);
+    debug('[PDF] generatePDF result:', result);
     return result;
   } catch (error) {
     console.error('PDF Export Error:', error);
@@ -497,16 +504,16 @@ export const exportEstimateToPDF = (estimate) => {
 
 // Export package to PDF
 export const exportPackageToPDF = (pkg) => {
-  console.log('[PDF] exportPackageToPDF called');
+  debug('[PDF] exportPackageToPDF called');
   if (isExporting) {
-    console.log('[PDF] Already exporting, skipping');
+    debug('[PDF] Already exporting, skipping');
     return false;
   }
   isExporting = true;
 
   try {
     if (!pkg) throw new Error('No package data provided');
-    console.log('[PDF] Package data:', pkg);
+    debug('[PDF] Package data:', pkg);
 
     // Prepare services
     let services = [];

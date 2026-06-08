@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
@@ -97,8 +97,23 @@ const WorkOrder = ({ user }) => {
     }
   };
 
-  // Remove attachment
+  // Cleanup blob URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      formData.attachments.forEach(attachment => {
+        if (attachment.preview) {
+          URL.revokeObjectURL(attachment.preview);
+        }
+      });
+    };
+  }, []);
+
+  // Remove attachment and cleanup blob URL
   const removeAttachment = (attachmentId) => {
+    const attachment = formData.attachments.find(a => a.id === attachmentId);
+    if (attachment?.preview) {
+      URL.revokeObjectURL(attachment.preview);
+    }
     setFormData(prev => ({
       ...prev,
       attachments: prev.attachments.filter(a => a.id !== attachmentId)

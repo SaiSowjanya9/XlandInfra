@@ -74,8 +74,12 @@ app.use(cors({
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.log('CORS blocked origin:', origin);
-      callback(null, true); // Allow all in case of misconfiguration
+      // In production, reject unknown origins; in development, allow for testing
+      if (process.env.NODE_ENV === 'production') {
+        callback(new Error('Not allowed by CORS'));
+      } else {
+        callback(null, true);
+      }
     }
   },
   credentials: true,

@@ -10,6 +10,10 @@ import {
   getServiceVendorAssignmentsByEstimate 
 } from '../utils/assignmentStore';
 
+// Debug logger - only logs in development
+const isDev = import.meta.env.DEV;
+const debug = (...args) => isDev && console.log(...args);
+
 // Zone mapping: Maps area/community names to directional zones
 // This is needed because properties may have zones like "Amaravathi" while vendors have "East", "North", etc.
 const ZONE_MAPPING = {
@@ -185,21 +189,21 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     // DEBUG: Log property info with enhanced zone debugging
     const propertyZone = property?.zone_name || property?.zone || property?.zone_id || '';
     const propZoneDebug = getZoneDebugInfo(propertyZone);
-    console.log('═══════════════════════════════════════════════════════════════════════════');
-    console.log('[DEBUG] ASSIGN VENDORS - DATA LOAD');
-    console.log('═══════════════════════════════════════════════════════════════════════════');
-    console.log('[DEBUG] Property ID:', property?.propertyId);
-    console.log('[DEBUG] Property Name:', property?.name || property?.communityName);
-    console.log('[DEBUG] Property Zone (original):', propZoneDebug.original);
-    console.log('[DEBUG] Property Zone (normalized):', propZoneDebug.normalized);
-    console.log('[DEBUG] Zone was mapped:', propZoneDebug.wasMapped ? `YES (${propZoneDebug.original} → ${propZoneDebug.normalized})` : 'NO (direct match or unknown)');
+    debug('═══════════════════════════════════════════════════════════════════════════');
+    debug('[DEBUG] ASSIGN VENDORS - DATA LOAD');
+    debug('═══════════════════════════════════════════════════════════════════════════');
+    debug('[DEBUG] Property ID:', property?.propertyId);
+    debug('[DEBUG] Property Name:', property?.name || property?.communityName);
+    debug('[DEBUG] Property Zone (original):', propZoneDebug.original);
+    debug('[DEBUG] Property Zone (normalized):', propZoneDebug.normalized);
+    debug('[DEBUG] Zone was mapped:', propZoneDebug.wasMapped ? `YES (${propZoneDebug.original} → ${propZoneDebug.normalized})` : 'NO (direct match or unknown)');
     
     try {
       // Load vendors from API only (test vendors only used as fallback if API fails)
       let vendorData = [];
       try {
         const apiVendors = await getVendors();
-        console.log('[DEBUG] Vendors loaded from API:', apiVendors?.length || 0);
+        debug('[DEBUG] Vendors loaded from API:', apiVendors?.length || 0);
         
         // Use only API vendors - no merging with test data
         vendorData = apiVendors || [];
@@ -214,7 +218,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       }
       
       // DEBUG: Log all vendors with normalized values and service types
-      console.log('[DEBUG] All Vendors (' + (vendorData?.length || 0) + ' total):');
+      debug('[DEBUG] All Vendors (' + (vendorData?.length || 0) + ' total):');
       const allVendorZones = new Set();
       const allVendorServiceTypes = new Set();
       vendorData?.forEach((v, i) => {
@@ -222,21 +226,21 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
         const vendorZoneDebug = getZoneDebugInfo(vZone);
         allVendorZones.add(vZone);
         allVendorServiceTypes.add(v.serviceType || v.service_type);
-        console.log(`  ${i + 1}. ${v.ownerName || v.owner_name}`);
-        console.log(`      Service: "${v.serviceType || v.service_type}" → normalized: "${normalizeServiceType(v.serviceType || v.service_type)}"`);
-        console.log(`      Zone: "${vZone}" → normalized: "${vendorZoneDebug.normalized}"${vendorZoneDebug.wasMapped ? ' (mapped)' : ''}`);
+        debug(`  ${i + 1}. ${v.ownerName || v.owner_name}`);
+        debug(`      Service: "${v.serviceType || v.service_type}" → normalized: "${normalizeServiceType(v.serviceType || v.service_type)}"`);
+        debug(`      Zone: "${vZone}" → normalized: "${vendorZoneDebug.normalized}"${vendorZoneDebug.wasMapped ? ' (mapped)' : ''}`);
       });
-      console.log('[DEBUG] All unique Vendor Zones:', Array.from(allVendorZones).join(', '));
-      console.log('[DEBUG] All unique Vendor Service Types:', Array.from(allVendorServiceTypes).join(', '));
-      console.log('═══════════════════════════════════════════════════════════════════════════');
+      debug('[DEBUG] All unique Vendor Zones:', Array.from(allVendorZones).join(', '));
+      debug('[DEBUG] All unique Vendor Service Types:', Array.from(allVendorServiceTypes).join(', '));
+      debug('═══════════════════════════════════════════════════════════════════════════');
       
       setVendors(vendorData || []);
       
       // Load estimates for this property
       const propertyEstimates = getEstimatesByPropertyId(property.propertyId);
-      console.log('[DEBUG] Estimates for property:', propertyEstimates?.length || 0);
+      debug('[DEBUG] Estimates for property:', propertyEstimates?.length || 0);
       if (propertyEstimates?.length > 0) {
-        console.log('[DEBUG] First Estimate ID:', propertyEstimates[0]?.estimateId);
+        debug('[DEBUG] First Estimate ID:', propertyEstimates[0]?.estimateId);
       }
       setEstimates(propertyEstimates || []);
       
@@ -248,7 +252,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
         // No estimate exists - keep serviceAssignments empty
         // Vendor assignment is only enabled after estimate is created and linked
         setServiceAssignments([]);
-        console.log('[DEBUG] No estimate found - vendor assignment disabled until estimate is created');
+        debug('[DEBUG] No estimate found - vendor assignment disabled until estimate is created');
       }
     } catch (err) {
       console.error('Error loading data:', err);
@@ -359,8 +363,8 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     const propZone = property?.zone_name || property?.zone || property?.zone_id || '';
     const propZoneNormalized = normalizeZone(propZone);
     
-    console.log(`[EstimateSelect] Property: ${property?.propertyId}, Zone: "${propZone}"`);
-    console.log(`[EstimateSelect] Available vendors:`, vendorList.map(v => `${v.ownerName || v.owner_name} (${v.serviceType || v.service_type}, ${v.zone_name || v.zone})`));
+    debug(`[EstimateSelect] Property: ${property?.propertyId}, Zone: "${propZone}"`);
+    debug(`[EstimateSelect] Available vendors:`, vendorList.map(v => `${v.ownerName || v.owner_name} (${v.serviceType || v.service_type}, ${v.zone_name || v.zone})`));
     
     // Map services with auto-matched vendors (by BOTH service type AND zone - exact match)
     const mappedServices = services.map(service => {
@@ -392,7 +396,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
         return matchesService && matchesZone;
       });
       
-      console.log(`[EstimateSelect] Service "${service.serviceType}" → Matched: ${matchingVendor?.ownerName || matchingVendor?.owner_name || 'None (no vendor for this service in ' + propZone + ' zone)'}`);
+      debug(`[EstimateSelect] Service "${service.serviceType}" → Matched: ${matchingVendor?.ownerName || matchingVendor?.owner_name || 'None (no vendor for this service in ' + propZone + ' zone)'}`);
       
       return {
         ...service,
@@ -413,22 +417,22 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     let packageData = null;
     
     // DEBUG: Log estimate structure
-    console.log('[ExtractServices] Estimate ID:', estimate.estimateId);
-    console.log('[ExtractServices] Package ID:', estimate.packageId);
-    console.log('[ExtractServices] Has serviceRows:', !!estimate.serviceRows);
-    console.log('[ExtractServices] Has services array:', !!estimate.services);
+    debug('[ExtractServices] Estimate ID:', estimate.estimateId);
+    debug('[ExtractServices] Package ID:', estimate.packageId);
+    debug('[ExtractServices] Has serviceRows:', !!estimate.serviceRows);
+    debug('[ExtractServices] Has services array:', !!estimate.services);
     
     // Load linked package data if available
     if (estimate.packageId) {
       packageData = JSON.parse(localStorage.getItem('xland_amc_packages') || '[]')
         .find(p => p.packageId === estimate.packageId);
-      console.log('[ExtractServices] Package found:', packageData?.packageName);
-      console.log('[ExtractServices] Package serviceRows:', packageData?.serviceRows);
+      debug('[ExtractServices] Package found:', packageData?.packageName);
+      debug('[ExtractServices] Package serviceRows:', packageData?.serviceRows);
     }
     
     // PRIORITY 1: Use estimate's own serviceRows if available
     if (estimate.serviceRows && Array.isArray(estimate.serviceRows) && estimate.serviceRows.length > 0) {
-      console.log('[ExtractServices] Using estimate.serviceRows');
+      debug('[ExtractServices] Using estimate.serviceRows');
       estimate.serviceRows.forEach(sr => {
         services.push({
           serviceType: sr.service || sr.name || sr.serviceType,
@@ -439,7 +443,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     }
     // PRIORITY 2: Use package serviceRows if estimate is linked to a package
     else if (packageData?.serviceRows && Array.isArray(packageData.serviceRows) && packageData.serviceRows.length > 0) {
-      console.log('[ExtractServices] Using package.serviceRows');
+      debug('[ExtractServices] Using package.serviceRows');
       packageData.serviceRows.forEach(sr => {
         services.push({
           serviceType: sr.service || sr.name || sr.serviceType,
@@ -450,7 +454,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
     }
     // PRIORITY 3: Use estimate's services array
     else if (estimate.services && Array.isArray(estimate.services)) {
-      console.log('[ExtractServices] Using estimate.services array');
+      debug('[ExtractServices] Using estimate.services array');
       
       // Check for package-based services (older format)
       if (estimate.services[0]?.type === 'package' && estimate.services[0]?.services) {
@@ -497,7 +501,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       });
     }
     
-    console.log('[ExtractServices] Final services:', services);
+    debug('[ExtractServices] Final services:', services);
     return services;
   };
 
@@ -507,20 +511,20 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
   // Get all vendors for a service type filtered by property zone
   const getFilteredVendors = (serviceType) => {
     if (!vendors.length) {
-      console.log('[FILTER] No vendors loaded!');
+      debug('[FILTER] No vendors loaded!');
       return [];
     }
     if (!serviceType) {
-      console.log('[FILTER] No service type provided!');
+      debug('[FILTER] No service type provided!');
       return [];
     }
     
     const normalizedService = normalizeServiceType(serviceType);
     
-    console.log('───────────────────────────────────────────');
-    console.log(`[FILTER] Service Type: "${serviceType}" → "${normalizedService}"`);
-    console.log(`[FILTER] Property Zone: "${property?.zone}" → "${propertyZoneNormalized}"`);
-    console.log(`[FILTER] Total vendors to check: ${vendors.length}`);
+    debug('───────────────────────────────────────────');
+    debug(`[FILTER] Service Type: "${serviceType}" → "${normalizedService}"`);
+    debug(`[FILTER] Property Zone: "${property?.zone}" → "${propertyZoneNormalized}"`);
+    debug(`[FILTER] Total vendors to check: ${vendors.length}`);
     
     // Filter vendors by BOTH service type AND zone
     const filtered = vendors.filter(v => {
@@ -533,12 +537,12 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       // Log each vendor check
       const serviceMatch = matchesService ? '✓' : '✗';
       const zoneMatch = matchesZone ? '✓' : '✗';
-      console.log(`[FILTER]   → ${v.ownerName} | Service: "${vendorServiceNormalized}" ${serviceMatch} | Zone: "${vendorZoneNormalized}" ${zoneMatch}`);
+      debug(`[FILTER]   → ${v.ownerName} | Service: "${vendorServiceNormalized}" ${serviceMatch} | Zone: "${vendorZoneNormalized}" ${zoneMatch}`);
       
       return matchesService && matchesZone;
     });
     
-    console.log(`[FILTER] ═══ RESULT: ${filtered.length} vendors match "${serviceType}" + "${property?.zone}" ═══`);
+    debug(`[FILTER] ═══ RESULT: ${filtered.length} vendors match "${serviceType}" + "${property?.zone}" ═══`);
     return filtered;
   };
 
@@ -575,7 +579,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
       // Get assignments with vendors
       const assignmentsToSave = serviceAssignments.filter(s => s.vendorId);
       
-      console.log('[VendorAssignmentModal] Saving to database:', {
+      debug('[VendorAssignmentModal] Saving to database:', {
         propertyId: property.id,
         assignments: assignmentsToSave
       });
