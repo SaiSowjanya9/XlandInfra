@@ -174,90 +174,177 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // ============================================
-// GET /api/onboarding  — List all onboarded properties
+// GET /api/onboarding  — List all properties from BOTH tables
 // ============================================
 router.get('/', async (req, res) => {
   try {
     const { status } = req.query;
-    // Simple query without JOINs that might fail due to missing tables
-    let query = `SELECT * FROM onboarded_properties`;
-    let params = [];
+    const data = [];
     
+    // 1. Fetch from onboarded_properties table
+    let onboardedQuery = `SELECT * FROM onboarded_properties`;
     if (status === 'all') {
-      query += ` ORDER BY created_at DESC`;
+      onboardedQuery += ` ORDER BY created_at DESC`;
     } else if (status === 'deleted') {
-      query += ` WHERE status = 'deleted' ORDER BY created_at DESC`;
+      onboardedQuery += ` WHERE status = 'deleted' ORDER BY created_at DESC`;
     } else {
-      query += ` WHERE status = 'active' ORDER BY created_at DESC`;
+      onboardedQuery += ` WHERE status = 'active' ORDER BY created_at DESC`;
     }
     
-    const [rows] = await pool.execute(query, params);
+    const [onboardedRows] = await pool.execute(onboardedQuery);
 
-    // Fetch contacts for all properties in one query
-    const propertyIds = rows.map(r => r.id);
+    // Fetch contacts for onboarded_properties
+    const onboardedIds = onboardedRows.map(r => r.id);
     let contactsMap = {};
-    if (propertyIds.length > 0) {
-      const placeholders = propertyIds.map(() => '?').join(',');
-      const [contacts] = await pool.execute(
-        `SELECT * FROM property_contacts WHERE property_id IN (${placeholders})`,
-        propertyIds
-      );
-      contacts.forEach(c => {
-        if (!contactsMap[c.property_id]) contactsMap[c.property_id] = [];
-        contactsMap[c.property_id].push({
-          name: c.name,
-          email: c.email,
-          phone: c.phone,
-          countryCode: c.country_code
+    if (onboardedIds.length > 0) {
+      const placeholders = onboardedIds.map(() => '?').join(',');
+      try {
+        const [contacts] = await pool.execute(
+          `SELECT * FROM property_contacts WHERE property_id IN (${placeholders})`,
+          onboardedIds
+        );
+        contacts.forEach(c => {
+          if (!contactsMap[c.property_id]) contactsMap[c.property_id] = [];
+          contactsMap[c.property_id].push({
+            name: c.name,
+            email: c.email,
+            phone: c.phone,
+            countryCode: c.country_code
+          });
+        });
+      } catch (e) { /* property_contacts may not exist */ }
+    }
+
+    // Transform onboarded_properties
+    onboardedRows.forEach(row => {
+      data.push({
+        id: row.id.toString(),
+        propertyId: row.property_id,
+        entryType: row.entry_type,
+        category: row.category,
+        name: row.community_name,
+        zone: row.zone,
+        areaName: row.area_name,
+        division: row.division,
+        propertyType: row.property_type,
+        numberOfBlocks: row.number_of_blocks,
+        blockNames: row.block_names ? (typeof row.block_names === 'string' ? JSON.parse(row.block_names) : row.block_names) : null,
+        unitsPerBlock: row.units_per_block ? (typeof row.units_per_block === 'string' ? JSON.parse(row.units_per_block) : row.units_per_block) : null,
+        blockInfo: row.block_info,
+        blockNA: !!row.block_na,
+        numberOfUnits: row.number_of_units,
+        villaPlotNumber: row.villa_plot_number,
+        totalUnits: row.total_units,
+        address: row.address,
+        addressLine1: row.address_line1,
+        aptSuiteUnit: row.apt_suite_unit,
+        aptSuiteNA: !!row.apt_suite_na,
+        city: row.city,
+        state: row.state,
+        postalCode: row.postal_code,
+        landmark: row.landmark,
+        mapLocation: (row.map_lat && row.map_lng) ? {
+          lat: parseFloat(row.map_lat),
+          lng: parseFloat(row.map_lng),
+          address: row.map_address
+        } : null,
+        notes: row.notes,
+        contacts: contactsMap[row.id] || [],
+        status: row.status,
+        createdBy: row.created_by || 'System',
+        createdAt: row.created_at,
+        sourceTable: 'onboarded_properties'
+      });
+    });
+
+    // 2. Fetch from properties table (Coordinator/Executive created)
+    let propertiesQuery = `SELECT * FROM properties WHERE 1=1`;
+    if (status === 'deleted') {
+      propertiesQuery += ` AND status = 'deleted'`;
+    } else if (status !== 'all') {
+      propertiesQuery += ` AND (status IS NULL OR status = 'active')`;
+    }
+    propertiesQuery += ` ORDER BY created_at DESC`;
+    
+    try {
+      const [propRows] = await pool.execute(propertiesQuery);
+      
+      // Transform properties table data
+      propRows.forEach(row => {
+        // Skip if already in onboarded_properties (check by property_id)
+        if (data.some(d => d.propertyId === row.property_id)) return;
+        
+        // Build contacts from inline fields
+        const contacts = [];
+        if (row.contact_person || row.contact_email || row.contact_phone) {
+          contacts.push({
+            name: row.contact_person || '',
+            email: row.contact_email || '',
+            phone: row.contact_phone || '',
+            countryCode: '+91'
+          });
+        }
+        
+        // Determine entry type from property_id prefix
+        let entryType = row.entry_type || 'GC';
+        if (row.property_id?.includes('-VILLA-')) entryType = 'VILLA';
+        else if (row.property_id?.includes('-APT-')) entryType = 'APT';
+        else if (row.property_id?.includes('-FLAT-')) entryType = 'FLAT';
+        else if (row.property_id?.includes('-PLOT-')) entryType = 'PLOT';
+        else if (row.property_id?.includes('-GC-')) entryType = 'GC';
+        
+        data.push({
+          id: `prop-${row.id}`,
+          propertyId: row.property_id,
+          entryType: entryType,
+          category: row.category || 'residential',
+          name: row.name,
+          zone: row.zone_id || row.zone || '',
+          areaName: row.area_name || '',
+          division: row.division_id || row.division || '',
+          propertyType: row.property_type,
+          numberOfBlocks: row.number_of_blocks,
+          blockNames: row.block_names ? (typeof row.block_names === 'string' ? JSON.parse(row.block_names) : row.block_names) : null,
+          unitsPerBlock: row.units_per_block ? (typeof row.units_per_block === 'string' ? JSON.parse(row.units_per_block) : row.units_per_block) : null,
+          blockInfo: row.block_info,
+          blockNA: false,
+          numberOfUnits: row.number_of_units,
+          villaPlotNumber: row.villa_plot_number,
+          totalUnits: row.total_units || row.number_of_units || 0,
+          address: row.address,
+          addressLine1: row.address,
+          aptSuiteUnit: '',
+          aptSuiteNA: false,
+          city: row.city,
+          state: row.state,
+          postalCode: row.zip_code || '',
+          landmark: row.landmark || '',
+          mapLocation: (row.latitude && row.longitude) ? {
+            lat: parseFloat(row.latitude),
+            lng: parseFloat(row.longitude),
+            address: row.address
+          } : null,
+          notes: row.notes || '',
+          contacts: contacts,
+          status: row.status || 'active',
+          createdBy: row.created_by || 'System',
+          createdAt: row.created_at,
+          sourceTable: 'properties'
         });
       });
+    } catch (e) {
+      console.log('Properties table fetch skipped:', e.message);
     }
 
-    const data = rows.map(row => ({
-      id: row.id.toString(),
-      propertyId: row.property_id,
-      entryType: row.entry_type,
-      category: row.category,
-      name: row.community_name,
-      zone: row.zone,
-      areaName: row.area_name,
-      division: row.division,
-      propertyType: row.property_type,
-      numberOfBlocks: row.number_of_blocks,
-      blockNames: row.block_names ? (typeof row.block_names === 'string' ? JSON.parse(row.block_names) : row.block_names) : null,
-      unitsPerBlock: row.units_per_block ? (typeof row.units_per_block === 'string' ? JSON.parse(row.units_per_block) : row.units_per_block) : null,
-      blockInfo: row.block_info,
-      blockNA: !!row.block_na,
-      numberOfUnits: row.number_of_units,
-      villaPlotNumber: row.villa_plot_number,
-      totalUnits: row.total_units,
-      // Address fields
-      address: row.address,
-      addressLine1: row.address_line1,
-      aptSuiteUnit: row.apt_suite_unit,
-      aptSuiteNA: !!row.apt_suite_na,
-      city: row.city,
-      state: row.state,
-      postalCode: row.postal_code,
-      landmark: row.landmark,
-      mapLocation: (row.map_lat && row.map_lng) ? {
-        lat: parseFloat(row.map_lat),
-        lng: parseFloat(row.map_lng),
-        address: row.map_address
-      } : null,
-      notes: row.notes,
-      contacts: contactsMap[row.id] || [],
-      status: row.status,
-      createdBy: row.created_by || 'System',
-      createdAt: row.created_at
-    }));
+    // Sort by created date descending
+    data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.json({ success: true, data });
   } catch (error) {
-    console.error('Error fetching onboarded properties:', error);
+    console.error('Error fetching properties:', error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching onboarded properties',
+      message: 'Error fetching properties',
       error: error.message
     });
   }
