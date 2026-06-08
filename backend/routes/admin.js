@@ -1196,7 +1196,7 @@ router.get('/fp-list', authenticate, adminOnly, async (req, res) => {
     const [fps] = await pool.execute(
       `SELECT id, fp_code, company_name, owner_name, city, state, is_active 
        FROM franchise_partners 
-       WHERE is_active = TRUE 
+       WHERE is_active = 1 OR is_active = TRUE OR is_active IS NULL
        ORDER BY company_name ASC`
     );
     
