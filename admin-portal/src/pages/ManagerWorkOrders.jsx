@@ -44,6 +44,7 @@ const ManagerWorkOrders = ({ user }) => {
   const [formData, setFormData] = useState({
     propertyId: '',
     categoryId: '',
+    subcategoryId: '',
     description: '',
     priority: 'medium'
   });
@@ -230,9 +231,15 @@ const ManagerWorkOrders = ({ user }) => {
     )
   );
 
-  // Handle property selection
+  // Handle property selection - auto-populate customer details
   const handlePropertySelect = (property) => {
-    setFormData({ ...formData, propertyId: property.id });
+    setFormData({ 
+      ...formData, 
+      propertyId: property.id,
+      customerName: property.contact_person || property.contactPerson || property.owner_name || '',
+      customerEmail: property.contact_email || property.contactEmail || property.email || '',
+      customerPhone: property.contact_phone || property.contactPhone || property.phone || property.mobile || ''
+    });
     setPropertySearch(property.property_id + ' - ' + property.name);
   };
 
