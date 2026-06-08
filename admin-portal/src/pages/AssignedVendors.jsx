@@ -558,9 +558,9 @@ const AssignedVendors = ({ user }) => {
                       </td>
                       <td className="py-4 px-4">
                         <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                          assignment.status === 'active' ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-100'
+                          (assignment.is_active === true || assignment.is_active === 1 || assignment.vendor_status === 'active' || assignment.status === 'active') ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-100'
                         }`}>
-                          {assignment.status === 'active' ? 'Active' : 'Removed'}
+                          {(assignment.is_active === true || assignment.is_active === 1 || assignment.vendor_status === 'active' || assignment.status === 'active') ? 'Active' : 'Removed'}
                         </span>
                       </td>
                       <td className="py-4 px-4">

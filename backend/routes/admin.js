@@ -1646,20 +1646,21 @@ router.get('/all-employees', authenticate, adminOnly, async (req, res) => {
 router.get('/all-vendor-assignments', authenticate, adminOnly, async (req, res) => {
   try {
     const [assignments] = await pool.execute(
-      `SELECT va.*, 
+      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at as assigned_date, pva.is_active,
               ov.vendor_id as vendor_code, ov.owner_name as vendor_name, ov.service_type, 
-              ov.zone as vendor_zone, ov.area, ov.rate_per_visit, ov.coverage_per_day,
-              p.name as property_name, p.property_type, p.zone_name as property_zone,
-              fp.fp_code, fp.company_name as fp_name,
-              va.created_at as assigned_date,
-              COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), va.assigned_by, 'System') as assigned_by_name
-       FROM vendor_assignments va
-       LEFT JOIN onboarded_vendors ov ON va.vendor_id = ov.id
-       LEFT JOIN properties p ON va.property_id = p.id
-       LEFT JOIN franchise_partners fp ON va.franchise_partner_id = fp.id
-       LEFT JOIN fp_employees fpe ON va.assigned_by = fpe.email OR va.assigned_by = fpe.username
-       WHERE va.status = 'active'
-       ORDER BY va.created_at DESC`
+              ov.zone as vendor_zone, ov.area_name as area, ov.rate_per_visit, ov.coverage_per_day,
+              ov.status as vendor_status,
+              COALESCE(p.name, op.name, op.community_name) as property_name, 
+              COALESCE(p.property_type, op.property_type) as property_type, 
+              COALESCE(p.zone_name, op.zone) as property_zone,
+              COALESCE(p.franchise_partner_id, op.franchise_partner_id) as fp_id,
+              fp.fp_code, fp.company_name as fp_name
+       FROM property_vendor_assignments pva
+       JOIN onboarded_vendors ov ON pva.vendor_id = ov.id
+       LEFT JOIN properties p ON pva.property_id = p.id
+       LEFT JOIN onboarded_properties op ON pva.property_id = op.id
+       LEFT JOIN franchise_partners fp ON COALESCE(p.franchise_partner_id, op.franchise_partner_id) = fp.id
+       ORDER BY pva.assigned_at DESC`
     );
     
     console.log('Admin all-vendor-assignments: Found', assignments.length, 'assignments');

@@ -386,7 +386,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     });
   };
 
-  // Filter by tab (pending/completed) first, then by search
+  // Filter by tab (pending/completed) first, then by status filter, then by search
   const pendingStatuses = ['pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'];
   const completedStatuses = ['completed', 'closed'];
   const tabFilteredWorkOrders = viewType === 'pending' 
@@ -395,7 +395,13 @@ const CoordinatorWorkOrders = ({ user }) => {
     ? workOrders.filter(wo => completedStatuses.includes(wo.status))
     : workOrders;
   
-  const filteredWorkOrders = tabFilteredWorkOrders.filter(wo =>
+  // Apply status filter
+  const statusFilteredWorkOrders = statusFilter 
+    ? tabFilteredWorkOrders.filter(wo => wo.status === statusFilter)
+    : tabFilteredWorkOrders;
+  
+  // Apply search filter
+  const filteredWorkOrders = statusFilteredWorkOrders.filter(wo =>
     wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -859,8 +865,21 @@ const CoordinatorWorkOrders = ({ user }) => {
             <Search className="w-4 h-4" />
             <span>Search</span>
           </button>
+          {/* Status Filter Dropdown */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
+          >
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="assigned">Assigned</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
           <button
-            onClick={() => setSearchTerm('')}
+            onClick={() => { setSearchTerm(''); setStatusFilter(''); }}
             className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
           >
             <RefreshCw className="w-4 h-4" />
