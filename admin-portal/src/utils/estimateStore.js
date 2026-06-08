@@ -19,7 +19,7 @@ const CURRENT_ADDONS_VERSION = 2; // Increment this to force re-migration
       localStorage.removeItem(ADDONS_KEY);
       // Set new version
       localStorage.setItem(ADDONS_VERSION_KEY, CURRENT_ADDONS_VERSION.toString());
-      console.log('[EstimateStore] Migrated addons data to version', CURRENT_ADDONS_VERSION);
+      // Migration complete - addons data updated to current version
     }
   } catch (e) {
     console.error('[EstimateStore] Migration error:', e);

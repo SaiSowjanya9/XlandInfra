@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, generateToken } = require('../middleware/auth');
 const { 
   adminOnly, 
   managerOrAdmin, 
@@ -61,9 +61,20 @@ router.post('/login', async (req, res) => {
       [admin.id]
     );
 
+    // Generate JWT token for admin
+    const token = generateToken({
+      id: admin.id,
+      username: admin.username,
+      email: admin.email,
+      role: admin.role,
+      first_name: admin.first_name,
+      last_name: admin.last_name
+    });
+
     res.json({
       success: true,
       message: 'Login successful',
+      token,
       data: {
         id: admin.id,
         username: admin.username,
