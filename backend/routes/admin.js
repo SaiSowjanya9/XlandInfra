@@ -1648,9 +1648,13 @@ router.get('/all-vendor-assignments', authenticate, adminOnly, async (req, res) 
     const [assignments] = await pool.execute(
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at as assigned_date, pva.is_active,
               ov.vendor_id as vendor_code, ov.owner_name as vendor_name, ov.service_type, 
-              ov.zone as vendor_zone, ov.area_name as area, ov.rate_per_visit, ov.coverage_per_day,
-              ov.status as vendor_status,
+              ov.zone as vendor_zone, ov.zone as zone_name, ov.area_name as area, 
+              ov.rate_per_visit, ov.coverage_per_day, ov.status as vendor_status,
+              ov.owner_mobile as vendor_phone, ov.owner_email as vendor_email,
+              ov.owner_aadhar, ov.manager_name, ov.manager_mobile, ov.manager_email,
+              ov.poc_name, ov.poc_mobile, ov.poc_email, ov.service_verified,
               COALESCE(p.name, op.name, op.community_name) as property_name, 
+              COALESCE(p.property_id, op.property_id) as propertyId,
               COALESCE(p.property_type, op.property_type) as property_type, 
               COALESCE(p.zone_name, op.zone) as property_zone,
               COALESCE(p.franchise_partner_id, op.franchise_partner_id) as fp_id,
@@ -1939,21 +1943,27 @@ router.get('/fp-view/:fpId/vendor-assignments', authenticate, adminOnly, async (
     }
     
     const [assignments] = await pool.execute(
-      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
-              COALESCE(p.name, op.community_name) as property_name,
+      `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at as assigned_date, pva.is_active,
+              COALESCE(p.name, op.community_name, op.name) as property_name,
               COALESCE(p.property_id, op.property_id) as propertyId,
+              COALESCE(p.zone_name, op.zone) as property_zone,
+              COALESCE(p.property_type, op.property_type) as property_type,
               v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
               v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
-              v.zone as zone_name
+              v.zone as zone_name, v.area_name as area,
+              v.rate_per_visit, v.coverage_per_day, v.status as vendor_status,
+              v.owner_aadhar, v.manager_name, v.manager_mobile, v.manager_email,
+              v.poc_name, v.poc_mobile, v.poc_email, v.service_verified
        FROM property_vendor_assignments pva
        LEFT JOIN properties p ON pva.property_id = p.id
        LEFT JOIN onboarded_properties op ON pva.property_id = op.id
        JOIN onboarded_vendors v ON pva.vendor_id = v.id
-       WHERE (p.franchise_partner_id = ? OR op.franchise_partner_id = ?) AND pva.is_active = TRUE
+       WHERE (p.franchise_partner_id = ? OR op.franchise_partner_id = ?)
        ORDER BY pva.assigned_at DESC`,
       [fpIdNum, fpIdNum]
     );
     
+    console.log('Admin fp-view vendor-assignments: Found', assignments.length, 'assignments for FP', fpIdNum);
     res.json({ success: true, data: assignments || [] });
   } catch (error) {
     console.error('Error fetching FP vendor assignments:', error);
