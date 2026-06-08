@@ -1140,8 +1140,8 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
     ] = await Promise.all([
       // ALL properties (exclude deleted)
       safeCount('SELECT COUNT(*) as count FROM properties WHERE status IS NULL OR status != \'deleted\''),
-      // Onboarded vendors (FP vendors)
-      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors'),
+      // Onboarded vendors (FP vendors - active only)
+      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE status = \'active\''),
       // FP employees
       safeCount('SELECT COUNT(*) as count FROM fp_employees WHERE is_active = 1'),
       // Work orders - combined query for all work orders
@@ -1156,8 +1156,8 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
         pending: Number(r.pending) || 0, 
         completed: Number(r.completed) || 0 
       })).catch(() => ({ total: 0, pending: 0, completed: 0 })),
-      // Estimates (both regular and FP estimates)
-      safeCount('SELECT COUNT(*) as count FROM estimates'),
+      // Estimates (from fp_estimates table)
+      safeCount('SELECT COUNT(*) as count FROM fp_estimates'),
       // Recent work orders
       pool.execute(
         `SELECT wo.id, wo.work_order_id, wo.title, wo.status, wo.priority, wo.created_at,
