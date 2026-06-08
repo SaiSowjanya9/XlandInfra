@@ -231,11 +231,11 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
       [franchisePartnerId, creatorEmail, req.user?.username || '', coordinatorId]
     );
 
-    // Estimates - own created
+    // Estimates - by FP (fp_estimates doesn't have created_by column)
     const [estimatesCount] = await pool.query(
       `SELECT COUNT(*) as count FROM fp_estimates 
-       WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR coordinator_id = ?)`,
-      [franchisePartnerId, creatorEmail, req.user?.username || '', coordinatorId]
+       WHERE franchise_partner_id = ?`,
+      [franchisePartnerId]
     );
 
     // Get recent work orders (own created + zone-centric)
