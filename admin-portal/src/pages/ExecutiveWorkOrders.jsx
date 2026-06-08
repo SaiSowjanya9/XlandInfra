@@ -13,6 +13,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
@@ -81,17 +82,22 @@ const ExecutiveWorkOrders = ({ user }) => {
     ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)
   ).length;
   const completedCount = workOrders.filter(wo => 
-    ['completed', 'verified', 'closed'].includes(wo.status)
+    ['completed', 'verified'].includes(wo.status)
   ).length;
 
-  // Filter work orders by active tab and search term
+  // Filter work orders by active tab, status filter, and search term
   const filteredWorkOrders = workOrders.filter(wo => {
     const isPending = ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status);
-    const isCompleted = ['completed', 'verified', 'closed'].includes(wo.status);
+    const isCompleted = ['completed', 'verified'].includes(wo.status);
     
+    // Tab filter
     if (activeTab === 'pending' && !isPending) return false;
     if (activeTab === 'completed' && !isCompleted) return false;
 
+    // Status dropdown filter
+    if (statusFilter && wo.status !== statusFilter) return false;
+
+    // Search filter
     if (searchTerm) {
       return (
         wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -104,7 +110,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   });
 
   const handleSearch = () => setSearchTerm(searchInput);
-  const handleClear = () => { setSearchInput(''); setSearchTerm(''); };
+  const handleClear = () => { setSearchInput(''); setSearchTerm(''); setStatusFilter(''); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -298,6 +304,19 @@ const ExecutiveWorkOrders = ({ user }) => {
             <button onClick={handleSearch} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               <Search className="w-4 h-4" /><span>Search</span>
             </button>
+            {/* Status Filter Dropdown */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
+            >
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="assigned">Assigned</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
             <button onClick={handleClear} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">
               <RefreshCw className="w-4 h-4" /><span>Clear</span>
             </button>
