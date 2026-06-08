@@ -14,6 +14,8 @@ const SupervisorWorkOrders = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelNote, setCancelNote] = useState('');
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [attachments, setAttachments] = useState([]);
@@ -706,6 +708,25 @@ const SupervisorWorkOrders = ({ user }) => {
                             >
                               <Eye className="w-4 h-4" />
                             </button>
+                            {/* Change Status Dropdown */}
+                            <select
+                              value={wo.status}
+                              onChange={(e) => {
+                                if (e.target.value === 'cancelled') {
+                                  setSelectedWorkOrder(wo);
+                                  setShowCancelModal(true);
+                                } else {
+                                  handleStatusChange(wo, e.target.value);
+                                }
+                              }}
+                              className="px-2 py-1 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="assigned">Assigned</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="completed">Completed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
                           </div>
                         </td>
                       </tr>
@@ -778,6 +799,67 @@ const SupervisorWorkOrders = ({ user }) => {
                   className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Modal - for entering cancellation note */}
+      {showCancelModal && selectedWorkOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Cancel Work Order</h2>
+              <p className="text-sm text-gray-500 mt-1">Please provide a reason for cancellation</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cancellation Note <span className="text-red-500">*</span></label>
+                <textarea
+                  value={cancelNote}
+                  onChange={(e) => setCancelNote(e.target.value)}
+                  placeholder="Enter reason for cancellation..."
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => { setShowCancelModal(false); setCancelNote(''); }}
+                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!cancelNote.trim()) {
+                      setMessage({ type: 'error', text: 'Cancellation note is required' });
+                      return;
+                    }
+                    try {
+                      const response = await fetch(`/api/supervisor/work-orders/${selectedWorkOrder.id}/status`, {
+                        method: 'PATCH',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'cancelled', cancelNote })
+                      });
+                      const result = await response.json();
+                      if (result.success) {
+                        setMessage({ type: 'success', text: 'Work order cancelled' });
+                        setShowCancelModal(false);
+                        setCancelNote('');
+                        fetchWorkOrders();
+                      } else {
+                        setMessage({ type: 'error', text: result.message || 'Failed to cancel' });
+                      }
+                    } catch (error) {
+                      setMessage({ type: 'error', text: 'Failed to cancel work order' });
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Confirm Cancel
                 </button>
               </div>
             </div>
