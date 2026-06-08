@@ -1832,7 +1832,7 @@ router.get('/categories/:categoryId/subcategories', requireManagerScope, async (
   try {
     const { categoryId } = req.params;
     const [subcategories] = await pool.execute(
-      'SELECT * FROM subcategories WHERE category_id = ? ORDER BY sort_order, name',
+      'SELECT * FROM subcategories WHERE category_id = ? ORDER BY name',
       [categoryId]
     );
     res.json({ success: true, data: subcategories });
