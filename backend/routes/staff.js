@@ -132,7 +132,7 @@ router.post('/login', async (req, res) => {
     try {
       // First check users table
       const [users] = await pool.execute(
-        `SELECT * FROM users WHERE (username = ? OR email = ?) AND is_active = TRUE`,
+        `SELECT * FROM users WHERE (username = ? OR email = ?) AND is_active = 1`,
         [username, username]
       );
       if (users.length > 0) {
@@ -158,7 +158,7 @@ router.post('/login', async (req, res) => {
       // If not found in users, check franchise_partners table
       if (!user) {
         const [fpUsers] = await pool.execute(
-          `SELECT * FROM franchise_partners WHERE (username = ? OR email = ?) AND is_active = TRUE`,
+          `SELECT * FROM franchise_partners WHERE (username = ? OR email = ?) AND is_active = 1`,
           [username, username]
         );
         if (fpUsers.length > 0) {
@@ -463,7 +463,7 @@ router.get('/verify-reset-token/:token', async (req, res) => {
     const [users] = await pool.execute(
       `SELECT id, email, first_name, reset_token_expires
        FROM users 
-       WHERE reset_token = ? AND is_active = TRUE`,
+       WHERE reset_token = ? AND is_active = 1`,
       [token]
     );
 
@@ -477,7 +477,7 @@ router.get('/verify-reset-token/:token', async (req, res) => {
       const [fpUsers] = await pool.execute(
         `SELECT id, email, contact_person as first_name, reset_token_expires
          FROM franchise_partners 
-         WHERE reset_token = ? AND is_active = TRUE`,
+         WHERE reset_token = ? AND is_active = 1`,
         [token]
       );
       
@@ -556,7 +556,7 @@ router.post('/reset-password', async (req, res) => {
     const [users] = await conn.execute(
       `SELECT id, user_id, email, first_name, role, reset_token_expires, reset_temp_password_hash, password_hash
        FROM users 
-       WHERE reset_token = ? AND is_active = TRUE`,
+       WHERE reset_token = ? AND is_active = 1`,
       [token]
     );
 
@@ -572,7 +572,7 @@ router.post('/reset-password', async (req, res) => {
         `SELECT id, partner_id as user_id, email, contact_person as first_name, 'franchise_partner' as role,
                 reset_token_expires, reset_temp_password_hash, password_hash
          FROM franchise_partners 
-         WHERE reset_token = ? AND is_active = TRUE`,
+         WHERE reset_token = ? AND is_active = 1`,
         [token]
       );
       
@@ -721,7 +721,7 @@ router.post('/set-password', async (req, res) => {
 
     // First try to find in users table
     const [users] = await pool.execute(
-      `SELECT * FROM users WHERE (username = ? OR email = ?) AND is_active = TRUE`,
+      `SELECT * FROM users WHERE (username = ? OR email = ?) AND is_active = 1`,
       [username, username]
     );
 
@@ -733,7 +733,7 @@ router.post('/set-password', async (req, res) => {
     // If not found, check franchise_partners table
     if (!user) {
       const [fpUsers] = await pool.execute(
-        `SELECT * FROM franchise_partners WHERE (username = ? OR email = ?) AND is_active = TRUE`,
+        `SELECT * FROM franchise_partners WHERE (username = ? OR email = ?) AND is_active = 1`,
         [username, username]
       );
       if (fpUsers.length > 0) {

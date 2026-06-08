@@ -202,7 +202,7 @@ router.get('/activate/:token', async (req, res) => {
       `SELECT id, customer_id, email, first_name, last_name, property_name,
               activation_expires, is_activated
        FROM customer_accounts 
-       WHERE activation_token = ? AND is_active = TRUE`,
+       WHERE activation_token = ? AND is_active = 1`,
       [token]
     );
 
@@ -283,7 +283,7 @@ router.post('/set-password', async (req, res) => {
       `SELECT id, customer_id, email, first_name, temp_password_hash, 
               activation_expires, is_activated
        FROM customer_accounts 
-       WHERE activation_token = ? AND is_active = TRUE`,
+       WHERE activation_token = ? AND is_active = 1`,
       [token]
     );
 
@@ -407,7 +407,7 @@ router.post('/login', async (req, res) => {
               op.address, op.city, op.state
        FROM customer_accounts ca
        LEFT JOIN onboarded_properties op ON ca.property_id = op.id
-       WHERE ca.email = ? AND ca.is_active = TRUE`,
+       WHERE ca.email = ? AND ca.is_active = 1`,
       [email.toLowerCase()]
     );
 
@@ -645,7 +645,7 @@ router.get('/verify-reset-token/:token', async (req, res) => {
     const [customers] = await pool.execute(
       `SELECT id, email, first_name, reset_token_expires
        FROM customer_accounts 
-       WHERE reset_token = ? AND is_active = TRUE`,
+       WHERE reset_token = ? AND is_active = 1`,
       [token]
     );
 
@@ -716,7 +716,7 @@ router.post('/reset-password', async (req, res) => {
     const [customers] = await conn.execute(
       `SELECT id, customer_id, email, first_name, reset_token_expires, reset_temp_password_hash
        FROM customer_accounts 
-       WHERE reset_token = ? AND is_active = TRUE`,
+       WHERE reset_token = ? AND is_active = 1`,
       [token]
     );
 
@@ -831,7 +831,7 @@ router.get('/profile', async (req, res) => {
               op.total_units
        FROM customer_accounts ca
        LEFT JOIN onboarded_properties op ON ca.property_id = op.id
-       WHERE ca.id = ? AND ca.is_active = TRUE`,
+       WHERE ca.id = ? AND ca.is_active = 1`,
       [decoded.id]
     );
 
@@ -894,7 +894,7 @@ router.post('/resend-activation', async (req, res) => {
     const [customers] = await pool.execute(
       `SELECT id, customer_id, email, first_name, property_name, is_activated
        FROM customer_accounts 
-       WHERE email = ? AND is_active = TRUE`,
+       WHERE email = ? AND is_active = 1`,
       [email.toLowerCase()]
     );
 

@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
     
     const pool = db.pool;
     const [addons] = await pool.execute(
-      `SELECT * FROM addons WHERE is_active = TRUE ORDER BY created_at DESC`
+      `SELECT * FROM addons WHERE is_active = 1 ORDER BY created_at DESC`
     );
     
     // Transform to match frontend format
@@ -137,7 +137,7 @@ router.delete('/:addonId', async (req, res) => {
     
     const pool = db.pool;
     await pool.execute(
-      `UPDATE addons SET is_active = FALSE WHERE addon_id = ?`,
+      `UPDATE addons SET is_active = 0 WHERE addon_id = ?`,
       [addonId]
     );
     

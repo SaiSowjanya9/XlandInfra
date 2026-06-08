@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
     
     const pool = db.pool;
     const [estimates] = await pool.execute(
-      `SELECT * FROM estimates WHERE is_active = TRUE AND is_archived = ? ORDER BY created_at DESC`,
+      `SELECT * FROM estimates WHERE is_active = 1 AND is_archived = ? ORDER BY created_at DESC`,
       [isArchived ? 1 : 0]
     );
     
@@ -194,7 +194,7 @@ router.post('/', async (req, res) => {
         finalDescription,
         packageName || null,
         packageId || null,
-        1,  // is_active = true
+        1,  // is_active = 1
         0,  // is_archived = false
         'direct',  // estimate_type
         createdById  // created_by is NOT NULL
@@ -393,7 +393,7 @@ router.delete('/:estimateId', async (req, res) => {
     
     const pool = db.pool;
     await pool.execute(
-      `UPDATE estimates SET is_active = FALSE WHERE estimate_id = ?`,
+      `UPDATE estimates SET is_active = 0 WHERE estimate_id = ?`,
       [estimateId]
     );
     
@@ -415,7 +415,7 @@ router.post('/:estimateId/send', async (req, res) => {
     
     const pool = db.pool;
     const [estimates] = await pool.execute(
-      `SELECT * FROM estimates WHERE estimate_id = ? AND is_active = TRUE`,
+      `SELECT * FROM estimates WHERE estimate_id = ? AND is_active = 1`,
       [estimateId]
     );
     
@@ -506,7 +506,7 @@ router.post('/:estimateId/action', async (req, res) => {
     
     // First check regular estimates table
     let [estimates] = await pool.execute(
-      `SELECT *, 'regular' as source FROM estimates WHERE estimate_id = ? AND action_token = ? AND is_active = TRUE`,
+      `SELECT *, 'regular' as source FROM estimates WHERE estimate_id = ? AND action_token = ? AND is_active = 1`,
       [estimateId, token]
     );
     
@@ -581,7 +581,7 @@ router.get('/:estimateId/status', async (req, res) => {
     // First check regular estimates table
     let [estimates] = await pool.execute(
       `SELECT estimate_id, customer_name, property_name, total, status, sent_at, 'regular' as source
-       FROM estimates WHERE estimate_id = ? AND action_token = ? AND is_active = TRUE`,
+       FROM estimates WHERE estimate_id = ? AND action_token = ? AND is_active = 1`,
       [estimateId, token]
     );
     

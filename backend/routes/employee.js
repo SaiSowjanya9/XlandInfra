@@ -65,7 +65,7 @@ router.post('/login', async (req, res) => {
 
     // Search for user in users table (all roles) - case insensitive
     const [users] = await pool.query(
-      `SELECT * FROM users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND is_active = TRUE`,
+      `SELECT * FROM users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND is_active = 1`,
       [normalizedUsername, normalizedUsername]
     );
 
@@ -81,7 +81,7 @@ router.post('/login', async (req, res) => {
         `SELECT fe.*, fp.company_name as franchise_company_name 
          FROM fp_employees fe
          LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
-         WHERE (LOWER(fe.email) = ? OR LOWER(fe.username) = ?) AND fe.is_active = TRUE`,
+         WHERE (LOWER(fe.email) = ? OR LOWER(fe.username) = ?) AND fe.is_active = 1`,
         [normalizedUsername, normalizedUsername]
       );
 
@@ -90,7 +90,7 @@ router.post('/login', async (req, res) => {
         // Check if there's a corresponding user record via user_id
         if (fpEmp.user_id) {
           const [linkedUsers] = await pool.query(
-            `SELECT * FROM users WHERE id = ? AND is_active = TRUE`,
+            `SELECT * FROM users WHERE id = ? AND is_active = 1`,
             [fpEmp.user_id]
           );
           if (linkedUsers.length > 0) {
@@ -229,7 +229,7 @@ router.post('/set-password', async (req, res) => {
 
     // Find user in users table - case insensitive
     const [users] = await pool.query(
-      `SELECT * FROM users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND is_active = TRUE`,
+      `SELECT * FROM users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND is_active = 1`,
       [normalizedUsername, normalizedUsername]
     );
 
@@ -241,7 +241,7 @@ router.post('/set-password', async (req, res) => {
     // Also check fp_employees table
     if (!user) {
       const [fpEmployees] = await pool.query(
-        `SELECT * FROM fp_employees WHERE (LOWER(email) = ? OR LOWER(username) = ?) AND is_active = TRUE`,
+        `SELECT * FROM fp_employees WHERE (LOWER(email) = ? OR LOWER(username) = ?) AND is_active = 1`,
         [normalizedUsername, normalizedUsername]
       );
 
@@ -250,7 +250,7 @@ router.post('/set-password', async (req, res) => {
         // Try to get linked user
         if (fpEmp.user_id) {
           const [linkedUsers] = await pool.query(
-            `SELECT * FROM users WHERE id = ? AND is_active = TRUE`,
+            `SELECT * FROM users WHERE id = ? AND is_active = 1`,
             [fpEmp.user_id]
           );
           if (linkedUsers.length > 0) {
@@ -429,10 +429,10 @@ router.post('/verify-account', async (req, res) => {
       issues.push('Account not found in any table');
     }
     if (result.foundInUsers && !users[0].is_active) {
-      issues.push('Account exists but is_active = FALSE in users table');
+      issues.push('Account exists but is_active = 0 in users table');
     }
     if (result.foundInFpEmployees && !fpEmployees[0].is_active) {
-      issues.push('Account exists but is_active = FALSE in fp_employees table');
+      issues.push('Account exists but is_active = 0 in fp_employees table');
     }
     if (result.foundInFpEmployees && fpEmployees[0].user_id && !result.foundInUsers) {
       issues.push('fp_employees has user_id but no matching users record found');
@@ -470,7 +470,7 @@ router.post('/reset-temp-password', async (req, res) => {
     
     // Find user in users table
     const [users] = await pool.query(
-      `SELECT * FROM users WHERE LOWER(email) = ? AND is_active = TRUE`,
+      `SELECT * FROM users WHERE LOWER(email) = ? AND is_active = 1`,
       [normalizedEmail]
     );
 

@@ -1089,7 +1089,7 @@ router.get('/vendors/assignments', requireManagerScope, async (req, res) => {
        LEFT JOIN properties p ON pva.property_id = p.id
        LEFT JOIN onboarded_properties op ON pva.property_id = op.id
        JOIN onboarded_vendors v ON pva.vendor_id = v.id
-       WHERE (p.${scopeColumn} = ? OR op.${scopeColumn} = ?) AND pva.is_active = TRUE${zoneClause}
+       WHERE (p.${scopeColumn} = ? OR op.${scopeColumn} = ?) AND pva.is_active = 1${zoneClause}
        ORDER BY pva.assigned_at DESC`,
       [scopeId, scopeId, ...zoneParams]
     );
