@@ -14,7 +14,9 @@ import {
   Store,
   UserPlus,
   Building2,
-  User
+  User,
+  Camera,
+  Upload
 } from 'lucide-react';
 
 const ManagerWorkOrders = ({ user }) => {
