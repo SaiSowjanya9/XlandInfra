@@ -562,26 +562,33 @@ const UserManagement = () => {
                     </div>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
-                    <button
-                      onClick={() => handleToggleStatus(user)}
-                      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                        user.status === 'active'
-                          ? 'bg-green-50 text-green-700 hover:bg-green-100'
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                      }`}
-                    >
-                      {user.status === 'active' ? (
-                        <>
-                          <ToggleRight className="w-3.5 h-3.5" />
-                          Active
-                        </>
-                      ) : (
-                        <>
-                          <ToggleLeft className="w-3.5 h-3.5" />
-                          Inactive
-                        </>
-                      )}
-                    </button>
+                    {user.isSuperAdmin ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-green-50 text-green-700 cursor-not-allowed opacity-75">
+                        <ToggleRight className="w-3.5 h-3.5" />
+                        Active
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleToggleStatus(user)}
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                          user.status === 'active'
+                            ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                      >
+                        {user.status === 'active' ? (
+                          <>
+                            <ToggleRight className="w-3.5 h-3.5" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <ToggleLeft className="w-3.5 h-3.5" />
+                            Inactive
+                          </>
+                        )}
+                      </button>
+                    )}
                   </td>
                   <td className="px-3 py-3 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
