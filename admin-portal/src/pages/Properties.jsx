@@ -4,7 +4,7 @@ import {
   Eye, ChevronDown, AlertCircle, Bell, Clock, Briefcase, Lock, 
   ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, FileText,
   Package, Plus, Calendar, DollarSign, Receipt, Tag, Users, UserCheck, RefreshCw,
-  Edit2, Save
+  Edit2, Save, Truck, UserPlus
 } from 'lucide-react';
 import VendorAssignmentModal from '../components/VendorAssignmentModal';
 import * as XLSX from 'xlsx';
@@ -661,29 +661,46 @@ const Properties = () => {
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => handleViewProperty(property)}
-                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="View details"
+                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="View Details"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-4 h-4 text-gray-500" />
                           </button>
-                          {hasFullAccess && (
-                            <>
-                              <button
-                                onClick={() => openEditModal(property)}
-                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                title="Edit"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setDeleteConfirm(property)}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
+                          <button
+                            onClick={() => handleExportProperty(property)}
+                            className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Export to CSV"
+                          >
+                            <Download className="w-4 h-4 text-gray-400 hover:text-emerald-600" />
+                          </button>
+                          <button
+                            onClick={() => openEditModal(property)}
+                            className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Property"
+                          >
+                            <Edit2 className="w-4 h-4 text-blue-500" />
+                          </button>
+                          <button
+                            onClick={() => setVendorAssignmentProperty(property)}
+                            className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
+                            title="Assign Vendor"
+                          >
+                            <Truck className="w-4 h-4 text-purple-500" />
+                          </button>
+                          <button
+                            onClick={() => handleViewProperty(property)}
+                            className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Assign Employee"
+                          >
+                            <UserPlus className="w-4 h-4 text-green-500" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm(property)}
+                            className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </button>
                         </div>
                       </td>
                     </tr>
