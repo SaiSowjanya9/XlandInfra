@@ -1138,8 +1138,8 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
       estimates,
       recentWorkOrders
     ] = await Promise.all([
-      // ALL properties (both with and without franchise_partner_id)
-      safeCount('SELECT COUNT(*) as count FROM properties'),
+      // ALL properties (exclude deleted)
+      safeCount('SELECT COUNT(*) as count FROM properties WHERE status IS NULL OR status != \'deleted\''),
       // Onboarded vendors (FP vendors)
       safeCount('SELECT COUNT(*) as count FROM onboarded_vendors'),
       // FP employees
