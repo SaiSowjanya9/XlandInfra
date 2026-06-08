@@ -457,9 +457,9 @@ export const exportEstimateToPDF = (estimate) => {
       propertyType: estimate.propertyType || estimate.property_type || estimate.entryType || 'N/A',
       propertyName: estimate.propertyName || estimate.property_name,
       communityName: estimate.communityName || estimate.community_name || estimate.propertyName || estimate.property_name,
-      zone: estimate.zone || estimate.zoneName || estimate.zone_name,
-      areaName: estimate.areaName || estimate.area_name || estimate.area,
-      division: estimate.division || estimate.divisionName || estimate.division_name,
+      zone: estimate.zone || estimate.zoneName || estimate.zone_name || estimate.zoneId || estimate.zone_id,
+      areaName: estimate.areaName || estimate.area_name || estimate.area || estimate.areaId || estimate.area_id,
+      division: estimate.division || estimate.divisionName || estimate.division_name || estimate.divisionId || estimate.division_id,
       // GC/APT specific fields
       numberOfBlocks: estimate.numberOfBlocks || estimate.number_of_blocks || estimate.blocks,
       unitsPerBlock: estimate.unitsPerBlock || estimate.units_per_block,
