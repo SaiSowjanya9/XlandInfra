@@ -1,12 +1,8 @@
 // Professional PDF Export using jsPDF - Direct Download, No Print Dialog
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { XLAND_LOGO } from './logoBase64.js';
 
 const GST_RATE = 0.18;
-
-// XLand Infra Logo as base64 (gold/dark blue themed)
-const XLAND_LOGO_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAAF8WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxNDUgNzkuMTYzNDk5LCAyMDE4LzA4LzEzLTE2OjQwOjIyICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1sbnM6cGhvdG9zaG9wPSJodHRwOi8vbnMuYWRvYmUuY29tL3Bob3Rvc2hvcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ0MgMjAxOSAoV2luZG93cykiIHhtcDpDcmVhdGVEYXRlPSIyMDI0LTAxLTAxVDEyOjAwOjAwKzA1OjMwIiB4bXA6TW9kaWZ5RGF0ZT0iMjAyNC0wMS0wMVQxMjowMDowMCswNTozMCIgeG1wOk1ldGFkYXRhRGF0ZT0iMjAyNC0wMS0wMVQxMjowMDowMCswNTozMCIgZGM6Zm9ybWF0PSJpbWFnZS9wbmciIHBob3Rvc2hvcDpDb2xvck1vZGU9IjMiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6MDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ4bXAuZGlkOjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCI+IDx4bXBNTTpIaXN0b3J5PiA8cmRmOlNlcT4gPHJkZjpsaSBzdEV2dDphY3Rpb249ImNyZWF0ZWQiIHN0RXZ0Omluc3RhbmNlSUQ9InhtcC5paWQ6MDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwIiBzdEV2dDp3aGVuPSIyMDI0LTAxLTAxVDEyOjAwOjAwKzA1OjMwIiBzdEV2dDpzb2Z0d2FyZUFnZW50PSJBZG9iZSBQaG90b3Nob3AgQ0MgMjAxOSAoV2luZG93cykiLz4gPC9yZGY6U2VxPiA8L3htcE1NOkhpc3Rvcnk+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+AQEBAQAAAP8A/wD/AP8A/wD/AP8AAQD/AP8A/wABAQEBAQAAAQEBAf//AAAA//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/AP8AAQD/AP8AAQABAP8A/wD/AP8AAAD/AAAA/wD/AAAAAAAAAP8A/wD/AP8A/wD/AAAA/wD/AP8A/wD/AAAA/wD/AP8A/wAAAAAAAAAAAAAAAAD/AP8AAQD/AAAA/wAAAP8A/wAAAP8A/wD/AAAA/wD/AAAAAAAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAAAAAAAAAAAAAAAAAAAAAAAP8AAAD/AAAAAAAAAP8AAAD/AAAA/wAAAAAAAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAAAAAAAAAAAAAAAAAAAAAAAAAD/AAAA/wAAAAAAAAD/AAAA/wAAAP8AAAD/AAAAAAAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAAAAAAAAAAAAAAAAAAAA/wAAAP8AAAD/AAAAAAD/AAAA/wAAAAD/AAAA/wAAAAAA/wAAAP8AAAD/AAAA/wAAAAD/AAAA/wAAAAAAAAAAAAAAAAAAAAAAAP8AAAD/AAAA/wAAAAAA/wAAAP8AAAAAAP8AAAD/AAAAAAD/AAAA/wAAAP8AAAD/AAAAAAD/AAAA/wAAAAAAAAAAAAAAAAAAAAAAAP8AAAD/AAAA/wAAAAAA/wAAAP8AAAAAAP8AAAD/AAAAAAD/AAAA/wAAAP8AAAD/AAAAAAD/AAAA/wAAAAAAAAAAAAAA';
 let isExporting = false;
 
 // Format currency with proper Indian formatting
@@ -21,448 +17,317 @@ const formatDate = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-// Generate Premium PDF with professional design - Soft/Subtle colors
+// Generate Premium PDF with professional design
 const generatePDF = (data, type, filename) => {
   try {
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
-    let y = 10;
+    let y = 12;
 
-    // Soft/Subtle Colors - No bright colors
-    const primaryColor = [71, 85, 105];      // Slate-600
-    const darkText = [51, 65, 85];           // Slate-700
-    const grayText = [100, 116, 139];        // Slate-500
-    const lightGray = [248, 250, 252];       // Slate-50
-    const borderColor = [203, 213, 225];     // Slate-300
-    const accentColor = [148, 163, 184];     // Slate-400
-    
-    // Helper function to check page overflow and add new page if needed
-    const checkPageOverflow = (neededHeight) => {
-      if (y + neededHeight > pageHeight - 25) {
-        doc.addPage();
-        y = 20;
-        return true;
-      }
-      return false;
-    };
+    // Professional Color Palette
+    const navy = [30, 41, 59];               // Dark navy
+    const slate = [71, 85, 105];             // Slate-600
+    const darkText = [31, 41, 55];           // Gray-800
+    const mediumText = [75, 85, 99];         // Gray-600
+    const lightText = [107, 114, 128];       // Gray-500
+    const cardBg = [249, 250, 251];          // Gray-50
+    const borderLight = [229, 231, 235];     // Gray-200
+    const gold = [180, 144, 52];             // Professional gold
 
     // ===== HEADER =====
-    // Clean white header with gold accent line
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, pageWidth, 45, 'F');
+    // Company Logo Area (text-based for reliability)
+    doc.setFillColor(...gold);
+    doc.roundedRect(margin, y, 12, 12, 1.5, 1.5, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('XI', margin + 6, y + 8, { align: 'center' });
     
-    // Gold accent line at bottom of header
-    doc.setFillColor(212, 175, 55); // Gold
-    doc.rect(0, 43, pageWidth, 2, 'F');
-    
-    // Add XLand Infra Gold Logo
-    try {
-      doc.addImage(XLAND_LOGO, 'PNG', margin, 4, 36, 36);
-    } catch (e) {
-      console.log('Logo failed to load, using text fallback');
-    }
-    
-    // Company name - positioned after logo
-    doc.setTextColor(30, 41, 59); // Dark slate
+    // Company Name
+    doc.setTextColor(...navy);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', margin + 42, 20);
+    doc.text('XLAND INFRA', margin + 16, y + 6);
     
     // Tagline
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 116, 139); // Slate-500
-    doc.text('Property Management Solutions', margin + 42, 28);
-    
-    // PVT LTD text
-    doc.setFontSize(7);
-    doc.setTextColor(148, 163, 184); // Slate-400
-    doc.text('PVT LTD', margin + 42, 35);
+    doc.setTextColor(...lightText);
+    doc.text('Property Management Solutions Pvt. Ltd.', margin + 16, y + 11);
 
-    // Document type - right aligned with gold background
+    // Document Badge (right side)
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
-    doc.setFillColor(30, 41, 59); // Dark slate background
-    doc.roundedRect(pageWidth - margin - 55, 12, 55, 22, 3, 3, 'F');
-    doc.setTextColor(212, 175, 55); // Gold text
-    doc.setFontSize(12);
+    const badgeWidth = 28;
+    const badgeX = pageWidth - margin - badgeWidth;
+    doc.setFillColor(...navy);
+    doc.roundedRect(badgeX, y, badgeWidth, 10, 1.5, 1.5, 'F');
+    doc.setTextColor(...gold);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.text(docType, pageWidth - margin - 27.5, 26, { align: 'center' });
+    doc.text(docType, badgeX + badgeWidth/2, y + 6.5, { align: 'center' });
 
-    y = 52;
+    y += 18;
+    
+    // Divider line
+    doc.setDrawColor(...gold);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 6;
 
-    // ===== DOCUMENT INFO =====
-    doc.setTextColor(...darkText);
-    doc.setFontSize(10);
+    // ===== DOCUMENT INFO ROW =====
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.text('Estimate ID:', margin, y);
+    doc.setTextColor(...mediumText);
+    doc.text('ID:', margin, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(data.estimateId || data.packageId || 'N/A', margin + 28, y);
+    doc.setTextColor(...darkText);
+    const estId = String(data.estimateId || data.packageId || 'N/A');
+    doc.text(estId.length > 25 ? estId.substring(0, 25) + '...' : estId, margin + 8, y);
     
     doc.setFont('helvetica', 'bold');
-    doc.text('Date:', pageWidth - margin - 60, y);
+    doc.setTextColor(...mediumText);
+    doc.text('Date:', pageWidth - margin - 35, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(formatDate(data.createdAt), pageWidth - margin - 45, y);
-    y += 10;
+    doc.setTextColor(...darkText);
+    doc.text(formatDate(data.createdAt), pageWidth - margin - 23, y);
+    y += 6;
 
-    // ===== PACKAGE/ESTIMATE NAME =====
+    // ===== PACKAGE NAME BAR =====
     if (data.packageName) {
-      doc.setFillColor(...lightGray);
-      doc.roundedRect(margin, y, pageWidth - margin * 2, 14, 2, 2, 'F');
-      doc.setFillColor(...accentColor);
-      doc.rect(margin, y, 3, 14, 'F');
+      doc.setFillColor(...cardBg);
+      doc.setDrawColor(...borderLight);
+      doc.roundedRect(margin, y, pageWidth - margin * 2, 9, 1.5, 1.5, 'FD');
       
-      doc.setTextColor(...primaryColor);
-      doc.setFontSize(12);
+      // Gold left accent
+      doc.setFillColor(...gold);
+      doc.rect(margin, y + 1, 2, 7, 'F');
+      
+      doc.setTextColor(...navy);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text(data.packageName, margin + 8, y + 9);
+      doc.text(data.packageName, margin + 6, y + 6);
       
       if (data.billingDuration) {
-        doc.setTextColor(...grayText);
-        doc.setFontSize(9);
+        doc.setTextColor(...lightText);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Billing: ${data.billingDuration}`, pageWidth - margin - 5, y + 9, { align: 'right' });
+        doc.text(`Billing: ${data.billingDuration}`, pageWidth - margin - 3, y + 6, { align: 'right' });
       }
-      y += 20;
+      y += 13;
     }
 
-    // ===== STACKED SECTIONS LAYOUT (Clean FP Portal Style) =====
+    // ===== SIDE-BY-SIDE CARDS: Property + Customer =====
     if (type !== 'package') {
-    const fullWidth = pageWidth - margin * 2;
-    
-    // Property Details Section
-    doc.setFillColor(241, 245, 249); // Slate-100 background
-    doc.roundedRect(margin, y, fullWidth, 45, 3, 3, 'F');
-    
-    doc.setTextColor(...primaryColor);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Property Details', margin + 5, y + 8);
-    
-    let infoY = y + 16;
-    doc.setTextColor(...darkText);
-    doc.setFontSize(8);
-    const col1X = margin + 5;
-    const col2X = margin + fullWidth/2;
-    
-    // Row 1
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...grayText);
-    doc.text('Property ID', col1X, infoY);
-    doc.text('Property Type', col2X, infoY);
-    infoY += 5;
-    doc.setTextColor(...darkText);
-    doc.setFont('helvetica', 'bold');
-    doc.text(String(data.propertyId || data.property_code || '-'), col1X, infoY);
-    doc.text(String(data.propertyType || '-'), col2X, infoY);
-    infoY += 8;
-    
-    // Row 2
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...grayText);
-    doc.text('Zone', col1X, infoY);
-    doc.text('Division', col2X, infoY);
-    infoY += 5;
-    doc.setTextColor(...darkText);
-    doc.setFont('helvetica', 'bold');
-    doc.text(String(data.zone || '-'), col1X, infoY);
-    doc.text(String(data.division || '-'), col2X, infoY);
-    
-    y += 50;
-    
-    // Customer Details Section (same style as Property Details)
-    doc.setFillColor(241, 245, 249); // Slate-100 background (same as Property Details)
-    doc.roundedRect(margin, y, fullWidth, 45, 3, 3, 'F');
-    
-    doc.setTextColor(...primaryColor); // Same color as Property Details
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Customer Details', margin + 5, y + 8);
-    
-    infoY = y + 16;
-    doc.setFontSize(8);
-    
-    // Row 1
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...grayText);
-    doc.text('Contact Name', col1X, infoY);
-    doc.text('Phone', col2X, infoY);
-    infoY += 5;
-    doc.setTextColor(...darkText);
-    doc.setFont('helvetica', 'bold');
-    doc.text(String(data.customerName || '-'), col1X, infoY);
-    doc.text(String(data.customerPhone || '-'), col2X, infoY);
-    infoY += 8;
-    
-    // Row 2
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...grayText);
-    doc.text('Email', col1X, infoY);
-    infoY += 5;
-    doc.setTextColor(...darkText);
-    doc.setFont('helvetica', 'bold');
-    doc.text(String(data.customerEmail || '-'), col1X, infoY);
-    
-    y += 55;
-    } // End of property/customer details section (skipped for package type)
-
-    // ===== NO OF VISITS =====
-    if (data.noOfVisits) {
-      doc.setFillColor(...lightGray);
-      doc.roundedRect(margin, y, 70, 10, 2, 2, 'F');
-      doc.setTextColor(...darkText);
-      doc.setFontSize(9);
+      const gap = 6;
+      const cardWidth = (pageWidth - margin * 2 - gap) / 2;
+      const cardHeight = 32;
+      
+      // Property Details Card
+      doc.setFillColor(...cardBg);
+      doc.setDrawColor(...borderLight);
+      doc.roundedRect(margin, y, cardWidth, cardHeight, 2, 2, 'FD');
+      
+      doc.setTextColor(...slate);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.text('No. of Visits:', margin + 5, y + 7);
+      doc.text('Property Details', margin + 4, y + 5);
+      
+      let py = y + 10;
+      doc.setFontSize(7);
+      
+      // Row 1: Property ID | Property Type
       doc.setFont('helvetica', 'normal');
-      doc.text(String(data.noOfVisits), margin + 35, y + 7);
-      y += 14;
+      doc.setTextColor(...lightText);
+      doc.text('Property ID', margin + 4, py);
+      doc.text('Type', margin + cardWidth/2 + 2, py);
+      py += 4;
+      doc.setTextColor(...darkText);
+      doc.setFont('helvetica', 'bold');
+      const propId = String(data.propertyId || '-');
+      doc.text(propId.length > 18 ? propId.substring(0, 18) + '...' : propId, margin + 4, py);
+      doc.text(String(data.propertyType || '-'), margin + cardWidth/2 + 2, py);
+      py += 6;
+      
+      // Row 2: Zone | Division
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...lightText);
+      doc.text('Zone', margin + 4, py);
+      doc.text('Division', margin + cardWidth/2 + 2, py);
+      py += 4;
+      doc.setTextColor(...darkText);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(data.zone || '-'), margin + 4, py);
+      doc.text(String(data.division || data.divisionName || '-'), margin + cardWidth/2 + 2, py);
+      
+      // Customer Details Card
+      const cx = margin + cardWidth + gap;
+      doc.setFillColor(...cardBg);
+      doc.setDrawColor(...borderLight);
+      doc.roundedRect(cx, y, cardWidth, cardHeight, 2, 2, 'FD');
+      
+      doc.setTextColor(...slate);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Customer Details', cx + 4, y + 5);
+      
+      let cy = y + 10;
+      doc.setFontSize(7);
+      
+      // Row 1: Name | Phone
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...lightText);
+      doc.text('Name', cx + 4, cy);
+      doc.text('Phone', cx + cardWidth/2 + 2, cy);
+      cy += 4;
+      doc.setTextColor(...darkText);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(data.customerName || '-'), cx + 4, cy);
+      doc.text(String(data.customerPhone || '-'), cx + cardWidth/2 + 2, cy);
+      cy += 6;
+      
+      // Row 2: Email
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...lightText);
+      doc.text('Email', cx + 4, cy);
+      cy += 4;
+      doc.setTextColor(...darkText);
+      doc.setFont('helvetica', 'bold');
+      const email = String(data.customerEmail || '-');
+      doc.text(email.length > 28 ? email.substring(0, 28) + '...' : email, cx + 4, cy);
+      
+      y += cardHeight + 6;
     }
 
     // ===== SERVICES TABLE =====
-    doc.setTextColor(...primaryColor);
-    doc.setFontSize(11);
+    doc.setTextColor(...navy);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.text('SERVICES INCLUDED', margin, y);
-    doc.setDrawColor(...accentColor);
-    doc.setLineWidth(0.8);
-    doc.line(margin, y + 2, margin + 40, y + 2);
-    y += 8;
+    y += 5;
 
-    // Prepare services data with No. of Visits column
     const services = data.services || [];
-    const tableBody = [];
-    
-    if (services.length > 0) {
-      services.forEach((s, idx) => {
-        // Get frequency count for each service
-        const serviceVisits = s.frequencyCount || s.frequency || s.visits || s.noOfVisits || '-';
-        const row = [
+    const tableBody = services.length > 0 
+      ? services.map((s, idx) => [
           String(idx + 1),
           String(s.name || s.service || 'Service'),
           String(s.frequencyType || 'Monthly'),
-          String(serviceVisits) // Show visits for each service
-        ];
-        tableBody.push(row);
-        
-        // Add description if exists
-        if (s.description) {
-          tableBody.push(['', { content: s.description, styles: { fontStyle: 'italic', textColor: grayText, fontSize: 7 } }, '', '']);
-        }
-      });
-    } else {
-      const fallbackVisits = data.noOfVisits || '-';
-      tableBody.push(['1', 'No services listed', '-', String(fallbackVisits)]);
-    }
+          String(s.frequencyCount || s.frequency || '-')
+        ])
+      : [['1', 'No services listed', '-', '-']];
 
     autoTable(doc, {
       startY: y,
-      head: [['#', 'Service Description', 'Frequency', 'No. of Visits']],
+      head: [['#', 'Service Description', 'Frequency', 'Visits']],
       body: tableBody,
       margin: { left: margin, right: margin },
-      styles: {
-        fontSize: 9,
-        cellPadding: 4,
-        lineColor: borderColor,
-        lineWidth: 0.2
-      },
-      headStyles: {
-        fillColor: primaryColor,
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 8
-      },
-      bodyStyles: {
-        textColor: darkText
-      },
+      styles: { fontSize: 8, cellPadding: 3, lineColor: borderLight, lineWidth: 0.2 },
+      headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+      bodyStyles: { textColor: darkText },
       columnStyles: {
-        0: { cellWidth: 12, halign: 'center' },
+        0: { cellWidth: 10, halign: 'center' },
         1: { cellWidth: 'auto' },
-        2: { cellWidth: 28, halign: 'center' },
-        3: { cellWidth: 28, halign: 'center' }
+        2: { cellWidth: 25, halign: 'center' },
+        3: { cellWidth: 20, halign: 'center' }
       },
-      alternateRowStyles: { fillColor: [250, 251, 252] }
+      alternateRowStyles: { fillColor: [252, 252, 253] }
     });
 
-    y = doc.lastAutoTable.finalY + 8;
+    y = doc.lastAutoTable.finalY + 6;
 
-    // ===== ADD-ONS SECTION (No individual prices shown) =====
+    // ===== ADD-ONS TABLE =====
     if (data.addons && data.addons.length > 0) {
-      doc.setTextColor(...primaryColor);
-      doc.setFontSize(11);
+      doc.setTextColor(...navy);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.text('ADD-ONS', margin, y);
-      doc.setDrawColor(...accentColor);
-      doc.setLineWidth(0.8);
-      doc.line(margin, y + 2, margin + 20, y + 2);
-      y += 8;
+      y += 5;
 
-      const addonsBody = data.addons.map((addon, idx) => {
-        const addonName = addon.name || addon.serviceName || addon.service_name || 'Additional Service';
-        const addonVisits = addon.frequencyCount || addon.visits || addon.noOfVisits || addon.no_of_visits || '-';
-        return [
-          String(idx + 1),
-          addonName,
-          addon.frequencyType || addon.frequency || 'One-time',
-          String(addonVisits)
-        ];
-      });
+      const addonsBody = data.addons.map((a, idx) => [
+        String(idx + 1),
+        String(a.name || a.serviceName || 'Add-on'),
+        String(a.frequencyType || a.frequency || 'One-time'),
+        String(a.frequencyCount || a.visits || '-')
+      ]);
 
       autoTable(doc, {
         startY: y,
-        head: [['#', 'Add-on Service', 'Frequency', 'No. of Visits']],
+        head: [['#', 'Add-on Service', 'Frequency', 'Visits']],
         body: addonsBody,
         margin: { left: margin, right: margin },
-        styles: {
-          fontSize: 9,
-          cellPadding: 4,
-          lineColor: borderColor,
-          lineWidth: 0.2
-        },
-        headStyles: {
-          fillColor: primaryColor, // Same color as Services header
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-          fontSize: 8
-        },
-        bodyStyles: {
-          textColor: darkText
-        },
+        styles: { fontSize: 8, cellPadding: 3, lineColor: borderLight, lineWidth: 0.2 },
+        headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+        bodyStyles: { textColor: darkText },
         columnStyles: {
-          0: { cellWidth: 12, halign: 'center' },
+          0: { cellWidth: 10, halign: 'center' },
           1: { cellWidth: 'auto' },
-          2: { cellWidth: 28, halign: 'center' },
-          3: { cellWidth: 28, halign: 'center' }
+          2: { cellWidth: 25, halign: 'center' },
+          3: { cellWidth: 20, halign: 'center' }
         },
-        alternateRowStyles: { fillColor: [250, 251, 252] }
+        alternateRowStyles: { fillColor: [252, 252, 253] }
       });
 
-      y = doc.lastAutoTable.finalY + 8;
+      y = doc.lastAutoTable.finalY + 6;
     }
 
-    // ===== DESCRIPTION SECTION =====
-    if (data.description) {
-      doc.setTextColor(...primaryColor);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text('DESCRIPTION / NOTES', margin, y);
-      doc.setDrawColor(...accentColor);
-      doc.setLineWidth(0.8);
-      doc.line(margin, y + 2, margin + 45, y + 2);
-      y += 8;
-
-      // Description box
-      doc.setDrawColor(...borderColor);
-      doc.setFillColor(250, 251, 252);
-      const descBoxWidth = pageWidth - (margin * 2);
-      
-      // Split description into lines
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...darkText);
-      const descLines = doc.splitTextToSize(String(data.description), descBoxWidth - 10);
-      const descBoxHeight = Math.max(20, descLines.length * 5 + 10);
-      
-      doc.roundedRect(margin, y, descBoxWidth, descBoxHeight, 2, 2, 'FD');
-      doc.text(descLines, margin + 5, y + 8);
-      y += descBoxHeight + 8;
-    }
-
-    // ===== TOTAL PRICE BOX (Full width - heading left, price right) =====
+    // ===== TOTAL BOX (Compact, Right-Aligned) =====
     const total = parseFloat(data.totalPrice) || parseFloat(data.subtotal) || 0;
-    const fullWidth = pageWidth - margin * 2;
-    const summaryBoxHeight = 22;
+    const totalBoxW = 75;
+    const totalBoxH = 12;
+    const totalBoxX = pageWidth - margin - totalBoxW;
 
-    // Check if we need a new page for the total box
-    if (y + summaryBoxHeight + 30 > pageHeight) {
+    if (y + totalBoxH + 25 > pageHeight) {
       doc.addPage();
-      y = margin;
+      y = 20;
     }
 
-    // Full width box with primary color background
-    doc.setFillColor(...primaryColor);
-    doc.roundedRect(margin, y, fullWidth, summaryBoxHeight, 3, 3, 'F');
-    
-    // ESTIMATE TOTAL label on left
+    doc.setFillColor(...navy);
+    doc.roundedRect(totalBoxX, y, totalBoxW, totalBoxH, 2, 2, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.text('ESTIMATE TOTAL', margin + 10, y + 14);
-    
-    // Price on right
-    doc.setFontSize(14);
-    doc.text(formatCurrency(total), pageWidth - margin - 10, y + 14, { align: 'right' });
+    doc.text('TOTAL', totalBoxX + 5, y + 8);
+    doc.setFontSize(10);
+    doc.text(formatCurrency(total), totalBoxX + totalBoxW - 5, y + 8, { align: 'right' });
 
-    y += summaryBoxHeight + 10;
+    y += totalBoxH + 8;
 
-    // ===== DESCRIPTION SECTION (After price summary) =====
+    // ===== NOTES/DESCRIPTION =====
     if (data.description && data.description.trim()) {
-      const maxDescLines = 50;
-      const lineHeight = 5;
-      const descWidth = pageWidth - margin * 2;
-      const textWidth = descWidth - 20;
-      
-      doc.setFontSize(8);
-      let descLines = doc.splitTextToSize(data.description, textWidth);
-      
-      if (descLines.length > maxDescLines) {
-        descLines = descLines.slice(0, maxDescLines);
-        descLines[maxDescLines - 1] = descLines[maxDescLines - 1] + '...';
-      }
-      
-      const headerHeight = 18;
-      const contentHeight = descLines.length * lineHeight;
-      const descBoxHeight = headerHeight + contentHeight + 10;
-      
-      // Check if description fits on current page
-      if (y + descBoxHeight > pageHeight - 25) {
+      if (y + 30 > pageHeight - 25) {
         doc.addPage();
         y = 20;
       }
       
-      // Description box
-      doc.setFillColor(250, 251, 252);
-      doc.setDrawColor(220, 225, 230);
-      doc.setLineWidth(0.3);
-      doc.roundedRect(margin, y, descWidth, descBoxHeight, 4, 4, 'FD');
-      
-      // Header bar
-      doc.setFillColor(...primaryColor);
-      doc.roundedRect(margin, y, descWidth, 14, 4, 4, 'F');
-      doc.rect(margin, y + 10, descWidth, 4, 'F');
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(...navy);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('DESCRIPTION / NOTES', margin + 10, y + 9);
+      doc.text('NOTES', margin, y);
+      y += 4;
       
-      // Description content
-      doc.setTextColor(60, 60, 60);
+      doc.setFillColor(...cardBg);
+      doc.setDrawColor(...borderLight);
+      const noteLines = doc.splitTextToSize(String(data.description), pageWidth - margin * 2 - 8);
+      const noteBoxH = Math.min(Math.max(12, noteLines.length * 4 + 6), 40);
+      doc.roundedRect(margin, y, pageWidth - margin * 2, noteBoxH, 2, 2, 'FD');
+      
+      doc.setTextColor(...mediumText);
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      
-      let textY = y + headerHeight + 4;
-      descLines.forEach((line) => {
-        doc.text(line, margin + 10, textY);
-        textY += lineHeight;
-      });
+      doc.text(noteLines.slice(0, 8), margin + 4, y + 5);
     }
 
     // ===== FOOTER =====
-    doc.setFillColor(...lightGray);
-    doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
-    doc.setDrawColor(...accentColor);
-    doc.setLineWidth(0.5);
-    doc.line(0, pageHeight - 20, pageWidth, pageHeight - 20);
+    const footerY = pageHeight - 12;
+    doc.setDrawColor(...borderLight);
+    doc.setLineWidth(0.3);
+    doc.line(margin, footerY - 4, pageWidth - margin, footerY - 4);
     
-    doc.setTextColor(...primaryColor);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA Property Management Solutions', pageWidth / 2, pageHeight - 12, { align: 'center' });
+    doc.setTextColor(...lightText);
+    doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...grayText);
-    doc.setFontSize(7);
-    doc.text('This is a computer-generated document. For queries, contact info@xlandinfra.com', pageWidth / 2, pageHeight - 6, { align: 'center' });
+    doc.text('XLAND INFRA Property Management Solutions Pvt. Ltd. | This is a computer-generated document.', pageWidth / 2, footerY, { align: 'center' });
 
     doc.save(filename);
     return true;
