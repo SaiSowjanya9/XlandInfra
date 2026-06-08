@@ -75,6 +75,7 @@ const ExecutiveAddVendor = ({ user }) => {
   // Zone & Area autocomplete
   const [zoneSuggestions, setZoneSuggestions] = useState([]);
   const [areaSuggestions, setAreaSuggestions] = useState([]);
+  const [divisions, setDivisions] = useState([]);
   const [showZoneDropdown, setShowZoneDropdown] = useState(false);
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
 
@@ -89,6 +90,9 @@ const ExecutiveAddVendor = ({ user }) => {
     fetchZones();
     fetch('/api/onboarding/suggestions/areas', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(res => { if (res.success) setAreaSuggestions(res.data || []); }).catch(() => {});
+    // Fetch divisions
+    fetch('/api/executive/divisions', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json()).then(res => { if (res.success) setDivisions(res.data || []); }).catch(() => {});
   }, [token]);
 
   const autoSaveZone = async (zoneName) => {
@@ -397,9 +401,9 @@ const ExecutiveAddVendor = ({ user }) => {
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:outline-none"
               >
                 <option value="">Select Division</option>
-                <option value="Residential">Residential</option>
-                <option value="Commercial">Commercial</option>
-                <option value="Industrial">Industrial</option>
+                {divisions.map(d => (
+                  <option key={d.id || d.name} value={d.name}>{d.name}</option>
+                ))}
               </select>
             </div>
           </div>
