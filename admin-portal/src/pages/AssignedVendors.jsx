@@ -114,7 +114,10 @@ const AssignedVendors = ({ user }) => {
         const vendorResult = await vendorResponse.json();
         
         if (assignResult.success) {
-          setAssignments(assignResult.data || []);
+          const data = assignResult.data || [];
+          // Set both assignments and serviceAssignments for admin view
+          setAssignments(data);
+          setServiceAssignments(data);
         }
         if (vendorResult.success) {
           setVendors(vendorResult.data || []);
