@@ -1438,12 +1438,22 @@ router.post('/estimates', requireSupervisorScope, async (req, res) => {
     const numericPropertyId = parseInt(property_id);
     const propertyIdValue = isNaN(numericPropertyId) ? null : numericPropertyId;
 
-    // Get creator name
+    // Get creator name - check fp_employees first, then users table
     let creatorName = 'Supervisor';
     try {
-      const [[userInfo]] = await pool.query('SELECT first_name, last_name, name FROM users WHERE id = ?', [supervisorId]);
-      if (userInfo) creatorName = userInfo.first_name && userInfo.last_name ? `${userInfo.first_name} ${userInfo.last_name}`.trim() : userInfo.name || 'Supervisor';
-    } catch (e) {}
+      // Try fp_employees table first (for FP-created employees)
+      const [[fpEmp]] = await pool.query(
+        'SELECT first_name, last_name FROM fp_employees WHERE id = ? OR user_id = ?',
+        [supervisorId, supervisorId]
+      );
+      if (fpEmp && (fpEmp.first_name || fpEmp.last_name)) {
+        creatorName = `${fpEmp.first_name || ''} ${fpEmp.last_name || ''}`.trim() || 'Supervisor';
+      } else {
+        // Fall back to users table
+        const [[userInfo]] = await pool.query('SELECT first_name, last_name, name FROM users WHERE id = ?', [supervisorId]);
+        if (userInfo) creatorName = userInfo.first_name && userInfo.last_name ? `${userInfo.first_name} ${userInfo.last_name}`.trim() : userInfo.name || 'Supervisor';
+      }
+    } catch (e) { console.log('Creator name lookup error:', e.message); }
 
     const [result] = await pool.query(
       `INSERT INTO fp_estimates (
