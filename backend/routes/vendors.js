@@ -54,7 +54,7 @@ router.post('/login', async (req, res) => {
     // Try database first - use onboarded_vendors table
     try {
       const [vendors] = await pool.execute(
-        `SELECT * FROM onboarded_vendors WHERE (username = ? OR email = ? OR owner_email = ?) AND (is_active = TRUE OR is_active IS NULL)`,
+        `SELECT * FROM onboarded_vendors WHERE (username = ? OR email = ? OR owner_email = ?) AND (is_active = 1 OR is_active IS NULL)`,
         [username, username, username]
       );
       if (vendors.length > 0) {
@@ -625,7 +625,7 @@ router.delete('/:id', authenticate, managerOrAdmin, async (req, res) => {
     const { id } = req.params;
 
     const [result] = await pool.execute(
-      `UPDATE onboarded_vendors SET is_active = FALSE, status = 'inactive' WHERE id = ?`,
+      `UPDATE onboarded_vendors SET is_active = 0, status = 'inactive' WHERE id = ?`,
       [id]
     );
 
@@ -656,7 +656,7 @@ router.put('/:id/restore', authenticate, managerOrAdmin, async (req, res) => {
     const { id } = req.params;
 
     const [result] = await pool.execute(
-      `UPDATE onboarded_vendors SET is_active = TRUE, status = 'active', updated_at = NOW() WHERE id = ?`,
+      `UPDATE onboarded_vendors SET is_active = 1, status = 'active', updated_at = NOW() WHERE id = ?`,
       [id]
     );
 
@@ -691,7 +691,7 @@ router.get('/list/active', authenticate, managerOrAdmin, async (req, res) => {
              COALESCE(contact_person, owner_name) as contact_person, 
              COALESCE(phone, owner_mobile) as phone, rating
       FROM onboarded_vendors
-      WHERE (is_active = TRUE OR is_active IS NULL) AND (is_verified = TRUE OR is_verified IS NULL OR status = 'active')
+      WHERE (is_active = 1 OR is_active IS NULL) AND (is_verified = 1 OR is_verified IS NULL OR status = 'active')
     `;
     const params = [];
 
@@ -810,7 +810,7 @@ router.get('/assignments', authenticate, managerOrAdmin, async (req, res) => {
   try {
     const { status } = req.query;
     
-    let whereClause = status === 'removed' ? 'pva.is_active = FALSE' : 'pva.is_active = TRUE';
+    let whereClause = status === 'removed' ? 'pva.is_active = 0' : 'pva.is_active = 1';
     if (status === 'all') whereClause = '1=1';
     
     // Fetch from onboarded_vendors (unified table after migration)
@@ -909,7 +909,7 @@ router.post('/assignments', authenticate, managerOrAdmin, async (req, res) => {
 
     // Check if same assignment exists
     const [existing] = await pool.execute(
-      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND is_active = TRUE`,
+      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND is_active = 1`,
       [propertyId, numericVendorId]
     );
 
@@ -991,7 +991,7 @@ router.delete('/assignments/:id', authenticate, managerOrAdmin, async (req, res)
     const { id } = req.params;
 
     const [result] = await pool.execute(
-      `UPDATE property_vendor_assignments SET is_active = FALSE WHERE id = ?`,
+      `UPDATE property_vendor_assignments SET is_active = 0 WHERE id = ?`,
       [id]
     );
 

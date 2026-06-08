@@ -235,7 +235,7 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
 
     // Soft delete
     const [result] = await pool.execute(
-      `UPDATE pricing SET is_active = FALSE WHERE id = ?`,
+      `UPDATE pricing SET is_active = 0 WHERE id = ?`,
       [id]
     );
 
@@ -268,7 +268,7 @@ router.get('/category/:categoryId', authenticate, canSeePricing, async (req, res
     const [pricing] = await pool.execute(
       `SELECT id, name, base_price, unit 
        FROM pricing 
-       WHERE category_id = ? AND is_active = TRUE
+       WHERE category_id = ? AND is_active = 1
        ORDER BY name`,
       [categoryId]
     );

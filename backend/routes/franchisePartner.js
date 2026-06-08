@@ -73,7 +73,7 @@ router.post('/login', async (req, res) => {
 
     // Check franchise_partners table
     const [fps] = await pool.execute(
-      `SELECT * FROM franchise_partners WHERE (username = ? OR email = ?) AND is_active = TRUE`,
+      `SELECT * FROM franchise_partners WHERE (username = ? OR email = ?) AND is_active = 1`,
       [username, username]
     );
 
@@ -556,7 +556,7 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
 
     // Check if same vendor assignment already exists and is active
     const [existingSame] = await pool.execute(
-      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND is_active = TRUE`,
+      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND is_active = 1`,
       [id, numericVendorId]
     );
 
@@ -566,7 +566,7 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
 
     // Deactivate any existing vendor assignments for this property (allow only one vendor per property)
     await pool.execute(
-      `UPDATE property_vendor_assignments SET is_active = FALSE WHERE property_id = ? AND is_active = TRUE`,
+      `UPDATE property_vendor_assignments SET is_active = 0 WHERE property_id = ? AND is_active = 1`,
       [id]
     );
 
@@ -628,7 +628,7 @@ router.post('/properties/:id/assign-employee', requireFPScope, async (req, res) 
     await pool.execute(
       `INSERT INTO property_employee_assignments (property_id, employee_id, assigned_by, assigned_at, is_active)
        VALUES (?, ?, ?, NOW(), TRUE)
-       ON DUPLICATE KEY UPDATE is_active = TRUE, assigned_at = NOW()`,
+       ON DUPLICATE KEY UPDATE is_active = 1, assigned_at = NOW()`,
       [id, employeeId, req.user.id]
     );
 
@@ -1472,7 +1472,7 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
        LEFT JOIN properties p ON pva.property_id = p.id
        LEFT JOIN onboarded_properties op ON pva.property_id = op.id
        JOIN onboarded_vendors v ON pva.vendor_id = v.id
-       WHERE (p.franchise_partner_id = ? OR op.franchise_partner_id = ?) AND pva.is_active = TRUE
+       WHERE (p.franchise_partner_id = ? OR op.franchise_partner_id = ?) AND pva.is_active = 1
        ORDER BY pva.assigned_at DESC`,
       [req.fpId, req.fpId]
     );
@@ -1540,7 +1540,7 @@ router.put('/vendors/assignments/:id', requireFPScope, async (req, res) => {
     // Verify new vendor belongs to this FP
     const [vendor] = await pool.execute(
       `SELECT id FROM onboarded_vendors WHERE id = ? AND (franchise_partner_id = ? OR id IN (
-        SELECT vendor_id FROM fp_assigned_vendors WHERE franchise_partner_id = ? AND is_active = TRUE
+        SELECT vendor_id FROM fp_assigned_vendors WHERE franchise_partner_id = ? AND is_active = 1
       ))`,
       [newVendorId, req.fpId, req.fpId]
     );
@@ -1580,7 +1580,7 @@ router.delete('/vendors/assignments/:id', requireFPScope, async (req, res) => {
     }
 
     await pool.execute(
-      `UPDATE property_vendor_assignments SET is_active = FALSE WHERE id = ?`,
+      `UPDATE property_vendor_assignments SET is_active = 0 WHERE id = ?`,
       [id]
     );
 
@@ -1746,7 +1746,7 @@ router.delete('/vendors/:id', requireFPScope, async (req, res) => {
 
     // Soft delete - set is_active to 0
     await pool.execute(
-      `UPDATE onboarded_vendors SET is_active = FALSE, status = 'inactive', updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+      `UPDATE onboarded_vendors SET is_active = 0, status = 'inactive', updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
       [id, req.fpId]
     );
 
@@ -1783,7 +1783,7 @@ router.put('/vendors/:id/restore', requireFPScope, async (req, res) => {
     }
 
     await pool.execute(
-      `UPDATE onboarded_vendors SET is_active = TRUE, status = 'active', updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+      `UPDATE onboarded_vendors SET is_active = 1, status = 'active', updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
       [id, req.fpId]
     );
 

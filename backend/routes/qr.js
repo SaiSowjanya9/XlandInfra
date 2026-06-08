@@ -138,7 +138,7 @@ router.get('/r/:slug', async (req, res) => {
   try {
     // Get QR code
     const [[qr]] = await pool.execute(
-      'SELECT * FROM qr_codes WHERE slug = ? AND is_active = TRUE',
+      'SELECT * FROM qr_codes WHERE slug = ? AND is_active = 1',
       [slug]
     );
     
@@ -316,7 +316,7 @@ router.get('/r/:slug', async (req, res) => {
       await pool.execute(
         `INSERT INTO qr_active_sessions (qr_id, session_id, visitor_id, ip_address, device_type, browser, os, country, city)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE last_activity = NOW(), is_active = TRUE`,
+         ON DUPLICATE KEY UPDATE last_activity = NOW(), is_active = 1`,
         [qr.id, sessionId, visitorId, ip, uaData.device, uaData.browserName, uaData.osName, geoData.country, geoData.city]
       );
       
@@ -349,7 +349,7 @@ router.get('/codes', async (req, res) => {
       SELECT q.*, 
         (SELECT COUNT(*) FROM qr_scans WHERE qr_id = q.id) as total_scans,
         (SELECT COUNT(*) FROM qr_scans WHERE qr_id = q.id AND is_unique_user = TRUE) as unique_users,
-        (SELECT COUNT(*) FROM qr_active_sessions WHERE qr_id = q.id AND is_active = TRUE AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)) as active_users
+        (SELECT COUNT(*) FROM qr_active_sessions WHERE qr_id = q.id AND is_active = 1 AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)) as active_users
       FROM qr_codes q
       ORDER BY q.created_at DESC
     `);
@@ -468,7 +468,7 @@ router.delete('/codes/:id', async (req, res) => {
     }
     
     // Soft delete by deactivating
-    await pool.execute('UPDATE qr_codes SET is_active = FALSE WHERE id = ?', [req.params.id]);
+    await pool.execute('UPDATE qr_codes SET is_active = 0 WHERE id = ?', [req.params.id]);
     
     res.json({ success: true, message: 'QR code deactivated successfully' });
   } catch (error) {
@@ -506,7 +506,7 @@ router.get('/analytics/overview', async (req, res) => {
     const [[active]] = await pool.execute(`
       SELECT COUNT(*) as active_now
       FROM qr_active_sessions
-      WHERE is_active = TRUE AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+      WHERE is_active = 1 AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
     `);
     
     // Per QR breakdown
@@ -515,7 +515,7 @@ router.get('/analytics/overview', async (req, res) => {
         q.id, q.qr_id, q.slug, q.label,
         COUNT(s.id) as total_scans,
         SUM(CASE WHEN s.is_unique_user = TRUE THEN 1 ELSE 0 END) as unique_users,
-        (SELECT COUNT(*) FROM qr_active_sessions WHERE qr_id = q.id AND is_active = TRUE AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)) as active_now
+        (SELECT COUNT(*) FROM qr_active_sessions WHERE qr_id = q.id AND is_active = 1 AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)) as active_now
       FROM qr_codes q
       LEFT JOIN qr_scans s ON q.id = s.qr_id
       GROUP BY q.id
@@ -648,7 +648,7 @@ router.get('/analytics/:qrId', async (req, res) => {
     const [[activeNow]] = await pool.execute(`
       SELECT COUNT(*) as count
       FROM qr_active_sessions
-      WHERE qr_id = ? AND is_active = TRUE AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+      WHERE qr_id = ? AND is_active = 1 AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
     `, [qr.id]);
     
     res.json({
@@ -686,7 +686,7 @@ router.get('/analytics/:qrId/realtime', async (req, res) => {
     const [activeSessions] = await pool.execute(`
       SELECT session_id, device_type, browser, os, country, city, latitude, longitude, started_at, last_activity
       FROM qr_active_sessions
-      WHERE qr_id = ? AND is_active = TRUE AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+      WHERE qr_id = ? AND is_active = 1 AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
       ORDER BY last_activity DESC
     `, [qr.id]);
     
@@ -864,7 +864,7 @@ router.post('/maintenance/cleanup-sessions', async (req, res) => {
     // Mark inactive sessions
     await pool.execute(`
       UPDATE qr_active_sessions 
-      SET is_active = FALSE 
+      SET is_active = 0 
       WHERE last_activity < DATE_SUB(NOW(), INTERVAL 5 MINUTE)
     `);
     

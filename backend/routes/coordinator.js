@@ -1098,7 +1098,7 @@ router.get('/vendors/assignments', requireCoordinatorScope, async (req, res) => 
        LEFT JOIN properties p ON pva.property_id = p.id
        LEFT JOIN onboarded_properties op ON pva.property_id = op.id
        JOIN onboarded_vendors v ON pva.vendor_id = v.id
-       WHERE (p.franchise_partner_id = ? OR op.franchise_partner_id = ?) AND pva.is_active = TRUE${zoneClause}
+       WHERE (p.franchise_partner_id = ? OR op.franchise_partner_id = ?) AND pva.is_active = 1${zoneClause}
        ORDER BY pva.assigned_at DESC`,
       [franchisePartnerId, franchisePartnerId, ...zoneParams]
     );
@@ -1629,7 +1629,7 @@ router.post('/addons', requireCoordinatorScope, async (req, res) => {
 router.get('/zones', requireCoordinatorScope, async (req, res) => {
   try {
     // Get global zones
-    const [globalZones] = await pool.query('SELECT id, name FROM zones WHERE is_active = TRUE');
+    const [globalZones] = await pool.query('SELECT id, name FROM zones WHERE is_active = 1');
     
     // Get zones from properties (FP-scoped or coordinator-scoped)
     const scopeColumn = req.franchisePartnerId ? 'franchise_partner_id' : 'coordinator_id';
@@ -1805,7 +1805,7 @@ router.get('/categories/:categoryId/subcategories', requireCoordinatorScope, asy
   try {
     const { categoryId } = req.params;
     const [subcategories] = await pool.query(
-      'SELECT * FROM subcategories WHERE category_id = ? AND (is_active = TRUE OR is_active = 1) ORDER BY sort_order, name',
+      'SELECT * FROM subcategories WHERE category_id = ? AND (is_active = 1 OR is_active = 1) ORDER BY sort_order, name',
       [categoryId]
     );
     res.json({ success: true, data: subcategories });

@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
     
     const pool = db.pool;
     const [packages] = await pool.execute(
-      `SELECT * FROM amc_packages WHERE is_active = TRUE ORDER BY created_at DESC`
+      `SELECT * FROM amc_packages WHERE is_active = 1 ORDER BY created_at DESC`
     );
     
     // Transform to match frontend format
@@ -137,7 +137,7 @@ router.delete('/:packageId', async (req, res) => {
     
     const pool = db.pool;
     await pool.execute(
-      `UPDATE amc_packages SET is_active = FALSE WHERE package_id = ?`,
+      `UPDATE amc_packages SET is_active = 0 WHERE package_id = ?`,
       [packageId]
     );
     

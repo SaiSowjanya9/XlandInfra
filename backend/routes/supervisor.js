@@ -1059,7 +1059,7 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
               'assigned' as vendor_type, sav.can_modify, sav.can_delete
        FROM onboarded_vendors v
        INNER JOIN supervisor_assigned_vendors sav ON v.id = sav.vendor_id
-       WHERE sav.supervisor_id = ? AND sav.is_active = TRUE`,
+       WHERE sav.supervisor_id = ? AND sav.is_active = 1`,
       [supervisorId]
     );
 
@@ -1133,7 +1133,7 @@ router.delete('/vendors/:id', requireSupervisorScope, validateOwnership('onboard
     }
 
     const { id } = req.params;
-    await pool.query('UPDATE onboarded_vendors SET is_active = FALSE, status = \'inactive\' WHERE id = ?', [id]);
+    await pool.query('UPDATE onboarded_vendors SET is_active = 0, status = \'inactive\' WHERE id = ?', [id]);
     res.json({ success: true, message: 'Vendor deleted successfully' });
   } catch (error) {
     console.error('Vendor delete error:', error);
@@ -1174,7 +1174,7 @@ router.get('/vendors/assignments', requireSupervisorScope, async (req, res) => {
        LEFT JOIN properties p ON pva.property_id = p.id
        LEFT JOIN onboarded_properties op ON pva.property_id = op.id
        JOIN onboarded_vendors v ON pva.vendor_id = v.id
-       WHERE (p.supervisor_id = ? OR op.supervisor_id = ?) AND pva.is_active = TRUE${zoneClause}
+       WHERE (p.supervisor_id = ? OR op.supervisor_id = ?) AND pva.is_active = 1${zoneClause}
        ORDER BY pva.assigned_at DESC`,
       [supervisorId, supervisorId, ...zoneParams]
     );
@@ -1676,7 +1676,7 @@ router.post('/addons', requireSupervisorScope, async (req, res) => {
 router.get('/zones', requireSupervisorScope, async (req, res) => {
   try {
     // Get global zones
-    const [globalZones] = await pool.query('SELECT id, name FROM zones WHERE is_active = TRUE');
+    const [globalZones] = await pool.query('SELECT id, name FROM zones WHERE is_active = 1');
     
     // Get zones from supervisor's properties (including FP properties)
     const scopeColumn = req.franchisePartnerId ? 'franchise_partner_id' : 'supervisor_id';

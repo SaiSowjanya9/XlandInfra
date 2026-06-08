@@ -32,7 +32,7 @@ router.post('/login', async (req, res) => {
     }
 
     const [admins] = await pool.execute(
-      `SELECT * FROM admin_users WHERE (username = ? OR email = ?) AND is_active = TRUE`,
+      `SELECT * FROM admin_users WHERE (username = ? OR email = ?) AND is_active = 1`,
       [username, username]
     );
 
@@ -253,7 +253,7 @@ router.delete('/residents/:id', authenticate, adminOnly, async (req, res) => {
 
     // Soft delete
     const [result] = await pool.execute(
-      `UPDATE residents SET is_active = FALSE WHERE id = ?`,
+      `UPDATE residents SET is_active = 0 WHERE id = ?`,
       [id]
     );
 
@@ -587,7 +587,7 @@ router.delete('/units/:id', authenticate, adminOnly, async (req, res) => {
     const { id } = req.params;
 
     const [result] = await pool.execute(
-      `UPDATE units SET is_active = FALSE WHERE id = ?`,
+      `UPDATE units SET is_active = 0 WHERE id = ?`,
       [id]
     );
 
@@ -772,7 +772,7 @@ router.get('/vendors', async (req, res) => {
   try {
     const [vendors] = await pool.execute(
       `SELECT id, vendor_id, company_name, owner_name, service_type, phone, email, status 
-       FROM onboarded_vendors WHERE status = 'active' OR is_active = TRUE ORDER BY company_name`
+       FROM onboarded_vendors WHERE status = 'active' OR is_active = 1 ORDER BY company_name`
     );
     res.json({ success: true, vendors });
   } catch (error) {
@@ -785,7 +785,7 @@ router.get('/vendors', async (req, res) => {
 router.get('/employees', async (req, res) => {
   try {
     const [employees] = await pool.execute(
-      `SELECT id, first_name, last_name, email, phone, role FROM admins WHERE is_active = TRUE ORDER BY first_name`
+      `SELECT id, first_name, last_name, email, phone, role FROM admins WHERE is_active = 1 ORDER BY first_name`
     );
     res.json({ success: true, employees });
   } catch (error) {
@@ -815,9 +815,9 @@ router.get('/vendors/assignments', async (req, res) => {
     `;
     
     if (status === 'active') {
-      query += ` WHERE pva.is_active = TRUE`;
+      query += ` WHERE pva.is_active = 1`;
     } else if (status === 'removed') {
-      query += ` WHERE pva.is_active = FALSE`;
+      query += ` WHERE pva.is_active = 0`;
     }
     
     query += ` ORDER BY pva.assigned_at DESC`;
@@ -901,19 +901,19 @@ router.get('/dashboard/stats', async (req, res) => {
       // Properties count
       pool.execute(`SELECT COUNT(*) as count FROM onboarded_properties WHERE status = 'active'`)
         .then(([[r]]) => r.count)
-        .catch(() => pool.execute(`SELECT COUNT(*) as count FROM properties WHERE is_active = TRUE`)
+        .catch(() => pool.execute(`SELECT COUNT(*) as count FROM properties WHERE is_active = 1`)
           .then(([[r]]) => r.count)
           .catch(() => 0)),
       
       // Vendors count
       pool.execute(`SELECT COUNT(*) as count FROM onboarded_vendors WHERE status = 'active'`)
         .then(([[r]]) => r.count)
-        .catch(() => pool.execute(`SELECT COUNT(*) as count FROM onboarded_vendors WHERE is_active = TRUE`)
+        .catch(() => pool.execute(`SELECT COUNT(*) as count FROM onboarded_vendors WHERE is_active = 1`)
           .then(([[r]]) => r.count)
           .catch(() => 0)),
       
       // Customers count
-      pool.execute(`SELECT COUNT(*) as count FROM residents WHERE is_active = TRUE`)
+      pool.execute(`SELECT COUNT(*) as count FROM residents WHERE is_active = 1`)
         .then(([[r]]) => r.count)
         .catch(() => 0),
       
@@ -1196,7 +1196,7 @@ router.get('/fp-list', authenticate, adminOnly, async (req, res) => {
     const [fps] = await pool.execute(
       `SELECT id, fp_code, company_name, owner_name, city, state, is_active 
        FROM franchise_partners 
-       WHERE is_active = 1 OR is_active = TRUE OR is_active IS NULL
+       WHERE is_active = 1 OR is_active = 1 OR is_active IS NULL
        ORDER BY company_name ASC`
     );
     
@@ -2033,7 +2033,7 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
               GROUP_CONCAT(DISTINCT ez.zone_name ORDER BY ez.zone_name) as zone_names
        FROM fp_employees e
        LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
-       WHERE e.franchise_partner_id = ? AND e.is_active = TRUE
+       WHERE e.franchise_partner_id = ? AND e.is_active = 1
        GROUP BY e.id
        ORDER BY e.first_name, e.last_name`,
       [fpIdNum, fpIdNum]

@@ -982,7 +982,7 @@ router.get('/vendors', requireExecutiveScope, async (req, res) => {
       `SELECT v.*, 'assigned' as vendor_type, eav.can_modify, eav.can_delete
        FROM onboarded_vendors v
        INNER JOIN executive_assigned_vendors eav ON v.id = eav.vendor_id
-       WHERE eav.executive_id = ? AND eav.is_active = TRUE`,
+       WHERE eav.executive_id = ? AND eav.is_active = 1`,
       [executiveId]
     );
 
@@ -1057,7 +1057,7 @@ router.delete('/vendors/:id', requireExecutiveScope, validateOwnership('onboarde
     }
 
     const { id } = req.params;
-    await pool.query(`UPDATE onboarded_vendors SET is_active = FALSE, status = 'inactive' WHERE id = ?`, [id]);
+    await pool.query(`UPDATE onboarded_vendors SET is_active = 0, status = 'inactive' WHERE id = ?`, [id]);
     res.json({ success: true, message: 'Vendor deleted successfully' });
   } catch (error) {
     console.error('Vendor delete error:', error);
@@ -1098,7 +1098,7 @@ router.get('/vendors/assignments', requireExecutiveScope, async (req, res) => {
        LEFT JOIN properties p ON pva.property_id = p.id
        LEFT JOIN onboarded_properties op ON pva.property_id = op.id
        JOIN onboarded_vendors v ON pva.vendor_id = v.id
-       WHERE (p.executive_id = ? OR op.executive_id = ?) AND pva.is_active = TRUE${zoneClause}
+       WHERE (p.executive_id = ? OR op.executive_id = ?) AND pva.is_active = 1${zoneClause}
        ORDER BY pva.assigned_at DESC`,
       [executiveId, executiveId, ...zoneParams]
     );
@@ -1517,7 +1517,7 @@ router.post('/addons', requireExecutiveScope, async (req, res) => {
 router.get('/zones', requireExecutiveScope, async (req, res) => {
   try {
     // Get global zones
-    const [globalZones] = await pool.query('SELECT id, name FROM zones WHERE is_active = TRUE');
+    const [globalZones] = await pool.query('SELECT id, name FROM zones WHERE is_active = 1');
     
     // Get zones from executive's properties (including FP properties)
     const scopeColumn = req.franchisePartnerId ? 'franchise_partner_id' : 'executive_id';

@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
       `SELECT u.*, p.name as property_name, p.property_id as property_code
        FROM units u 
        JOIN properties p ON u.property_id = p.id 
-       WHERE u.is_active = TRUE
+       WHERE u.is_active = 1
        ORDER BY p.name, u.unit_number`
     );
 
@@ -44,7 +44,7 @@ router.get('/property/:propertyId', async (req, res) => {
       `SELECT u.*, p.name as property_name 
        FROM units u 
        JOIN properties p ON u.property_id = p.id 
-       WHERE u.property_id = ? AND u.is_active = TRUE
+       WHERE u.property_id = ? AND u.is_active = 1
        ORDER BY u.unit_number`,
       [propertyId]
     );

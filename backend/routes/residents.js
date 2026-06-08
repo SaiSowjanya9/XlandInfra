@@ -25,7 +25,7 @@ router.post('/verify', async (req, res) => {
        AND LOWER(r.email) = LOWER(?) 
        AND LOWER(r.first_name) = LOWER(?) 
        AND LOWER(r.last_name) = LOWER(?)
-       AND r.is_active = TRUE`,
+       AND r.is_active = 1`,
       [unitId, email, firstName, lastName]
     );
 
@@ -89,7 +89,7 @@ router.post('/register', async (req, res) => {
        SET is_registered = TRUE, 
            password_hash = ?, 
            registration_date = NOW() 
-       WHERE resident_id = ? AND is_active = TRUE`,
+       WHERE resident_id = ? AND is_active = 1`,
       [passwordHash, residentId]
     );
 
@@ -149,7 +149,7 @@ router.post('/login', async (req, res) => {
        FROM residents r 
        JOIN units u ON r.unit_id = u.id 
        JOIN properties p ON u.property_id = p.id
-       WHERE LOWER(r.email) = LOWER(?) AND r.is_active = TRUE AND r.is_registered = TRUE`,
+       WHERE LOWER(r.email) = LOWER(?) AND r.is_active = 1 AND r.is_registered = TRUE`,
       [email]
     );
 
@@ -207,7 +207,7 @@ router.get('/profile/:residentId', async (req, res) => {
        FROM residents r 
        JOIN units u ON r.unit_id = u.id 
        JOIN properties p ON u.property_id = p.id
-       WHERE r.resident_id = ? AND r.is_active = TRUE`,
+       WHERE r.resident_id = ? AND r.is_active = 1`,
       [residentId]
     );
 
