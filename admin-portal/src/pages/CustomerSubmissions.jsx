@@ -125,30 +125,44 @@ const CustomerSubmissions = () => {
       console.log('Property Management: API returned', result.data?.length || 0, 'properties');
       if (result.success) {
         // Map API response to expected format and filter by property type
-        let props = result.data.map(p => ({
-          id: p.id,
-          propertyId: p.property_id,
-          name: p.name,
-          propertyType: p.property_type,
-          category: p.category || 'residential',
-          zone: p.zone_name || p.zone,
-          area: p.area || p.area_name,
-          division: p.division,
-          units: p.units || 0,
-          address: p.address,
-          city: p.city,
-          state: p.state,
-          zipCode: p.zip_code || p.postal_code,
-          contactPerson: p.contact_person,
-          contactPhone: p.contact_phone,
-          contactEmail: p.contact_email,
-          createdAt: p.created_at,
-          createdBy: p.created_by,
-          status: p.status || 'active',
-          sourceTable: p.source_table,
-          fpId: p.fp_id || p.franchise_partner_id,
-          fpName: p.fp_name || p.company_name
-        }));
+        let props = result.data.map(p => {
+          // Build contacts array from inline fields if not already present
+          let contacts = p.contacts || [];
+          if (contacts.length === 0 && (p.contact_person || p.contact_email || p.contact_phone)) {
+            contacts = [{
+              name: p.contact_person || '',
+              email: p.contact_email || '',
+              phone: p.contact_phone || '',
+              countryCode: '+91'
+            }];
+          }
+          
+          return {
+            id: p.id,
+            propertyId: p.property_id,
+            name: p.name,
+            propertyType: p.property_type,
+            category: p.category || 'residential',
+            zone: p.zone_name || p.zone,
+            area: p.area || p.area_name,
+            division: p.division,
+            units: p.units || 0,
+            address: p.address,
+            city: p.city,
+            state: p.state,
+            zipCode: p.zip_code || p.postal_code,
+            contactPerson: p.contact_person,
+            contactPhone: p.contact_phone,
+            contactEmail: p.contact_email,
+            contacts: contacts,
+            createdAt: p.created_at,
+            createdBy: p.created_by,
+            status: p.status || 'active',
+            sourceTable: p.source_table,
+            fpId: p.fp_id || p.franchise_partner_id,
+            fpName: p.fp_name || p.company_name
+          };
+        });
         
         // For now, only showing residential properties (commercial coming soon)
         props = props.filter(p => {
@@ -184,14 +198,29 @@ const CustomerSubmissions = () => {
     setPropertyEstimates(estimates);
   };
 
-  // Delete handler
-  const handleDelete = async (id) => {
-    const success = await deleteProperty(id);
-    if (success) {
-      await loadData();
-      showToast('Customer deleted successfully');
-    } else {
-      showToast('Failed to delete customer', 'error');
+  // Delete handler - use admin API endpoint
+  const handleDelete = async (property) => {
+    try {
+      // Determine correct ID and endpoint based on source
+      const propertyId = property.id?.toString().startsWith('prop-') 
+        ? property.id.replace('prop-', '') 
+        : property.id;
+      
+      const response = await fetch(`${API_BASE}/api/admin/properties/${propertyId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        await loadData();
+        showToast('Property deleted successfully');
+      } else {
+        showToast(result.message || 'Failed to delete property', 'error');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      showToast('Failed to delete property', 'error');
     }
     setDeleteConfirm(null);
   };
@@ -929,14 +958,14 @@ const CustomerSubmissions = () => {
                             <Edit2 className="w-4 h-4 text-blue-500" />
                           </button>
                           <button
-                            onClick={() => { setSelectedProperty(property); setShowAssignVendor(true); }}
+                            onClick={() => setAssignVendorModal(property)}
                             className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
                             title="Assign Vendor"
                           >
                             <Truck className="w-4 h-4 text-purple-500" />
                           </button>
                           <button
-                            onClick={() => { setSelectedProperty(property); setShowAssignEmployee(true); }}
+                            onClick={() => setAssignEmployeeModal(property)}
                             className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
                             title="Assign Employee"
                           >
@@ -1265,7 +1294,7 @@ const CustomerSubmissions = () => {
                 Cancel
               </button>
               <button
-                onClick={() => handleDelete(deleteConfirm.id)}
+                onClick={() => handleDelete(deleteConfirm)}
                 className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
               >
                 Delete
