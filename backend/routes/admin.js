@@ -1399,9 +1399,39 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
     }
     
     // Combine and sort by created_at
-    const allEstimates = [...mainEstimates, ...fpEstimates].sort((a, b) => 
+    let allEstimates = [...mainEstimates, ...fpEstimates].sort((a, b) => 
       new Date(b.created_at) - new Date(a.created_at)
     );
+    
+    // Enrich estimates with missing division from property tables
+    allEstimates = await Promise.all(allEstimates.map(async (est) => {
+      if (!est.division && (est.property_name || est.property_code || est.property_id)) {
+        try {
+          // Try to get division from properties table
+          let [props] = await pool.execute(
+            `SELECT division, division_id FROM properties WHERE 
+             (name = ? OR property_id = ? OR id = ?) AND franchise_partner_id = ? LIMIT 1`,
+            [est.property_name || '', est.property_code || '', est.property_id || 0, est.franchise_partner_id || 0]
+          );
+          if (props.length > 0 && (props[0].division || props[0].division_id)) {
+            est.division = props[0].division || props[0].division_id;
+          }
+          
+          // If still not found, try onboarded_properties
+          if (!est.division) {
+            [props] = await pool.execute(
+              `SELECT division FROM onboarded_properties WHERE 
+               (community_name = ? OR property_id = ?) AND franchise_partner_id = ? LIMIT 1`,
+              [est.property_name || '', est.property_code || '', est.franchise_partner_id || 0]
+            );
+            if (props.length > 0 && props[0].division) {
+              est.division = props[0].division;
+            }
+          }
+        } catch (e) { /* ignore lookup errors */ }
+      }
+      return est;
+    }));
     
     console.log('Admin all-estimates: Total', allEstimates.length, 'estimates');
     res.json({ success: true, data: allEstimates || [] });
