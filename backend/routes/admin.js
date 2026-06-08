@@ -1228,7 +1228,7 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
        FROM properties p
        LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
-       WHERE (p.status IS NULL OR p.status != 'deleted') AND (p.is_active IS NULL OR p.is_active = TRUE)
+       WHERE (p.status IS NULL OR p.status != 'deleted') AND (p.is_active IS NULL OR p.is_active != 0)
        ORDER BY p.created_at DESC`
     );
     
@@ -1767,7 +1767,7 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
               COALESCE(p.category, 'residential') as category
        FROM properties p
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
-       WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted') AND (p.is_active IS NULL OR p.is_active = TRUE)
+       WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted') AND (p.is_active IS NULL OR p.is_active != 0)
        ORDER BY p.created_at DESC`,
       [fpIdNum]
     );
