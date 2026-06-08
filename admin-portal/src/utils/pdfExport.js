@@ -1,6 +1,7 @@
 // Professional PDF Export using jsPDF - Direct Download, No Print Dialog
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { XLAND_LOGO } from './logoBase64.js';
 
 const GST_RATE = 0.18;
 
