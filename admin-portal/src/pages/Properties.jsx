@@ -4,7 +4,7 @@ import {
   Eye, ChevronDown, AlertCircle, Bell, Clock, Briefcase, Lock, 
   ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, FileText,
   Package, Plus, Calendar, DollarSign, Receipt, Tag, Users, UserCheck, RefreshCw,
-  Edit2, Save
+  Edit2, Save, Truck, UserPlus
 } from 'lucide-react';
 import VendorAssignmentModal from '../components/VendorAssignmentModal';
 import * as XLSX from 'xlsx';
@@ -79,6 +79,8 @@ const Properties = () => {
   // Check if user is Operations Manager (view-only access)
   const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
   const isOpsManager = currentUser?.role === 'operations_manager';
+  // Admin and super_admin should always have full access
+  const hasFullAccess = !isOpsManager || currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
   // Load properties from backend API (onboarding endpoint)
   const loadData = async () => {
@@ -281,6 +283,37 @@ const Properties = () => {
     showToast('Property exported successfully');
   };
 
+  // Export all properties to Excel
+  const exportAllProperties = () => {
+    if (filteredProperties.length === 0) {
+      showToast('No properties to export');
+      return;
+    }
+
+    const exportData = filteredProperties.map(property => ({
+      'Property ID': property.propertyId || '',
+      'Name': property.name || '',
+      'Type': TYPE_LABELS[property.entryType] || '',
+      'Zone': property.zone || '',
+      'Division': property.division || '',
+      'Area Name': property.areaName || '',
+      'Address': property.address || '',
+      'City': property.city || '',
+      'State': property.state || '',
+      'Postal Code': property.postalCode || '',
+      'Total Units': property.totalUnits || 0,
+      'Status': property.status || 'Active',
+      'Created By': property.createdBy || '',
+      'Created At': property.createdAt ? new Date(property.createdAt).toLocaleDateString('en-IN') : ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Properties');
+    XLSX.writeFile(wb, `all_properties_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast(`Exported ${filteredProperties.length} properties`);
+  };
+
   // Derived data
   const divisions = [...new Set(properties.map(p => p.division).filter(Boolean))];
   const zones = [...new Set(properties.map(p => p.zone).filter(Boolean))];
@@ -415,6 +448,15 @@ const Properties = () => {
         </div>
         {/* Action Buttons */}
         <div className="flex items-center gap-2 mt-3 sm:mt-0">
+          {/* Export All Button */}
+          <button
+            onClick={exportAllProperties}
+            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+            title="Export All Properties"
+          >
+            <Download className="w-4 h-4" />
+            Export All
+          </button>
           {/* Notification Bell */}
           <div className="relative">
             <button
@@ -619,29 +661,46 @@ const Properties = () => {
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => handleViewProperty(property)}
-                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="View details"
+                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="View Details"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-4 h-4 text-gray-500" />
                           </button>
-                          {!isOpsManager && (
-                            <>
-                              <button
-                                onClick={() => openEditModal(property)}
-                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                title="Edit"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setDeleteConfirm(property)}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
+                          <button
+                            onClick={() => handleExportProperty(property)}
+                            className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Export to CSV"
+                          >
+                            <Download className="w-4 h-4 text-gray-400 hover:text-emerald-600" />
+                          </button>
+                          <button
+                            onClick={() => openEditModal(property)}
+                            className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Property"
+                          >
+                            <Edit2 className="w-4 h-4 text-blue-500" />
+                          </button>
+                          <button
+                            onClick={() => setVendorAssignmentProperty(property)}
+                            className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
+                            title="Assign Vendor"
+                          >
+                            <Truck className="w-4 h-4 text-purple-500" />
+                          </button>
+                          <button
+                            onClick={() => handleViewProperty(property)}
+                            className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Assign Employee"
+                          >
+                            <UserPlus className="w-4 h-4 text-green-500" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm(property)}
+                            className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -985,7 +1044,7 @@ const Properties = () => {
                 <div className="px-6 py-5">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold text-gray-800">Vendor Assignments</h3>
-                    {!isOpsManager && (
+                    {hasFullAccess && (
                       <button
                         onClick={() => {
                           handleClosePropertyView();
@@ -1074,7 +1133,7 @@ const Properties = () => {
 
             {/* Modal Footer */}
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-              {!isOpsManager ? (
+              {hasFullAccess ? (
                 <button
                   onClick={() => { setDeleteConfirm(viewProperty); handleClosePropertyView(); }}
                   className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-md text-sm font-medium transition-colors"
@@ -1083,7 +1142,7 @@ const Properties = () => {
                 </button>
               ) : <div />}
               <div className="flex items-center gap-2">
-                {!isOpsManager && (
+                {hasFullAccess && (
                   <button
                     onClick={() => handleExportProperty(viewProperty)}
                     className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 transition-colors"

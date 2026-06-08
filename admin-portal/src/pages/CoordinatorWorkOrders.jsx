@@ -123,7 +123,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     try {
       const [propRes, catRes, custRes, vendRes, empRes] = await Promise.all([
         fetch('/api/coordinator/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/coordinator/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/coordinator/customers', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/coordinator/vendors', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/coordinator/employees', { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => ({ json: () => ({ success: false }) }))
@@ -345,24 +345,17 @@ const CoordinatorWorkOrders = ({ user }) => {
     setPropertySearch('');
   };
 
-  // Handle category change to load subcategories
-  const fetchSubcategories = async (categoryId) => {
-    if (categoryId) {
-      try {
-        const response = await fetch(`/api/categories/${categoryId}/subcategories`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const result = await response.json();
-        if (result.success) {
-          setSubcategories(result.data || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch subcategories:', error);
-        setSubcategories([]);
-      }
-    } else {
-      setSubcategories([]);
-    }
+  // Handle category change to load subcategories from embedded data
+  const handleCategoryChange = (categoryId) => {
+    setFormData({ ...formData, categoryId, subcategoryId: '' });
+    const category = categories.find(c => c.id === parseInt(categoryId));
+    setSubcategories(category?.subcategories || []);
+  };
+
+  // Fetch subcategories (uses embedded data from categories)
+  const fetchSubcategories = (categoryId) => {
+    const category = categories.find(c => c.id === parseInt(categoryId));
+    setSubcategories(category?.subcategories || []);
   };
 
   const getStatusColor = (status) => {
@@ -393,7 +386,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     });
   };
 
-  // Filter by tab (pending/completed) first, then by search
+  // Filter by tab (pending/completed) first, then by status filter, then by search
   const pendingStatuses = ['pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'];
   const completedStatuses = ['completed', 'closed'];
   const tabFilteredWorkOrders = viewType === 'pending' 
@@ -402,7 +395,13 @@ const CoordinatorWorkOrders = ({ user }) => {
     ? workOrders.filter(wo => completedStatuses.includes(wo.status))
     : workOrders;
   
-  const filteredWorkOrders = tabFilteredWorkOrders.filter(wo =>
+  // Apply status filter
+  const statusFilteredWorkOrders = statusFilter 
+    ? tabFilteredWorkOrders.filter(wo => wo.status === statusFilter)
+    : tabFilteredWorkOrders;
+  
+  // Apply search filter
+  const filteredWorkOrders = statusFilteredWorkOrders.filter(wo =>
     wo.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wo.work_order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wo.property_name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -866,8 +865,21 @@ const CoordinatorWorkOrders = ({ user }) => {
             <Search className="w-4 h-4" />
             <span>Search</span>
           </button>
+          {/* Status Filter Dropdown */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
+          >
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="assigned">Assigned</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
           <button
-            onClick={() => setSearchTerm('')}
+            onClick={() => { setSearchTerm(''); setStatusFilter(''); }}
             className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
           >
             <RefreshCw className="w-4 h-4" />
@@ -938,6 +950,19 @@ const CoordinatorWorkOrders = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        
+                        {/* Change Status Dropdown - Always visible */}
+                        <select
+                          value={wo.status}
+                          onChange={(e) => handleStatusUpdate(wo.id, e.target.value)}
+                          className="px-2 py-1 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="assigned">Assigned</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
                         
                         {/* PENDING TAB ACTIONS */}
                         {viewType === 'pending' && (
