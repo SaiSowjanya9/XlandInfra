@@ -42,6 +42,7 @@ const initialFormState = {
   serviceVerified: false,
   zone: '',
   areaName: '',
+  division: '',
   ownerName: '',
   ownerMobile: '',
   ownerEmail: '',
@@ -384,6 +385,21 @@ const CoordinatorAddVendor = ({ user }) => {
                 </div>
               )}
               {errors.areaName && <p className="text-xs text-red-500 mt-1">{errors.areaName}</p>}
+            </div>
+
+            {/* Division */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Division</label>
+              <select
+                value={formData.division}
+                onChange={(e) => updateField('division', e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:outline-none"
+              >
+                <option value="">Select Division</option>
+                <option value="Residential">Residential</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Industrial">Industrial</option>
+              </select>
             </div>
           </div>
         </div>
