@@ -8,7 +8,7 @@ require('dotenv').config();
 
 const ADMIN_USER = {
   username: 'XL_admin',
-  email: 'admin@xlandinfra.com',
+  email: 'xlandinfra@gmail.com',
   // Password: Password$123 (pre-hashed with bcrypt)
   password_hash: '$2a$10$mNm4vcgibG.g/KcN2eX3guJpXv6fjTNO7.aYkkRwRBW6TiF/j920u',
   first_name: 'XLand',

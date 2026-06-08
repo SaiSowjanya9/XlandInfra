@@ -14,7 +14,7 @@ const DEFAULT_PASSWORD = 'Password@123';
 const USERS = [
   {
     username: 'admin',
-    email: 'admin@xlandinfra.com',
+    email: 'xlandinfra@gmail.com',
     firstName: 'System',
     lastName: 'Admin',
     phone: '+91 9999999901',

@@ -27,7 +27,7 @@ async function reactivateAdmin() {
     // ========== FIX USERS TABLE (Employee Portal) ==========
     console.log('--- Fixing USERS table (Employee Portal) ---');
     const [usersResult] = await connection.execute(
-      `UPDATE users SET is_active = TRUE WHERE username = 'XL_admin' OR email = 'admin@xlandinfra.com'`
+      `UPDATE users SET is_active = TRUE WHERE username = 'XL_admin' OR email = 'xlandinfra@gmail.com'`
     );
 
     if (usersResult.affectedRows > 0) {
@@ -36,7 +36,7 @@ async function reactivateAdmin() {
       console.log('User not found in users table, creating...');
       await connection.execute(`
         INSERT INTO users (username, email, password_hash, first_name, last_name, phone, role, is_active)
-        VALUES ('XL_admin', 'admin@xlandinfra.com', ?, 'XLand', 'Admin', '+91 9999999901', 'admin', TRUE)
+        VALUES ('XL_admin', 'xlandinfra@gmail.com', ?, 'XLand', 'Admin', '+91 9999999901', 'admin', TRUE)
       `, [PASSWORD_HASH]);
       console.log('✅ XL_admin CREATED in users table!');
     }
@@ -44,7 +44,7 @@ async function reactivateAdmin() {
     // ========== FIX ADMIN_USERS TABLE (Admin Portal) ==========
     console.log('\n--- Fixing ADMIN_USERS table (Admin Portal) ---');
     const [adminResult] = await connection.execute(
-      `UPDATE admin_users SET is_active = TRUE WHERE username = 'XL_admin' OR email = 'admin@xlandinfra.com'`
+      `UPDATE admin_users SET is_active = TRUE WHERE username = 'XL_admin' OR email = 'xlandinfra@gmail.com'`
     );
 
     if (adminResult.affectedRows > 0) {
@@ -53,7 +53,7 @@ async function reactivateAdmin() {
       console.log('User not found in admin_users table, creating...');
       await connection.execute(`
         INSERT INTO admin_users (username, email, password_hash, first_name, last_name, role, is_active)
-        VALUES ('XL_admin', 'admin@xlandinfra.com', ?, 'XLand', 'Admin', 'admin', TRUE)
+        VALUES ('XL_admin', 'xlandinfra@gmail.com', ?, 'XLand', 'Admin', 'admin', TRUE)
       `, [PASSWORD_HASH]);
       console.log('✅ XL_admin CREATED in admin_users table!');
     }
@@ -61,14 +61,14 @@ async function reactivateAdmin() {
     // Verify
     const [users] = await connection.execute(
       'SELECT id, username, email, is_active, role FROM users WHERE username = ? OR email = ?',
-      ['XL_admin', 'admin@xlandinfra.com']
+      ['XL_admin', 'xlandinfra@gmail.com']
     );
     console.log('\n=== Users Table ===');
     console.table(users);
 
     const [admins] = await connection.execute(
       'SELECT id, username, email, is_active, role FROM admin_users WHERE username = ? OR email = ?',
-      ['XL_admin', 'admin@xlandinfra.com']
+      ['XL_admin', 'xlandinfra@gmail.com']
     );
     console.log('\n=== Admin_Users Table ===');
     console.table(admins);

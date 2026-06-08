@@ -16,7 +16,7 @@ MODIFY COLUMN role ENUM('admin', 'operations_manager', 'manager', 'coordinator',
 -- Production Admin Password: Password$123 (bcrypt hash below)
 -- Other Users Password: Password@123
 INSERT INTO users (username, email, password_hash, first_name, last_name, phone, role, is_active) VALUES
-('XL_admin', 'admin@xlandinfra.com', '$2a$10$mNm4vcgibG.g/KcN2eX3guJpXv6fjTNO7.aYkkRwRBW6TiF/j920u', 'XLand', 'Admin', '+91 9999999901', 'admin', TRUE),
+('XL_admin', 'xlandinfra@gmail.com', '$2a$10$mNm4vcgibG.g/KcN2eX3guJpXv6fjTNO7.aYkkRwRBW6TiF/j920u', 'XLand', 'Admin', '+91 9999999901', 'admin', TRUE),
 ('manager_admin', 'manager@pmportal.com', '$2a$10$rDkPvvAFV6kqLK9eVsQOu.GdQPCpZqKqLqPqZqMqNqJqRqLqMqNqO', 'Operations', 'Manager', '+91 9999999902', 'manager', TRUE),
 ('coordinator_admin', 'coordinator@pmportal.com', '$2a$10$rDkPvvAFV6kqLK9eVsQOu.GdQPCpZqKqLqPqZqMqNqJqRqLqMqNqO', 'Field', 'Coordinator', '+91 9999999903', 'coordinator', TRUE),
 ('supervisor_admin', 'supervisor@pmportal.com', '$2a$10$rDkPvvAFV6kqLK9eVsQOu.GdQPCpZqKqLqPqZqMqNqJqRqLqMqNqO', 'Site', 'Supervisor', '+91 9999999904', 'supervisor', TRUE),
