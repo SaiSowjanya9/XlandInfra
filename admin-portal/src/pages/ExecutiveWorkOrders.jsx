@@ -1,26 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  ClipboardList, Plus, Search, RefreshCw, X, Save, AlertCircle,
-  CheckCircle, Clock, Eye
+  ClipboardList, Plus, Search, RefreshCw, X, AlertCircle,
+  CheckCircle, Clock, Eye, Building2, User, Camera, Upload, FileText, Image
 } from 'lucide-react';
 
 const ExecutiveWorkOrders = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
-  const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [propertySearch, setPropertySearch] = useState('');
+  const [attachments, setAttachments] = useState([]);
   const [formData, setFormData] = useState({
-    propertyId: '', categoryId: '', clientId: '', title: '', description: '',
-    priority: 'medium', permissionToEnter: 'no', hasPet: 'no', scheduledDate: ''
+    propertyId: '',
+    categoryId: '',
+    subcategoryId: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    description: '',
+    priority: 'medium',
+    permissionToEnter: 'no',
+    hasPet: 'no',
+    entryNotes: ''
   });
+
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -116,7 +130,63 @@ const ExecutiveWorkOrders = ({ user }) => {
   };
 
   const resetForm = () => {
-    setFormData({ propertyId: '', categoryId: '', clientId: '', title: '', description: '', priority: 'medium', permissionToEnter: 'no', hasPet: 'no', scheduledDate: '' });
+    setFormData({
+      propertyId: '',
+      categoryId: '',
+      subcategoryId: '',
+      customerName: '',
+      customerEmail: '',
+      customerPhone: '',
+      description: '',
+      priority: 'medium',
+      permissionToEnter: 'no',
+      hasPet: 'no',
+      entryNotes: ''
+    });
+    setPropertySearch('');
+    setSubcategories([]);
+    setAttachments([]);
+  };
+
+  // Filter properties based on search
+  const filteredPropertiesForSearch = properties.filter(p => 
+    propertySearch && (
+      p.name?.toLowerCase().includes(propertySearch.toLowerCase()) ||
+      p.property_id?.toLowerCase().includes(propertySearch.toLowerCase())
+    )
+  );
+
+  // Handle property selection - auto-populate customer details
+  const handlePropertySelect = (property) => {
+    setFormData({ 
+      ...formData, 
+      propertyId: property.id,
+      customerName: property.contact_person || property.contactPerson || property.owner_name || '',
+      customerEmail: property.contact_email || property.contactEmail || property.email || '',
+      customerPhone: property.contact_phone || property.contactPhone || property.phone || property.mobile || ''
+    });
+    setPropertySearch(property.property_id + ' - ' + property.name);
+  };
+
+  // Handle category change to load subcategories from embedded data
+  const handleCategoryChange = (categoryId) => {
+    setFormData({ ...formData, categoryId, subcategoryId: '' });
+    const category = categories.find(c => c.id === parseInt(categoryId));
+    setSubcategories(category?.subcategories || []);
+  };
+
+  // Handle file attachments
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (attachments.length + files.length > 5) {
+      setMessage({ type: 'error', text: 'Maximum 5 files allowed' });
+      return;
+    }
+    setAttachments([...attachments, ...files]);
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments(attachments.filter((_, i) => i !== index));
   };
 
   const handleStatusChange = async (workOrderId, newStatus) => {
@@ -198,46 +268,54 @@ const ExecutiveWorkOrders = ({ user }) => {
           }`}>{completedCount}</span>
         </button>
         <button
-          onClick={() => { resetForm(); setActiveTab('create'); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent"
+          onClick={() => { resetForm(); setActiveTab('create'); }}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'create'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
         >
           <Plus className="w-4 h-4" />
           <span>Create Work Order</span>
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search by Work Order ID, category, or name..." 
-              value={searchInput} 
-              onChange={(e) => setSearchInput(e.target.value)} 
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
-            />
+      {/* Search Bar - shown for pending/completed tabs */}
+      {(activeTab === 'pending' || activeTab === 'completed') && (
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Search by Work Order ID, category, or name..." 
+                value={searchInput} 
+                onChange={(e) => setSearchInput(e.target.value)} 
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
+              />
+            </div>
+            <button onClick={handleSearch} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <Search className="w-4 h-4" /><span>Search</span>
+            </button>
+            <button onClick={handleClear} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+              <RefreshCw className="w-4 h-4" /><span>Clear</span>
+            </button>
           </div>
-          <button onClick={handleSearch} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            <Search className="w-4 h-4" /><span>Search</span>
-          </button>
-          <button onClick={handleClear} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-            <RefreshCw className="w-4 h-4" /><span>Clear</span>
-          </button>
         </div>
-      </div>
+      )}
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-12"><RefreshCw className="w-6 h-6 text-indigo-600 animate-spin" /></div>
-        ) : filteredWorkOrders.length === 0 ? (
-          <div className="text-center py-12"><ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No work orders found</p></div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-gray-100">
+      {/* Work Orders List - shown for pending/completed tabs */}
+      {(activeTab === 'pending' || activeTab === 'completed') && (
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center py-12"><RefreshCw className="w-6 h-6 text-indigo-600 animate-spin" /></div>
+          ) : filteredWorkOrders.length === 0 ? (
+            <div className="text-center py-12"><ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No work orders found</p></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b border-gray-100">
                 <tr>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Order ID</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Resident</th>
@@ -279,38 +357,266 @@ const ExecutiveWorkOrders = ({ user }) => {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">Create Work Order</h2>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+              </table>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Property *</label><select required value={formData.propertyId} onChange={(e) => setFormData({ ...formData, propertyId: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"><option value="">Select Property</option>{properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Category</label><select value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"><option value="">Select Category</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Customer</label><select value={formData.clientId} onChange={(e) => setFormData({ ...formData, clientId: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"><option value="">Select Customer</option>{customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Priority</label><select value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500">{priorityOptions.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
-                <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Title *</label><input type="text" required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Brief title" /></div>
-                <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" rows={3} /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Scheduled Date</label><input type="datetime-local" value={formData.scheduledDate} onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" /></div>
-                <div className="flex gap-4">
-                  <div className="flex-1"><label className="block text-sm font-medium text-gray-700 mb-1">Permission to Enter</label><select value={formData.permissionToEnter} onChange={(e) => setFormData({ ...formData, permissionToEnter: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"><option value="no">No</option><option value="yes">Yes</option></select></div>
-                  <div className="flex-1"><label className="block text-sm font-medium text-gray-700 mb-1">Has Pet?</label><select value={formData.hasPet} onChange={(e) => setFormData({ ...formData, hasPet: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"><option value="no">No</option><option value="yes">Yes</option></select></div>
+          )}
+        </div>
+      )}
+
+      {/* Create Work Order Form - shown for create tab */}
+      {activeTab === 'create' && (
+        <div className="bg-white rounded-xl border border-gray-100">
+          {/* Header */}
+          <div className="flex items-start gap-3 p-6 border-b border-gray-100">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Plus className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Create New Work Order</h2>
+              <p className="text-sm text-gray-500">Fill in the details to create a work order on behalf of a resident</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Property Information Section */}
+            <div className="bg-gray-50 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Building2 className="w-5 h-5 text-gray-600" />
+                <h3 className="font-semibold text-gray-900">Property Information</h3>
+              </div>
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property ID <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={propertySearch}
+                  onChange={(e) => { setPropertySearch(e.target.value); setFormData({ ...formData, propertyId: '' }); }}
+                  placeholder="Search by Property ID or Community Name..."
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                {filteredPropertiesForSearch.length > 0 && !formData.propertyId && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {filteredPropertiesForSearch.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handlePropertySelect(p)}
+                        className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 last:border-0"
+                      >
+                        <p className="font-medium text-gray-900">{p.property_id}</p>
+                        <p className="text-sm text-gray-500">{p.name}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Customer Details Section */}
+            <div className="bg-gray-50 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <User className="w-5 h-5 text-gray-600" />
+                <h3 className="font-semibold text-gray-900">Customer Details</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.customerName}
+                    onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                    placeholder="Customer name"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={formData.customerEmail}
+                    onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
+                    placeholder="customer@email.com"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number <span className="text-red-500">*</span></label>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.customerPhone}
+                    onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
+                    placeholder="Phone number"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
               </div>
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button type="submit" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"><Save className="w-4 h-4" /><span>Create Work Order</span></button>
+            </div>
+
+            {/* Category & Subcategory */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-500">*</span></label>
+                <select
+                  required
+                  value={formData.categoryId}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select a category</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
               </div>
-            </form>
-          </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory <span className="text-red-500">*</span></label>
+                <select
+                  required
+                  value={formData.subcategoryId}
+                  onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  disabled={!formData.categoryId}
+                >
+                  <option value="">{formData.categoryId ? 'Select subcategory' : 'Select a category first'}</option>
+                  {subcategories.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description <span className="text-gray-400">(Optional)</span>
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value.slice(0, 500) })}
+                placeholder="Describe the issue or request in detail..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                rows={4}
+              />
+              <p className="text-right text-sm text-gray-400 mt-1">{formData.description.length}/500</p>
+            </div>
+
+            {/* Permission & Pet */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Permission to Enter <span className="text-red-500">*</span></label>
+                <p className="text-xs text-gray-500 mb-2">Allow entry if resident is unavailable</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, permissionToEnter: 'yes' })}
+                    className={`flex-1 py-3 rounded-lg border-2 font-medium transition-all ${
+                      formData.permissionToEnter === 'yes'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, permissionToEnter: 'no' })}
+                    className={`flex-1 py-3 rounded-lg border-2 font-medium transition-all ${
+                      formData.permissionToEnter === 'no'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Has Pet? <span className="text-red-500">*</span></label>
+                <p className="text-xs text-gray-500 mb-2">Does the resident have a pet?</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, hasPet: 'yes' })}
+                    className={`flex-1 py-3 rounded-lg border-2 font-medium transition-all ${
+                      formData.hasPet === 'yes'
+                        ? 'border-amber-500 bg-amber-50 text-amber-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, hasPet: 'no' })}
+                    className={`flex-1 py-3 rounded-lg border-2 font-medium transition-all ${
+                      formData.hasPet === 'no'
+                        ? 'border-amber-500 bg-amber-50 text-amber-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Entry Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Entry Notes <span className="text-gray-400">(Optional)</span>
+              </label>
+              <textarea
+                value={formData.entryNotes}
+                onChange={(e) => setFormData({ ...formData, entryNotes: e.target.value })}
+                placeholder="Special instructions for entry (gate code, parking, etc.)..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                rows={2}
+              />
+            </div>
+
+            {/* Priority */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Priority</label>
+              <div className="grid grid-cols-4 gap-3">
+                {priorityOptions.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, priority: p.value })}
+                    className={`py-3 rounded-lg border-2 font-medium transition-all ${
+                      formData.priority === p.value
+                        ? p.value === 'low' ? 'border-green-500 bg-green-50 text-green-700'
+                        : p.value === 'medium' ? 'border-amber-500 bg-amber-50 text-amber-700'
+                        : p.value === 'high' ? 'border-orange-500 bg-orange-50 text-orange-700'
+                        : 'border-red-500 bg-red-50 text-red-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => { resetForm(); setActiveTab('pending'); }}
+                className="px-6 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
+              >
+                <CheckCircle className="w-5 h-5" />
+                Create Work Order
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

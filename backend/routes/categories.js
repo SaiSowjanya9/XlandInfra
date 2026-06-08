@@ -3,22 +3,14 @@ const router = express.Router();
 const configCategories = require('../config/categories');
 const { pool, isDbConnected } = require('../config/database');
 
-// Get all categories (from database, fallback to config)
+// Get all categories with embedded subcategories (from config file - always reliable)
 router.get('/', async (req, res) => {
   try {
-    if (isDbConnected && pool) {
-      const [rows] = await pool.execute('SELECT id, name FROM categories WHERE is_active = 1 ORDER BY name');
-      if (rows.length > 0) {
-        return res.json({ success: true, data: rows });
-      }
-    }
-    // Fallback to config
-    const categoryList = configCategories.map(cat => ({ id: cat.id, name: cat.name }));
-    res.json({ success: true, data: categoryList });
+    // Always return config categories with embedded subcategories
+    // This ensures consistency across all portals
+    res.json({ success: true, data: configCategories });
   } catch (error) {
-    // Fallback to config on error
-    const categoryList = configCategories.map(cat => ({ id: cat.id, name: cat.name }));
-    res.json({ success: true, data: categoryList });
+    res.json({ success: true, data: configCategories });
   }
 });
 
