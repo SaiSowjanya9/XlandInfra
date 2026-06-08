@@ -1170,7 +1170,7 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
 
     // Check if user exists and get current details for email
     const [existing] = await pool.execute(
-      `SELECT id, email, first_name, role FROM users WHERE id = ?`,
+      `SELECT id, email, first_name, role, is_super_admin FROM users WHERE id = ?`,
       [id]
     );
 
@@ -1182,6 +1182,14 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
     }
     
     const currentUser = existing[0];
+
+    // SUPER ADMIN PROTECTION: Cannot deactivate super admin accounts
+    if (currentUser.is_super_admin && isActive === false) {
+      return res.status(403).json({
+        success: false,
+        message: 'Super Admin accounts cannot be deactivated from the portal. Contact database administrator.'
+      });
+    }
 
     // Check for duplicate username/email
     if (username || email) {
