@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Hammer, Lock, 
   ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, UserPlus, Users,
-  FileText, Store, Package, Shield, RefreshCw, Edit2, Truck
+  FileText, Store, Package, Shield, RefreshCw
 } from 'lucide-react';
 import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
 import { getZoneNames, createZone } from '../utils/zoneStore';
@@ -98,16 +98,14 @@ const CustomerSubmissions = () => {
   const [propertyEstimates, setPropertyEstimates] = useState([]);
   const [viewAMCDetails, setViewAMCDetails] = useState(null); // AMC package details modal
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
-  const [propertiesLoading, setPropertiesLoading] = useState(false);
 
   // Load properties from FP-specific API or all FPs (Admin mode)
-  const loadData = useCallback(async () => {
+  const loadData = async () => {
     if (!selectedFp) {
       setProperties([]);
       return;
     }
     
-    setPropertiesLoading(true);
     try {
       let endpoint;
       if (selectedFp.id === 'all') {
@@ -127,44 +125,30 @@ const CustomerSubmissions = () => {
       console.log('Property Management: API returned', result.data?.length || 0, 'properties');
       if (result.success) {
         // Map API response to expected format and filter by property type
-        let props = result.data.map(p => {
-          // Build contacts array from inline fields if not already present
-          let contacts = p.contacts || [];
-          if (contacts.length === 0 && (p.contact_person || p.contact_email || p.contact_phone)) {
-            contacts = [{
-              name: p.contact_person || '',
-              email: p.contact_email || '',
-              phone: p.contact_phone || '',
-              countryCode: '+91'
-            }];
-          }
-          
-          return {
-            id: p.id,
-            propertyId: p.property_id,
-            name: p.name,
-            propertyType: p.property_type,
-            category: p.category || 'residential',
-            zone: p.zone_name || p.zone,
-            area: p.area || p.area_name,
-            division: p.division,
-            units: p.units || 0,
-            address: p.address,
-            city: p.city,
-            state: p.state,
-            zipCode: p.zip_code || p.postal_code,
-            contactPerson: p.contact_person,
-            contactPhone: p.contact_phone,
-            contactEmail: p.contact_email,
-            contacts: contacts,
-            createdAt: p.created_at,
-            createdBy: p.created_by,
-            status: p.status || 'active',
-            sourceTable: p.source_table,
-            fpId: p.fp_id || p.franchise_partner_id,
-            fpName: p.fp_name || p.company_name
-          };
-        });
+        let props = result.data.map(p => ({
+          id: p.id,
+          propertyId: p.property_id,
+          name: p.name,
+          propertyType: p.property_type,
+          category: p.category || 'residential',
+          zone: p.zone_name || p.zone,
+          area: p.area || p.area_name,
+          division: p.division,
+          units: p.units || 0,
+          address: p.address,
+          city: p.city,
+          state: p.state,
+          zipCode: p.zip_code || p.postal_code,
+          contactPerson: p.contact_person,
+          contactPhone: p.contact_phone,
+          contactEmail: p.contact_email,
+          createdAt: p.created_at,
+          createdBy: p.created_by,
+          status: p.status || 'active',
+          sourceTable: p.source_table,
+          fpId: p.fp_id || p.franchise_partner_id,
+          fpName: p.fp_name || p.company_name
+        }));
         
         // For now, only showing residential properties (commercial coming soon)
         props = props.filter(p => {
@@ -176,34 +160,16 @@ const CustomerSubmissions = () => {
       }
     } catch (error) {
       console.error('Error loading properties:', error);
-    } finally {
-      setPropertiesLoading(false);
     }
     setNotifications(getNotifications());
-  }, [selectedFp, token]);
+  };
 
-  // Auto-select residential category when FP is selected (for seamless FP switching)
   useEffect(() => {
-    if (selectedFp && !selectedCategory) {
-      setSelectedCategory('residential');
-    }
-  }, [selectedFp, selectedCategory]);
-
-  // Reload data when entering main view or when FP/filters change
-  useEffect(() => {
-    // Only load data when both category and FP are selected (main view)
-    if (selectedCategory && selectedFp) {
-      console.log('CustomerSubmissions: Loading data for FP:', selectedFp.id, selectedFp.companyName);
-      loadData();
-    }
+    loadData();
     // Poll for new entries every 10 seconds
-    const interval = setInterval(() => {
-      if (selectedCategory && selectedFp) {
-        loadData();
-      }
-    }, 10000);
+    const interval = setInterval(loadData, 10000);
     return () => clearInterval(interval);
-  }, [loadData, statusFilter, selectedCategory, selectedFp]);
+  }, [selectedFp, statusFilter]);
 
   // Show toast helper
   const showToast = (message, type = 'success') => {
@@ -218,29 +184,14 @@ const CustomerSubmissions = () => {
     setPropertyEstimates(estimates);
   };
 
-  // Delete handler - use admin API endpoint
-  const handleDelete = async (property) => {
-    try {
-      // Determine correct ID and endpoint based on source
-      const propertyId = property.id?.toString().startsWith('prop-') 
-        ? property.id.replace('prop-', '') 
-        : property.id;
-      
-      const response = await fetch(`${API_BASE}/api/admin/properties/${propertyId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      
-      if (result.success) {
-        await loadData();
-        showToast('Property deleted successfully');
-      } else {
-        showToast(result.message || 'Failed to delete property', 'error');
-      }
-    } catch (error) {
-      console.error('Delete error:', error);
-      showToast('Failed to delete property', 'error');
+  // Delete handler
+  const handleDelete = async (id) => {
+    const success = await deleteProperty(id);
+    if (success) {
+      await loadData();
+      showToast('Customer deleted successfully');
+    } else {
+      showToast('Failed to delete customer', 'error');
     }
     setDeleteConfirm(null);
   };
@@ -576,7 +527,7 @@ const CustomerSubmissions = () => {
         {/* Header */}
         <div className="flex items-center gap-4">
           <button
-            onClick={() => { setSelectedCategory(null); setProperties([]); }}
+            onClick={() => setSelectedCategory(null)}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600" />
@@ -877,12 +828,7 @@ const CustomerSubmissions = () => {
         </div>
 
         {/* Property Table */}
-        {propertiesLoading ? (
-          <div className="py-16 text-center">
-            <RefreshCw className="w-10 h-10 text-primary-500 mx-auto mb-3 animate-spin" />
-            <p className="text-gray-500 font-medium">Loading properties...</p>
-          </div>
-        ) : filteredProperties.length === 0 ? (
+        {filteredProperties.length === 0 ? (
           <div className="py-16 text-center">
             <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">No properties found</p>
@@ -963,45 +909,10 @@ const CustomerSubmissions = () => {
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => handleViewProperty(property)}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="View Details"
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="View details"
                           >
-                            <Eye className="w-4 h-4 text-gray-500" />
-                          </button>
-                          <button
-                            onClick={() => handleExportProperty(property)}
-                            className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors"
-                            title="Export to CSV"
-                          >
-                            <Download className="w-4 h-4 text-gray-400 hover:text-emerald-600" />
-                          </button>
-                          <button
-                            onClick={() => handleViewProperty(property)}
-                            className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit Property"
-                          >
-                            <Edit2 className="w-4 h-4 text-blue-500" />
-                          </button>
-                          <button
-                            onClick={() => setAssignVendorModal(property)}
-                            className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
-                            title="Assign Vendor"
-                          >
-                            <Truck className="w-4 h-4 text-purple-500" />
-                          </button>
-                          <button
-                            onClick={() => setAssignEmployeeModal(property)}
-                            className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Assign Employee"
-                          >
-                            <UserPlus className="w-4 h-4 text-green-500" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirm(property)}
-                            className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
+                            <Eye className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -1319,7 +1230,7 @@ const CustomerSubmissions = () => {
                 Cancel
               </button>
               <button
-                onClick={() => handleDelete(deleteConfirm)}
+                onClick={() => handleDelete(deleteConfirm.id)}
                 className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
               >
                 Delete

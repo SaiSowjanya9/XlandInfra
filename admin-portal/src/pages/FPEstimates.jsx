@@ -1884,8 +1884,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <PlusCircle className="w-5 h-5 text-gray-400" />
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-800">{a.service_name || a.name || 'Unnamed Add-on'}</p>
-                        <p className="text-sm text-gray-500">{a.frequency_count || 1}x {a.frequency_type || 'Monthly'} • {getPropertyTypeLabel(a.property_type) || 'GC'}</p>
+                        <p className="font-semibold text-gray-800">{a.service_name}</p>
+                        <p className="text-sm text-gray-500">{a.frequency_count}x {a.frequency_type} • {getPropertyTypeLabel(a.property_type)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">

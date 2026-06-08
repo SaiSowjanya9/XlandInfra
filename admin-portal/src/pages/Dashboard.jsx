@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Building2, ClipboardList, Clock, CheckCircle2, FileText, Users, 
   Package, MapPin, Wrench, UserPlus, IndianRupee, Activity,
@@ -35,7 +35,7 @@ const Dashboard = () => {
       if (selectedFp) fetchDashboardData();
     }, 60000);
     return () => clearInterval(interval);
-  }, [fetchDashboardData, selectedFp]);
+  }, [selectedFp]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -47,13 +47,12 @@ const Dashboard = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = async () => {
     if (!selectedFp) {
       setLoading(false);
       return;
     }
     
-    setLoading(true);
     try {
       let endpoint;
       if (selectedFp.id === 'all') {
@@ -99,7 +98,7 @@ const Dashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedFp, token]);
+  };
 
   const fetchNotifications = async () => {
     try {

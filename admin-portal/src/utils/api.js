@@ -19,8 +19,8 @@ export const apiRequest = async (endpoint, options = {}) => {
     'Content-Type': 'application/json',
   };
 
-  // Add auth token if available (check sessionStorage first, then localStorage for backwards compatibility)
-  const token = sessionStorage.getItem('pm_auth_token') || localStorage.getItem('pm_auth_token');
+  // Add auth token if available
+  const token = localStorage.getItem('auth_token');
   if (token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }

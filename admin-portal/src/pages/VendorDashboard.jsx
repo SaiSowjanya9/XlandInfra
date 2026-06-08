@@ -15,7 +15,7 @@ const VendorDashboard = ({ user }) => {
 
   const fetchVendorDashboard = async () => {
     try {
-      const token = sessionStorage.getItem('pm_auth_token') || localStorage.getItem('pm_auth_token');
+      const token = localStorage.getItem('vendor_token') || sessionStorage.getItem('pm_auth_token');
       const response = await fetch('/api/vendors/dashboard', {
         headers: {
           'Authorization': `Bearer ${token}`,
