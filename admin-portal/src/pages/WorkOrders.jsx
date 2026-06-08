@@ -11,6 +11,7 @@ const WorkOrders = ({ admin }) => {
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'completed'
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
   
   // FP Context
   const { fpList, selectedFp, selectFp, loading: fpLoading } = useFP();
@@ -51,8 +52,6 @@ const WorkOrders = ({ admin }) => {
     selectFp(fp);
     setFpDropdownOpen(false);
   };
-
-  const [error, setError] = useState('');
   
   const updateStatus = async (id, status) => {
     try {
