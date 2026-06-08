@@ -2013,41 +2013,38 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
 
 // Transform AMC package to frontend format
 const transformPackage = (pkg) => {
-  // Parse services - handle both string and JSON formats
-  let parsedServices = [];
   let servicesString = '';
   let serviceRows = [];
+  let propertyType = pkg.property_type || 'GC';
+  let billingDuration = pkg.billing_duration || 'Annual';
   
+  // Parse the services field - it contains JSON with serviceRows nested inside
   if (pkg.services) {
-    if (typeof pkg.services === 'string') {
-      try {
-        parsedServices = JSON.parse(pkg.services);
-        // If it's an array of objects with 'name', extract names
-        if (Array.isArray(parsedServices)) {
-          servicesString = parsedServices.map(s => typeof s === 'string' ? s : (s.name || s.service || '')).filter(Boolean).join(', ');
-        }
-      } catch (e) {
-        // If not JSON, treat as comma-separated string
-        servicesString = pkg.services;
-        parsedServices = pkg.services.split(',').map(s => s.trim());
-      }
-    } else if (Array.isArray(pkg.services)) {
-      parsedServices = pkg.services;
-      servicesString = pkg.services.map(s => typeof s === 'string' ? s : (s.name || s.service || '')).filter(Boolean).join(', ');
-    }
-  }
-  
-  if (pkg.service_rows) {
     try {
-      serviceRows = typeof pkg.service_rows === 'string' ? JSON.parse(pkg.service_rows) : pkg.service_rows;
-      // Also build services string from serviceRows if services is empty
-      if (!servicesString && Array.isArray(serviceRows) && serviceRows.length > 0) {
-        servicesString = serviceRows.map(r => r.service || r.name || '').filter(Boolean).join(', ');
+      const parsed = typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services;
+      
+      // Check if it's the nested structure: {serviceRows: [...], property_type: ..., billing_duration: ...}
+      if (parsed.serviceRows && Array.isArray(parsed.serviceRows)) {
+        serviceRows = parsed.serviceRows;
+        servicesString = serviceRows.map(r => r.name || r.service || '').filter(Boolean).join(', ');
+        // Also extract property_type and billing_duration if present
+        if (parsed.property_type) propertyType = parsed.property_type;
+        if (parsed.billing_duration) billingDuration = parsed.billing_duration;
+      } 
+      // Or it might be a direct array of services
+      else if (Array.isArray(parsed)) {
+        serviceRows = parsed;
+        servicesString = parsed.map(s => typeof s === 'string' ? s : (s.name || s.service || '')).filter(Boolean).join(', ');
       }
     } catch (e) {
-      serviceRows = [];
+      // If not JSON, treat as comma-separated string
+      servicesString = pkg.services;
     }
   }
+  
+  // Map property type codes
+  const propTypeMap = { 'AP': 'APT', 'VL': 'VILLA', 'FL': 'FLAT', 'PL': 'PLOT' };
+  const mappedPropertyType = propTypeMap[propertyType] || propertyType || 'GC';
   
   return {
     id: pkg.id,
@@ -2055,14 +2052,13 @@ const transformPackage = (pkg) => {
     packageName: pkg.name || pkg.package_name,
     name: pkg.name || pkg.package_name,
     description: pkg.description || '',
-    propertyType: pkg.property_type === 'AP' ? 'APT' : pkg.property_type === 'VL' ? 'VILLA' : pkg.property_type === 'FL' ? 'FLAT' : pkg.property_type === 'PL' ? 'PLOT' : pkg.property_type || 'GC',
+    propertyType: mappedPropertyType,
     price: parseFloat(pkg.base_price || pkg.price) || 0,
     rate: parseFloat(pkg.base_price || pkg.price) || 0,
     services: servicesString, // String for display
-    servicesArray: parsedServices, // Array for processing
     serviceRows: serviceRows,
     durationMonths: pkg.duration_months || 12,
-    billingCycle: pkg.billing_duration || 'Annual',
+    billingCycle: billingDuration,
     termsConditions: pkg.terms_conditions || '',
     franchisePartnerId: pkg.franchise_partner_id,
     fpCode: pkg.fp_code,

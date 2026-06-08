@@ -556,8 +556,8 @@ export const exportEstimateToPDF = (estimate) => {
     if (estimate.addons && Array.isArray(estimate.addons) && estimate.addons.length > 0) {
       addons = estimate.addons.map(a => ({
         name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
-        frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time',
-        frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || 1
+        frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
+        frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1
       }));
     }
     // Try addons_data JSON string (from backend)
@@ -566,9 +566,9 @@ export const exportEstimateToPDF = (estimate) => {
         const parsed = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
         if (Array.isArray(parsed) && parsed.length > 0) {
           addons = parsed.map(a => ({
-            name: a.name || a.serviceName || a.service_name || 'Add-on',
-            frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time',
-            frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || 1
+            name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
+            frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
+            frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1
           }));
         }
       } catch (e) { console.log('[PDF] addons_data parse error:', e); }
@@ -576,9 +576,9 @@ export const exportEstimateToPDF = (estimate) => {
     // Try selectedAddons array (from form)
     if (addons.length === 0 && estimate.selectedAddons && Array.isArray(estimate.selectedAddons) && estimate.selectedAddons.length > 0) {
       addons = estimate.selectedAddons.map(a => ({
-        name: a.name || a.serviceName || a.service_name || 'Add-on',
-        frequencyType: a.frequencyType || a.frequency_type || a.frequency || 'One-time',
-        frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || 1
+        name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
+        frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
+        frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1
       }));
     }
     
