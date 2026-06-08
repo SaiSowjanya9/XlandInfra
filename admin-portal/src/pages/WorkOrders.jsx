@@ -11,7 +11,6 @@ const WorkOrders = ({ admin }) => {
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'completed'
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
   
   // FP Context
   const { fpList, selectedFp, selectFp, loading: fpLoading } = useFP();
@@ -52,31 +51,22 @@ const WorkOrders = ({ admin }) => {
     selectFp(fp);
     setFpDropdownOpen(false);
   };
-  
+
   const updateStatus = async (id, status) => {
     try {
-      const response = await fetch(`${API_BASE}/api/admin/work-orders/${id}`, {
+      const response = await fetch(`/api/admin/work-orders/${id}`, {
         method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       });
       const result = await response.json();
       if (result.success) {
-        setSuccess('Status updated successfully');
-        setError('');
+        setSuccess('Status updated');
         fetchWorkOrders();
         setTimeout(() => setSuccess(''), 3000);
-      } else {
-        setError(result.message || 'Failed to update status');
-        setTimeout(() => setError(''), 5000);
       }
-    } catch (err) {
-      console.error('Error:', err);
-      setError('Failed to update status');
-      setTimeout(() => setError(''), 5000);
+    } catch (error) {
+      console.error('Error:', error);
     }
   };
 
@@ -206,12 +196,6 @@ const WorkOrders = ({ admin }) => {
       {success && (
         <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2 text-green-700">
           <Check className="w-5 h-5" /><span>{success}</span>
-        </div>
-      )}
-
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-700">
-          <AlertCircle className="w-5 h-5" /><span>{error}</span>
         </div>
       )}
 
