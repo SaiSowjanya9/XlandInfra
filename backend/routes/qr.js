@@ -108,14 +108,42 @@ const parseUserAgent = (ua) => {
   };
 };
 
-// Bot detection
+// Bot detection - Enhanced to filter out common bots and crawlers
 const isBot = (ua) => {
   if (!ua) return true;
+  const uaLower = ua.toLowerCase();
+  
+  // Known bot user agents and patterns
   const botPatterns = [
-    /bot/i, /crawl/i, /spider/i, /scrape/i, /curl/i, /wget/i,
-    /python/i, /java\//i, /httpclient/i, /libwww/i, /headless/i
+    // Search engine bots
+    /googlebot/i, /bingbot/i, /slurp/i, /duckduckbot/i, /baiduspider/i,
+    /yandexbot/i, /sogou/i, /exabot/i, /facebot/i, /ia_archiver/i,
+    // Social media crawlers
+    /facebookexternalhit/i, /twitterbot/i, /linkedinbot/i, /pinterest/i,
+    /whatsapp/i, /telegrambot/i, /slackbot/i, /discordbot/i,
+    // Generic bot patterns
+    /bot/i, /crawl/i, /spider/i, /scrape/i, /fetch/i,
+    // Tools and libraries
+    /curl/i, /wget/i, /python/i, /java\//i, /httpclient/i, /libwww/i,
+    /headless/i, /phantom/i, /selenium/i, /puppeteer/i, /playwright/i,
+    // Preview generators
+    /preview/i, /thumb/i, /snap/i, /embed/i,
+    // Monitoring and uptime
+    /pingdom/i, /uptimerobot/i, /statuscake/i, /newrelic/i, /datadog/i,
+    // Other
+    /mediapartners/i, /adsbot/i, /apis-google/i, /feedfetcher/i
   ];
-  return botPatterns.some(pattern => pattern.test(ua));
+  
+  // Check if any pattern matches
+  if (botPatterns.some(pattern => pattern.test(ua))) {
+    return true;
+  }
+  
+  // Additional checks for suspicious patterns
+  if (uaLower.includes('http://') || uaLower.includes('https://')) return true;
+  if (ua.length < 20) return true; // Very short user agents are often bots
+  
+  return false;
 };
 
 // Get client IP
@@ -180,17 +208,10 @@ router.get('/r/:slug', async (req, res) => {
     const ip = getClientIP(req);
     const ipHash = hashIP(ip);
     
-    // Bot detection
+    // Bot detection - Skip logging for bots but still redirect them
     if (isBot(userAgent)) {
-      // Log bot but don't count in analytics
-      try {
-        await pool.execute(
-          'INSERT INTO qr_bot_detections (ip_address, user_agent, detection_type, confidence_score) VALUES (?, ?, ?, ?)',
-          [ip, userAgent.substring(0, 500), 'bot', 95.0]
-        );
-      } catch (e) {}
-      
-      // Still redirect bots
+      console.log(`[QR Bot Filtered] Slug: ${slug}, UA: ${userAgent.substring(0, 100)}`);
+      // Redirect bot without logging scan
       return res.redirect(302, qr.current_url);
     }
     
