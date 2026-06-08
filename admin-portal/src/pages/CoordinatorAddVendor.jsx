@@ -42,7 +42,6 @@ const initialFormState = {
   serviceVerified: false,
   zone: '',
   areaName: '',
-  division: '',
   ownerName: '',
   ownerMobile: '',
   ownerEmail: '',
@@ -75,7 +74,6 @@ const CoordinatorAddVendor = ({ user }) => {
   // Zone & Area autocomplete
   const [zoneSuggestions, setZoneSuggestions] = useState([]);
   const [areaSuggestions, setAreaSuggestions] = useState([]);
-  const [divisions, setDivisions] = useState([]);
   const [showZoneDropdown, setShowZoneDropdown] = useState(false);
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
 
@@ -90,9 +88,6 @@ const CoordinatorAddVendor = ({ user }) => {
     fetchZones();
     fetch('/api/onboarding/suggestions/areas', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(res => { if (res.success) setAreaSuggestions(res.data || []); }).catch(() => {});
-    // Fetch divisions
-    fetch('/api/coordinator/divisions', { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(r => r.json()).then(res => { if (res.success) setDivisions(res.data || []); }).catch(() => {});
   }, [token]);
 
   const autoSaveZone = async (zoneName) => {
@@ -389,21 +384,6 @@ const CoordinatorAddVendor = ({ user }) => {
                 </div>
               )}
               {errors.areaName && <p className="text-xs text-red-500 mt-1">{errors.areaName}</p>}
-            </div>
-
-            {/* Division */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Division</label>
-              <select
-                value={formData.division}
-                onChange={(e) => updateField('division', e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:outline-none"
-              >
-                <option value="">Select Division</option>
-                {divisions.map(d => (
-                  <option key={d.id || d.name} value={d.name}>{d.name}</option>
-                ))}
-              </select>
             </div>
           </div>
         </div>

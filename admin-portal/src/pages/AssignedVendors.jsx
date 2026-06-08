@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Search,
   X,
@@ -64,7 +64,27 @@ const AssignedVendors = ({ user }) => {
 
   const token = sessionStorage.getItem('pm_auth_token');
 
-  const loadData = useCallback(async () => {
+  useEffect(() => {
+    if (isAdmin && selectedFp) {
+      loadData();
+    } else if (!isAdmin) {
+      loadData();
+    }
+  }, [statusFilter, selectedFp]);
+
+  // Refresh data when page becomes visible (handles navigation back to this page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [statusFilter, selectedFp]);
+
+  const loadData = async () => {
     // For admin users, use FP-specific or all-FPs endpoint
     if (isAdmin) {
       if (!selectedFp) {
@@ -94,10 +114,7 @@ const AssignedVendors = ({ user }) => {
         const vendorResult = await vendorResponse.json();
         
         if (assignResult.success) {
-          const data = assignResult.data || [];
-          // Set both assignments and serviceAssignments for admin view
-          setAssignments(data);
-          setServiceAssignments(data);
+          setAssignments(assignResult.data || []);
         }
         if (vendorResult.success) {
           setVendors(vendorResult.data || []);
@@ -135,27 +152,7 @@ const AssignedVendors = ({ user }) => {
     } catch (err) {
       console.error('Error loading data:', err);
     }
-  }, [isAdmin, selectedFp, apiPrefix, statusFilter, token]);
-
-  useEffect(() => {
-    if (isAdmin && selectedFp) {
-      loadData();
-    } else if (!isAdmin) {
-      loadData();
-    }
-  }, [loadData, isAdmin, selectedFp]);
-
-  // Refresh data when page becomes visible (handles navigation back to this page)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        loadData();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [loadData]);
+  };
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -526,41 +523,41 @@ const AssignedVendors = ({ user }) => {
                   {filteredServiceAssignments.map((assignment) => (
                     <tr key={assignment.id} className="hover:bg-gray-50 transition-colors">
                       <td className="py-4 px-4">
-                        <span className="text-sm font-mono text-blue-600">{assignment.vendor_code || assignment.vendor_id || assignment.vendorId || '-'}</span>
+                        <span className="text-sm font-mono text-blue-600">{assignment.vendorId || '-'}</span>
                       </td>
                       <td className="py-4 px-4">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                          {assignment.service_type || assignment.serviceType || '-'}
+                          {assignment.serviceType || '-'}
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <span className="text-sm font-medium text-gray-900">{assignment.vendor_name || assignment.vendorName || '-'}</span>
+                        <span className="text-sm font-medium text-gray-900">{assignment.vendorName || '-'}</span>
                       </td>
                       <td className="py-4 px-4">
-                        <span className="text-sm text-gray-600">{assignment.zone_name || assignment.property_zone || assignment.vendor_zone || assignment.propertyZone || '-'}</span>
+                        <span className="text-sm text-gray-600">{assignment.zone_name || assignment.propertyZone || '-'}</span>
                       </td>
                       <td className="py-4 px-4">
-                        <span className="text-sm text-gray-600">{assignment.area || assignment.area_name || '-'}</span>
+                        <span className="text-sm text-gray-600">{assignment.area || '-'}</span>
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <span className="text-sm text-gray-900">₹{assignment.rate_per_visit || assignment.rate || '0'}</span>
+                        <span className="text-sm text-gray-900">₹{assignment.rate_per_visit || '0'}</span>
                       </td>
                       <td className="py-4 px-4 text-center">
-                        <span className="text-sm text-gray-900">{assignment.coverage_per_day || assignment.coverage || '0'}</span>
+                        <span className="text-sm text-gray-900">{assignment.coverage_per_day || '0'}</span>
                       </td>
                       <td className="py-4 px-4">
-                        <span className="text-sm text-gray-600">{assignment.property_name || assignment.propertyName || '-'}</span>
+                        <span className="text-sm text-gray-600">{assignment.propertyName || '-'}</span>
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-sm text-gray-600">
-                          {(assignment.assigned_date || assignment.assignedDate || assignment.created_at) ? new Date(assignment.assigned_date || assignment.assignedDate || assignment.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                          {assignment.assignedDate ? new Date(assignment.assignedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
                         </span>
                       </td>
                       <td className="py-4 px-4">
                         <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                          (assignment.is_active === true || assignment.is_active === 1 || assignment.vendor_status === 'active' || assignment.status === 'active') ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-100'
+                          assignment.status === 'active' ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-100'
                         }`}>
-                          {(assignment.is_active === true || assignment.is_active === 1 || assignment.vendor_status === 'active' || assignment.status === 'active') ? 'Active' : 'Removed'}
+                          {assignment.status === 'active' ? 'Active' : 'Removed'}
                         </span>
                       </td>
                       <td className="py-4 px-4">

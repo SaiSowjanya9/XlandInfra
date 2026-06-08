@@ -78,7 +78,6 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const [viewEstimate, setViewEstimate] = useState(null);
   const clearAllFilters = () => { setEstimateTypeFilter('all'); setStatusFilter('all'); setCategoryFilter('all'); setFromDate(''); setToDate(''); setSearchTerm(''); };
 
   const [estimateForm, setEstimateForm] = useState({ clientId: '', propertyId: '', title: '', description: '', estimateType: '', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
@@ -432,7 +431,6 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                             </td>
                             <td className="py-4 px-4">
                               <button 
-                                onClick={() => setViewEstimate(estimate)}
                                 className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" 
                                 title="View"
                               >
@@ -474,7 +472,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="py-4 px-4"><span className="text-gray-700">{estimate.client_name || '-'}</span></td>
                               <td className="py-4 px-4"><span className="text-gray-500">{estimate.archived_at ? new Date(estimate.archived_at).toLocaleDateString() : '-'}</span></td>
                               <td className="py-4 px-4"><span className="font-semibold">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(estimate.total_amount || 0)}</span></td>
-                              <td className="py-4 px-4"><div className="flex items-center justify-center gap-1"><button onClick={() => setViewEstimate(estimate)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button></div></td>
+                              <td className="py-4 px-4"><div className="flex items-center justify-center gap-1"><button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button></div></td>
                             </tr>
                           );
                         })}
@@ -743,16 +741,17 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {(filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType))).map((pkg) => {
-                          // Parse services JSON if it's a string, or use directly if object
-                          let servicesData = pkg.services;
-                          if (typeof servicesData === 'string') {
-                            try { servicesData = JSON.parse(servicesData); } catch(e) { servicesData = null; }
+                          // Handle services - could be string, array, or object
+                          let servicesText = '-';
+                          if (typeof pkg.services === 'string') {
+                            servicesText = pkg.services;
+                          } else if (Array.isArray(pkg.services)) {
+                            servicesText = pkg.services.map(s => typeof s === 'string' ? s : s.name || s.service || '').join(', ');
+                          } else if (pkg.services_data && Array.isArray(pkg.services_data)) {
+                            servicesText = pkg.services_data.map(s => s.name || s.service || '').join(', ');
+                          } else if (pkg.serviceRows && Array.isArray(pkg.serviceRows)) {
+                            servicesText = pkg.serviceRows.map(s => s.service || s.name || '').join(', ');
                           }
-                          // Extract service names from serviceRows array
-                          const serviceRows = servicesData?.serviceRows || pkg.serviceRows || servicesData || [];
-                          const servicesText = Array.isArray(serviceRows) 
-                            ? serviceRows.map(s => s.name || s.service || 'Service').filter(Boolean).join(', ') 
-                            : '-';
                           const getBillingBadgeColor = (billing) => {
                             switch(billing) {
                               case 'monthly': return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -846,117 +845,6 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           )}
         </>
-      )}
-
-      {/* View Estimate Modal */}
-      {viewEstimate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
-              <button onClick={() => setViewEstimate(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-              {/* Basic Info */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                <div><p className="text-xs text-gray-500">Estimate ID</p><p className="font-medium text-sm">{viewEstimate.estimate_id}</p></div>
-                <div><p className="text-xs text-gray-500">Status</p>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
-                    viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
-                    viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
-                  }`}>{viewEstimate.status || 'draft'}</span>
-                </div>
-                <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
-                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{viewEstimate.created_at ? new Date(viewEstimate.created_at).toLocaleDateString() : '-'}</p></div>
-              </div>
-
-              {/* Property Details */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p>
-                <div className="bg-slate-50 p-4 rounded-lg grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Property ID</p><p className="font-medium text-sm">{viewEstimate.property_code || viewEstimate.property_id || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Property Name</p><p className="font-medium text-sm">{viewEstimate.property_name || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Property Type</p><p className="font-medium text-sm">{viewEstimate.property_type || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Zone</p><p className="font-medium text-sm">{viewEstimate.zone || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Division</p><p className="font-medium text-sm">{viewEstimate.division || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
-                  <div className="col-span-2"><p className="text-xs text-gray-500">Address</p><p className="font-medium text-sm">{viewEstimate.address || viewEstimate.property_address || '-'}</p></div>
-                </div>
-              </div>
-
-              {/* Customer Details */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p>
-                <div className="bg-blue-50 p-4 rounded-lg grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Contact Name</p><p className="font-medium text-sm">{viewEstimate.client_name || viewEstimate.customer_name || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium text-sm">{viewEstimate.client_phone || '-'}</p></div>
-                  <div className="col-span-2"><p className="text-xs text-gray-500">Email</p><p className="font-medium text-sm">{viewEstimate.client_email || '-'}</p></div>
-                </div>
-              </div>
-
-              {/* Package */}
-              {viewEstimate.package_name && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
-                  <div className="flex justify-between items-center bg-indigo-50 p-4 rounded-lg">
-                    <div>
-                      <p className="font-semibold text-indigo-900">{viewEstimate.package_name}</p>
-                      <p className="text-xs text-indigo-600">Yearly Billing</p>
-                    </div>
-                    <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.package_price || 0).toLocaleString()}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Add-ons */}
-              {viewEstimate.addons && viewEstimate.addons.length > 0 && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Add-ons</p>
-                  <div className="space-y-2">
-                    {viewEstimate.addons.map((addon, idx) => (
-                      <div key={idx} className="bg-green-50 p-3 rounded-lg">
-                        <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
-                        <p className="text-xs text-green-600">{addon.frequency_type || addon.frequencyType || 'One-time'}</p>
-                      </div>
-                    ))}
-                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-lg mt-2">
-                      <p className="font-semibold text-green-800">Total Add-ons Price</p>
-                      <p className="font-bold text-green-700">₹{viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0).toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Description */}
-              {viewEstimate.description && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Description / Notes</p>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.description}</p>
-                </div>
-              )}
-
-              {/* Price Summary */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>₹{Number(viewEstimate.subtotal || 0).toLocaleString()}</span></div>
-                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm text-green-600"><span>Discount ({viewEstimate.discount_percent || 0}%)</span><span>-₹{Number(viewEstimate.discount_amount).toLocaleString()}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 18}%)</span><span>₹{Number(viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
-                  <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                    <p className="text-lg font-semibold">Total</p>
-                    <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total_amount || 0).toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Created By */}
-              <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
-                Created by: {viewEstimate.created_by_name || (viewEstimate.created_by_role ? viewEstimate.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')} {viewEstimate.created_by_name && viewEstimate.created_by_role ? `(${viewEstimate.created_by_role.replace(/_/g, ' ')})` : ''}
-              </div>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

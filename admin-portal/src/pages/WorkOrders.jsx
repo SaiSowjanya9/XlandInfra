@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Eye, X, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle2 } from 'lucide-react';
 import { useFP } from '../contexts/FPContext';
 
@@ -17,7 +17,13 @@ const WorkOrders = ({ admin }) => {
   const token = sessionStorage.getItem('pm_auth_token');
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
 
-  const fetchWorkOrders = useCallback(async () => {
+  useEffect(() => {
+    if (selectedFp) {
+      fetchWorkOrders();
+    }
+  }, [selectedFp, activeTab]);
+
+  const fetchWorkOrders = async () => {
     if (!selectedFp) return;
     setLoading(true);
     
@@ -39,13 +45,7 @@ const WorkOrders = ({ admin }) => {
     } finally {
       setLoading(false);
     }
-  }, [selectedFp, activeTab, token]);
-
-  useEffect(() => {
-    if (selectedFp) {
-      fetchWorkOrders();
-    }
-  }, [fetchWorkOrders, selectedFp]);
+  };
   
   const handleFpSelect = (fp) => {
     selectFp(fp);
