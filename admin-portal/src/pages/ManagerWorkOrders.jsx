@@ -243,25 +243,11 @@ const ManagerWorkOrders = ({ user }) => {
     setPropertySearch(property.property_id + ' - ' + property.name);
   };
 
-  // Handle category change to load subcategories
-  const handleCategoryChange = async (categoryId) => {
+  // Handle category change to load subcategories from embedded data
+  const handleCategoryChange = (categoryId) => {
     setFormData({ ...formData, categoryId, subcategoryId: '' });
-    if (categoryId) {
-      try {
-        const response = await fetch(`/api/manager/categories/${categoryId}/subcategories`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const result = await response.json();
-        if (result.success) {
-          setSubcategories(result.data || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch subcategories:', error);
-        setSubcategories([]);
-      }
-    } else {
-      setSubcategories([]);
-    }
+    const category = categories.find(c => c.id === parseInt(categoryId));
+    setSubcategories(category?.subcategories || []);
   };
 
   const handleAddCategory = () => {
