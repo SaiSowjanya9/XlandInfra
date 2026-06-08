@@ -26,27 +26,6 @@ const Dashboard = () => {
   const token = sessionStorage.getItem('pm_auth_token');
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
 
-  useEffect(() => {
-    if (selectedFp) {
-      fetchDashboardData();
-      fetchNotifications();
-    }
-    const interval = setInterval(() => {
-      if (selectedFp) fetchDashboardData();
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [fetchDashboardData, selectedFp]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setShowNotifications(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const fetchDashboardData = useCallback(async () => {
     if (!selectedFp) {
       setLoading(false);
@@ -113,6 +92,29 @@ const Dashboard = () => {
       console.error('Error fetching notifications:', error);
     }
   };
+
+  // Load dashboard data when FP changes
+  useEffect(() => {
+    if (selectedFp) {
+      fetchDashboardData();
+      fetchNotifications();
+    }
+    const interval = setInterval(() => {
+      if (selectedFp) fetchDashboardData();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [fetchDashboardData, selectedFp]);
+
+  // Close notifications on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const markAsRead = async (notificationId) => {
     try {
