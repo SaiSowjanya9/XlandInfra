@@ -13,13 +13,15 @@ import {
   XCircle,
   Store,
   UserPlus,
-  Building2
+  Building2,
+  User
 } from 'lucide-react';
 
 const ManagerWorkOrders = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
