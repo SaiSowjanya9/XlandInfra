@@ -318,7 +318,7 @@ const sendCustomerActivationEmail = async (customerData) => {
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 35px 0;">
-              <a href="${activationLink}" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
+              <a href="${activationLink}" style="display: inline-block; background-color: #D8B25C; color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
                 ACTIVATE YOUR ACCOUNT
               </a>
             </div>
@@ -401,7 +401,7 @@ const sendPasswordResetConfirmation = async (customerData) => {
               You can now log in to your Customer Portal using your email and the password you just created.
             </p>
             
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" style="display: inline-block; background-color: #D8B25C; color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px;">
               LOGIN TO YOUR PORTAL
             </a>
           </div>
@@ -516,7 +516,7 @@ const sendEmployeeWelcomeEmail = async (userData) => {
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 35px 0;">
-              <a href="${portalUrl}" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
+              <a href="${portalUrl}" style="display: inline-block; background-color: #D8B25C; color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
                 LOGIN TO PORTAL
               </a>
             </div>
@@ -639,7 +639,7 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 35px 0;">
-              <a href="${portalUrl}" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
+              <a href="${portalUrl}" style="display: inline-block; background-color: #D8B25C; color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
                 LOGIN TO PORTAL
               </a>
             </div>
@@ -1006,7 +1006,7 @@ const sendPasswordResetEmail = async (userData) => {
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 35px 0;">
-              <a href="${resetLink}" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
+              <a href="${resetLink}" style="display: inline-block; background-color: #D8B25C; color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
                 RESET PASSWORD
               </a>
             </div>
@@ -1088,7 +1088,7 @@ const sendPasswordResetSuccess = async (userData) => {
               You can now log in with your new password.
             </p>
             
-            <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px;">
+            <a href="${loginUrl}" style="display: inline-block; background-color: #D8B25C; color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px;">
               LOGIN NOW
             </a>
             
@@ -1177,7 +1177,7 @@ const sendPasswordUpdatedByAdminEmail = async (userData) => {
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 35px 0;">
-              <a href="${portalUrl}" style="display: inline-block; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); color: #0D0D0D; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
+              <a href="${portalUrl}" style="display: inline-block; background-color: #D8B25C; color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
                 LOGIN NOW
               </a>
             </div>

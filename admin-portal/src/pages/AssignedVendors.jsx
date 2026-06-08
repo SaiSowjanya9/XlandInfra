@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Search,
   X,
@@ -64,27 +64,7 @@ const AssignedVendors = ({ user }) => {
 
   const token = sessionStorage.getItem('pm_auth_token');
 
-  useEffect(() => {
-    if (isAdmin && selectedFp) {
-      loadData();
-    } else if (!isAdmin) {
-      loadData();
-    }
-  }, [statusFilter, selectedFp]);
-
-  // Refresh data when page becomes visible (handles navigation back to this page)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        loadData();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [statusFilter, selectedFp]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     // For admin users, use FP-specific or all-FPs endpoint
     if (isAdmin) {
       if (!selectedFp) {

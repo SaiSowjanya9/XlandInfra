@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Hammer, Lock, 
@@ -98,14 +98,16 @@ const CustomerSubmissions = () => {
   const [propertyEstimates, setPropertyEstimates] = useState([]);
   const [viewAMCDetails, setViewAMCDetails] = useState(null); // AMC package details modal
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
+  const [propertiesLoading, setPropertiesLoading] = useState(false);
 
   // Load properties from FP-specific API or all FPs (Admin mode)
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!selectedFp) {
       setProperties([]);
       return;
     }
     
+    setPropertiesLoading(true);
     try {
       let endpoint;
       if (selectedFp.id === 'all') {
@@ -174,16 +176,26 @@ const CustomerSubmissions = () => {
       }
     } catch (error) {
       console.error('Error loading properties:', error);
+    } finally {
+      setPropertiesLoading(false);
     }
     setNotifications(getNotifications());
-  };
+  }, [selectedFp, token]);
 
+  // Reload data when entering main view or when FP/filters change
   useEffect(() => {
-    loadData();
+    // Only load data when both category and FP are selected (main view)
+    if (selectedCategory && selectedFp) {
+      loadData();
+    }
     // Poll for new entries every 10 seconds
-    const interval = setInterval(loadData, 10000);
+    const interval = setInterval(() => {
+      if (selectedCategory && selectedFp) {
+        loadData();
+      }
+    }, 10000);
     return () => clearInterval(interval);
-  }, [selectedFp, statusFilter]);
+  }, [loadData, statusFilter, selectedCategory, selectedFp]);
 
   // Show toast helper
   const showToast = (message, type = 'success') => {
@@ -556,7 +568,7 @@ const CustomerSubmissions = () => {
         {/* Header */}
         <div className="flex items-center gap-4">
           <button
-            onClick={() => setSelectedCategory(null)}
+            onClick={() => { setSelectedCategory(null); setProperties([]); }}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600" />
@@ -857,7 +869,12 @@ const CustomerSubmissions = () => {
         </div>
 
         {/* Property Table */}
-        {filteredProperties.length === 0 ? (
+        {propertiesLoading ? (
+          <div className="py-16 text-center">
+            <RefreshCw className="w-10 h-10 text-primary-500 mx-auto mb-3 animate-spin" />
+            <p className="text-gray-500 font-medium">Loading properties...</p>
+          </div>
+        ) : filteredProperties.length === 0 ? (
           <div className="py-16 text-center">
             <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">No properties found</p>
