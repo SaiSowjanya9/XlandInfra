@@ -16,7 +16,8 @@ import {
   Building2,
   User,
   Camera,
-  Upload
+  Upload,
+  FileText
 } from 'lucide-react';
 
 const ManagerWorkOrders = ({ user }) => {
