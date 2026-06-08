@@ -1,6 +1,7 @@
 // Professional PDF Export using jsPDF - Direct Download, No Print Dialog
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { XLAND_LOGO } from './logoBase64.js';
 
 const GST_RATE = 0.18;
 let isExporting = false;
@@ -36,45 +37,48 @@ const generatePDF = (data, type, filename) => {
     const borderLight = [229, 231, 235];     // Gray-200
     const gold = [180, 144, 52];             // Professional gold
 
-    // ===== HEADER =====
-    // Company Logo Area (text-based for reliability)
-    doc.setFillColor(...gold);
-    doc.roundedRect(margin, y, 12, 12, 1.5, 1.5, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('XI', margin + 6, y + 8, { align: 'center' });
+    // ===== HEADER with Dark Background =====
+    const headerHeight = 22;
+    doc.setFillColor(20, 20, 20); // Near black
+    doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
-    // Company Name
-    doc.setTextColor(...navy);
-    doc.setFontSize(18);
+    // Company Logo
+    try {
+      doc.addImage(XLAND_LOGO, 'PNG', margin, 3, 16, 16);
+    } catch (e) {
+      // Fallback to text if logo fails
+      doc.setFillColor(...gold);
+      doc.roundedRect(margin, 4, 14, 14, 1.5, 1.5, 'F');
+      doc.setTextColor(20, 20, 20);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('XI', margin + 7, 13, { align: 'center' });
+    }
+    
+    // Company Name (white text on dark bg)
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', margin + 16, y + 6);
+    doc.text('XLAND INFRA', margin + 20, 10);
     
     // Tagline
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...lightText);
-    doc.text('Property Management Solutions Pvt. Ltd.', margin + 16, y + 11);
+    doc.setTextColor(180, 180, 180);
+    doc.text('Property Management Solutions Pvt. Ltd.', margin + 20, 16);
 
     // Document Badge (right side)
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
-    const badgeWidth = 28;
+    const badgeWidth = 26;
     const badgeX = pageWidth - margin - badgeWidth;
-    doc.setFillColor(...navy);
-    doc.roundedRect(badgeX, y, badgeWidth, 10, 1.5, 1.5, 'F');
-    doc.setTextColor(...gold);
+    doc.setFillColor(...gold);
+    doc.roundedRect(badgeX, 5, badgeWidth, 12, 1.5, 1.5, 'F');
+    doc.setTextColor(20, 20, 20);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.text(docType, badgeX + badgeWidth/2, y + 6.5, { align: 'center' });
+    doc.text(docType, badgeX + badgeWidth/2, 13, { align: 'center' });
 
-    y += 18;
-    
-    // Divider line
-    doc.setDrawColor(...gold);
-    doc.setLineWidth(0.5);
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 6;
+    y = headerHeight + 6;
 
     // ===== DOCUMENT INFO ROW =====
     doc.setFontSize(8);
@@ -100,14 +104,10 @@ const generatePDF = (data, type, filename) => {
       doc.setDrawColor(...borderLight);
       doc.roundedRect(margin, y, pageWidth - margin * 2, 9, 1.5, 1.5, 'FD');
       
-      // Gold left accent
-      doc.setFillColor(...gold);
-      doc.rect(margin, y + 1, 2, 7, 'F');
-      
       doc.setTextColor(...navy);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text(data.packageName, margin + 6, y + 6);
+      doc.text(data.packageName, margin + 4, y + 6);
       
       if (data.billingDuration) {
         doc.setTextColor(...lightText);
@@ -222,9 +222,9 @@ const generatePDF = (data, type, filename) => {
       head: [['#', 'Service Description', 'Frequency', 'Visits']],
       body: tableBody,
       margin: { left: margin, right: margin },
-      styles: { fontSize: 8, cellPadding: 3, lineColor: borderLight, lineWidth: 0.2 },
-      headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
-      bodyStyles: { textColor: darkText },
+      styles: { fontSize: 8, cellPadding: 3, lineColor: [50, 50, 50], lineWidth: 0.3 },
+      headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50] },
+      bodyStyles: { textColor: darkText, lineColor: [100, 100, 100] },
       columnStyles: {
         0: { cellWidth: 10, halign: 'center' },
         1: { cellWidth: 'auto' },
@@ -256,9 +256,9 @@ const generatePDF = (data, type, filename) => {
         head: [['#', 'Add-on Service', 'Frequency', 'Visits']],
         body: addonsBody,
         margin: { left: margin, right: margin },
-        styles: { fontSize: 8, cellPadding: 3, lineColor: borderLight, lineWidth: 0.2 },
-        headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
-        bodyStyles: { textColor: darkText },
+        styles: { fontSize: 8, cellPadding: 3, lineColor: [50, 50, 50], lineWidth: 0.3 },
+        headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50] },
+        bodyStyles: { textColor: darkText, lineColor: [100, 100, 100] },
         columnStyles: {
           0: { cellWidth: 10, halign: 'center' },
           1: { cellWidth: 'auto' },
