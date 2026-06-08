@@ -415,17 +415,31 @@ router.put('/properties/:id', authenticate, managerOrAdmin, async (req, res) => 
   }
 });
 
-// Delete property (Admin only)
+// Delete property (Admin only) - handles both tables
 router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
+    let deleted = false;
 
-    const [result] = await pool.execute(
-      `UPDATE properties SET is_active = FALSE WHERE id = ?`,
-      [id]
-    );
+    // Try to delete from properties table first
+    try {
+      const [result1] = await pool.execute(
+        `UPDATE properties SET status = 'deleted', is_active = FALSE WHERE id = ?`,
+        [id]
+      );
+      if (result1.affectedRows > 0) deleted = true;
+    } catch (e) { console.log('Properties table update skipped:', e.message); }
 
-    if (result.affectedRows === 0) {
+    // Also try to delete from onboarded_properties table
+    try {
+      const [result2] = await pool.execute(
+        `UPDATE onboarded_properties SET status = 'deleted' WHERE id = ?`,
+        [id]
+      );
+      if (result2.affectedRows > 0) deleted = true;
+    } catch (e) { console.log('Onboarded_properties table update skipped:', e.message); }
+
+    if (!deleted) {
       return res.status(404).json({
         success: false,
         message: 'Property not found'
