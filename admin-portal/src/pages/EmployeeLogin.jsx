@@ -45,6 +45,7 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
           name: `${result.data.user?.firstName || result.data.firstName || ''} ${result.data.user?.lastName || result.data.lastName || ''}`.trim(),
           email: result.data.user?.email || result.data.email,
           role: userRole,
+          isSuperAdmin: result.data.user?.isSuperAdmin || false,
           status: 'active',
           permissions: result.data.user?.permissions || ['all'],
           franchisePartnerId: result.data.user?.franchisePartnerId,
