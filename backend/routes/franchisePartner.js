@@ -298,8 +298,8 @@ router.get('/properties', requireFPScope, async (req, res) => {
         ) as created_by_name,
         'properties' as source_table
        FROM properties p
-       LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS UNSIGNED) = fpe.id
-       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
+       LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS UNSIGNED) = fpe.id
+       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE p.franchise_partner_id = ?
        ORDER BY p.created_at DESC`,
       [req.fpId]
@@ -321,8 +321,8 @@ router.get('/properties', requireFPScope, async (req, res) => {
                 op.created_at, op.status,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
-         LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR CAST(op.created_by AS UNSIGNED) = fpe.id
-         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
+         LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username OR CAST(op.created_by AS UNSIGNED) = fpe.id
+         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.username OR op.created_by = u.user_id OR op.created_by = u.id
          WHERE op.franchise_partner_id = ? AND op.status = 'active'
          ORDER BY op.created_at DESC`,
         [req.fpId]
@@ -672,8 +672,8 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
       LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-      LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR CAST(wo.created_by AS UNSIGNED) = fpe.id
-      LEFT JOIN users u ON wo.created_by = u.email OR wo.created_by = u.user_id OR CAST(wo.created_by AS UNSIGNED) = u.id
+      LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username OR CAST(wo.created_by AS UNSIGNED) = fpe.id
+      LEFT JOIN users u ON wo.created_by = u.email OR wo.created_by = u.username OR wo.created_by = u.user_id OR CAST(wo.created_by AS UNSIGNED) = u.id
       WHERE wo.franchise_partner_id = ?
     `;
     const params = [req.fpId];

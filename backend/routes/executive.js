@@ -316,8 +316,8 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
                 'properties' as source_table
          FROM properties p
          LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
-         LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
-         LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
+         LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+         LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
          WHERE p.franchise_partner_id = ?${zoneFilter.clause}
          ORDER BY p.created_at DESC`,
         [franchisePartnerId, ...zoneFilter.params]
@@ -338,8 +338,8 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
                 'properties' as source_table
          FROM properties p
          LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
-         LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
-         LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
+         LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+         LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
          WHERE p.executive_id = ?${zoneFilter.clause}
          ORDER BY p.created_at DESC`,
         [executiveId, ...zoneFilter.params]
@@ -364,8 +364,8 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
                 FALSE as can_assign_vendor, FALSE as can_assign_employee,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
-         LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR CAST(op.created_by AS CHAR) = CAST(fpe.id AS CHAR)
-         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR CAST(op.created_by AS CHAR) = CAST(u.id AS CHAR)
+         LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username OR CAST(op.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.username OR op.created_by = u.user_id OR CAST(op.created_by AS CHAR) = CAST(u.id AS CHAR)
          WHERE op.${scopeColumn} = ? AND op.status = 'active'${onbZoneFilter.clause}
          ORDER BY op.created_at DESC`,
         [scopeId, ...onbZoneFilter.params]
