@@ -184,6 +184,7 @@ router.post('/login', async (req, res) => {
           firstName: user.first_name,
           lastName: user.last_name,
           role: user.role,
+          isSuperAdmin: user.is_super_admin === 1 || user.is_super_admin === true,
           franchisePartnerId: user.franchise_partner_id || null,
           permissions: ['all']
         }
