@@ -358,15 +358,23 @@ router.post('/properties', requireFPScope, async (req, res) => {
 
     const propertyId = `FP${req.fpId}-PROP-${Date.now()}`;
     
-    // Get actual user name from database
-    let creatorName = 'System';
+    // Get actual user name from database (check both users and fp_employees tables)
+    let creatorName = req.user?.username || req.user?.email || 'System';
     try {
       const [userRows] = await pool.execute(
-        'SELECT first_name, last_name FROM users WHERE id = ? OR email = ?',
-        [req.user?.id, req.user?.email]
+        'SELECT first_name, last_name FROM users WHERE id = ? OR email = ? OR username = ?',
+        [req.user?.id || 0, req.user?.email || '', req.user?.username || '']
       );
-      if (userRows.length > 0) {
-        creatorName = `${userRows[0].first_name || ''} ${userRows[0].last_name || ''}`.trim() || 'System';
+      if (userRows.length > 0 && (userRows[0].first_name || userRows[0].last_name)) {
+        creatorName = `${userRows[0].first_name || ''} ${userRows[0].last_name || ''}`.trim();
+      } else {
+        const [fpRows] = await pool.execute(
+          'SELECT first_name, last_name FROM fp_employees WHERE id = ? OR email = ? OR username = ?',
+          [req.user?.id || 0, req.user?.email || '', req.user?.username || '']
+        );
+        if (fpRows.length > 0 && (fpRows[0].first_name || fpRows[0].last_name)) {
+          creatorName = `${fpRows[0].first_name || ''} ${fpRows[0].last_name || ''}`.trim();
+        }
       }
     } catch (e) {
       console.log('Could not fetch creator name:', e.message);
