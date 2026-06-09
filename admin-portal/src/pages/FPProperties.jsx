@@ -353,9 +353,9 @@ const FPProperties = ({ user }) => {
     // Division filter
     if (selectedDivision && p.division !== selectedDivision) return false;
     
-    // Status filter
-    if (statusFilter === 'active' && p.status !== 'active') return false;
-    if (statusFilter === 'inactive' && p.status !== 'inactive') return false;
+    // Status filter - use is_active field to match display logic
+    if (statusFilter === 'active' && p.is_active === false) return false;
+    if (statusFilter === 'inactive' && p.is_active !== false) return false;
     
     return true;
   });

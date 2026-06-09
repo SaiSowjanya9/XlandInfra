@@ -176,6 +176,9 @@ const startServer = async () => {
     console.log(`📁 Uploads directory: ${uploadsDir}`);
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔗 CORS: Accepting requests from xlandinfra.com and localhost`);
+    console.log(`📧 Email configured: ${process.env.EMAIL_USER ? 'YES (' + process.env.EMAIL_USER + ')' : 'NO - EMAIL_USER missing!'}`);
+    console.log(`📧 Email password: ${process.env.EMAIL_PASS ? 'SET' : 'NOT SET - EMAIL_PASS missing!'}`);
+    console.log(`🔗 FRONTEND_URL: ${process.env.FRONTEND_URL || 'https://xlandinfra.com (default)'}`);
   });
 };
 

@@ -883,6 +883,7 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
 
       let customerResult = null;
       let emailSent = false;
+      console.log('📧 [Coordinator] Creating customer - contactEmail:', contactEmail);
       if (contactEmail) {
         const tempPassword = generateTempPassword();
         const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
@@ -890,6 +891,7 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
         const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
         
         const [existing] = await pool.query('SELECT id, is_activated FROM customer_accounts WHERE email = ?', [contactEmail.toLowerCase()]);
+        console.log('📧 [Coordinator] Existing customer check:', existing.length > 0 ? 'Found' : 'New customer');
         
         if (existing.length === 0) {
           [customerResult] = await pool.query(
@@ -903,14 +905,21 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
           
           // Send activation email
           const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          const emailResult = await sendCustomerActivationEmail({
-            email: contactEmail.toLowerCase(),
-            firstName: contactName,
-            tempPassword,
-            activationLink,
-            propertyName: communityName
-          });
-          emailSent = emailResult.success;
+          console.log('📧 [Coordinator] Sending activation email to:', contactEmail.toLowerCase());
+          console.log('📧 [Coordinator] Activation link:', activationLink);
+          try {
+            const emailResult = await sendCustomerActivationEmail({
+              email: contactEmail.toLowerCase(),
+              firstName: contactName,
+              tempPassword,
+              activationLink,
+              propertyName: communityName
+            });
+            emailSent = emailResult.success;
+            console.log('📧 [Coordinator] Email result:', emailResult);
+          } catch (emailError) {
+            console.error('📧 [Coordinator] Email sending failed:', emailError.message);
+          }
         } else if (!existing[0].is_activated) {
           // Resend activation email for inactive account
           await pool.query(
