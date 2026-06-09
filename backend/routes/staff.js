@@ -1352,8 +1352,19 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       const userRole = role || currentUser.role;
       const userUsername = email; // New email becomes the username for login
       
+      console.log('📧 Preparing to send activation email with:', {
+        email,
+        firstName: userFirstName,
+        lastName: userLastName,
+        username: userUsername,
+        tempPassword: tempPassword,
+        role: userRole,
+        userId: currentUser.user_id,
+        loginUrl: ADMIN_PORTAL_URL
+      });
+      
       try {
-        await sendEmployeeWelcomeEmail({
+        const emailResult = await sendEmployeeWelcomeEmail({
           email: email, // Send to NEW email
           firstName: userFirstName,
           lastName: userLastName,
@@ -1363,9 +1374,11 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
           userId: currentUser.user_id,
           loginUrl: ADMIN_PORTAL_URL
         });
+        console.log(`📧 sendEmployeeWelcomeEmail result:`, emailResult);
         console.log(`📧 Account activation email sent to new email: ${email} (changed from ${currentUser.email})`);
       } catch (emailError) {
-        console.error('Failed to send activation email to new email:', emailError);
+        console.error('❌ Failed to send activation email to new email:', emailError.message);
+        console.error('❌ Full error:', emailError);
       }
       
       res.json({
