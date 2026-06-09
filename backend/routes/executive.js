@@ -309,14 +309,15 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
                 p.division_id as division, p.number_of_units as units,
                 p.address, p.city, p.state, p.zip_code,
                 p.contact_person, p.contact_phone, p.contact_email,
-                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+                COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
                 p.created_at, p.status, TRUE as is_active,
                 'fp' as access_type, FALSE as can_modify, FALSE as can_delete,
                 FALSE as can_assign_vendor, FALSE as can_assign_employee,
                 'properties' as source_table
          FROM properties p
          LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
-         LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
+         LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+         LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
          WHERE p.franchise_partner_id = ?${zoneFilter.clause}
          ORDER BY p.created_at DESC`,
         [franchisePartnerId, ...zoneFilter.params]
@@ -330,14 +331,15 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
                 p.division_id as division, p.number_of_units as units,
                 p.address, p.city, p.state, p.zip_code,
                 p.contact_person, p.contact_phone, p.contact_email,
-                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+                COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
                 p.created_at, p.status, TRUE as is_active,
                 'own' as access_type, TRUE as can_modify, FALSE as can_delete,
                 FALSE as can_assign_vendor, FALSE as can_assign_employee,
                 'properties' as source_table
          FROM properties p
          LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
-         LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
+         LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+         LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
          WHERE p.executive_id = ?${zoneFilter.clause}
          ORDER BY p.created_at DESC`,
         [executiveId, ...zoneFilter.params]
@@ -356,13 +358,14 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
                 op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
-                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
+                COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
                 op.created_at, op.status, TRUE as is_active,
                 'own' as access_type, FALSE as can_modify, FALSE as can_delete,
                 FALSE as can_assign_vendor, FALSE as can_assign_employee,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
-         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
+         LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR CAST(op.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR CAST(op.created_by AS CHAR) = CAST(u.id AS CHAR)
          WHERE op.${scopeColumn} = ? AND op.status = 'active'${onbZoneFilter.clause}
          ORDER BY op.created_at DESC`,
         [scopeId, ...onbZoneFilter.params]
