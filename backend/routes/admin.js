@@ -1231,6 +1231,7 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
               p.created_at, p.status,
               COALESCE(
                 CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
                 p.created_by, 'System'
               ) as created_by,
               'properties' as source_table,
@@ -1239,6 +1240,7 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
        FROM properties p
        LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+       LEFT JOIN users u ON p.created_by = u.email OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR) OR p.created_by = u.user_id
        WHERE (p.status IS NULL OR p.status != 'deleted')
        ORDER BY p.created_at DESC`
     );
@@ -1256,6 +1258,7 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
                 op.created_at, op.status,
                 COALESCE(
                   CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                  CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
                   op.created_by, 'System'
                 ) as created_by,
                 'onboarded_properties' as source_table,
@@ -1264,6 +1267,7 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
          FROM onboarded_properties op
          LEFT JOIN franchise_partners fp ON op.franchise_partner_id = fp.id
          LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR CAST(op.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+         LEFT JOIN users u ON op.created_by = u.email OR CAST(op.created_by AS CHAR) = CAST(u.id AS CHAR) OR op.created_by = u.user_id
          WHERE op.status = 'active'
          ORDER BY op.created_at DESC`
       );
