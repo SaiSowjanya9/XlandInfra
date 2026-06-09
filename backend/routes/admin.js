@@ -1612,6 +1612,7 @@ router.get('/all-employees', authenticate, adminOnly, async (req, res) => {
     );
 
     // Get employees from users table (Admin-created employees: manager, coordinator, supervisor, executive)
+    // EXCLUDE those already in fp_employees to avoid duplicates
     const [userEmployees] = await pool.execute(
       `SELECT u.id, u.user_id as employee_id, u.user_id as employee_code,
               u.username, u.email, u.phone, u.first_name, u.last_name,
@@ -1624,6 +1625,7 @@ router.get('/all-employees', authenticate, adminOnly, async (req, res) => {
               'users' as source
        FROM users u
        WHERE u.role IN ('manager', 'coordinator', 'supervisor', 'executive')
+         AND u.email NOT IN (SELECT email FROM fp_employees WHERE email IS NOT NULL)
        ORDER BY u.created_at DESC`
     );
 
