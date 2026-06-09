@@ -1596,21 +1596,41 @@ router.get('/all-employee-zones', authenticate, adminOnly, async (req, res) => {
   }
 });
 
-// Get ALL employees from ALL FPs (Admin mode)
+// Get ALL employees from ALL sources (Admin mode)
 router.get('/all-employees', authenticate, adminOnly, async (req, res) => {
   try {
-    // Get employees first (matching FP portal approach)
-    const [employees] = await pool.execute(
+    // Get employees from fp_employees table (FP-created employees)
+    const [fpEmployees] = await pool.execute(
       `SELECT e.*, e.employee_code as employee_id, 
               CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
               CASE WHEN e.is_active = 1 THEN 'active' ELSE 'inactive' END as status,
-              fp.fp_code, fp.company_name as fp_name
+              fp.fp_code, fp.company_name as fp_name,
+              'fp_employees' as source
        FROM fp_employees e
        LEFT JOIN franchise_partners fp ON e.franchise_partner_id = fp.id
        ORDER BY e.created_at DESC`
     );
 
-    // Get all zone assignments
+    // Get employees from users table (Admin-created employees: manager, coordinator, supervisor, executive)
+    const [userEmployees] = await pool.execute(
+      `SELECT u.id, u.user_id as employee_id, u.user_id as employee_code,
+              u.username, u.email, u.phone, u.first_name, u.last_name,
+              CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')) as name,
+              u.role, u.is_active,
+              CASE WHEN u.is_active = 1 THEN 'active' ELSE 'inactive' END as status,
+              u.visible_password, u.created_at, u.updated_at,
+              NULL as fp_code, 'Admin Portal' as fp_name,
+              NULL as franchise_partner_id, NULL as aadhaar, NULL as country_code,
+              'users' as source
+       FROM users u
+       WHERE u.role IN ('manager', 'coordinator', 'supervisor', 'executive')
+       ORDER BY u.created_at DESC`
+    );
+
+    // Combine both lists
+    const allEmployees = [...fpEmployees, ...userEmployees];
+
+    // Get all zone assignments for fp_employees
     const [zoneAssignments] = await pool.execute(
       `SELECT fp_employee_id, zone_name FROM fp_employee_zones`
     );
@@ -1627,14 +1647,14 @@ router.get('/all-employees', authenticate, adminOnly, async (req, res) => {
     });
 
     // Transform employees with their zones
-    const transformedEmployees = employees.map(emp => ({
+    const transformedEmployees = allEmployees.map(emp => ({
       ...emp,
-      assigned_zones: employeeZonesMap[emp.id] || [],
-      zone_names: (employeeZonesMap[emp.id] || []).join(', '),
-      zone_count: (employeeZonesMap[emp.id] || []).length
+      assigned_zones: emp.source === 'fp_employees' ? (employeeZonesMap[emp.id] || []) : [],
+      zone_names: emp.source === 'fp_employees' ? (employeeZonesMap[emp.id] || []).join(', ') : '',
+      zone_count: emp.source === 'fp_employees' ? (employeeZonesMap[emp.id] || []).length : 0
     }));
     
-    console.log('Admin all-employees: Found', transformedEmployees.length, 'employees');
+    console.log('Admin all-employees: Found', transformedEmployees.length, 'employees (FP:', fpEmployees.length, '+ Admin:', userEmployees.length, ')');
     res.json({ success: true, data: transformedEmployees || [] });
   } catch (error) {
     console.error('Error fetching all employees:', error);
