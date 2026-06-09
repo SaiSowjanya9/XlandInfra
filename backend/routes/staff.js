@@ -1286,8 +1286,15 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
     const isEmailChanged = email && email.toLowerCase() !== currentUser.email.toLowerCase();
     let tempPassword = null;
     
+    console.log('📧 Email change check:', {
+      newEmail: email,
+      currentEmail: currentUser.email,
+      isEmailChanged: isEmailChanged
+    });
+    
     // If email is changed, generate new temp password and require password change
     if (isEmailChanged) {
+      console.log('📧 Email IS being changed - generating new temp password');
       tempPassword = generateTempPassword();
       const passwordHash = await bcrypt.hash(tempPassword, 10);
       updateFields.push('password_hash = ?');
