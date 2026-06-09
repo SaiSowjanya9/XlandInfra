@@ -165,7 +165,7 @@ function CustomerHome() {
     localStorage.removeItem('adminUser');
     localStorage.removeItem('activePortal');
     // Redirect to admin portal's System Administration Portal
-    window.location.href = 'http://localhost:3001';
+    window.location.href = import.meta.env.VITE_ADMIN_PORTAL_URL || 'https://admin.xlandinfra.com';
   };
 
   const handleNavigation = (path) => {
