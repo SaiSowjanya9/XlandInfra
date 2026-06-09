@@ -358,25 +358,27 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
               COALESCE(p.area_name, p.city) as area,
               COALESCE(p.division_id, p.division, 'General') as division,
               COALESCE(p.number_of_units, 1) as units,
-              COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+              COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'own' as access_type, TRUE as can_modify, TRUE as can_delete,
               TRUE as can_assign_vendor, TRUE as can_assign_employee,
               'properties' as source_table
        FROM properties p
-       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
+       LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
        WHERE (p.supervisor_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})${zoneFilter.clause}
        UNION
        SELECT p.*, p.zone_id as zone_name,
               COALESCE(p.area_name, p.city) as area,
               COALESCE(p.division_id, p.division, 'General') as division,
               COALESCE(p.number_of_units, 1) as units,
-              COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
+              COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'assigned' as access_type, sap.can_modify, sap.can_delete,
               sap.can_assign_vendor, sap.can_assign_employee,
               'properties' as source_table
        FROM properties p
        INNER JOIN supervisor_assigned_properties sap ON p.id = sap.property_id
-       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
+       LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
        WHERE sap.supervisor_id = ?${zoneFilter.clause}
        ORDER BY created_at DESC`;
     const params = franchisePartnerId 
@@ -395,11 +397,12 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
                 op.zone as zone_name, op.area_name as area, op.division, COALESCE(op.total_units, 1) as units,
                 op.address, op.city, op.state, op.pincode as zip_code,
                 op.contact_person, op.contact_phone, op.contact_email as email,
-                COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
+                COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
                 op.created_at, op.status,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
-         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
+         LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR CAST(op.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR CAST(op.created_by AS CHAR) = CAST(u.id AS CHAR)
          WHERE op.${scopeColumn} = ? AND op.status = 'active'${onbZoneFilter.clause}
          ORDER BY op.created_at DESC`,
         [scopeId, ...onbZoneFilter.params]
