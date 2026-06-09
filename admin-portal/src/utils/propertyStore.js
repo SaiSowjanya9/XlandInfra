@@ -115,9 +115,14 @@ export const extractUnitNumber = (property) => {
 const createCustomerAccounts = async (contacts, propertyData, createdBy) => {
   const results = [];
   
+  console.log('📧 createCustomerAccounts called with contacts:', contacts);
+  console.log('📧 Property data:', propertyData);
+  
   for (const contact of contacts) {
+    console.log('📧 Processing contact:', contact);
     // Only create account if contact has a valid email
     if (contact.email && contact.email.includes('@')) {
+      console.log('📧 Valid email found, calling /api/customers/create for:', contact.email);
       try {
         const res = await fetch('/api/customers/create', {
           method: 'POST',

@@ -39,6 +39,9 @@ const generateActivationToken = () => {
 // POST /api/customers/create - Create customer account (called by admin)
 // ============================================
 router.post('/create', async (req, res) => {
+  console.log('📧 /api/customers/create endpoint hit');
+  console.log('📧 Request body:', req.body);
+  
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
