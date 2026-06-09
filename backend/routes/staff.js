@@ -1465,6 +1465,24 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
         }
       }
       
+      // Get fp_employee id by email to delete zone assignments
+      try {
+        const [fpEmpRecord] = await pool.execute(
+          `SELECT id FROM fp_employees WHERE email = ?`,
+          [userToDelete.email]
+        );
+        if (fpEmpRecord.length > 0) {
+          // Delete zone assignments first
+          await pool.execute(
+            `DELETE FROM fp_employee_zones WHERE fp_employee_id = ?`,
+            [fpEmpRecord[0].id]
+          );
+          console.log(`🗑️ Zone assignments deleted for fp_employee_id: ${fpEmpRecord[0].id}`);
+        }
+      } catch (zoneError) {
+        console.log(`Note: No zone assignments found for email: ${userToDelete.email}`);
+      }
+      
       // Also delete from fp_employees table by email (for employee records)
       try {
         await pool.execute(
@@ -1484,14 +1502,48 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
       if (result.affectedRows > 0) deleted = true;
     }
     
-    // Also try to delete from fp_employees table by ID (fallback)
+    // Also try to delete from fp_employees table by ID (fallback for employees from fp_employees source)
     try {
-      const [fpResult] = await pool.execute(
-        `DELETE FROM fp_employees WHERE id = ?`,
+      // First check if employee exists in fp_employees and get linked user_id
+      const [fpEmpRecord] = await pool.execute(
+        `SELECT id, user_id, email FROM fp_employees WHERE id = ?`,
         [id]
       );
-      if (fpResult.affectedRows > 0) deleted = true;
-    } catch (e) { console.log('fp_employees delete by ID skipped:', e.message); }
+      
+      if (fpEmpRecord.length > 0) {
+        const fpEmployee = fpEmpRecord[0];
+        
+        // Delete zone assignments first
+        await pool.execute(
+          `DELETE FROM fp_employee_zones WHERE fp_employee_id = ?`,
+          [id]
+        );
+        console.log(`🗑️ Zone assignments deleted for fp_employee_id: ${id}`);
+        
+        // Delete from fp_employees
+        const [fpResult] = await pool.execute(
+          `DELETE FROM fp_employees WHERE id = ?`,
+          [id]
+        );
+        if (fpResult.affectedRows > 0) {
+          deleted = true;
+          console.log(`🗑️ FP employee record deleted: ID ${id}`);
+        }
+        
+        // Delete the linked user account if exists
+        if (fpEmployee.user_id) {
+          try {
+            await pool.execute(
+              `DELETE FROM users WHERE id = ?`,
+              [fpEmployee.user_id]
+            );
+            console.log(`🗑️ Linked user account deleted: user_id ${fpEmployee.user_id}`);
+          } catch (userDelError) {
+            console.log(`Note: Could not delete linked user ${fpEmployee.user_id}:`, userDelError.message);
+          }
+        }
+      }
+    } catch (e) { console.log('fp_employees delete by ID error:', e.message); }
 
     if (!deleted) {
       return res.status(404).json({

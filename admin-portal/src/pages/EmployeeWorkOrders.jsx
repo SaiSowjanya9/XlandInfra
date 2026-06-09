@@ -409,9 +409,9 @@ const EmployeeWorkOrders = ({ admin }) => {
   // Handle status change
   const handleStatusChange = async (workOrderId, newStatus) => {
     try {
-      const response = await fetch(`${API_BASE}/admin/work-orders/${workOrderId}`, {
+      const response = await fetch(`${API_BASE}/api/admin/work-orders/${workOrderId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ status: newStatus })
       });
       const result = await response.json();
@@ -455,9 +455,9 @@ const EmployeeWorkOrders = ({ admin }) => {
   const handleSaveEdit = async () => {
     if (!selectedOrder) return;
     try {
-      const response = await fetch(`${API_BASE}/admin/work-orders/${selectedOrder.id}`, {
+      const response = await fetch(`${API_BASE}/api/admin/work-orders/${selectedOrder.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           category_id: editFormData.categoryId,
           subcategory_id: editFormData.subcategoryId,
@@ -486,10 +486,14 @@ const EmployeeWorkOrders = ({ admin }) => {
   const handleDeleteWorkOrder = async (workOrderId) => {
     if (!window.confirm('Are you sure you want to delete this work order?')) return;
     try {
-      const response = await fetch(`${API_BASE}/admin/work-orders/${workOrderId}`, {
-        method: 'DELETE'
+      console.log('Deleting work order:', workOrderId, 'Token:', token ? 'present' : 'missing');
+      const response = await fetch(`${API_BASE}/api/admin/work-orders/${workOrderId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
       });
+      console.log('Delete response status:', response.status);
       const result = await response.json();
+      console.log('Delete result:', result);
       if (result.success) {
         setSuccess('Work order deleted successfully');
         fetchWorkOrders();
@@ -497,6 +501,7 @@ const EmployeeWorkOrders = ({ admin }) => {
         setError(result.message || 'Failed to delete work order');
       }
     } catch (err) {
+      console.error('Delete error:', err);
       setError('Failed to delete work order');
     }
   };
@@ -509,11 +514,11 @@ const EmployeeWorkOrders = ({ admin }) => {
     setShowAssignModal(true);
     // Fetch vendors or employees
     if (type === 'vendor') {
-      fetch(`${API_BASE}/admin/vendors`).then(r => r.json()).then(data => {
+      fetch(`${API_BASE}/api/admin/vendors`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).then(data => {
         if (data.success) setVendors(data.vendors || data.data || []);
       });
     } else {
-      fetch(`${API_BASE}/admin/employees`).then(r => r.json()).then(data => {
+      fetch(`${API_BASE}/api/admin/employees`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).then(data => {
         if (data.success) setEmployees(data.employees || data.data || []);
       });
     }
@@ -523,9 +528,9 @@ const EmployeeWorkOrders = ({ admin }) => {
   const handleAssign = async () => {
     if (!selectedAssignee || !selectedOrder) return;
     try {
-      const response = await fetch(`${API_BASE}/admin/work-orders/${selectedOrder.id}`, {
+      const response = await fetch(`${API_BASE}/api/admin/work-orders/${selectedOrder.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           assignedTo: selectedAssignee,
           status: 'assigned'

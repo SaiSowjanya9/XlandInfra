@@ -892,6 +892,17 @@ router.get('/vendors/assignments', async (req, res) => {
 router.delete('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('Delete work order request - ID:', id, 'User:', req.user?.role, req.user?.email);
+    
+    // First check if work order exists
+    const [existing] = await pool.execute('SELECT id, work_order_id FROM work_orders WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      console.log('Work order not found:', id);
+      return res.status(404).json({
+        success: false,
+        message: 'Work order not found'
+      });
+    }
     
     const [result] = await pool.execute(
       `DELETE FROM work_orders WHERE id = ?`,
@@ -905,6 +916,7 @@ router.delete('/work-orders/:id', authenticate, managerOrAdmin, async (req, res)
       });
     }
 
+    console.log('Work order deleted successfully:', id);
     res.json({
       success: true,
       message: 'Work order deleted successfully'
@@ -913,7 +925,7 @@ router.delete('/work-orders/:id', authenticate, managerOrAdmin, async (req, res)
     console.error('Error deleting work order:', error);
     res.status(500).json({
       success: false,
-      message: 'Error deleting work order',
+      message: 'Error deleting work order: ' + error.message,
       error: error.message
     });
   }
