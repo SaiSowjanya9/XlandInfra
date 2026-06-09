@@ -772,14 +772,23 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
           
           // Send activation email
           const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          const emailResult = await sendCustomerActivationEmail({
-            email: contactEmail.toLowerCase(),
-            firstName: contactName,
-            tempPassword,
-            activationLink,
-            propertyName: communityName
-          });
-          emailSent = emailResult.success;
+          console.log('📧 Sending customer activation email (executive property form) to:', contactEmail.toLowerCase());
+          console.log('📧 Activation link:', activationLink);
+          try {
+            const emailResult = await sendCustomerActivationEmail({
+              email: contactEmail.toLowerCase(),
+              firstName: contactName,
+              tempPassword,
+              activationLink,
+              propertyName: communityName
+            });
+            emailSent = emailResult.success;
+            if (!emailResult.success) {
+              console.error('📧 Email sending returned failure:', emailResult.error);
+            }
+          } catch (emailError) {
+            console.error('📧 Email sending failed with exception:', emailError.message);
+          }
         } else if (!existing[0].is_activated) {
           // Resend activation email for inactive account
           await pool.query(
@@ -790,14 +799,22 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
           );
           
           const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          const emailResult = await sendCustomerActivationEmail({
-            email: contactEmail.toLowerCase(),
-            firstName: contactName,
-            tempPassword,
-            activationLink,
-            propertyName: communityName
-          });
-          emailSent = emailResult.success;
+          console.log('📧 Resending activation email (executive property form) to:', contactEmail.toLowerCase());
+          try {
+            const emailResult = await sendCustomerActivationEmail({
+              email: contactEmail.toLowerCase(),
+              firstName: contactName,
+              tempPassword,
+              activationLink,
+              propertyName: communityName
+            });
+            emailSent = emailResult.success;
+            if (!emailResult.success) {
+              console.error('📧 Email resending returned failure:', emailResult.error);
+            }
+          } catch (emailError) {
+            console.error('📧 Email resending failed with exception:', emailError.message);
+          }
         }
       }
 
