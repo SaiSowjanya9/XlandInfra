@@ -78,6 +78,10 @@ const rateLimits = new Map();
 const RATE_LIMIT = 60; // requests per minute
 const RATE_WINDOW = 60000; // 1 minute
 
+// Scan deduplication store - prevent duplicate scans within 5 seconds
+const recentScans = new Map();
+const SCAN_DEDUP_WINDOW = 5000; // 5 seconds
+
 const checkRateLimit = (ip) => {
   const now = Date.now();
   const key = ip;
@@ -101,7 +105,7 @@ const checkRateLimit = (ip) => {
   return true;
 };
 
-// Clean up rate limits periodically
+// Clean up rate limits and recent scans periodically
 setInterval(() => {
   const now = Date.now();
   for (const [key, value] of rateLimits) {
@@ -109,7 +113,29 @@ setInterval(() => {
       rateLimits.delete(key);
     }
   }
+  // Clean up old scan dedup entries
+  for (const [key, timestamp] of recentScans) {
+    if (now - timestamp > SCAN_DEDUP_WINDOW * 2) {
+      recentScans.delete(key);
+    }
+  }
 }, 60000);
+
+// Check if this is a duplicate scan (same IP + slug within 5 seconds)
+const isDuplicateScan = (ip, slug) => {
+  const now = Date.now();
+  const key = `${hashIP(ip)}-${slug}`;
+  
+  if (recentScans.has(key)) {
+    const lastScan = recentScans.get(key);
+    if (now - lastScan < SCAN_DEDUP_WINDOW) {
+      return true; // Duplicate scan within window
+    }
+  }
+  
+  recentScans.set(key, now);
+  return false;
+};
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -189,8 +215,9 @@ app.get('/:slug', async (req, res) => {
     const redirectUrl = qr.current_url;
     const redirectLatency = Date.now() - startTime;
     
-    // Log analytics (non-blocking, skip for bots)
-    if (!isBotRequest) {
+    // Log analytics (non-blocking, skip for bots and duplicates)
+    const isDuplicate = isDuplicateScan(ip, slug);
+    if (!isBotRequest && !isDuplicate) {
       setImmediate(async () => {
         try {
           const parser = new UAParser(userAgent);
