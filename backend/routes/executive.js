@@ -448,19 +448,9 @@ router.put('/properties/:id', requireExecutiveScope, validateOwnership('properti
   }
 });
 
-router.delete('/properties/:id', requireExecutiveScope, validateOwnership('properties', 'id', true), async (req, res) => {
-  try {
-    if (!req.canDelete) {
-      return res.status(403).json({ success: false, message: 'You do not have permission to delete this property' });
-    }
-
-    const { id } = req.params;
-    await pool.query('DELETE FROM properties WHERE id = ?', [id]);
-    res.json({ success: true, message: 'Property deleted successfully' });
-  } catch (error) {
-    console.error('Property delete error:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete property' });
-  }
+// Delete property - DISABLED for Executive role
+router.delete('/properties/:id', requireExecutiveScope, async (req, res) => {
+  return res.status(403).json({ success: false, message: 'Delete operation not allowed for this role' });
 });
 
 // =====================================================
@@ -1053,19 +1043,9 @@ router.put('/vendors/:id', requireExecutiveScope, validateOwnership('onboarded_v
   }
 });
 
-router.delete('/vendors/:id', requireExecutiveScope, validateOwnership('onboarded_vendors', 'id', true), async (req, res) => {
-  try {
-    if (!req.canDelete) {
-      return res.status(403).json({ success: false, message: 'You do not have permission to delete this vendor' });
-    }
-
-    const { id } = req.params;
-    await pool.query(`UPDATE onboarded_vendors SET is_active = 0, status = 'inactive' WHERE id = ?`, [id]);
-    res.json({ success: true, message: 'Vendor deleted successfully' });
-  } catch (error) {
-    console.error('Vendor delete error:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete vendor' });
-  }
+// Delete vendor - DISABLED for Executive role
+router.delete('/vendors/:id', requireExecutiveScope, async (req, res) => {
+  return res.status(403).json({ success: false, message: 'Delete operation not allowed for this role' });
 });
 
 // Get vendor assignments for executive (ZONE-CENTRIC)

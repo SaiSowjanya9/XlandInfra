@@ -485,19 +485,9 @@ router.put('/properties/:id', requireSupervisorScope, validateOwnership('propert
   }
 });
 
-router.delete('/properties/:id', requireSupervisorScope, validateOwnership('properties', 'id', true), async (req, res) => {
-  try {
-    if (!req.canDelete) {
-      return res.status(403).json({ success: false, message: 'You do not have permission to delete this property' });
-    }
-
-    const { id } = req.params;
-    await pool.query('DELETE FROM properties WHERE id = ?', [id]);
-    res.json({ success: true, message: 'Property deleted successfully' });
-  } catch (error) {
-    console.error('Property delete error:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete property' });
-  }
+// Delete property - DISABLED for Supervisor role
+router.delete('/properties/:id', requireSupervisorScope, async (req, res) => {
+  return res.status(403).json({ success: false, message: 'Delete operation not allowed for this role' });
 });
 
 router.post('/properties/:id/assign-vendor', requireSupervisorScope, async (req, res) => {
@@ -1129,19 +1119,9 @@ router.put('/vendors/:id', requireSupervisorScope, validateOwnership('onboarded_
   }
 });
 
-router.delete('/vendors/:id', requireSupervisorScope, validateOwnership('onboarded_vendors', 'id', true), async (req, res) => {
-  try {
-    if (!req.canDelete) {
-      return res.status(403).json({ success: false, message: 'You do not have permission to delete this vendor' });
-    }
-
-    const { id } = req.params;
-    await pool.query('UPDATE onboarded_vendors SET is_active = 0, status = \'inactive\' WHERE id = ?', [id]);
-    res.json({ success: true, message: 'Vendor deleted successfully' });
-  } catch (error) {
-    console.error('Vendor delete error:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete vendor' });
-  }
+// Delete vendor - DISABLED for Supervisor role
+router.delete('/vendors/:id', requireSupervisorScope, async (req, res) => {
+  return res.status(403).json({ success: false, message: 'Delete operation not allowed for this role' });
 });
 
 // Get vendor assignments for supervisor (ZONE-CENTRIC)
