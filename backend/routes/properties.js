@@ -6,7 +6,7 @@ const { pool } = require('../config/database');
 router.get('/', async (req, res) => {
   try {
     const [properties] = await pool.execute(
-      `SELECT * FROM properties WHERE is_active = 1 ORDER BY name`
+      `SELECT * FROM properties WHERE (status IS NULL OR status != 'deleted') ORDER BY name`
     );
 
     res.json({
@@ -38,7 +38,7 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
 
     const [properties] = await pool.execute(
-      `SELECT * FROM properties WHERE id = ? AND is_active = 1`,
+      `SELECT * FROM properties WHERE id = ? AND (status IS NULL OR status != 'deleted')`,
       [id]
     );
 

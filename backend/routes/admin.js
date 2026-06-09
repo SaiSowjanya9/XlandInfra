@@ -901,7 +901,7 @@ router.get('/dashboard/stats', async (req, res) => {
       // Properties count
       pool.execute(`SELECT COUNT(*) as count FROM onboarded_properties WHERE status = 'active'`)
         .then(([[r]]) => r.count)
-        .catch(() => pool.execute(`SELECT COUNT(*) as count FROM properties WHERE is_active = 1`)
+        .catch(() => pool.execute(`SELECT COUNT(*) as count FROM properties WHERE (status IS NULL OR status != 'deleted')`)
           .then(([[r]]) => r.count)
           .catch(() => 0)),
       
@@ -1675,7 +1675,7 @@ router.get('/all-vendor-assignments', authenticate, adminOnly, async (req, res) 
               ov.owner_mobile as vendor_phone, ov.owner_email as vendor_email,
               ov.owner_aadhar, ov.manager_name, ov.manager_mobile, ov.manager_email,
               ov.poc_name, ov.poc_mobile, ov.poc_email, ov.service_verified,
-              COALESCE(p.name, op.name, op.community_name) as property_name, 
+              COALESCE(p.name, op.community_name) as property_name, 
               COALESCE(p.property_id, op.property_id) as propertyId,
               COALESCE(p.property_type, op.property_type) as property_type, 
               COALESCE(p.zone_name, op.zone) as property_zone,
