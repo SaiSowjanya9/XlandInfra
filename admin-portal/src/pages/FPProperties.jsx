@@ -986,14 +986,9 @@ const FPProperties = ({ user }) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
-                  <select value={editFormData.propertyType || ''} onChange={(e) => setEditFormData({ ...editFormData, propertyType: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option value="residential">Residential</option>
-                    <option value="gated_community">Gated Community</option>
-                    <option value="apartment">Apartment</option>
-                    <option value="villa">Villa</option>
-                    <option value="plot">Plot</option>
-                    <option value="flat">Flat</option>
-                  </select>
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                    {editFormData.propertyType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}
+                  </div>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
@@ -1022,13 +1017,6 @@ const FPProperties = ({ user }) => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
                   <input type="email" value={editFormData.contactEmail || ''} onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select value={editFormData.isActive ? 'active' : 'inactive'} onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.value === 'active' })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
                 </div>
               </div>
             </div>
