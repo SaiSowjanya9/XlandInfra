@@ -7,6 +7,7 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 const ADMIN_USER = {
+  user_id: 'XAD001',
   username: 'XL_admin',
   email: 'xlandinfra@gmail.com',
   // Password: Password$123 (pre-hashed with bcrypt)
@@ -42,18 +43,19 @@ async function createAdmin() {
     );
 
     if (existing.length > 0) {
-      console.log('User already exists, updating password...');
+      console.log('User already exists, updating password and user_id...');
       await connection.execute(
-        'UPDATE users SET password_hash = ?, is_active = TRUE WHERE username = ? OR email = ?',
-        [ADMIN_USER.password_hash, ADMIN_USER.username, ADMIN_USER.email]
+        'UPDATE users SET password_hash = ?, user_id = ?, is_active = TRUE, is_super_admin = TRUE WHERE username = ? OR email = ?',
+        [ADMIN_USER.password_hash, ADMIN_USER.user_id, ADMIN_USER.username, ADMIN_USER.email]
       );
-      console.log('✓ Admin user password updated!');
+      console.log('✓ Admin user password and user_id updated!');
     } else {
       console.log('Creating new admin user...');
       await connection.execute(`
-        INSERT INTO users (username, email, password_hash, first_name, last_name, phone, role, is_active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)
+        INSERT INTO users (user_id, username, email, password_hash, first_name, last_name, phone, role, is_active, is_super_admin)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE)
       `, [
+        ADMIN_USER.user_id,
         ADMIN_USER.username,
         ADMIN_USER.email,
         ADMIN_USER.password_hash,
