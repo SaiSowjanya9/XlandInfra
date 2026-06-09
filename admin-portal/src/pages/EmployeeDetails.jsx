@@ -758,14 +758,41 @@ const EmployeeDetails = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  const result = updateEmployee(editEmployee.id || editEmployee.employeeId, editEmployee);
-                  if (result.success) {
-                    showToast('Employee updated successfully');
-                    setEditEmployee(null);
-                    loadData();
-                  } else {
-                    showToast(result.message || 'Failed to update employee', 'error');
+                onClick={async () => {
+                  try {
+                    // Parse full name into first and last name
+                    const nameParts = (editEmployee.fullName || editEmployee.name || '').trim().split(' ');
+                    const firstName = nameParts[0] || '';
+                    const lastName = nameParts.slice(1).join(' ') || '';
+                    
+                    const response = await fetch(`${API_BASE}/api/staff/${editEmployee.id || editEmployee.employeeId}`, {
+                      method: 'PUT',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({
+                        firstName,
+                        lastName,
+                        username: editEmployee.username,
+                        email: editEmployee.email,
+                        phone: editEmployee.phone,
+                        role: editEmployee.role,
+                        isActive: editEmployee.status === 'active'
+                      })
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                      showToast(result.message || 'Employee updated successfully');
+                      setEditEmployee(null);
+                      loadData();
+                    } else {
+                      showToast(result.message || 'Failed to update employee', 'error');
+                    }
+                  } catch (error) {
+                    console.error('Error updating employee:', error);
+                    showToast('Failed to update employee', 'error');
                   }
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
