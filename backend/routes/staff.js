@@ -30,27 +30,43 @@ const USER_ID_PREFIXES = {
 const EMPLOYEE_ROLES = ['manager', 'coordinator', 'supervisor', 'executive'];
 
 // Generate sequential unique User ID based on role
+// Uses id_sequences table to track highest ever assigned ID (prevents reuse after deletions)
 const generateUserId = async (role) => {
   const isEmployee = EMPLOYEE_ROLES.includes(role);
   
   try {
     if (isEmployee) {
       // For employees: Generate numeric-only ID (001, 002, 003...)
-      const [rows] = await pool.execute(
-        `SELECT user_id FROM users 
-         WHERE role IN ('manager', 'coordinator', 'supervisor', 'executive') 
-         AND user_id REGEXP '^[0-9]+$'
-         ORDER BY CAST(user_id AS UNSIGNED) DESC LIMIT 1`
+      const sequencePrefix = 'EMP';
+      
+      // Get next sequence from id_sequences table (or create if not exists)
+      const [seqRows] = await pool.execute(
+        `SELECT last_sequence FROM id_sequences WHERE prefix = ?`,
+        [sequencePrefix]
       );
       
       let nextSequence = 1;
-      if (rows.length > 0) {
-        const existingId = rows[0].user_id;
-        const numericPart = parseInt(existingId, 10);
-        if (!isNaN(numericPart)) {
-          nextSequence = numericPart + 1;
+      
+      if (seqRows.length > 0) {
+        nextSequence = seqRows[0].last_sequence + 1;
+      } else {
+        // If no sequence record exists, check existing users for max and create record
+        const [userRows] = await pool.execute(
+          `SELECT MAX(CAST(user_id AS UNSIGNED)) as max_id FROM users 
+           WHERE role IN ('manager', 'coordinator', 'supervisor', 'executive') 
+           AND user_id REGEXP '^[0-9]+$'`
+        );
+        if (userRows.length > 0 && userRows[0].max_id) {
+          nextSequence = userRows[0].max_id + 1;
         }
       }
+      
+      // Update/Insert the sequence tracker
+      await pool.execute(
+        `INSERT INTO id_sequences (prefix, last_sequence) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE last_sequence = ?`,
+        [sequencePrefix, nextSequence, nextSequence]
+      );
       
       // Format with leading zeros (3 digits minimum)
       return String(nextSequence).padStart(3, '0');
@@ -58,20 +74,34 @@ const generateUserId = async (role) => {
     
     // For non-employees: Use prefix-based ID
     const prefix = USER_ID_PREFIXES[role] || 'XUS';
-    const [rows] = await pool.execute(
-      `SELECT user_id FROM users WHERE user_id LIKE ? ORDER BY user_id DESC LIMIT 1`,
-      [`${prefix}%`]
+    
+    // Get next sequence from id_sequences table (or create if not exists)
+    const [seqRows] = await pool.execute(
+      `SELECT last_sequence FROM id_sequences WHERE prefix = ?`,
+      [prefix]
     );
     
     let nextSequence = 1;
     
-    if (rows.length > 0) {
-      const existingId = rows[0].user_id;
-      const numericPart = parseInt(existingId.replace(prefix, ''), 10);
-      if (!isNaN(numericPart)) {
-        nextSequence = numericPart + 1;
+    if (seqRows.length > 0) {
+      nextSequence = seqRows[0].last_sequence + 1;
+    } else {
+      // If no sequence record exists, check existing users for max and create record
+      const [userRows] = await pool.execute(
+        `SELECT MAX(CAST(SUBSTRING(user_id, ?) AS UNSIGNED)) as max_id FROM users WHERE user_id LIKE ?`,
+        [prefix.length + 1, `${prefix}%`]
+      );
+      if (userRows.length > 0 && userRows[0].max_id) {
+        nextSequence = userRows[0].max_id + 1;
       }
     }
+    
+    // Update/Insert the sequence tracker
+    await pool.execute(
+      `INSERT INTO id_sequences (prefix, last_sequence) VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE last_sequence = ?`,
+      [prefix, nextSequence, nextSequence]
+    );
     
     // Format with leading zeros (3 digits minimum, expandable)
     const sequenceStr = String(nextSequence).padStart(3, '0');
@@ -79,6 +109,7 @@ const generateUserId = async (role) => {
   } catch (error) {
     console.error('Error generating user ID:', error);
     // Fallback to timestamp-based if database query fails
+    const prefix = USER_ID_PREFIXES[role] || 'XUS';
     const timestamp = Date.now().toString(36).toUpperCase().slice(-4);
     return `${prefix}${timestamp}`;
   }
@@ -1170,7 +1201,7 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
 
     // Check if user exists and get current details for email
     const [existing] = await pool.execute(
-      `SELECT id, email, first_name, role, is_super_admin FROM users WHERE id = ?`,
+      `SELECT id, user_id, username, email, first_name, last_name, role, is_super_admin FROM users WHERE id = ?`,
       [id]
     );
 
@@ -1225,8 +1256,27 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
     if (canAssign !== undefined) { updateFields.push('can_assign = ?'); params.push(canAssign); }
     if (canClose !== undefined) { updateFields.push('can_close = ?'); params.push(canClose); }
 
-    // Update password if provided (also store visible_password for admin)
-    if (password) {
+    // Check if email is being changed
+    const isEmailChanged = email && email.toLowerCase() !== currentUser.email.toLowerCase();
+    let tempPassword = null;
+    
+    // If email is changed, generate new temp password and require password change
+    if (isEmailChanged) {
+      tempPassword = generateTempPassword();
+      const passwordHash = await bcrypt.hash(tempPassword, 10);
+      updateFields.push('password_hash = ?');
+      params.push(passwordHash);
+      updateFields.push('visible_password = ?');
+      params.push(tempPassword);
+      updateFields.push('must_change_password = ?');
+      params.push(true);
+      // Also update username to new email if they match
+      if (currentUser.username === currentUser.email) {
+        updateFields.push('username = ?');
+        params.push(email);
+      }
+    } else if (password) {
+      // Update password if provided (also store visible_password for admin)
       const passwordHash = await bcrypt.hash(password, 10);
       updateFields.push('password_hash = ?');
       params.push(passwordHash);
@@ -1248,8 +1298,52 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       params
     );
 
-    // Send email notification if password was updated
-    if (password) {
+    // Also update franchise_partners table if this is an FP user
+    if (isEmailChanged && (currentUser.role === 'franchise_partner' || currentUser.role === 'franchise')) {
+      try {
+        const fpPasswordHash = await bcrypt.hash(tempPassword, 10);
+        await pool.execute(
+          `UPDATE franchise_partners SET email = ?, username = ?, password_hash = ?, visible_password = ?, must_change_password = TRUE WHERE email = ?`,
+          [email, email, fpPasswordHash, tempPassword, currentUser.email]
+        );
+        console.log(`📧 Franchise partner email updated from ${currentUser.email} to ${email}`);
+      } catch (fpError) {
+        console.error('Error updating franchise_partners table:', fpError);
+      }
+    }
+
+    // Send activation email to NEW email if email was changed
+    if (isEmailChanged && tempPassword) {
+      const userFirstName = firstName || currentUser.first_name;
+      const userLastName = lastName || currentUser.last_name || '';
+      const userRole = role || currentUser.role;
+      const userUsername = email; // New email becomes the username for login
+      
+      try {
+        await sendEmployeeWelcomeEmail({
+          email: email, // Send to NEW email
+          firstName: userFirstName,
+          lastName: userLastName,
+          username: userUsername,
+          tempPassword: tempPassword,
+          role: userRole,
+          userId: currentUser.user_id,
+          loginUrl: ADMIN_PORTAL_URL
+        });
+        console.log(`📧 Account activation email sent to new email: ${email} (changed from ${currentUser.email})`);
+      } catch (emailError) {
+        console.error('Failed to send activation email to new email:', emailError);
+      }
+      
+      res.json({
+        success: true,
+        message: `Email changed successfully. Activation email sent to ${email}. The old email (${currentUser.email}) no longer has access.`
+      });
+      return;
+    }
+
+    // Send email notification if password was updated (without email change)
+    if (password && !isEmailChanged) {
       const userEmail = email || currentUser.email;
       const userFirstName = firstName || currentUser.first_name;
       

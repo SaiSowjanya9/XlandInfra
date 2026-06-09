@@ -2161,9 +2161,9 @@ router.put('/employees/:id', requireFPScope, async (req, res) => {
     const { id } = req.params;
     const { firstName, lastName, email, phone, countryCode, aadhaar, role } = req.body;
     
-    // Verify employee belongs to this FP
+    // Verify employee belongs to this FP and get current details
     const [existing] = await pool.execute(
-      'SELECT id, user_id FROM fp_employees WHERE id = ? AND franchise_partner_id = ?',
+      'SELECT id, user_id, email as current_email, first_name, last_name, employee_code, username FROM fp_employees WHERE id = ? AND franchise_partner_id = ?',
       [id, req.fpId]
     );
     
@@ -2171,7 +2171,59 @@ router.put('/employees/:id', requireFPScope, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Employee not found' });
     }
     
-    // Update fp_employees table
+    const currentEmployee = existing[0];
+    const isEmailChanged = email && email.toLowerCase() !== (currentEmployee.current_email || '').toLowerCase();
+    let tempPassword = null;
+    
+    // If email is changed, generate new temp password
+    if (isEmailChanged) {
+      tempPassword = generateTempPassword();
+      const passwordHash = await bcrypt.hash(tempPassword, 10);
+      
+      // Update fp_employees table with new email and password
+      await pool.execute(
+        `UPDATE fp_employees SET 
+          first_name = ?, last_name = ?, email = ?, phone = ?, 
+          country_code = ?, aadhaar = ?, role = ?, password_hash = ?, 
+          visible_password = ?, must_change_password = TRUE, updated_at = NOW()
+         WHERE id = ? AND franchise_partner_id = ?`,
+        [firstName, lastName, email, phone, countryCode || '+91', aadhaar || null, role || 'field_staff', passwordHash, tempPassword, id, req.fpId]
+      );
+      
+      // Also update linked user account if exists
+      if (currentEmployee.user_id) {
+        await pool.execute(
+          `UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ?, 
+           password_hash = ?, visible_password = ?, must_change_password = TRUE,
+           username = ? WHERE id = ?`,
+          [firstName, lastName, email, phone, passwordHash, tempPassword, email, currentEmployee.user_id]
+        );
+      }
+      
+      // Send activation email to NEW email
+      try {
+        await sendFPEmployeeWelcomeEmail({
+          email: email,
+          firstName: firstName || currentEmployee.first_name,
+          lastName: lastName || currentEmployee.last_name || '',
+          employeeCode: currentEmployee.employee_code,
+          username: email,
+          tempPassword: tempPassword,
+          role: role || 'field_staff'
+        });
+        console.log(`📧 Account activation email sent to new email: ${email} (changed from ${currentEmployee.current_email})`);
+      } catch (emailError) {
+        console.error('Failed to send activation email to new email:', emailError);
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Email changed successfully. Activation email sent to ${email}. The old email no longer has access.` 
+      });
+      return;
+    }
+    
+    // Normal update without email change
     await pool.execute(
       `UPDATE fp_employees SET 
         first_name = ?, last_name = ?, email = ?, phone = ?, 
@@ -2181,10 +2233,10 @@ router.put('/employees/:id', requireFPScope, async (req, res) => {
     );
     
     // Also update linked user account if exists
-    if (existing[0].user_id) {
+    if (currentEmployee.user_id) {
       await pool.execute(
         `UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ? WHERE id = ?`,
-        [firstName, lastName, email, phone, existing[0].user_id]
+        [firstName, lastName, email, phone, currentEmployee.user_id]
       );
     }
     
