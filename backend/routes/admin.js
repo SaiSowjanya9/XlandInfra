@@ -251,17 +251,35 @@ router.delete('/residents/:id', authenticate, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Soft delete
-    const [result] = await pool.execute(
-      `UPDATE residents SET is_active = 0 WHERE id = ?`,
+    // Get resident email before deleting
+    const [residents] = await pool.execute(
+      `SELECT email FROM residents WHERE id = ?`,
       [id]
     );
 
-    if (result.affectedRows === 0) {
+    if (residents.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Resident not found'
       });
+    }
+
+    const residentEmail = residents[0].email;
+
+    // Soft delete resident
+    await pool.execute(
+      `UPDATE residents SET is_active = 0 WHERE id = ?`,
+      [id]
+    );
+
+    // Also deactivate customer account if exists (so they can't login)
+    try {
+      await pool.execute(
+        `UPDATE customer_accounts SET is_active = 0 WHERE email = ?`,
+        [residentEmail]
+      );
+    } catch (e) {
+      // customer_accounts table might not exist or no matching record - continue
     }
 
     res.json({
@@ -455,6 +473,16 @@ router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
         success: false,
         message: 'Property not found'
       });
+    }
+
+    // Also deactivate customer accounts linked to this property (so they can't login)
+    try {
+      await pool.execute(
+        `UPDATE customer_accounts SET is_active = 0 WHERE property_id = ?`,
+        [id]
+      );
+    } catch (e) {
+      // customer_accounts table might not exist - continue
     }
 
     res.json({
