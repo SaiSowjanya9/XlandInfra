@@ -194,10 +194,10 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
       onbZoneParams = [...assignedZones];
     }
 
-    // Count onboarded_properties (zone-centric + own created)
+    // Count onboarded_properties (zone-centric + own created, only active)
     const [onboardedPropsCount] = await pool.query(
       `SELECT COUNT(*) as count FROM onboarded_properties op
-       WHERE (op.franchise_partner_id = ? AND (op.created_by = ? OR op.created_by = ? OR op.executive_id = ?${onbZoneCondition}))`,
+       WHERE op.status = 'active' AND (op.franchise_partner_id = ? AND (op.created_by = ? OR op.created_by = ? OR op.executive_id = ?${onbZoneCondition}))`,
       [franchisePartnerId, creatorEmail, req.user?.username || '', executiveId, ...onbZoneParams]
     );
 
