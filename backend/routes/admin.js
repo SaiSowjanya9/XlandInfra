@@ -1267,8 +1267,8 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
               COALESCE(p.category, 'residential') as category
        FROM properties p
        LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
-       LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
-       LEFT JOIN users u ON p.created_by = u.email OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR) OR p.created_by = u.user_id
+       LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR) OR p.created_by = u.user_id
        WHERE (p.status IS NULL OR p.status != 'deleted')
        ORDER BY p.created_at DESC`
     );
@@ -1294,8 +1294,8 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
                 COALESCE(op.category, 'residential') as category
          FROM onboarded_properties op
          LEFT JOIN franchise_partners fp ON op.franchise_partner_id = fp.id
-         LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR CAST(op.created_by AS CHAR) = CAST(fpe.id AS CHAR)
-         LEFT JOIN users u ON op.created_by = u.email OR CAST(op.created_by AS CHAR) = CAST(u.id AS CHAR) OR op.created_by = u.user_id
+         LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username OR CAST(op.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.username OR CAST(op.created_by AS CHAR) = CAST(u.id AS CHAR) OR op.created_by = u.user_id
          WHERE op.status = 'active'
          ORDER BY op.created_at DESC`
       );
@@ -1337,7 +1337,7 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN franchise_partners fp ON wo.franchise_partner_id = fp.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-      LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR CAST(wo.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+      LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username OR CAST(wo.created_by AS CHAR) = CAST(fpe.id AS CHAR)
       WHERE 1=1
     `;
     
@@ -1933,7 +1933,7 @@ router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, re
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-      LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR CAST(wo.created_by AS CHAR) = CAST(fpe.id AS CHAR)
+      LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username OR CAST(wo.created_by AS CHAR) = CAST(fpe.id AS CHAR)
       WHERE wo.franchise_partner_id = ?
     `;
     const params = [fpIdNum];
