@@ -1079,7 +1079,7 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
       });
     }
 
-    // Check if username or email already exists
+    // Check if username or email already exists in users table
     const [existing] = await pool.execute(
       `SELECT id FROM users WHERE username = ? OR email = ?`,
       [username, email]
@@ -1089,6 +1089,32 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Username or email already exists'
+      });
+    }
+    
+    // Also check franchise_partners table for FP roles
+    if (role === 'franchise_partner' || role === 'franchise') {
+      const [fpExisting] = await pool.execute(
+        `SELECT id FROM franchise_partners WHERE username = ? OR email = ?`,
+        [username, email]
+      );
+      if (fpExisting.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username or email already exists in franchise partners'
+        });
+      }
+    }
+    
+    // Also check fp_employees table
+    const [fpEmpExisting] = await pool.execute(
+      `SELECT id FROM fp_employees WHERE email = ?`,
+      [email]
+    );
+    if (fpEmpExisting.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already exists in employee records'
       });
     }
 
@@ -1419,6 +1445,17 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
         }
       }
       
+      // Also delete from fp_employees table by email (for employee records)
+      try {
+        await pool.execute(
+          `DELETE FROM fp_employees WHERE email = ?`,
+          [userToDelete.email]
+        );
+        console.log(`🗑️ FP employee record deleted for email: ${userToDelete.email}`);
+      } catch (fpEmpError) {
+        console.log(`Note: No fp_employees record found for ${userToDelete.email}`);
+      }
+      
       // Permanently delete the user from database
       const [result] = await pool.execute(
         `DELETE FROM users WHERE id = ?`,
@@ -1427,14 +1464,14 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
       if (result.affectedRows > 0) deleted = true;
     }
     
-    // Also try to delete from fp_employees table
+    // Also try to delete from fp_employees table by ID (fallback)
     try {
       const [fpResult] = await pool.execute(
         `DELETE FROM fp_employees WHERE id = ?`,
         [id]
       );
       if (fpResult.affectedRows > 0) deleted = true;
-    } catch (e) { console.log('fp_employees delete skipped:', e.message); }
+    } catch (e) { console.log('fp_employees delete by ID skipped:', e.message); }
 
     if (!deleted) {
       return res.status(404).json({
