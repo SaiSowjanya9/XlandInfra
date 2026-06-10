@@ -683,36 +683,103 @@ router.get('/customers', requireExecutiveScope, async (req, res) => {
   }
 });
 
+// Helper function to create customer account and send activation email
+async function createCustomerAccountAndSendEmail(customerData) {
+  const { clientId, customerName, customerEmail, customerPhone, propertyId, propertyName } = customerData;
+  
+  console.log('📧 [CreateCustomerAccount] Starting for email:', customerEmail);
+  
+  if (!customerEmail) {
+    console.log('📧 [CreateCustomerAccount] No email provided, skipping');
+    return { success: false, reason: 'no_email' };
+  }
+
+  try {
+    const emailLower = customerEmail.toLowerCase().trim();
+    const tempPassword = generateTempPassword();
+    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+    const activationToken = generateActivationToken();
+    const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
+    const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
+
+    console.log('📧 [CreateCustomerAccount] Generated temp password and token');
+    console.log('📧 [CreateCustomerAccount] Activation link:', activationLink);
+
+    // Check if customer account already exists
+    const [existing] = await pool.query(
+      'SELECT id, is_activated FROM customer_accounts WHERE email = ?',
+      [emailLower]
+    );
+
+    if (existing.length > 0 && existing[0].is_activated) {
+      console.log('📧 [CreateCustomerAccount] Account already exists and is activated');
+      return { success: false, reason: 'already_activated' };
+    }
+
+    if (existing.length > 0) {
+      // Update existing inactive account
+      console.log('📧 [CreateCustomerAccount] Updating existing inactive account');
+      await pool.query(
+        `UPDATE customer_accounts 
+         SET temp_password_hash = ?, activation_token = ?, activation_expires = ?, updated_at = NOW()
+         WHERE id = ?`,
+        [tempPasswordHash, activationToken, activationExpires, existing[0].id]
+      );
+    } else {
+      // Create new customer account
+      console.log('📧 [CreateCustomerAccount] Creating new customer account');
+      await pool.query(
+        `INSERT INTO customer_accounts (
+          customer_id, first_name, last_name, email, phone, temp_password_hash, property_id,
+          activation_token, activation_expires, is_activated, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [clientId, customerName || '', '', emailLower, customerPhone || '',
+          tempPasswordHash, propertyId, activationToken, activationExpires, 0, 'executive']
+      );
+    }
+
+    // Send activation email
+    console.log('📧 [CreateCustomerAccount] Sending activation email to:', emailLower);
+    const emailResult = await sendCustomerActivationEmail({
+      email: emailLower,
+      firstName: customerName || 'Customer',
+      tempPassword,
+      activationLink,
+      propertyName: propertyName || 'XLAND INFRA'
+    });
+
+    console.log('� [CreateCustomerAccount] Email result:', emailResult);
+    return { success: emailResult.success, emailSent: emailResult.success };
+  } catch (error) {
+    console.error('� [CreateCustomerAccount] Error:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
 router.post('/customers', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
+    const creatorId = req.user?.username || req.user?.email || 'System';
+
+    console.log('📋 [Executive] Customer creation - executiveId:', executiveId, 'fpId:', franchisePartnerId);
+
     const {
       // Property form data
       zone, areaName, division, propertyType, communityName,
       associationContacts, numberOfBlocks, unitsPerBlock, blockNames,
-      numberOfUnits, villaPlotNumber, blockInfo, blockNA,
+      numberOfUnits, villaPlotNumber, blockInfo,
       address, city, state, postalCode, landmark, mapLocation, notes,
       entryType, category,
-      // Simple customer data (backward compatibility)
+      // Simple customer data
       name, email, phone, alternatePhone, zipCode,
       clientType, companyName, propertyId, gstNumber
     } = req.body;
 
-    // Debug logging for customer creation
-    console.log('📋 [Executive] Customer creation request received');
-    console.log('📋 [Executive] Request body keys:', Object.keys(req.body));
-    console.log('📋 [Executive] zone:', zone, 'communityName:', communityName);
-    console.log('📋 [Executive] associationContacts:', JSON.stringify(associationContacts));
-    console.log('📋 [Executive] Simple form - name:', name, 'email:', email);
-
-    // Get creator identifier - MUST match what getCreatorIdentifier returns (username/email)
-    // This is used for zone filtering to show "own created data"
-    const creatorId = req.user?.username || req.user?.email || 'System';
-
-    // Check if this is a property form submission
+    // Property form submission (with zone and communityName)
     if (zone && communityName) {
-      console.log('📋 [Executive] Property form submission detected');
+      console.log('📋 [Executive] Property form - community:', communityName, 'zone:', zone);
+      
       const propertyIdGen = `EXEC-${entryType || 'GC'}-${Date.now()}`;
       const clientId = `EXEC-CLT-${Date.now()}`;
       
@@ -722,6 +789,9 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
       const contactPhone = contact.phone || '';
       const contactCountryCode = contact.countryCode || '+91';
 
+      console.log('📋 [Executive] Contact info - name:', contactName, 'email:', contactEmail);
+
+      // Create property
       const [propertyResult] = await pool.query(
         `INSERT INTO properties (
           property_id, name, property_type, address, city, state, zip_code,
@@ -742,151 +812,63 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
         ]
       );
 
-      // Also create a record in clients table for Property Management listing
+      // Create client record
       await pool.execute(
         `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
           property_id, executive_id, franchise_partner_id, created_by, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [clientId, contactName || communityName, contactEmail || '', `${contactCountryCode}${contactPhone || ''}`,
          address || '', city || '', state || '', postalCode || '',
-         propertyResult.insertId, executiveId, franchisePartnerId, req.user?.username || req.user?.email || '']
+         propertyResult.insertId, executiveId, franchisePartnerId, creatorId]
       );
 
-      let customerResult = null;
-      let emailSent = false;
-      console.log('📋 [Executive] contactEmail value:', contactEmail, '| Will send activation email:', !!contactEmail);
-      if (contactEmail) {
-        const tempPassword = generateTempPassword();
-        const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
-        const activationToken = generateActivationToken();
-        const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
-        
-        const [existing] = await pool.query('SELECT id, is_activated FROM customer_accounts WHERE email = ?', [contactEmail.toLowerCase()]);
-        
-        if (existing.length === 0) {
-          [customerResult] = await pool.query(
-            `INSERT INTO customer_accounts (
-              customer_id, first_name, last_name, email, phone, temp_password_hash, property_id,
-              activation_token, activation_expires, is_activated, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [clientId, contactName, '', contactEmail.toLowerCase(), `${contactCountryCode}${contactPhone}`,
-              tempPasswordHash, propertyResult.insertId, activationToken, activationExpires, 0, 'executive']
-          );
-          
-          // Send activation email
-          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          console.log('📧 Sending customer activation email (executive property form) to:', contactEmail.toLowerCase());
-          console.log('📧 Activation link:', activationLink);
-          try {
-            const emailResult = await sendCustomerActivationEmail({
-              email: contactEmail.toLowerCase(),
-              firstName: contactName,
-              tempPassword,
-              activationLink,
-              propertyName: communityName
-            });
-            emailSent = emailResult.success;
-            if (!emailResult.success) {
-              console.error('📧 Email sending returned failure:', emailResult.error);
-            }
-          } catch (emailError) {
-            console.error('📧 Email sending failed with exception:', emailError.message);
-          }
-        } else if (!existing[0].is_activated) {
-          // Resend activation email for inactive account
-          await pool.query(
-            `UPDATE customer_accounts 
-             SET temp_password_hash = ?, activation_token = ?, activation_expires = ?, updated_at = NOW()
-             WHERE id = ?`,
-            [tempPasswordHash, activationToken, activationExpires, existing[0].id]
-          );
-          
-          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          console.log('📧 Resending activation email (executive property form) to:', contactEmail.toLowerCase());
-          try {
-            const emailResult = await sendCustomerActivationEmail({
-              email: contactEmail.toLowerCase(),
-              firstName: contactName,
-              tempPassword,
-              activationLink,
-              propertyName: communityName
-            });
-            emailSent = emailResult.success;
-            if (!emailResult.success) {
-              console.error('📧 Email resending returned failure:', emailResult.error);
-            }
-          } catch (emailError) {
-            console.error('📧 Email resending failed with exception:', emailError.message);
-          }
-        }
-      }
+      // Create customer account and send activation email
+      const emailResult = await createCustomerAccountAndSendEmail({
+        clientId,
+        customerName: contactName,
+        customerEmail: contactEmail,
+        customerPhone: `${contactCountryCode}${contactPhone}`,
+        propertyId: propertyResult.insertId,
+        propertyName: communityName
+      });
 
       res.status(201).json({
         success: true,
-        message: 'Property and customer created successfully' + (emailSent ? ', activation email sent' : ''),
-        data: { propertyId: propertyIdGen, clientId, customerId: customerResult?.insertId || null, emailSent }
+        message: 'Property and customer created successfully' + (emailResult.emailSent ? ', activation email sent' : ''),
+        data: { propertyId: propertyIdGen, clientId, emailSent: emailResult.emailSent || false }
       });
+
     } else {
+      // Simple customer form
+      console.log('� [Executive] Simple customer form - name:', name, 'email:', email);
+      
       const clientId = `CLT-EXEC-${Date.now()}`;
       const [result] = await pool.query(
         `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
           zip_code, client_type, company_name, property_id, gst_number, executive_id, franchise_partner_id, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
-          clientType || 'individual', companyName, propertyId || null, gstNumber, executiveId, franchisePartnerId,
-          req.user?.username || req.user?.email || '']
+          clientType || 'individual', companyName, propertyId || null, gstNumber, executiveId, franchisePartnerId, creatorId]
       );
 
-      // Create customer account and send activation email if email provided
-      let emailSent = false;
-      if (email) {
-        const tempPassword = generateTempPassword();
-        const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
-        const activationToken = generateActivationToken();
-        const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
-        
-        const [existing] = await pool.query(
-          'SELECT id, is_activated FROM customer_accounts WHERE email = ?', [email.toLowerCase()]
-        );
-        
-        if (existing.length === 0) {
-          await pool.query(
-            `INSERT INTO customer_accounts (customer_id, first_name, last_name, email, phone, temp_password_hash,
-              activation_token, activation_expires, is_activated, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [clientId, name, '', email.toLowerCase(), phone || '', tempPasswordHash, activationToken, activationExpires, 0, 'executive']
-          );
-          
-          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          console.log('📧 Sending activation email (executive simple create) to:', email.toLowerCase());
-          try {
-            const emailResult = await sendCustomerActivationEmail({
-              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA'
-            });
-            emailSent = emailResult.success;
-          } catch (emailError) {
-            console.error('📧 Email sending failed:', emailError);
-          }
-        } else if (!existing[0].is_activated) {
-          await pool.query(
-            `UPDATE customer_accounts SET temp_password_hash = ?, activation_token = ?, activation_expires = ?, updated_at = NOW() WHERE id = ?`,
-            [tempPasswordHash, activationToken, activationExpires, existing[0].id]
-          );
-          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          try {
-            const emailResult = await sendCustomerActivationEmail({
-              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA'
-            });
-            emailSent = emailResult.success;
-          } catch (emailError) {
-            console.error('📧 Email resend failed:', emailError);
-          }
-        }
-      }
+      // Create customer account and send activation email
+      const emailResult = await createCustomerAccountAndSendEmail({
+        clientId,
+        customerName: name,
+        customerEmail: email,
+        customerPhone: phone,
+        propertyId: null,
+        propertyName: companyName || 'XLAND INFRA'
+      });
 
-      res.json({ success: true, message: 'Customer created' + (emailSent ? ', activation email sent' : ''), data: { id: result.insertId, clientId, emailSent } });
+      res.json({
+        success: true,
+        message: 'Customer created' + (emailResult.emailSent ? ', activation email sent' : ''),
+        data: { id: result.insertId, clientId, emailSent: emailResult.emailSent || false }
+      });
     }
   } catch (error) {
-    console.error('Customer create error:', error);
+    console.error('📋 [Executive] Customer create error:', error);
     res.status(500).json({ success: false, message: 'Failed to create customer' });
   }
 });
