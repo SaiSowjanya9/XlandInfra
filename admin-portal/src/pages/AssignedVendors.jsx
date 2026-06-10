@@ -564,13 +564,24 @@ const AssignedVendors = ({ user }) => {
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <div className="flex items-center justify-end">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setViewAssignment(assignment)}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm('Are you sure you want to delete this assignment? This action cannot be undone.')) {
+                                handleRemoveServiceAssignment(assignment);
+                              }
+                            }}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                            title="Delete Assignment"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
