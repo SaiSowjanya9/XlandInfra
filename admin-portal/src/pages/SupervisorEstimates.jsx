@@ -657,6 +657,35 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Property Details */}
+                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Property Details</h3></div>
+                    <div className="p-6 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Property Type <span className="text-red-500">*</span></label><select value={estimateForm.directPropertyType || ''} onChange={(e) => setEstimateForm({...estimateForm, directPropertyType: e.target.value, numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg bg-white">{PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Property Name</label><input type="text" value={estimateForm.directPropertyName || ''} onChange={(e) => setEstimateForm({...estimateForm, directPropertyName: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Property name" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Zone</label><input type="text" value={estimateForm.directZone || ''} onChange={(e) => setEstimateForm({...estimateForm, directZone: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Zone" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">City</label><input type="text" value={estimateForm.directCity || ''} onChange={(e) => setEstimateForm({...estimateForm, directCity: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="City" /></div>
+                      </div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Address</label><input type="text" value={estimateForm.directAddress || ''} onChange={(e) => setEstimateForm({...estimateForm, directAddress: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Full address" /></div>
+                      
+                      {/* Blocks & Units - Only for GC and Apartment */}
+                      {(estimateForm.directPropertyType === 'gated_community' || estimateForm.directPropertyType === 'apartment') && (
+                        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <h4 className="text-sm font-semibold text-blue-800 mb-3">Block & Unit Details</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Number of Blocks</label><input type="number" min="1" value={estimateForm.numberOfBlocks || 1} onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setEstimateForm({...estimateForm, numberOfBlocks: blocks, unitsPerBlock: {}}); }} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" /></div>
+                            {Array.from({ length: estimateForm.numberOfBlocks || 1 }, (_, i) => i + 1).map(blockNum => (
+                              <div key={blockNum}><label className="block text-sm font-medium text-gray-700 mb-1">Block {blockNum} Units</label><input type="number" min="1" value={(estimateForm.unitsPerBlock || {})[blockNum] || ''} onChange={(e) => { const units = parseInt(e.target.value) || 0; const newUnitsPerBlock = {...(estimateForm.unitsPerBlock || {}), [blockNum]: units}; const totalUnits = Object.values(newUnitsPerBlock).reduce((sum, u) => sum + (u || 0), 0); setEstimateForm({...estimateForm, unitsPerBlock: newUnitsPerBlock, totalUnits}); }} placeholder="Units" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" /></div>
+                            ))}
+                          </div>
+                          {(estimateForm.totalUnits || 0) > 0 && (<div className="mt-3 p-2 bg-blue-100 rounded inline-block"><span className="text-sm text-blue-700 font-medium">Total Units: {estimateForm.totalUnits}</span></div>)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">AMC Package</h3></div>
                     <div className="p-6 space-y-4">
