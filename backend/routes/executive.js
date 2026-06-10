@@ -699,12 +699,20 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
       clientType, companyName, propertyId, gstNumber
     } = req.body;
 
+    // Debug logging for customer creation
+    console.log('📋 [Executive] Customer creation request received');
+    console.log('📋 [Executive] Request body keys:', Object.keys(req.body));
+    console.log('📋 [Executive] zone:', zone, 'communityName:', communityName);
+    console.log('📋 [Executive] associationContacts:', JSON.stringify(associationContacts));
+    console.log('📋 [Executive] Simple form - name:', name, 'email:', email);
+
     // Get creator identifier - MUST match what getCreatorIdentifier returns (username/email)
     // This is used for zone filtering to show "own created data"
     const creatorId = req.user?.username || req.user?.email || 'System';
 
     // Check if this is a property form submission
     if (zone && communityName) {
+      console.log('📋 [Executive] Property form submission detected');
       const propertyIdGen = `EXEC-${entryType || 'GC'}-${Date.now()}`;
       const clientId = `EXEC-CLT-${Date.now()}`;
       
@@ -746,6 +754,7 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
 
       let customerResult = null;
       let emailSent = false;
+      console.log('📋 [Executive] contactEmail value:', contactEmail, '| Will send activation email:', !!contactEmail);
       if (contactEmail) {
         const tempPassword = generateTempPassword();
         const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
