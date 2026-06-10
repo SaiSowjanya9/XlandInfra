@@ -1372,19 +1372,19 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
       SELECT wo.*,
              COALESCE(p.name, op.community_name, wo.property_name) as property_name,
              COALESCE(c.name, wo.category_name) as category_name,
-             COALESCE(p.zone_id, op.zone) as zone,
-             COALESCE(p.division, op.division) as division,
-             p.address as address,
-             p.city as city,
-             p.state as state,
-             p.contact_person as contact_person,
-             p.contact_phone as property_contact_phone,
-             p.contact_email as property_contact_email,
+             CASE WHEN p.id IS NOT NULL THEN p.zone_id ELSE op.zone END as zone,
+             CASE WHEN p.id IS NOT NULL THEN p.division ELSE op.division END as division,
+             CASE WHEN p.id IS NOT NULL THEN p.address ELSE NULL END as address,
+             CASE WHEN p.id IS NOT NULL THEN p.city ELSE NULL END as city,
+             CASE WHEN p.id IS NOT NULL THEN p.state ELSE NULL END as state,
+             CASE WHEN p.id IS NOT NULL THEN p.contact_person ELSE NULL END as contact_person,
+             CASE WHEN p.id IS NOT NULL THEN p.contact_phone ELSE NULL END as property_contact_phone,
+             CASE WHEN p.id IS NOT NULL THEN p.contact_email ELSE NULL END as property_contact_email,
              fp.fp_code, fp.company_name as fp_name,
              v.company_name as vendor_name
       FROM work_orders wo
-      LEFT JOIN properties p ON wo.property_id = p.id
-      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+      LEFT JOIN properties p ON wo.property_id = p.id AND p.name = wo.property_name
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.id AND op.community_name = wo.property_name
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN franchise_partners fp ON wo.franchise_partner_id = fp.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
@@ -1973,18 +1973,18 @@ router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, re
       SELECT wo.*,
              COALESCE(p.name, op.community_name, wo.property_name) as property_name,
              COALESCE(c.name, wo.category_name) as category_name,
-             COALESCE(p.zone_id, op.zone) as zone,
-             COALESCE(p.division, op.division) as division,
-             p.address as address,
-             p.city as city,
-             p.state as state,
-             p.contact_person as contact_person,
-             p.contact_phone as property_contact_phone,
-             p.contact_email as property_contact_email,
+             CASE WHEN p.id IS NOT NULL THEN p.zone_id ELSE op.zone END as zone,
+             CASE WHEN p.id IS NOT NULL THEN p.division ELSE op.division END as division,
+             CASE WHEN p.id IS NOT NULL THEN p.address ELSE NULL END as address,
+             CASE WHEN p.id IS NOT NULL THEN p.city ELSE NULL END as city,
+             CASE WHEN p.id IS NOT NULL THEN p.state ELSE NULL END as state,
+             CASE WHEN p.id IS NOT NULL THEN p.contact_person ELSE NULL END as contact_person,
+             CASE WHEN p.id IS NOT NULL THEN p.contact_phone ELSE NULL END as property_contact_phone,
+             CASE WHEN p.id IS NOT NULL THEN p.contact_email ELSE NULL END as property_contact_email,
              v.company_name as vendor_name
       FROM work_orders wo
-      LEFT JOIN properties p ON wo.property_id = p.id
-      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+      LEFT JOIN properties p ON wo.property_id = p.id AND p.name = wo.property_name
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.id AND op.community_name = wo.property_name
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       WHERE wo.franchise_partner_id = ?
