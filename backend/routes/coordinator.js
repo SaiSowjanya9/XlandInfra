@@ -170,7 +170,7 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
     const [propertiesCount] = await pool.query(
       `SELECT COUNT(DISTINCT p.id) as count FROM properties p
        LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
-       WHERE (p.franchise_partner_id = ? AND (p.created_by = ? OR p.created_by = ? OR p.coordinator_id = ?${zoneCondition}))`,
+       WHERE (p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted') AND (p.created_by = ? OR p.created_by = ? OR p.coordinator_id = ?${zoneCondition}))`,
       [franchisePartnerId, creatorEmail, req.user?.username || '', coordinatorId, ...zoneParams]
     );
     
@@ -312,7 +312,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
          LEFT JOIN zones zn ON p.zone_id = zn.name
          LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
-         WHERE p.franchise_partner_id = ?${zoneFilter.clause}
+         WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
          ORDER BY p.created_at DESC`;
       propParams = [franchisePartnerId, ...zoneFilter.params];
     } else {
@@ -334,7 +334,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
          LEFT JOIN zones zn ON p.zone_id = zn.name
          LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
-         WHERE (p.coordinator_id = ? OR p.created_by = ? OR p.created_by = ?)${zoneFilter.clause}
+         WHERE (p.coordinator_id = ? OR p.created_by = ? OR p.created_by = ?) AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
          ORDER BY p.created_at DESC`;
       propParams = [coordinatorId, coordinatorId, req.user?.username || req.user?.email || '', ...zoneFilter.params];
     }

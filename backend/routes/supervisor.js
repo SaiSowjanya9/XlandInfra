@@ -220,7 +220,7 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
     const [propertiesCount] = await pool.query(
       `SELECT COUNT(DISTINCT p.id) as count FROM properties p
        LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
-       WHERE (p.franchise_partner_id = ? AND (p.created_by = ? OR p.created_by = ? OR p.supervisor_id = ?${zoneCondition}))`,
+       WHERE (p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted') AND (p.created_by = ? OR p.created_by = ? OR p.supervisor_id = ?${zoneCondition}))`,
       [franchisePartnerId, creatorEmail, req.user?.username || '', supervisorId, ...zoneParams]
     );
     
@@ -365,7 +365,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
        FROM properties p
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
-       WHERE (p.supervisor_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''})${zoneFilter.clause}
+       WHERE (p.supervisor_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''}) AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
        UNION
        SELECT p.*, p.zone_id as zone_name,
               COALESCE(p.area_name, p.city) as area,
@@ -379,7 +379,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
        INNER JOIN supervisor_assigned_properties sap ON p.id = sap.property_id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
-       WHERE sap.supervisor_id = ?${zoneFilter.clause}
+       WHERE sap.supervisor_id = ? AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
        ORDER BY created_at DESC`;
     const params = franchisePartnerId 
       ? [supervisorId, franchisePartnerId, ...zoneFilter.params, supervisorId, ...zoneFilter.params] 
