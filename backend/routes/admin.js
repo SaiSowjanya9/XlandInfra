@@ -467,11 +467,24 @@ router.put('/properties/:id', authenticate, managerOrAdmin, async (req, res) => 
   }
 });
 
-// Delete property (Admin only) - handles both tables
+// Delete property (Admin only) - handles both tables + cascades to clients and customer_accounts
 router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
     let deleted = false;
+    let contactEmail = null;
+
+    // Get contact email before deleting (for customer_accounts cleanup)
+    try {
+      const [prop] = await pool.query('SELECT contact_email FROM properties WHERE id = ?', [id]);
+      if (prop.length > 0) contactEmail = prop[0].contact_email;
+    } catch (e) {}
+    if (!contactEmail) {
+      try {
+        const [prop] = await pool.query('SELECT poc_email as contact_email FROM onboarded_properties WHERE id = ?', [id]);
+        if (prop.length > 0) contactEmail = prop[0].contact_email;
+      } catch (e) {}
+    }
 
     // Try to delete from properties table first
     try {
@@ -498,19 +511,27 @@ router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
       });
     }
 
-    // Also deactivate customer accounts linked to this property (so they can't login)
-    try {
-      await pool.execute(
-        `UPDATE customer_accounts SET is_active = 0 WHERE property_id = ?`,
-        [id]
-      );
-    } catch (e) {
-      // customer_accounts table might not exist - continue
+    // Delete customer_accounts by email (so email can be reused for new customer)
+    if (contactEmail) {
+      try {
+        await pool.execute('DELETE FROM customer_accounts WHERE email = ?', [contactEmail.toLowerCase()]);
+        console.log('📋 [Admin] Deleted customer_account for email:', contactEmail);
+      } catch (e) {}
     }
+    // Also delete by property_id
+    try {
+      await pool.execute('DELETE FROM customer_accounts WHERE property_id = ?', [id]);
+    } catch (e) {}
+
+    // Delete related clients
+    try {
+      await pool.execute('DELETE FROM clients WHERE property_id = ?', [id]);
+      console.log('📋 [Admin] Deleted clients for property_id:', id);
+    } catch (e) {}
 
     res.json({
       success: true,
-      message: 'Property deleted successfully'
+      message: 'Property and associated customer accounts deleted. Email can now be reused.'
     });
   } catch (error) {
     console.error('Error deleting property:', error);
