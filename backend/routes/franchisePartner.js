@@ -494,15 +494,43 @@ router.put('/properties/:id', requireFPScope, validateOwnership('properties'), a
   }
 });
 
-// Delete property
+// Delete property - cascades to clients and customer_accounts
 router.delete('/properties/:id', requireFPScope, validateOwnership('properties'), async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Get contact email before deleting (for customer_accounts cleanup)
+    let contactEmail = null;
+    try {
+      const [prop] = await pool.query('SELECT contact_email FROM properties WHERE id = ?', [id]);
+      if (prop.length > 0) contactEmail = prop[0].contact_email;
+    } catch (e) {}
+
+    // Delete customer_accounts by email (so email can be reused)
+    if (contactEmail) {
+      try {
+        await pool.execute('DELETE FROM customer_accounts WHERE email = ?', [contactEmail.toLowerCase()]);
+        console.log('📋 [FP] Deleted customer_account for email:', contactEmail);
+      } catch (e) {}
+    }
+    // Also delete by property_id
+    try {
+      await pool.execute('DELETE FROM customer_accounts WHERE property_id = ?', [id]);
+    } catch (e) {}
+
+    // Delete related clients
+    try {
+      await pool.execute('DELETE FROM clients WHERE property_id = ?', [id]);
+      console.log('📋 [FP] Deleted clients for property_id:', id);
+    } catch (e) {}
+
+    // Delete the property
     await pool.execute(
       `DELETE FROM properties WHERE id = ? AND franchise_partner_id = ?`,
       [id, req.fpId]
     );
-    res.json({ success: true, message: 'Property deleted successfully' });
+    
+    res.json({ success: true, message: 'Property and associated customer accounts deleted. Email can now be reused.' });
   } catch (error) {
     console.error('Delete property error:', error);
     res.status(500).json({ success: false, message: error.message });
