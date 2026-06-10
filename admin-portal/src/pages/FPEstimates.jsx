@@ -105,7 +105,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // Estimate form state
   const [estimateForm, setEstimateForm] = useState({
     customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '',
-    selectedPackage: '', selectedAddons: [], discount: 0, gst: 0, description: ''
+    selectedPackage: '', selectedAddons: [], discount: 0, gst: 0, description: '',
+    numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0
   });
 
   // Helper to normalize property type to match PROPERTY_TYPE_OPTIONS IDs
@@ -351,7 +352,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         setEstimateType(null);
         setSelectedProperty(null);
         setPropertyIdInput('');
-        setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: 0, gst: 0, description: '' });
+        setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: 0, gst: 0, description: '', numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0 });
         loadData();
         setActiveTab('list');
       } else {
@@ -758,6 +759,26 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <label className="block text-sm font-medium text-slate-600 mb-1.5">Address</label>
                 <input type="text" placeholder="Enter full address" value={estimateForm.address} onChange={(e) => setEstimateForm({...estimateForm, address: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
               </div>
+              
+              {/* Blocks & Units - Only for GC and Apartment */}
+              {(estimateForm.propertyType === 'GC' || estimateForm.propertyType === 'Apt') && (
+                <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <h3 className="text-sm font-semibold text-amber-800 mb-3">Block & Unit Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Number of Blocks <span className="text-red-500">*</span></label>
+                      <input type="number" min="1" value={estimateForm.numberOfBlocks} onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setEstimateForm({...estimateForm, numberOfBlocks: blocks, unitsPerBlock: {}}); }} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                    </div>
+                    {Array.from({ length: estimateForm.numberOfBlocks }, (_, i) => i + 1).map(blockNum => (
+                      <div key={blockNum}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Block {blockNum} Units</label>
+                        <input type="number" min="1" value={estimateForm.unitsPerBlock[blockNum] || ''} onChange={(e) => { const units = parseInt(e.target.value) || 0; const newUnitsPerBlock = {...estimateForm.unitsPerBlock, [blockNum]: units}; const totalUnits = Object.values(newUnitsPerBlock).reduce((sum, u) => sum + (u || 0), 0); setEstimateForm({...estimateForm, unitsPerBlock: newUnitsPerBlock, totalUnits}); }} placeholder="Enter units" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                      </div>
+                    ))}
+                  </div>
+                  {estimateForm.totalUnits > 0 && (<div className="mt-3 p-2 bg-amber-100 rounded inline-block"><span className="text-sm text-amber-700 font-medium">Total Units: {estimateForm.totalUnits}</span></div>)}
+                </div>
+              )}
             </div>
           </div>
 
