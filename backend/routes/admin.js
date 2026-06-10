@@ -1354,12 +1354,13 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
     const { status } = req.query;
     
     let query = `
-      SELECT wo.*,
+      SELECT wo.id, wo.work_order_id, wo.title, wo.description, wo.status, wo.priority,
+             wo.created_at, wo.updated_at, wo.property_id, wo.category_id, wo.subcategory_id,
              wo.customer_name, wo.customer_email, wo.customer_phone,
              wo.block, wo.flat_number, wo.subcategory_name,
              wo.permission_to_enter, wo.has_pet, wo.entry_notes,
-             COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-             COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
+             wo.assigned_vendor_id, wo.franchise_partner_id,
+             COALESCE(p.name, op.community_name, wo.property_name) as property_name,
              COALESCE(c.name, wo.category_name) as category_name,
              COALESCE(p.zone_id, op.zone) as zone,
              COALESCE(p.division, op.division) as division,
@@ -1367,9 +1368,8 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
              COALESCE(p.city, op.city) as city,
              COALESCE(p.state, op.state) as state,
              COALESCE(p.contact_person, op.contact_name) as contact_person,
-             COALESCE(p.contact_phone, op.contact_phone) as contact_phone,
-             COALESCE(p.contact_email, op.contact_email) as contact_email,
-             wo.franchise_partner_id,
+             COALESCE(p.contact_phone, op.contact_phone) as property_contact_phone,
+             COALESCE(p.contact_email, op.contact_email) as property_contact_email,
              fp.fp_code, fp.company_name as fp_name,
              v.company_name as vendor_name,
              COALESCE(
@@ -1965,12 +1965,13 @@ router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, re
     const { status } = req.query;
     
     let query = `
-      SELECT wo.*,
+      SELECT wo.id, wo.work_order_id, wo.title, wo.description, wo.status, wo.priority,
+             wo.created_at, wo.updated_at, wo.property_id, wo.category_id, wo.subcategory_id,
              wo.customer_name, wo.customer_email, wo.customer_phone,
              wo.block, wo.flat_number, wo.subcategory_name,
              wo.permission_to_enter, wo.has_pet, wo.entry_notes,
-             COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-             COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
+             wo.assigned_vendor_id, wo.franchise_partner_id,
+             COALESCE(p.name, op.community_name, wo.property_name) as property_name,
              COALESCE(c.name, wo.category_name) as category_name,
              COALESCE(p.zone_id, op.zone) as zone,
              COALESCE(p.division, op.division) as division,
@@ -1978,8 +1979,8 @@ router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, re
              COALESCE(p.city, op.city) as city,
              COALESCE(p.state, op.state) as state,
              COALESCE(p.contact_person, op.contact_name) as contact_person,
-             COALESCE(p.contact_phone, op.contact_phone) as contact_phone,
-             COALESCE(p.contact_email, op.contact_email) as contact_email,
+             COALESCE(p.contact_phone, op.contact_phone) as property_contact_phone,
+             COALESCE(p.contact_email, op.contact_email) as property_contact_email,
              v.company_name as vendor_name,
              COALESCE(
                CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
