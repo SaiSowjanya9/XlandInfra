@@ -531,7 +531,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                   <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>₹{Number(viewEstimate.subtotal || viewEstimate.package_price || 0).toLocaleString()}</span></div>
                   {(viewEstimate.discount > 0 || viewEstimate.discount_amount > 0) && <div className="flex justify-between text-sm text-green-600"><span>Discount</span><span>-₹{Number(viewEstimate.discount || viewEstimate.discount_amount || 0).toLocaleString()}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST (18%)</span><span>₹{Number(viewEstimate.tax || viewEstimate.gst || viewEstimate.gst_amount || Math.round((viewEstimate.subtotal || viewEstimate.package_price || 0) * 0.18)).toLocaleString()}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>₹{Number(viewEstimate.tax || viewEstimate.gst || viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
                   <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                     <p className="text-lg font-semibold">Total</p>
                     <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total || viewEstimate.totalPrice || viewEstimate.total_amount || calculateEstimateTotal(viewEstimate) || 0).toLocaleString()}</p>

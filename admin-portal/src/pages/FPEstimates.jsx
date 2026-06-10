@@ -105,7 +105,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // Estimate form state
   const [estimateForm, setEstimateForm] = useState({
     customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '',
-    selectedPackage: '', selectedAddons: [], discount: 0, gst: 18, description: ''
+    selectedPackage: '', selectedAddons: [], discount: 0, gst: 0, description: ''
   });
 
   // Helper to normalize property type to match PROPERTY_TYPE_OPTIONS IDs
@@ -282,7 +282,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     }, 0);
     const subtotal = pkgPrice + addonsPrice;
     const discount = parseFloat(estimateForm.discount) || 0;
-    const gst = parseFloat(estimateForm.gst) || 18;
+    const gst = parseFloat(estimateForm.gst) || 0;
     const discountAmt = (subtotal * discount) / 100;
     const gstAmt = ((subtotal - discountAmt) * gst) / 100;
     const total = subtotal - discountAmt + gstAmt;
@@ -351,7 +351,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         setEstimateType(null);
         setSelectedProperty(null);
         setPropertyIdInput('');
-        setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: 0, gst: 18, description: '' });
+        setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: 0, gst: 0, description: '' });
         loadData();
         setActiveTab('list');
       } else {
@@ -958,7 +958,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
           {/* Footer Note */}
           <div className="text-xs text-gray-500 border-t border-gray-200 pt-4">
-            * Currency: INR (₹) | GST: 18% applied on total | Fields marked with * are mandatory
+            * Currency: INR (₹) | GST applied on total | Fields marked with * are mandatory
           </div>
 
           {/* Actions */}
@@ -2151,7 +2151,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                   <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>{formatCurrency(viewEstimate.subtotal)}</span></div>
                   {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm text-green-600"><span>Discount ({viewEstimate.discount_percent || 0}%)</span><span>-{formatCurrency(viewEstimate.discount_amount)}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 18}%)</span><span>{formatCurrency(viewEstimate.gst_amount)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>{formatCurrency(viewEstimate.gst_amount)}</span></div>
                   <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                     <p className="text-lg font-semibold">Total</p>
                     <p className="text-2xl font-bold text-indigo-600">{formatCurrency(viewEstimate.total_amount)}</p>

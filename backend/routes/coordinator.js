@@ -1433,7 +1433,7 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
         zone || '', city || '', address || '',
         package_id || null, package_name || '', package_price || 0,
         subtotal || 0, discount_percent || 0, discount_amount || 0,
-        gst_percent || 18, gst_amount || 0, total_amount || 0,
+        gst_percent || 0, gst_amount || 0, total_amount || 0,
         JSON.stringify(addons || []), description || '', coordinatorId, creatorName, 'coordinator'
       ]
     );
