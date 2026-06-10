@@ -140,18 +140,36 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
 
     // Try to save to database
     try {
+      // Get franchise_partner_id and zone_id from property for proper FP/zone filtering
+      let franchisePartnerId = null;
+      let zoneId = null;
+      const propId = propertyId && propertyId !== 'undefined' ? propertyId : null;
+      
+      if (propId) {
+        const [propData] = await pool.query(
+          `SELECT franchise_partner_id, zone_id FROM properties WHERE id = ? 
+           UNION SELECT franchise_partner_id, zone as zone_id FROM onboarded_properties WHERE id = ?`,
+          [propId, propId]
+        );
+        if (propData.length > 0) {
+          franchisePartnerId = propData[0].franchise_partner_id;
+          zoneId = propData[0].zone_id;
+          console.log('[WorkOrder] Property lookup - fpId:', franchisePartnerId, 'zoneId:', zoneId);
+        }
+      }
+
       const [result] = await pool.query(
         `INSERT INTO work_orders (
           work_order_id, resident_id, property_id, unit_id,
           category_id, subcategory_id, category_name, subcategory_name,
           description, permission_to_enter, entry_notes, has_pet, priority,
           customer_name, customer_email, customer_phone, property_name, property_type, block, flat_number,
-          status, source, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'customer', NOW())`,
+          franchise_partner_id, zone_id, status, source, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'customer', NOW())`,
         [
           orderNumber,
           residentId && residentId !== 'undefined' ? residentId : null,
-          propertyId && propertyId !== 'undefined' ? propertyId : null,
+          propId,
           unitId && unitId !== 'undefined' && !isNaN(parseInt(unitId)) ? parseInt(unitId) : null,
           parseInt(categoryId),
           parseInt(subcategoryId),
@@ -168,7 +186,9 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
           propertyName || null,
           propertyType || null,
           block || null,
-          flatNumber || null
+          flatNumber || null,
+          franchisePartnerId,
+          zoneId
         ]
       );
 
