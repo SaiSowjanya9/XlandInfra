@@ -140,21 +140,19 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
 
     // Try to save to database
     try {
-      // Get franchise_partner_id and zone_id from property for proper FP/zone filtering
+      // Get franchise_partner_id from property for proper FP filtering
       let franchisePartnerId = null;
-      let zoneId = null;
       const propId = propertyId && propertyId !== 'undefined' ? propertyId : null;
       
       if (propId) {
         const [propData] = await pool.query(
-          `SELECT franchise_partner_id, zone_id FROM properties WHERE id = ? 
-           UNION SELECT franchise_partner_id, zone as zone_id FROM onboarded_properties WHERE id = ?`,
+          `SELECT franchise_partner_id FROM properties WHERE id = ? 
+           UNION SELECT franchise_partner_id FROM onboarded_properties WHERE id = ?`,
           [propId, propId]
         );
         if (propData.length > 0) {
           franchisePartnerId = propData[0].franchise_partner_id;
-          zoneId = propData[0].zone_id;
-          console.log('[WorkOrder] Property lookup - fpId:', franchisePartnerId, 'zoneId:', zoneId);
+          console.log('[WorkOrder] Property lookup - fpId:', franchisePartnerId);
         }
       }
 
@@ -164,8 +162,8 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
           category_id, subcategory_id, category_name, subcategory_name,
           description, permission_to_enter, entry_notes, has_pet, priority,
           customer_name, customer_email, customer_phone, property_name, property_type, block, flat_number,
-          franchise_partner_id, zone_id, status, source, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'customer', NOW())`,
+          franchise_partner_id, status, source, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'customer', NOW())`,
         [
           orderNumber,
           residentId && residentId !== 'undefined' ? residentId : null,
@@ -187,8 +185,7 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
           propertyType || null,
           block || null,
           flatNumber || null,
-          franchisePartnerId,
-          zoneId
+          franchisePartnerId
         ]
       );
 
