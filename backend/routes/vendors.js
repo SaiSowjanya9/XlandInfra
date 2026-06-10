@@ -650,6 +650,41 @@ router.delete('/:id', authenticate, managerOrAdmin, async (req, res) => {
   }
 });
 
+// Permanent delete vendor (completely removes from database)
+router.delete('/:id/permanent', authenticate, managerOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // First check if vendor exists
+    const [existing] = await pool.execute(
+      `SELECT id, vendor_id, owner_name FROM onboarded_vendors WHERE id = ?`,
+      [id]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    // Delete related assignments first
+    await pool.execute(`DELETE FROM property_vendor_assignments WHERE vendor_id = ?`, [id]);
+
+    // Permanently delete the vendor
+    const [result] = await pool.execute(
+      `DELETE FROM onboarded_vendors WHERE id = ?`,
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Failed to delete vendor' });
+    }
+
+    res.json({ success: true, message: 'Vendor permanently deleted' });
+  } catch (error) {
+    console.error('Error permanently deleting vendor:', error);
+    res.status(500).json({ success: false, message: 'Error deleting vendor', error: error.message });
+  }
+});
+
 // Restore vendor (set is_active back to TRUE)
 router.put('/:id/restore', authenticate, managerOrAdmin, async (req, res) => {
   try {
