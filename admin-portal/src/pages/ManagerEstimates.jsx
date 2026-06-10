@@ -166,7 +166,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [selectedAmcPackage, setSelectedAmcPackage] = useState('');
   const [selectedAddons, setSelectedAddons] = useState([]);
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [gstPercent, setGstPercent] = useState(18);
+  const [gstPercent, setGstPercent] = useState(0);
   
   // Direct Estimate form state
   const [directForm, setDirectForm] = useState({
@@ -240,7 +240,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     setSelectedAmcPackage('');
     setSelectedAddons([]);
     setDiscountPercent(0);
-    setGstPercent(18);
+    setGstPercent(0);
     setDirectForm({
       customerName: '', phone: '', email: '',
       propertyType: '', propertyName: '', zone: '', city: '', address: ''
@@ -419,7 +419,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* Footer Note & Buttons */}
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">* Currency: INR (₹) | GST: 18% applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
+        <p className="text-xs text-gray-500">* Currency: INR (₹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
         <div className="flex gap-3">
           <button onClick={resetEstimateForm} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
           {showSaveButton && (
@@ -1271,7 +1271,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                   <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>₹{Number(viewEstimate.subtotal || 0).toLocaleString()}</span></div>
                   {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm text-green-600"><span>Discount ({viewEstimate.discount_percent || 0}%)</span><span>-₹{Number(viewEstimate.discount_amount).toLocaleString()}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 18}%)</span><span>₹{Number(viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>₹{Number(viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
                   <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                     <p className="text-lg font-semibold">Total</p>
                     <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total_amount || 0).toLocaleString()}</p>

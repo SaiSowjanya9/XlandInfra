@@ -705,8 +705,8 @@ export const linkAMCToProperty = (packageId, propertyId) => {
 // GST Configuration
 // ============================================
 
-// Default GST rate is 2%
-const DEFAULT_GST_RATE = 2;
+// Default GST rate is 0% - user enters their own value
+const DEFAULT_GST_RATE = 0;
 
 export const getGSTConfig = () => {
   try {

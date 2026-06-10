@@ -92,7 +92,7 @@ router.get('/', async (req, res) => {
         discount_percent: parseFloat(est.discount_percent || 0),
         tax: parseFloat(est.tax || est.gst_amount || 0),
         gst_amount: parseFloat(est.gst_amount || est.tax || 0),
-        gst_percent: parseFloat(est.gst_percent || 18),
+        gst_percent: parseFloat(est.gst_percent || 0),
         total: parseFloat(est.total || est.total_amount || 0),
         total_amount: parseFloat(est.total_amount || est.total || 0),
         // Notes and status

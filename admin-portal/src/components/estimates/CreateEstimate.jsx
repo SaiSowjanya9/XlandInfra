@@ -70,7 +70,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     description: ''
   });
   const [discount, setDiscount] = useState(''); // Discount percentage
-  const [gstRate, setGstRate] = useState('18'); // GST percentage - customizable
+  const [gstRate, setGstRate] = useState(''); // GST percentage - user enters value
   const [subcategories, setSubcategories] = useState(SUBCATEGORIES); // Dynamic subcategories
   const [directSelectedPackage, setDirectSelectedPackage] = useState(null); // Package for Direct estimate
   const [directSelectedAddons, setDirectSelectedAddons] = useState([]); // Add-ons for Direct estimate
@@ -83,7 +83,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     description: ''
   });
   const [directDiscount, setDirectDiscount] = useState('');
-  const [directGstRate, setDirectGstRate] = useState('18');
+  const [directGstRate, setDirectGstRate] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [estimateForm, setEstimateForm] = useState({
@@ -481,7 +481,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   const calculateDirectGST = () => {
     const subtotal = calculateDirectSubTotal();
     const discountAmount = getDirectDiscountAmount();
-    const gst = parseFloat(directGstRate) || 18;
+    const gst = parseFloat(directGstRate) || 0;
     return Math.round((subtotal - discountAmount) * (gst / 100));
   };
 
@@ -2310,7 +2310,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
             {/* Footer Note */}
             <div className="px-6 py-3 border-t border-gray-200 bg-white">
               <p className="text-xs text-gray-500">
-                * Currency: INR (₹) | GST: 18% applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section
+                * Currency: INR (₹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section
               </p>
             </div>
           </>

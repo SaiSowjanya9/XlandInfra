@@ -94,7 +94,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [selectedAmcPackage, setSelectedAmcPackage] = useState('');
   const [selectedAddons, setSelectedAddons] = useState([]);
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [gstPercent, setGstPercent] = useState(18);
+  const [gstPercent, setGstPercent] = useState(0);
   
   // Direct estimate form
   const [directForm, setDirectForm] = useState({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '' });
@@ -425,7 +425,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       </div>
 
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">* Currency: INR (₹) | GST: 18% applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
+        <p className="text-xs text-gray-500">* Currency: INR (₹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
         <div className="flex gap-3">
           <button onClick={resetEstimateForm} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
           {showSaveButton && <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save</button>}
