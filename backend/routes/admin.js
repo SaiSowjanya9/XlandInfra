@@ -1328,8 +1328,9 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
     try {
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                op.zone as zone_name, op.area_name as area,
+                op.zone as zone_name, op.area_name as area, op.division,
                 op.address, op.city, op.state, op.postal_code as zip_code,
+                op.number_of_units as total_units, op.total_units as units_count,
                 op.contact_person, op.contact_phone, op.contact_email,
                 op.created_at, op.status,
                 COALESCE(
