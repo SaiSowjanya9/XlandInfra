@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Eye, X, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle2 } from 'lucide-react';
+import { Search, Eye, X, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle2, Pencil } from 'lucide-react';
 import { useFP } from '../contexts/FPContext';
+import { categories as categoriesConfig } from '../config/categories';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -11,6 +12,14 @@ const WorkOrders = ({ admin }) => {
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'completed'
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [success, setSuccess] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    categoryId: '', subcategoryId: '', description: '',
+    permissionToEnter: '', hasPet: '', entryNotes: '',
+    priority: 'medium', status: '',
+    customerName: '', customerEmail: '', customerPhone: '',
+    block: '', flatNumber: ''
+  });
   
   // FP Context
   const { fpList, selectedFp, selectFp, loading: fpLoading } = useFP();
@@ -62,6 +71,64 @@ const WorkOrders = ({ admin }) => {
       const result = await response.json();
       if (result.success) {
         setSuccess('Status updated');
+        fetchWorkOrders();
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleEditWorkOrder = (wo) => {
+    setSelectedOrder(null);
+    setTimeout(() => {
+      setSelectedOrder(wo);
+      setEditFormData({
+        categoryId: wo.category_id || '',
+        subcategoryId: wo.subcategory_id || '',
+        description: wo.description || '',
+        permissionToEnter: wo.permission_to_enter || '',
+        hasPet: wo.has_pet || '',
+        entryNotes: wo.entry_notes || '',
+        priority: wo.priority || 'medium',
+        status: wo.status || 'pending',
+        customerName: wo.customer_name || [wo.first_name, wo.last_name].filter(Boolean).join(' ') || '',
+        customerEmail: wo.customer_email || wo.email || '',
+        customerPhone: wo.customer_phone || wo.phone || '',
+        block: wo.block || '',
+        flatNumber: wo.flat_number || ''
+      });
+      setShowEditModal(true);
+    }, 100);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedOrder) return;
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/work-orders/${selectedOrder.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          category_id: editFormData.categoryId,
+          subcategory_id: editFormData.subcategoryId,
+          description: editFormData.description,
+          permission_to_enter: editFormData.permissionToEnter,
+          has_pet: editFormData.hasPet,
+          entry_notes: editFormData.entryNotes,
+          priority: editFormData.priority,
+          status: editFormData.status,
+          customer_name: editFormData.customerName,
+          customer_email: editFormData.customerEmail,
+          customer_phone: editFormData.customerPhone,
+          block: editFormData.block,
+          flat_number: editFormData.flatNumber
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSuccess('Work order updated successfully');
+        setShowEditModal(false);
+        setSelectedOrder(null);
         fetchWorkOrders();
         setTimeout(() => setSuccess(''), 3000);
       }
@@ -308,9 +375,12 @@ const WorkOrders = ({ admin }) => {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap hidden lg:table-cell">{wo.created_by_name || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap hidden sm:table-cell">{new Date(wo.created_at).toLocaleDateString('en-IN')}</td>
-                    <td className="px-4 py-3 text-center">
-                      <button onClick={() => setSelectedOrder(wo)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
+                    <td className="px-4 py-3 text-center flex items-center justify-center gap-1">
+                      <button onClick={() => setSelectedOrder(wo)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="View">
                         <Eye className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleEditWorkOrder(wo)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Edit">
+                        <Pencil className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
@@ -352,24 +422,70 @@ const WorkOrders = ({ admin }) => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <p className="text-sm text-gray-500">Resident</p>
-                  <p className="font-medium">{selectedOrder.first_name} {selectedOrder.last_name}</p>
-                  <p className="text-sm text-gray-600 break-all">{selectedOrder.email}</p>
+                  <p className="text-sm text-gray-500">Customer Name</p>
+                  <p className="font-medium">{selectedOrder.customer_name || [selectedOrder.first_name, selectedOrder.last_name].filter(Boolean).join(' ') || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Location</p>
-                  <p className="font-medium">Unit {selectedOrder.unit_number}</p>
-                  <p className="text-sm text-gray-600">{selectedOrder.property_name}</p>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="text-sm text-gray-600 break-all">{selectedOrder.customer_email || selectedOrder.email || 'N/A'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Phone</p>
+                  <p className="font-medium">{selectedOrder.customer_phone || selectedOrder.phone || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Property ID</p>
+                  <p className="font-medium">{selectedOrder.property_id || 'N/A'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Block</p>
+                  <p className="font-medium">{selectedOrder.block || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Property/Community</p>
+                  <p className="font-medium">{selectedOrder.property_name || 'N/A'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Zone</p>
+                  <p className="font-medium">{selectedOrder.zone || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Division</p>
+                  <p className="font-medium">{selectedOrder.division || 'N/A'}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Address</p>
+                <p className="font-medium">{[selectedOrder.address, selectedOrder.city, selectedOrder.state].filter(Boolean).join(', ') || 'N/A'}</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Contact Person</p>
+                  <p className="font-medium">{selectedOrder.contact_person || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Contact Phone</p>
+                  <p className="font-medium">{selectedOrder.contact_phone || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Contact Email</p>
+                  <p className="font-medium text-sm break-all">{selectedOrder.contact_email || 'N/A'}</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Category</p>
-                  <p className="font-medium">{selectedOrder.category_name}</p>
+                  <p className="font-medium">{selectedOrder.category_name || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Subcategory</p>
-                  <p className="font-medium">{selectedOrder.subcategory_name}</p>
+                  <p className="font-medium">{selectedOrder.subcategory_name || 'N/A'}</p>
                 </div>
               </div>
               <div>
@@ -393,8 +509,156 @@ const WorkOrders = ({ admin }) => {
                 </div>
               )}
             </div>
-            <div className="p-4 border-t border-gray-200 flex justify-end">
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+              <button onClick={() => handleEditWorkOrder(selectedOrder)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Edit</button>
               <button onClick={() => setSelectedOrder(null)} className="btn-secondary">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Work Order Modal */}
+      {showEditModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100 sticky top-0 bg-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Edit Work Order</h2>
+                  <p className="text-sm text-gray-500">{selectedOrder.work_order_id}</p>
+                </div>
+                <button onClick={() => setShowEditModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* Property Info (Read Only) */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Property Information</h3>
+                <p className="text-sm text-gray-600">{selectedOrder.property_name || 'N/A'}</p>
+                <p className="text-xs text-gray-500">Zone: {selectedOrder.zone || 'N/A'} | Division: {selectedOrder.division || 'N/A'}</p>
+              </div>
+
+              {/* Customer Information */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                  <input type="text" value={editFormData.customerName} onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Customer name" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Email</label>
+                  <input type="email" value={editFormData.customerEmail} onChange={(e) => setEditFormData({ ...editFormData, customerEmail: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Email" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Phone</label>
+                  <input type="tel" value={editFormData.customerPhone} onChange={(e) => setEditFormData({ ...editFormData, customerPhone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Phone" />
+                </div>
+              </div>
+
+              {/* Block & Flat */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Block</label>
+                  <input type="text" value={editFormData.block} onChange={(e) => setEditFormData({ ...editFormData, block: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Block" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Flat/Unit Number</label>
+                  <input type="text" value={editFormData.flatNumber} onChange={(e) => setEditFormData({ ...editFormData, flatNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Flat/Unit" />
+                </div>
+              </div>
+
+              {/* Category & Subcategory */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select value={editFormData.categoryId} onChange={(e) => setEditFormData({ ...editFormData, categoryId: e.target.value, subcategoryId: '' })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Select Category</option>
+                    {categoriesConfig.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                  <select value={editFormData.subcategoryId} onChange={(e) => setEditFormData({ ...editFormData, subcategoryId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Select Subcategory</option>
+                    {(categoriesConfig.find(c => c.id === parseInt(editFormData.categoryId))?.subcategories || []).map(sub => (
+                      <option key={sub.id} value={sub.id}>{sub.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea value={editFormData.description} onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Describe the issue..." />
+              </div>
+
+              {/* Priority & Status */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select value={editFormData.priority} onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select value={editFormData.status} onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="pending">Pending</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Permission & Pet */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Permission to Enter</label>
+                  <select value={editFormData.permissionToEnter} onChange={(e) => setEditFormData({ ...editFormData, permissionToEnter: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Select</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Has Pet</label>
+                  <select value={editFormData.hasPet} onChange={(e) => setEditFormData({ ...editFormData, hasPet: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Select</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Entry Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Entry Notes</label>
+                <textarea value={editFormData.entryNotes} onChange={(e) => setEditFormData({ ...editFormData, entryNotes: e.target.value })}
+                  rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Special instructions..." />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button onClick={() => setShowEditModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button onClick={handleSaveEdit} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save Changes</button>
             </div>
           </div>
         </div>

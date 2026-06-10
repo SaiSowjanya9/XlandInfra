@@ -48,7 +48,12 @@ const FPWorkOrders = ({ user }) => {
     hasPet: '',
     entryNotes: '',
     priority: 'medium',
-    status: ''
+    status: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    block: '',
+    flatNumber: ''
   });
   const [employees, setEmployees] = useState([]);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -522,7 +527,12 @@ const FPWorkOrders = ({ user }) => {
       hasPet: wo.has_pet || '',
       entryNotes: wo.entry_notes || '',
       priority: wo.priority || 'medium',
-      status: wo.status || 'pending'
+      status: wo.status || 'pending',
+      customerName: wo.customer_name || [wo.first_name, wo.last_name].filter(Boolean).join(' ') || '',
+      customerEmail: wo.customer_email || wo.email || '',
+      customerPhone: wo.customer_phone || wo.phone || '',
+      block: wo.block || '',
+      flatNumber: wo.flat_number || ''
     });
     // Load subcategories for the selected category
     if (wo.category_id) {
@@ -550,7 +560,12 @@ const FPWorkOrders = ({ user }) => {
           has_pet: editFormData.hasPet,
           entry_notes: editFormData.entryNotes,
           priority: editFormData.priority,
-          status: editFormData.status
+          status: editFormData.status,
+          customer_name: editFormData.customerName,
+          customer_email: editFormData.customerEmail,
+          customer_phone: editFormData.customerPhone,
+          block: editFormData.block,
+          flat_number: editFormData.flatNumber
         })
       });
       
@@ -1237,10 +1252,34 @@ const FPWorkOrders = ({ user }) => {
             </div>
 
             <div className="p-6 space-y-4">
+              {/* Customer Information */}
+              <div className="grid grid-cols-3 gap-4 bg-gray-50 rounded-lg p-4">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Customer Name</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.customer_name || [selectedWorkOrder.first_name, selectedWorkOrder.last_name].filter(Boolean).join(' ') || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Email</p>
+                  <p className="font-medium text-gray-900 text-sm break-all">{selectedWorkOrder.customer_email || selectedWorkOrder.email || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Phone</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.customer_phone || selectedWorkOrder.phone || 'N/A'}</p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Property</p>
                   <p className="font-medium text-gray-900">{selectedWorkOrder.property_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Zone / Division</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.zone || 'N/A'} / {selectedWorkOrder.division || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Block</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.block || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Category</p>
@@ -1465,6 +1504,46 @@ const FPWorkOrders = ({ user }) => {
               </div>
             </div>
             <div className="p-6 space-y-4">
+              {/* Property Info (Read Only) */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Property Information</h3>
+                <p className="text-sm text-gray-600">{selectedWorkOrder.property_name || 'N/A'}</p>
+                <p className="text-xs text-gray-500">Zone: {selectedWorkOrder.zone || 'N/A'} | Division: {selectedWorkOrder.division || 'N/A'}</p>
+              </div>
+
+              {/* Customer Information */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                  <input type="text" value={editFormData.customerName} onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Customer name" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input type="email" value={editFormData.customerEmail} onChange={(e) => setEditFormData({ ...editFormData, customerEmail: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Email" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input type="tel" value={editFormData.customerPhone} onChange={(e) => setEditFormData({ ...editFormData, customerPhone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Phone" />
+                </div>
+              </div>
+
+              {/* Block & Flat */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Block</label>
+                  <input type="text" value={editFormData.block} onChange={(e) => setEditFormData({ ...editFormData, block: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Block" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Flat/Unit</label>
+                  <input type="text" value={editFormData.flatNumber} onChange={(e) => setEditFormData({ ...editFormData, flatNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Flat/Unit" />
+                </div>
+              </div>
+
               {/* Category */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
