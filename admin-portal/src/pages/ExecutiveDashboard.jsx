@@ -47,8 +47,6 @@ const ExecutiveDashboard = ({ user }) => {
   const statCards = [
     { label: 'Properties', value: stats?.properties || 0, icon: Building2, bgColor: 'bg-blue-50', textColor: 'text-blue-600', path: '/executive/properties' },
     { label: 'Vendors', value: stats?.vendors || 0, icon: Store, bgColor: 'bg-purple-50', textColor: 'text-purple-600', path: '/executive/vendors' },
-    { label: 'Customers', value: stats?.customers || 0, icon: Users, bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/executive/customers' },
-    { label: 'Employees', value: stats?.employees || 0, icon: Users, bgColor: 'bg-orange-50', textColor: 'text-orange-600', path: '/executive/employees/zones' },
     { label: 'Total Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, bgColor: 'bg-indigo-50', textColor: 'text-indigo-600', path: '/executive/work-orders' },
     { label: 'Pending Work Orders', value: stats?.pendingWorkOrders || 0, icon: Clock, bgColor: 'bg-amber-50', textColor: 'text-amber-600', path: '/executive/work-orders' },
     { label: 'Completed Work Orders', value: stats?.completedWorkOrders || 0, icon: CheckCircle, bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/executive/work-orders' },
@@ -94,7 +92,6 @@ const ExecutiveDashboard = ({ user }) => {
   const quickActions = [
     { label: 'Add Vendor', icon: Store, path: '/executive/vendors/add', color: 'purple' },
     { label: 'Create Work Order', icon: ClipboardList, path: '/executive/work-orders', color: 'orange' },
-    { label: 'Add Customer', icon: Users, path: '/executive/customers', color: 'green' },
     { label: 'Create Estimate', icon: FileText, path: '/executive/estimates/create', color: 'pink' }
   ];
 

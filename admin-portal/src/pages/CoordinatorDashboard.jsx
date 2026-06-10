@@ -51,8 +51,6 @@ const CoordinatorDashboard = ({ user }) => {
   const statCards = [
     { label: 'Properties', value: stats?.properties || 0, icon: Building2, color: 'blue', bgColor: 'bg-blue-50', textColor: 'text-blue-600', path: '/coordinator/properties' },
     { label: 'Vendors', value: stats?.vendors || 0, icon: Store, color: 'purple', bgColor: 'bg-purple-50', textColor: 'text-purple-600', path: '/coordinator/vendors' },
-    { label: 'Customers', value: stats?.customers || 0, icon: Users, color: 'green', bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/coordinator/customers' },
-    { label: 'Employees', value: stats?.employees || 0, icon: Users, color: 'orange', bgColor: 'bg-orange-50', textColor: 'text-orange-600', path: '/coordinator/employees/zones' },
     { label: 'Total Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, color: 'indigo', bgColor: 'bg-indigo-50', textColor: 'text-indigo-600', path: '/coordinator/work-orders' },
     { label: 'Pending Work Orders', value: stats?.pendingWorkOrders || 0, icon: Clock, color: 'amber', bgColor: 'bg-amber-50', textColor: 'text-amber-600', path: '/coordinator/work-orders' },
     { label: 'Completed Work Orders', value: stats?.completedWorkOrders || 0, icon: CheckCircle, color: 'green', bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/coordinator/work-orders' },

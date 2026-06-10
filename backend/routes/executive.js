@@ -181,7 +181,7 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
     const [propertiesCount] = await pool.query(
       `SELECT COUNT(DISTINCT p.id) as count FROM properties p
        LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
-       WHERE (p.franchise_partner_id = ? AND (p.created_by = ? OR p.created_by = ? OR p.executive_id = ?${zoneCondition}))`,
+       WHERE (p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted') AND (p.created_by = ? OR p.created_by = ? OR p.executive_id = ?${zoneCondition}))`,
       [franchisePartnerId, creatorEmail, req.user?.username || '', executiveId, ...zoneParams]
     );
     
