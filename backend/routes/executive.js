@@ -392,36 +392,16 @@ router.post('/properties', requireExecutiveScope, async (req, res) => {
 
     const propertyId = `PROP-EXEC-${Date.now()}`;
     
-    // Get actual user name from database (check both users and fp_employees tables)
-    let creatorName = req.user?.username || req.user?.email || 'System';
-    try {
-      // First try users table
-      const [userRows] = await pool.execute(
-        'SELECT first_name, last_name FROM users WHERE id = ? OR email = ? OR username = ?',
-        [req.user?.id || 0, req.user?.email || '', req.user?.username || '']
-      );
-      if (userRows.length > 0 && (userRows[0].first_name || userRows[0].last_name)) {
-        creatorName = `${userRows[0].first_name || ''} ${userRows[0].last_name || ''}`.trim();
-      } else {
-        // Then try fp_employees table
-        const [fpRows] = await pool.execute(
-          'SELECT first_name, last_name FROM fp_employees WHERE id = ? OR email = ? OR username = ?',
-          [req.user?.id || 0, req.user?.email || '', req.user?.username || '']
-        );
-        if (fpRows.length > 0 && (fpRows[0].first_name || fpRows[0].last_name)) {
-          creatorName = `${fpRows[0].first_name || ''} ${fpRows[0].last_name || ''}`.trim();
-        }
-      }
-    } catch (e) {
-      console.log('Could not fetch creator name:', e.message);
-    }
+    // Get creator identifier - MUST match what getCreatorIdentifier returns (username/email)
+    // This is used for zone filtering to show "own created data"
+    const creatorId = req.user?.username || req.user?.email || 'System';
 
     const [result] = await pool.query(
       `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
         contact_person, contact_phone, contact_email, zone_id, executive_id, franchise_partner_id, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [propertyId, name, propertyType || 'residential', address, city, state, zipCode,
-        contactPerson, contactPhone, contactEmail, zoneId || null, executiveId, franchisePartnerId, creatorName]
+        contactPerson, contactPhone, contactEmail, zoneId || null, executiveId, franchisePartnerId, creatorId]
     );
 
     res.json({
@@ -719,27 +699,9 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
       clientType, companyName, propertyId, gstNumber
     } = req.body;
 
-    // Get creator name (check both users and fp_employees tables)
-    let creatorName = req.user?.username || req.user?.email || 'System';
-    try {
-      const [userRows] = await pool.execute(
-        'SELECT first_name, last_name FROM users WHERE id = ? OR email = ? OR username = ?',
-        [req.user?.id || 0, req.user?.email || '', req.user?.username || '']
-      );
-      if (userRows.length > 0 && (userRows[0].first_name || userRows[0].last_name)) {
-        creatorName = `${userRows[0].first_name || ''} ${userRows[0].last_name || ''}`.trim();
-      } else {
-        const [fpRows] = await pool.execute(
-          'SELECT first_name, last_name FROM fp_employees WHERE id = ? OR email = ? OR username = ?',
-          [req.user?.id || 0, req.user?.email || '', req.user?.username || '']
-        );
-        if (fpRows.length > 0 && (fpRows[0].first_name || fpRows[0].last_name)) {
-          creatorName = `${fpRows[0].first_name || ''} ${fpRows[0].last_name || ''}`.trim();
-        }
-      }
-    } catch (e) {
-      console.log('Could not fetch creator name:', e.message);
-    }
+    // Get creator identifier - MUST match what getCreatorIdentifier returns (username/email)
+    // This is used for zone filtering to show "own created data"
+    const creatorId = req.user?.username || req.user?.email || 'System';
 
     // Check if this is a property form submission
     if (zone && communityName) {
@@ -764,7 +726,7 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
           propertyIdGen, communityName, propertyType || 'residential', address, city, state, postalCode || '',
           contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
           zone || null, division || null,
-          executiveId, franchisePartnerId, creatorName, 
+          executiveId, franchisePartnerId, creatorId, 
           mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
           entryType || null, category || null, areaName || '',
           numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}),
