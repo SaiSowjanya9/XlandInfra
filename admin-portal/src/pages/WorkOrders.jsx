@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, Eye, X, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle2, Pencil } from 'lucide-react';
 import { useFP } from '../contexts/FPContext';
-import { categories as categoriesConfig } from '../config/categories';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -13,6 +12,7 @@ const WorkOrders = ({ admin }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [success, setSuccess] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [categories, setCategories] = useState([]);
   const [editFormData, setEditFormData] = useState({
     categoryId: '', subcategoryId: '', description: '',
     permissionToEnter: '', hasPet: '', entryNotes: '',
@@ -55,6 +55,22 @@ const WorkOrders = ({ admin }) => {
       fetchWorkOrders();
     }
   }, [fetchWorkOrders, selectedFp]);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/admin/categories`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) setCategories(result.data || []);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    fetchCategories();
+  }, [token]);
   
   const handleFpSelect = (fp) => {
     selectFp(fp);
@@ -580,7 +596,7 @@ const WorkOrders = ({ admin }) => {
                   <select value={editFormData.categoryId} onChange={(e) => setEditFormData({ ...editFormData, categoryId: e.target.value, subcategoryId: '' })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500">
                     <option value="">Select Category</option>
-                    {categoriesConfig.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                    {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                   </select>
                 </div>
                 <div>
@@ -588,7 +604,7 @@ const WorkOrders = ({ admin }) => {
                   <select value={editFormData.subcategoryId} onChange={(e) => setEditFormData({ ...editFormData, subcategoryId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500">
                     <option value="">Select Subcategory</option>
-                    {(categoriesConfig.find(c => c.id === parseInt(editFormData.categoryId))?.subcategories || []).map(sub => (
+                    {(categories.find(c => c.id === parseInt(editFormData.categoryId))?.subcategories || []).map(sub => (
                       <option key={sub.id} value={sub.id}>{sub.name}</option>
                     ))}
                   </select>
