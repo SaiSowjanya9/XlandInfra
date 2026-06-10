@@ -57,16 +57,23 @@ export const FPProvider = ({ children }) => {
       if (result.success && Array.isArray(result.data)) {
         setFpList(result.data);
         
-        // Only restore previously selected FP, don't auto-select
-        if (result.data.length > 0) {
-          const savedFpId = sessionStorage.getItem('selectedFpId');
-          if (savedFpId) {
-            const fpToSelect = result.data.find(f => f.id?.toString() === savedFpId);
-            if (fpToSelect) {
-              setSelectedFp(fpToSelect);
-            }
+        // Restore previously selected FP or default to Admin (All FPs)
+        const savedFpId = sessionStorage.getItem('selectedFpId');
+        if (savedFpId === 'all') {
+          setSelectedFp({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' });
+        } else if (savedFpId && result.data.length > 0) {
+          const fpToSelect = result.data.find(f => f.id?.toString() === savedFpId);
+          if (fpToSelect) {
+            setSelectedFp(fpToSelect);
+          } else {
+            // Saved FP not found, default to Admin mode
+            setSelectedFp({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' });
+            sessionStorage.setItem('selectedFpId', 'all');
           }
-          // Don't auto-select first one anymore - let user choose
+        } else {
+          // No saved selection, default to Admin (All FPs)
+          setSelectedFp({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' });
+          sessionStorage.setItem('selectedFpId', 'all');
         }
       } else {
         setFpList([]);
@@ -88,10 +95,10 @@ export const FPProvider = ({ children }) => {
   const selectFp = useCallback((fp) => {
     if (fp && fp.id) {
       setSelectedFp(fp);
-      sessionStorage.setItem('selectedFpId', fp.id.toString());
+      sessionStorage.setItem('selectedFpId', fp.id.toString()); // stores 'all' or numeric id
     } else {
-      setSelectedFp(null);
-      sessionStorage.removeItem('selectedFpId');
+      setSelectedFp({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' });
+      sessionStorage.setItem('selectedFpId', 'all');
     }
   }, []);
 
