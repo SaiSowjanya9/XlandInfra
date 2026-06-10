@@ -47,8 +47,6 @@ const SupervisorDashboard = ({ user }) => {
   const statCards = [
     { label: 'Properties', value: stats?.properties || 0, icon: Building2, bgColor: 'bg-blue-50', textColor: 'text-blue-600', path: '/supervisor/properties' },
     { label: 'Vendors', value: stats?.vendors || 0, icon: Store, bgColor: 'bg-purple-50', textColor: 'text-purple-600', path: '/supervisor/vendors' },
-    { label: 'Customers', value: stats?.customers || 0, icon: Users, bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/supervisor/customers' },
-    { label: 'Employees', value: stats?.employees || 0, icon: Users, bgColor: 'bg-orange-50', textColor: 'text-orange-600', path: '/supervisor/employees/zones' },
     { label: 'Total Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, bgColor: 'bg-indigo-50', textColor: 'text-indigo-600', path: '/supervisor/work-orders' },
     { label: 'Pending Work Orders', value: stats?.pendingWorkOrders || 0, icon: Clock, bgColor: 'bg-amber-50', textColor: 'text-amber-600', path: '/supervisor/work-orders' },
     { label: 'Completed Work Orders', value: stats?.completedWorkOrders || 0, icon: CheckCircle, bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/supervisor/work-orders' },

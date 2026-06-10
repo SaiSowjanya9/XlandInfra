@@ -68,15 +68,6 @@ const ManagerDashboard = ({ user }) => {
       link: '/manager/vendors'
     },
     {
-      title: 'Customers',
-      value: stats?.customers || 0,
-      icon: Users,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-600',
-      link: '/manager/properties'
-    },
-    {
       title: 'Employees',
       value: stats?.employees || 0,
       icon: Users,
