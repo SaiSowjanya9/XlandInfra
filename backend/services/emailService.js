@@ -335,6 +335,13 @@ const sendCustomerActivationEmail = async (customerData) => {
                 Please activate your account and set a new password before the link expires.
               </p>
             </div>
+            
+            <!-- Login Info -->
+            <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 15px 20px; margin-top: 20px; text-align: center;">
+              <p style="color: #888; font-size: 13px; margin: 0;">
+                After activation, login at: <a href="https://xlandinfra.com/login" style="color: #D8B25C; font-weight: bold;">https://xlandinfra.com/login</a>
+              </p>
+            </div>
           </div>
           
           <!-- Footer -->
@@ -390,10 +397,6 @@ const sendPasswordResetConfirmation = async (customerData) => {
           
           <!-- Main Content -->
           <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none; text-align: center;">
-            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #D8B25C 0%, #C9A227 100%); border-radius: 50%; margin: 0 auto 25px auto; display: flex; align-items: center; justify-content: center;">
-              <span style="font-size: 40px;">✓</span>
-            </div>
-            
             <h2 style="color: #D8B25C; margin: 0 0 20px 0; font-size: 24px; font-weight: 400;">Account Activated!</h2>
             
             <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 30px 0;">
