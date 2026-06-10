@@ -985,7 +985,7 @@ router.put('/assignments/:id', authenticate, managerOrAdmin, async (req, res) =>
   }
 });
 
-// Remove vendor assignment
+// Remove vendor assignment (soft delete)
 router.delete('/assignments/:id', authenticate, managerOrAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -1003,6 +1003,38 @@ router.delete('/assignments/:id', authenticate, managerOrAdmin, async (req, res)
   } catch (error) {
     console.error('Remove assignment error:', error);
     res.status(500).json({ success: false, message: 'Failed to remove assignment', error: error.message });
+  }
+});
+
+// Delete service vendor assignment (permanent delete)
+router.delete('/service-assignments/:id', authenticate, managerOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // First check if the assignment exists
+    const [existing] = await pool.execute(
+      `SELECT * FROM property_vendor_assignments WHERE id = ?`,
+      [id]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    // Permanently delete the assignment
+    const [result] = await pool.execute(
+      `DELETE FROM property_vendor_assignments WHERE id = ?`,
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Failed to delete assignment' });
+    }
+
+    res.json({ success: true, message: 'Assignment deleted permanently' });
+  } catch (error) {
+    console.error('Delete service assignment error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete assignment', error: error.message });
   }
 });
 
