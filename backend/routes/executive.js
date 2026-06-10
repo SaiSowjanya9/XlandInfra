@@ -903,6 +903,56 @@ router.put('/customers/:id', requireExecutiveScope, async (req, res) => {
   }
 });
 
+// Delete customer - also removes customer_accounts entry so email can be reused
+router.delete('/customers/:id', requireExecutiveScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const executiveId = req.executiveId;
+    const franchisePartnerId = req.franchisePartnerId;
+
+    // Get customer details before deleting
+    const [customer] = await pool.query(
+      'SELECT id, email, client_id FROM clients WHERE id = ?',
+      [id]
+    );
+
+    if (customer.length === 0) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    // Verify ownership - must belong to this executive or FP
+    const [ownership] = await pool.query(
+      `SELECT id FROM clients WHERE id = ? AND (executive_id = ? OR franchise_partner_id = ?)`,
+      [id, executiveId, franchisePartnerId]
+    );
+
+    if (ownership.length === 0) {
+      return res.status(403).json({ success: false, message: 'Access denied - you can only delete your own customers' });
+    }
+
+    const customerEmail = customer[0].email;
+    const clientId = customer[0].client_id;
+
+    // Delete customer account (so email can be reused for new customer)
+    if (customerEmail) {
+      await pool.query('DELETE FROM customer_accounts WHERE email = ?', [customerEmail.toLowerCase()]);
+      console.log('📋 [Executive] Deleted customer_account for email:', customerEmail);
+    }
+    if (clientId) {
+      await pool.query('DELETE FROM customer_accounts WHERE customer_id = ?', [clientId]);
+    }
+
+    // Delete from clients table
+    await pool.query('DELETE FROM clients WHERE id = ?', [id]);
+    console.log('📋 [Executive] Deleted client id:', id);
+
+    res.json({ success: true, message: 'Customer deleted successfully. Email can now be reused.' });
+  } catch (error) {
+    console.error('Customer delete error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete customer' });
+  }
+});
+
 // =====================================================
 // VENDORS (ZONE-CENTRIC + OWN CREATED)
 // =====================================================
