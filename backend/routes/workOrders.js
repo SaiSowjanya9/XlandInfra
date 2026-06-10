@@ -140,21 +140,44 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
 
     // Try to save to database
     try {
-      // Get franchise_partner_id from property for proper FP filtering
+      // Get property details including franchise_partner_id, zone, division, address, contact info
       let franchisePartnerId = null;
+      let propDetails = {};
       const propId = propertyId && propertyId !== 'undefined' ? propertyId : null;
       
       if (propId) {
+        // Try properties table first
         const [propData] = await pool.query(
-          `SELECT franchise_partner_id FROM properties WHERE id = ? 
-           UNION SELECT franchise_partner_id FROM onboarded_properties WHERE id = ?`,
-          [propId, propId]
+          `SELECT franchise_partner_id, name, property_type, zone_id as zone, division,
+                  address, city, state, contact_person, contact_phone, contact_email
+           FROM properties WHERE id = ?`,
+          [propId]
         );
         if (propData.length > 0) {
+          propDetails = propData[0];
           franchisePartnerId = propData[0].franchise_partner_id;
-          console.log('[WorkOrder] Property lookup - fpId:', franchisePartnerId);
+        } else {
+          // Try onboarded_properties
+          const [opData] = await pool.query(
+            `SELECT franchise_partner_id, community_name as name, property_type, zone, division,
+                    address, city, state, contact_name as contact_person, contact_phone, contact_email
+             FROM onboarded_properties WHERE id = ?`,
+            [propId]
+          );
+          if (opData.length > 0) {
+            propDetails = opData[0];
+            franchisePartnerId = opData[0].franchise_partner_id;
+          }
         }
+        console.log('[WorkOrder] Property lookup - fpId:', franchisePartnerId, 'zone:', propDetails.zone);
       }
+
+      // Use property details as fallbacks for customer info
+      const finalCustomerName = customerName || propDetails.contact_person || null;
+      const finalCustomerEmail = customerEmail || propDetails.contact_email || null;
+      const finalCustomerPhone = customerPhone || propDetails.contact_phone || null;
+      const finalPropertyName = propertyName || propDetails.name || null;
+      const finalPropertyType = propertyType || propDetails.property_type || null;
 
       const [result] = await pool.query(
         `INSERT INTO work_orders (
@@ -178,11 +201,11 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
           entryNotes || '',
           hasPet === 'yes' ? 'yes' : 'no',
           priority || 'medium',
-          customerName || null,
-          customerEmail || null,
-          customerPhone || null,
-          propertyName || null,
-          propertyType || null,
+          finalCustomerName,
+          finalCustomerEmail,
+          finalCustomerPhone,
+          finalPropertyName,
+          finalPropertyType,
           block || null,
           flatNumber || null,
           franchisePartnerId

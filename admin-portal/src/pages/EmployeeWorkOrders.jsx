@@ -53,7 +53,12 @@ const EmployeeWorkOrders = ({ admin }) => {
     hasPet: '',
     entryNotes: '',
     priority: 'medium',
-    status: ''
+    status: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    block: '',
+    flatNumber: ''
   });
   const [vendors, setVendors] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -443,9 +448,11 @@ const EmployeeWorkOrders = ({ admin }) => {
         entryNotes: wo.entry_notes || wo.entryNotes || '',
         priority: wo.priority || 'medium',
         status: wo.status || 'pending',
-        customerName: wo.customer_name || wo.first_name + ' ' + wo.last_name || '',
+        customerName: wo.customer_name || [wo.first_name, wo.last_name].filter(Boolean).join(' ') || '',
         customerPhone: wo.customer_phone || wo.phone || '',
-        customerEmail: wo.customer_email || wo.email || ''
+        customerEmail: wo.customer_email || wo.email || '',
+        block: wo.block || '',
+        flatNumber: wo.flat_number || wo.flatNumber || ''
       });
       setShowEditModal(true);
     }, 100);
@@ -466,7 +473,12 @@ const EmployeeWorkOrders = ({ admin }) => {
           has_pet: editFormData.hasPet,
           entry_notes: editFormData.entryNotes,
           priority: editFormData.priority,
-          status: editFormData.status
+          status: editFormData.status,
+          customer_name: editFormData.customerName,
+          customer_email: editFormData.customerEmail,
+          customer_phone: editFormData.customerPhone,
+          block: editFormData.block,
+          flat_number: editFormData.flatNumber
         })
       });
       const result = await response.json();
@@ -1474,7 +1486,7 @@ const EmployeeWorkOrders = ({ admin }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Customer Name</p>
-                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.customer_name || selectedOrder.first_name + ' ' + selectedOrder.last_name || 'N/A'}</p>
+                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.customer_name || [selectedOrder.first_name, selectedOrder.last_name].filter(Boolean).join(' ') || 'N/A'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Email</p>
@@ -1496,12 +1508,23 @@ const EmployeeWorkOrders = ({ admin }) => {
               {/* Location Details */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Property/Community</p>
+                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.onboarded_property_name || selectedOrder.property_name || 'N/A'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Zone / Division</p>
+                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.zone || 'N/A'} / {selectedOrder.division || 'N/A'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Block</p>
                   <p className="font-medium text-gray-900 mt-1">{selectedOrder.block || 'N/A'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider">Property/Community</p>
-                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.onboarded_property_name || selectedOrder.property_name || 'N/A'}</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Flat/Unit</p>
+                  <p className="font-medium text-gray-900 mt-1">{selectedOrder.flat_number || selectedOrder.unit_number || 'N/A'}</p>
                 </div>
               </div>
 

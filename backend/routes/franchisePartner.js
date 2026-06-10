@@ -937,7 +937,8 @@ router.put('/work-orders/:id', requireFPScope, async (req, res) => {
     const { id } = req.params;
     const { 
       category_id, subcategory_id, description, 
-      permission_to_enter, has_pet, entry_notes, priority, status 
+      permission_to_enter, has_pet, entry_notes, priority, status,
+      customer_name, customer_email, customer_phone, block, flat_number
     } = req.body;
 
     // Build dynamic update query
@@ -952,6 +953,11 @@ router.put('/work-orders/:id', requireFPScope, async (req, res) => {
     if (entry_notes !== undefined) { updates.push('entry_notes = ?'); params.push(entry_notes); }
     if (priority !== undefined) { updates.push('priority = ?'); params.push(priority); }
     if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+    if (customer_name !== undefined) { updates.push('customer_name = ?'); params.push(customer_name); }
+    if (customer_email !== undefined) { updates.push('customer_email = ?'); params.push(customer_email); }
+    if (customer_phone !== undefined) { updates.push('customer_phone = ?'); params.push(customer_phone); }
+    if (block !== undefined) { updates.push('block = ?'); params.push(block); }
+    if (flat_number !== undefined) { updates.push('flat_number = ?'); params.push(flat_number); }
 
     if (updates.length === 0) {
       return res.status(400).json({ success: false, message: 'No fields to update' });

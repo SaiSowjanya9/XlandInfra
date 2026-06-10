@@ -659,22 +659,29 @@ router.get('/work-orders', async (req, res) => {
     
     let query = `
       SELECT wo.*,
-             wo.customer_name as first_name,
-             '' as last_name,
-             wo.customer_email as email,
-             wo.customer_phone as phone,
+             wo.customer_name,
+             wo.customer_email,
+             wo.customer_phone,
              COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-             COALESCE(p.property_id, wo.property_id) as property_code,
+             COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
              COALESCE(c.name, wo.category_name) as category_name,
              wo.subcategory_name,
              v.company_name as vendor_name,
              r.first_name as resident_first_name,
              r.last_name as resident_last_name,
              r.phone as resident_phone,
-             r.email as resident_email
+             r.email as resident_email,
+             COALESCE(p.zone_id, op.zone) as zone,
+             COALESCE(p.division, op.division) as division,
+             COALESCE(p.address, op.address) as address,
+             COALESCE(p.city, op.city) as city,
+             COALESCE(p.state, op.state) as state,
+             COALESCE(p.contact_person, op.contact_name) as contact_person,
+             COALESCE(p.contact_phone, op.contact_phone) as contact_phone,
+             COALESCE(p.contact_email, op.contact_email) as contact_email
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
-      LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       LEFT JOIN residents r ON wo.resident_id = r.id
@@ -733,7 +740,8 @@ router.put('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) =>
     const { 
       status, priority, assignedTo, scheduledDate, notes,
       category_id, subcategory_id, description,
-      permission_to_enter, has_pet, entry_notes
+      permission_to_enter, has_pet, entry_notes,
+      customer_name, customer_email, customer_phone, block, flat_number
     } = req.body;
 
     // Build dynamic update query
@@ -751,6 +759,11 @@ router.put('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) =>
     if (permission_to_enter !== undefined) { updates.push('permission_to_enter = ?'); params.push(permission_to_enter); }
     if (has_pet !== undefined) { updates.push('has_pet = ?'); params.push(has_pet); }
     if (entry_notes !== undefined) { updates.push('entry_notes = ?'); params.push(entry_notes); }
+    if (customer_name !== undefined) { updates.push('customer_name = ?'); params.push(customer_name); }
+    if (customer_email !== undefined) { updates.push('customer_email = ?'); params.push(customer_email); }
+    if (customer_phone !== undefined) { updates.push('customer_phone = ?'); params.push(customer_phone); }
+    if (block !== undefined) { updates.push('block = ?'); params.push(block); }
+    if (flat_number !== undefined) { updates.push('flat_number = ?'); params.push(flat_number); }
 
     if (status === 'completed') {
       updates.push('completed_date = NOW()');
