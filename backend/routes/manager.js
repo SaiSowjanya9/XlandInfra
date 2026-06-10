@@ -178,7 +178,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       // Properties count (zone-centric + own created)
       pool.execute(
         `SELECT COUNT(*) as count FROM properties 
-         WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR manager_id = ?${zoneList ? ` OR zone_id IN (${zoneList})` : ''})`,
+         WHERE franchise_partner_id = ? AND (status IS NULL OR status != 'deleted') AND (created_by = ? OR created_by = ? OR manager_id = ?${zoneList ? ` OR zone_id IN (${zoneList})` : ''})`,
         [franchisePartnerId, creatorEmail, req.user?.username || '', managerId, ...assignedZones]
       ).then(([r]) => r[0].count).catch(() => 0),
       
@@ -304,7 +304,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
        FROM properties p 
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
        LEFT JOIN users u ON p.created_by = u.email OR CAST(p.created_by AS UNSIGNED) = u.id
-       WHERE ${franchisePartnerId ? 'p.franchise_partner_id = ?' : 'p.manager_id = ?'}${zoneFilter.clause}
+       WHERE ${franchisePartnerId ? 'p.franchise_partner_id = ?' : 'p.manager_id = ?'} AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
        ORDER BY p.created_at DESC`;
     const propParams = franchisePartnerId ? [franchisePartnerId, ...zoneFilter.params] : [managerId, ...zoneFilter.params];
     console.log('[Manager Properties] Params:', propParams);

@@ -182,7 +182,7 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       recentWorkOrders
     ] = await Promise.all([
       // Properties count
-      safeCount('SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ?', [fpId]),
+      safeCount('SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ? AND (status IS NULL OR status != \'deleted\')', [fpId]),
       
       // Vendors count
       safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ?', [fpId]),
@@ -300,7 +300,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
        FROM properties p
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS UNSIGNED) = fpe.id
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR p.created_by = u.id
-       WHERE p.franchise_partner_id = ?
+       WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted')
        ORDER BY p.created_at DESC`,
       [req.fpId]
     );

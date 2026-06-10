@@ -318,7 +318,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
          LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
          LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
-         WHERE p.franchise_partner_id = ?${zoneFilter.clause}
+         WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
          ORDER BY p.created_at DESC`,
         [franchisePartnerId, ...zoneFilter.params]
       );
@@ -340,7 +340,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
          LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
          LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
-         WHERE p.executive_id = ?${zoneFilter.clause}
+         WHERE p.executive_id = ? AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
          ORDER BY p.created_at DESC`,
         [executiveId, ...zoneFilter.params]
       );
