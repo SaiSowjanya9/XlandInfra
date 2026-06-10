@@ -1730,7 +1730,7 @@ router.get('/all-vendor-assignments', authenticate, adminOnly, async (req, res) 
               COALESCE(p.name, op.community_name) as property_name, 
               COALESCE(p.property_id, op.property_id) as propertyId,
               COALESCE(p.property_type, op.property_type) as property_type, 
-              COALESCE(p.zone_name, op.zone) as property_zone,
+              COALESCE(p.zone_id, op.zone) as property_zone,
               COALESCE(p.franchise_partner_id, op.franchise_partner_id) as fp_id,
               fp.fp_code, fp.company_name as fp_name
        FROM property_vendor_assignments pva
@@ -2016,7 +2016,7 @@ router.get('/fp-view/:fpId/vendor-assignments', authenticate, adminOnly, async (
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at as assigned_date, pva.is_active,
               COALESCE(p.name, op.community_name) as property_name,
               COALESCE(p.property_id, op.property_id) as propertyId,
-              COALESCE(p.zone_name, op.zone) as property_zone,
+              COALESCE(p.zone_id, op.zone) as property_zone,
               COALESCE(p.property_type, op.property_type) as property_type,
               v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
               v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
