@@ -1359,12 +1359,12 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
              COALESCE(c.name, wo.category_name) as category_name,
              COALESCE(p.zone_id, op.zone) as zone,
              COALESCE(p.division, op.division) as division,
-             COALESCE(p.address, op.address) as address,
-             COALESCE(p.city, op.city) as city,
-             COALESCE(p.state, op.state) as state,
-             COALESCE(p.contact_person, op.contact_name) as contact_person,
-             COALESCE(p.contact_phone, op.contact_phone) as property_contact_phone,
-             COALESCE(p.contact_email, op.contact_email) as property_contact_email,
+             p.address as address,
+             p.city as city,
+             p.state as state,
+             p.contact_person as contact_person,
+             p.contact_phone as property_contact_phone,
+             p.contact_email as property_contact_email,
              fp.fp_code, fp.company_name as fp_name,
              v.company_name as vendor_name
       FROM work_orders wo
@@ -1960,12 +1960,12 @@ router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, re
              COALESCE(c.name, wo.category_name) as category_name,
              COALESCE(p.zone_id, op.zone) as zone,
              COALESCE(p.division, op.division) as division,
-             COALESCE(p.address, op.address) as address,
-             COALESCE(p.city, op.city) as city,
-             COALESCE(p.state, op.state) as state,
-             COALESCE(p.contact_person, op.contact_name) as contact_person,
-             COALESCE(p.contact_phone, op.contact_phone) as property_contact_phone,
-             COALESCE(p.contact_email, op.contact_email) as property_contact_email,
+             p.address as address,
+             p.city as city,
+             p.state as state,
+             p.contact_person as contact_person,
+             p.contact_phone as property_contact_phone,
+             p.contact_email as property_contact_email,
              v.company_name as vendor_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
