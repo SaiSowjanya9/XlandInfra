@@ -655,7 +655,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Customer Name <span className="text-red-500">*</span></label><input type="text" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Customer name" /></div>
-                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input type="text" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Phone number" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input type="tel" value={estimateForm.directPhone || ''} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setEstimateForm({...estimateForm, directPhone: val}); }} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="10-digit phone" /></div>
                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Email address" /></div>
                       </div>
                     </div>
