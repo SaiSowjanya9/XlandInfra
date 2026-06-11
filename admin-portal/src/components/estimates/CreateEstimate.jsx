@@ -1284,14 +1284,15 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                         const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType;
                         const filteredPkgs = propertyType 
                           ? availablePackages.filter(pkg => {
-                              const pkgType = getPackagePropertyType(pkg)?.toUpperCase();
+                              const pkgType = (getPackagePropertyType(pkg) || '').toUpperCase();
                               const searchType = propertyType.toUpperCase();
-                              return pkgType === searchType || 
-                                     (pkgType === 'GC' && searchType === 'GC') ||
-                                     (pkgType === 'APT' && (searchType === 'APT' || searchType === 'APARTMENT')) ||
-                                     (pkgType === 'VILLA' && (searchType === 'VILLA' || searchType === 'VILLAS')) ||
-                                     (pkgType === 'FLAT' && (searchType === 'FLAT' || searchType === 'FLATS')) ||
-                                     (pkgType === 'PLOT' && (searchType === 'PLOT' || searchType === 'PLOTS'));
+                              // Normalize both to check equivalents
+                              const isGC = ['GC', 'GATED_COMMUNITY', 'GATED COMMUNITY'].includes(pkgType) && ['GC', 'GATED_COMMUNITY', 'GATED COMMUNITY'].includes(searchType);
+                              const isApt = ['APT', 'APARTMENT', 'APARTMENTS'].includes(pkgType) && ['APT', 'APARTMENT', 'APARTMENTS'].includes(searchType);
+                              const isVilla = ['VILLA', 'VILLAS'].includes(pkgType) && ['VILLA', 'VILLAS'].includes(searchType);
+                              const isFlat = ['FLAT', 'FLATS'].includes(pkgType) && ['FLAT', 'FLATS'].includes(searchType);
+                              const isPlot = ['PLOT', 'PLOTS'].includes(pkgType) && ['PLOT', 'PLOTS'].includes(searchType);
+                              return pkgType === searchType || isGC || isApt || isVilla || isFlat || isPlot;
                             })
                           : [];
                         
@@ -1900,14 +1901,15 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                       const propertyType = estimateForm.propertyType;
                       const filteredPkgs = propertyType 
                         ? availablePackages.filter(pkg => {
-                            const pkgType = getPackagePropertyType(pkg)?.toUpperCase();
+                            const pkgType = (getPackagePropertyType(pkg) || '').toUpperCase();
                             const searchType = propertyType.toUpperCase();
-                            return pkgType === searchType || 
-                                   (pkgType === 'GC' && searchType === 'GC') ||
-                                   (pkgType === 'APT' && (searchType === 'APT' || searchType === 'APARTMENT')) ||
-                                   (pkgType === 'VILLA' && (searchType === 'VILLA' || searchType === 'VILLAS')) ||
-                                   (pkgType === 'FLAT' && (searchType === 'FLAT' || searchType === 'FLATS')) ||
-                                   (pkgType === 'PLOT' && (searchType === 'PLOT' || searchType === 'PLOTS'));
+                            // Normalize both to check equivalents
+                            const isGC = ['GC', 'GATED_COMMUNITY', 'GATED COMMUNITY'].includes(pkgType) && ['GC', 'GATED_COMMUNITY', 'GATED COMMUNITY'].includes(searchType);
+                            const isApt = ['APT', 'APARTMENT', 'APARTMENTS'].includes(pkgType) && ['APT', 'APARTMENT', 'APARTMENTS'].includes(searchType);
+                            const isVilla = ['VILLA', 'VILLAS'].includes(pkgType) && ['VILLA', 'VILLAS'].includes(searchType);
+                            const isFlat = ['FLAT', 'FLATS'].includes(pkgType) && ['FLAT', 'FLATS'].includes(searchType);
+                            const isPlot = ['PLOT', 'PLOTS'].includes(pkgType) && ['PLOT', 'PLOTS'].includes(searchType);
+                            return pkgType === searchType || isGC || isApt || isVilla || isFlat || isPlot;
                           })
                         : [];
                       

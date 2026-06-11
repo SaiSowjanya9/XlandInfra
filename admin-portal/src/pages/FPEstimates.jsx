@@ -837,8 +837,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           </div>
 
-          {/* AMC Package - Only show after property type is selected */}
-          {estimateForm.propertyType ? (
+          {/* AMC Package */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
               <h2 className="text-base font-semibold text-gray-900">AMC Package</h2>
@@ -985,12 +984,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               </div>
             </div>
           </div>
-
-          ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
-              <p className="text-amber-700 font-medium">Please select a Property Type to see available AMC Packages</p>
-            </div>
-          )}
 
           {/* Price Summary - Only show when package selected */}
           {estimateForm.selectedPackage && (
