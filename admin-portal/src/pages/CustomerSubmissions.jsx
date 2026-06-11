@@ -1075,30 +1075,32 @@ const CustomerSubmissions = () => {
                 </div>
               </div>
 
-              {/* Blocks (GC) */}
-              {viewProperty.entryType === 'GC' && viewProperty.unitsPerBlock && Object.keys(viewProperty.unitsPerBlock).length > 0 && (
+              {/* Blocks (GC and APT) */}
+              {(viewProperty.entryType === 'GC' || viewProperty.entryType === 'APT') && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Block Details</h3>
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-                    {Object.entries(viewProperty.unitsPerBlock).map(([blockNum, units]) => (
-                      <div key={blockNum}>
-                        <label className="block text-xs text-gray-500 mb-1">
-                          {viewProperty.blockNames?.[blockNum] || `Block ${blockNum}`}
-                        </label>
-                        <p className="text-sm text-gray-900">{units} units</p>
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-3 mb-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Number of Blocks</label>
+                      <p className="text-sm text-gray-900">{viewProperty.numberOfBlocks || 1}</p>
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {/* Block Info (APT) */}
-              {viewProperty.entryType === 'APT' && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Block Information</h3>
-                  <p className="text-sm text-gray-900">
-                    {viewProperty.blockNA ? 'N/A' : (viewProperty.blockInfo || '-')}
-                  </p>
+                  {viewProperty.unitsPerBlock && Object.keys(viewProperty.unitsPerBlock).length > 0 && (
+                    <div className="space-y-2">
+                      {Object.entries(viewProperty.unitsPerBlock).map(([blockNum, units]) => (
+                        <div key={blockNum} className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Block Name</label>
+                            <p className="text-sm text-gray-900">{viewProperty.blockNames?.[blockNum] || `Block ${blockNum}`}</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Units</label>
+                            <p className="text-sm text-gray-900">{units}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

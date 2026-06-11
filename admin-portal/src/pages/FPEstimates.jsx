@@ -106,7 +106,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [estimateForm, setEstimateForm] = useState({
     customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '',
     selectedPackage: '', selectedAddons: [], discount: 0, gst: 0, description: '',
-    numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0
+    numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0,
+    villaNumber: '', flatNumber: '', blockNumber: '', plotNumber: '', numberOfUnits: ''
   });
 
   // Helper to normalize property type to match PROPERTY_TYPE_OPTIONS IDs
@@ -760,10 +761,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <input type="text" placeholder="Enter full address" value={estimateForm.address} onChange={(e) => setEstimateForm({...estimateForm, address: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
               </div>
               
-              {/* Blocks & Units - Only for GC and Apartment */}
-              {(estimateForm.propertyType === 'GC' || estimateForm.propertyType === 'Apt') && (
-                <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                  <h3 className="text-sm font-semibold text-amber-800 mb-3">Block & Unit Details</h3>
+              {/* Blocks & Units - Only for GC */}
+              {estimateForm.propertyType === 'GC' && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h3 className="text-sm font-semibold text-blue-800 mb-3">Block & Unit Details</h3>
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Number of Blocks <span className="text-red-500">*</span></label>
                     <input type="number" min="1" value={estimateForm.numberOfBlocks} onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setEstimateForm({...estimateForm, numberOfBlocks: blocks, unitsPerBlock: {}}); }} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
@@ -782,7 +783,63 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </div>
                     ))}
                   </div>
-                  {estimateForm.totalUnits > 0 && (<div className="mt-3 p-2 bg-amber-100 rounded inline-block"><span className="text-sm text-amber-700 font-medium">Total Units: {estimateForm.totalUnits}</span></div>)}
+                  {estimateForm.totalUnits > 0 && (<div className="mt-3 p-2 bg-blue-100 rounded inline-block"><span className="text-sm text-blue-700 font-medium">Total Units: {estimateForm.totalUnits}</span></div>)}
+                </div>
+              )}
+
+              {/* Apartment - Block Information & Units */}
+              {estimateForm.propertyType === 'Apt' && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Apartment Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Block/Tower Name</label>
+                      <input type="text" value={estimateForm.blockNumber} onChange={(e) => setEstimateForm({...estimateForm, blockNumber: e.target.value})} placeholder="e.g., Tower A" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Number of Units <span className="text-red-500">*</span></label>
+                      <input type="number" min="1" value={estimateForm.numberOfUnits} onChange={(e) => setEstimateForm({...estimateForm, numberOfUnits: e.target.value})} placeholder="Total units" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Villa - Villa Number */}
+              {estimateForm.propertyType === 'Villa' && (
+                <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <h3 className="text-sm font-semibold text-amber-800 mb-3">Villa Details</h3>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Villa Number <span className="text-red-500">*</span></label>
+                    <input type="text" value={estimateForm.villaNumber} onChange={(e) => setEstimateForm({...estimateForm, villaNumber: e.target.value})} placeholder="e.g., Villa 101" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                </div>
+              )}
+
+              {/* Flat - Flat Number & Block Number */}
+              {estimateForm.propertyType === 'Flat' && (
+                <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <h3 className="text-sm font-semibold text-purple-800 mb-3">Flat Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Flat Number <span className="text-red-500">*</span></label>
+                      <input type="text" value={estimateForm.flatNumber} onChange={(e) => setEstimateForm({...estimateForm, flatNumber: e.target.value})} placeholder="e.g., 101" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Block Number</label>
+                      <input type="text" value={estimateForm.blockNumber} onChange={(e) => setEstimateForm({...estimateForm, blockNumber: e.target.value})} placeholder="e.g., A, B" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Plot - Plot Number */}
+              {estimateForm.propertyType === 'Plot' && (
+                <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <h3 className="text-sm font-semibold text-green-800 mb-3">Plot Details</h3>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Plot Number <span className="text-red-500">*</span></label>
+                    <input type="text" value={estimateForm.plotNumber} onChange={(e) => setEstimateForm({...estimateForm, plotNumber: e.target.value})} placeholder="e.g., Plot 25" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                  </div>
                 </div>
               )}
             </div>
