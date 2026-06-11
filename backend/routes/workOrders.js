@@ -160,7 +160,7 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
           // Try onboarded_properties
           const [opData] = await pool.query(
             `SELECT franchise_partner_id, community_name as name, property_type, zone, division,
-                    address, city, state, contact_name as contact_person, contact_phone, contact_email
+                    address, city, state, contact_person, contact_phone, contact_email
              FROM onboarded_properties WHERE id = ?`,
             [propId]
           );
