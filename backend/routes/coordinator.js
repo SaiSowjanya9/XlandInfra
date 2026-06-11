@@ -1481,22 +1481,6 @@ router.put('/estimates/:id/restore', requireCoordinatorScope, async (req, res) =
   }
 });
 
-// Delete estimate permanently
-router.delete('/estimates/:id', requireCoordinatorScope, async (req, res) => {
-  try {
-    const franchisePartnerId = req.franchisePartnerId;
-    if (franchisePartnerId) {
-      await pool.query(
-        `DELETE FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?`,
-        [req.params.id, franchisePartnerId]
-      );
-    }
-    res.json({ success: true, message: 'Estimate deleted' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
 // =====================================================
 // AMC PACKAGES - FP Coordinators use FP packages (read-only)
 // =====================================================
