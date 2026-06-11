@@ -735,6 +735,39 @@ const ManagerProperties = ({ user }) => {
                   <p className="text-gray-900">{viewingProperty.zip_code || '-'}</p>
                 </div>
 
+                {/* Block Details - Show for GC and Apartment */}
+                {(viewingProperty.property_type === 'gated_community' || viewingProperty.property_type === 'apartment' || viewingProperty.block_names || viewingProperty.units_per_block || viewingProperty.number_of_blocks) && (
+                  <div className="md:col-span-2 mt-4 p-4 bg-blue-50 rounded-lg">
+                    <h4 className="text-sm font-semibold text-blue-800 mb-3">Block Details</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Number of Blocks</p>
+                        <p className="text-gray-900">{viewingProperty.number_of_blocks || 1}</p>
+                      </div>
+                    </div>
+                    {(() => {
+                      try {
+                        const blockNames = typeof viewingProperty.block_names === 'string' ? JSON.parse(viewingProperty.block_names) : viewingProperty.block_names || {};
+                        const unitsPerBlock = typeof viewingProperty.units_per_block === 'string' ? JSON.parse(viewingProperty.units_per_block) : viewingProperty.units_per_block || {};
+                        const numBlocks = viewingProperty.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
+                        if (Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0) {
+                          return (
+                            <div className="mt-3 space-y-2">
+                              {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
+                                <div key={blockNum} className="grid grid-cols-2 gap-4 p-2 bg-white rounded">
+                                  <div><p className="text-xs text-gray-500">Block Name</p><p className="text-sm text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</p></div>
+                                  <div><p className="text-xs text-gray-500">Units</p><p className="text-sm text-gray-900">{unitsPerBlock[blockNum] || 0}</p></div>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return null;
+                      } catch { return null; }
+                    })()}
+                  </div>
+                )}
+
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Contact Person</p>
                   <p className="text-gray-900">{viewingProperty.contact_person || '-'}</p>

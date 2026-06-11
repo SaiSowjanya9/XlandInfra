@@ -764,15 +764,21 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               {(estimateForm.propertyType === 'GC' || estimateForm.propertyType === 'Apt') && (
                 <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
                   <h3 className="text-sm font-semibold text-amber-800 mb-3">Block & Unit Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Number of Blocks <span className="text-red-500">*</span></label>
-                      <input type="number" min="1" value={estimateForm.numberOfBlocks} onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setEstimateForm({...estimateForm, numberOfBlocks: blocks, unitsPerBlock: {}}); }} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
-                    </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Number of Blocks <span className="text-red-500">*</span></label>
+                    <input type="number" min="1" value={estimateForm.numberOfBlocks} onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setEstimateForm({...estimateForm, numberOfBlocks: blocks, unitsPerBlock: {}}); }} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div className="space-y-3">
                     {Array.from({ length: estimateForm.numberOfBlocks }, (_, i) => i + 1).map(blockNum => (
-                      <div key={blockNum}>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Block {blockNum} Units</label>
-                        <input type="number" min="1" value={estimateForm.unitsPerBlock[blockNum] || ''} onChange={(e) => { const units = parseInt(e.target.value) || 0; const newUnitsPerBlock = {...estimateForm.unitsPerBlock, [blockNum]: units}; const totalUnits = Object.values(newUnitsPerBlock).reduce((sum, u) => sum + (u || 0), 0); setEstimateForm({...estimateForm, unitsPerBlock: newUnitsPerBlock, totalUnits}); }} placeholder="Enter units" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                      <div key={blockNum} className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Block Name</label>
+                          <input type="text" value={`Block ${blockNum}`} readOnly className="w-full px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-100 text-gray-600 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Units <span className="text-red-500">*</span></label>
+                          <input type="number" min="1" value={estimateForm.unitsPerBlock[blockNum] || ''} onChange={(e) => { const units = parseInt(e.target.value) || 0; const newUnitsPerBlock = {...estimateForm.unitsPerBlock, [blockNum]: units}; const totalUnits = Object.values(newUnitsPerBlock).reduce((sum, u) => sum + (u || 0), 0); setEstimateForm({...estimateForm, unitsPerBlock: newUnitsPerBlock, totalUnits}); }} placeholder="No. of units" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                        </div>
                       </div>
                     ))}
                   </div>
