@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
-  DollarSign, Layers, Filter, Download, Mail, Save, Edit, Send, Link2, RefreshCw
+  DollarSign, Layers, Filter, Download, Mail, Save, Edit, Send, Link2, RefreshCw,
+  FolderOpen, ExternalLink, Link
 } from 'lucide-react';
 import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
@@ -68,6 +69,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [viewEstimate, setViewEstimate] = useState(null);
   const [viewAmcPackage, setViewAmcPackage] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  
+  // FP Portal Links state
+  const [portalLinks, setPortalLinks] = useState([]);
+  const [linkForms, setLinkForms] = useState({
+    1: { heading: '', url: '', isEditing: false, isSaving: false },
+    2: { heading: '', url: '', isEditing: false, isSaving: false }
+  });
+  const [linkErrors, setLinkErrors] = useState({ 1: '', 2: '' });
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -76,21 +85,33 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [estRes, amcRes, addRes, propRes, archivedRes] = await Promise.all([
+      const [estRes, amcRes, addRes, propRes, archivedRes, linksRes] = await Promise.all([
         fetch('/api/fp/estimates?archived=false', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/fp/amc-packages', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/fp/addons', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/fp/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/fp/estimates?archived=true', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch('/api/fp/estimates?archived=true', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/fp/portal-links', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
-      const [estData, amcData, addData, propData, archivedData] = await Promise.all([estRes.json(), amcRes.json(), addRes.json(), propRes.json(), archivedRes.json()]);
+      const [estData, amcData, addData, propData, archivedData, linksData] = await Promise.all([estRes.json(), amcRes.json(), addRes.json(), propRes.json(), archivedRes.json(), linksRes.json()]);
       const estArr = estData.success ? (Array.isArray(estData.data) ? estData.data : []) : [];
       const amcArr = amcData.success ? (Array.isArray(amcData.data) ? amcData.data : []) : [];
       const addArr = addData.success ? (Array.isArray(addData.data) ? addData.data : []) : [];
       const propArr = propData.success ? (Array.isArray(propData.data) ? propData.data : []) : [];
       const archArr = archivedData.success ? (Array.isArray(archivedData.data) ? archivedData.data : []) : [];
+      const linksArr = linksData.success ? (Array.isArray(linksData.data) ? linksData.data : []) : [];
       setEstimates(estArr); setAmcPackages(amcArr); setAddons(addArr); setProperties(propArr); setArchivedEstimates(archArr);
       setStats({ estimates: estArr.length, amcPackages: amcArr.length, addons: addArr.length, archived: archArr.length });
+      
+      // Set portal links and populate forms
+      setPortalLinks(linksArr);
+      const newForms = { 1: { heading: '', url: '', isEditing: false, isSaving: false }, 2: { heading: '', url: '', isEditing: false, isSaving: false } };
+      linksArr.forEach(link => {
+        if (link.link_slot === 1 || link.link_slot === 2) {
+          newForms[link.link_slot] = { heading: link.heading, url: link.url, isEditing: false, isSaving: false, id: link.id };
+        }
+      });
+      setLinkForms(newForms);
     } catch (e) { console.error('Load error:', e); }
     finally { setLoading(false); }
   };
@@ -100,6 +121,116 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const num = parseFloat(amt);
     const value = isNaN(num) ? 0 : Math.round(num);
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(value);
+  };
+
+  // Portal Links Handlers
+  const validateUrl = (url) => {
+    if (!url || !url.trim()) return false;
+    try {
+      new URL(url.trim());
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const handleLinkFormChange = (slot, field, value) => {
+    setLinkForms(prev => ({
+      ...prev,
+      [slot]: { ...prev[slot], [field]: value }
+    }));
+    setLinkErrors(prev => ({ ...prev, [slot]: '' }));
+  };
+
+  const handleSavePortalLink = async (slot) => {
+    const form = linkForms[slot];
+    
+    // Validation
+    if (!form.heading || !form.heading.trim()) {
+      setLinkErrors(prev => ({ ...prev, [slot]: 'Heading cannot be blank.' }));
+      return;
+    }
+    if (!form.url || !form.url.trim()) {
+      setLinkErrors(prev => ({ ...prev, [slot]: 'URL cannot be blank.' }));
+      return;
+    }
+    if (!validateUrl(form.url)) {
+      setLinkErrors(prev => ({ ...prev, [slot]: 'Please enter a valid URL.' }));
+      return;
+    }
+
+    setLinkForms(prev => ({ ...prev, [slot]: { ...prev[slot], isSaving: true } }));
+
+    try {
+      const res = await fetch('/api/fp/portal-links', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link_slot: slot, heading: form.heading.trim(), url: form.url.trim() })
+      });
+      const result = await res.json();
+      
+      if (res.ok && result.success) {
+        showToast(result.message || 'Link saved successfully.');
+        setLinkForms(prev => ({ 
+          ...prev, 
+          [slot]: { ...prev[slot], isEditing: false, isSaving: false, id: result.data?.id } 
+        }));
+        loadData(); // Refresh to get updated links
+      } else {
+        setLinkErrors(prev => ({ ...prev, [slot]: result.message || 'Failed to save link.' }));
+        setLinkForms(prev => ({ ...prev, [slot]: { ...prev[slot], isSaving: false } }));
+      }
+    } catch (e) {
+      console.error('Save portal link error:', e);
+      setLinkErrors(prev => ({ ...prev, [slot]: 'Failed to save link. Please try again.' }));
+      setLinkForms(prev => ({ ...prev, [slot]: { ...prev[slot], isSaving: false } }));
+    }
+  };
+
+  const handleDeletePortalLink = async (slot) => {
+    const form = linkForms[slot];
+    if (!form.id) {
+      // Just clear the form if no saved link
+      setLinkForms(prev => ({ ...prev, [slot]: { heading: '', url: '', isEditing: false, isSaving: false } }));
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/fp/portal-links/${form.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await res.json();
+      
+      if (res.ok && result.success) {
+        showToast('Link deleted successfully.');
+        setLinkForms(prev => ({ ...prev, [slot]: { heading: '', url: '', isEditing: false, isSaving: false } }));
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to delete link.', 'error');
+      }
+    } catch (e) {
+      console.error('Delete portal link error:', e);
+      showToast('Failed to delete link.', 'error');
+    }
+  };
+
+  const handleEditLink = (slot) => {
+    setLinkForms(prev => ({ ...prev, [slot]: { ...prev[slot], isEditing: true } }));
+  };
+
+  const handleCancelEdit = (slot) => {
+    // Restore original values from portalLinks
+    const existingLink = portalLinks.find(l => l.link_slot === slot);
+    if (existingLink) {
+      setLinkForms(prev => ({ 
+        ...prev, 
+        [slot]: { heading: existingLink.heading, url: existingLink.url, isEditing: false, isSaving: false, id: existingLink.id } 
+      }));
+    } else {
+      setLinkForms(prev => ({ ...prev, [slot]: { heading: '', url: '', isEditing: false, isSaving: false } }));
+    }
+    setLinkErrors(prev => ({ ...prev, [slot]: '' }));
   };
 
   // Estimate form state
@@ -1048,6 +1179,242 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
         </div>
       )}
+
+      {/* FP Portal Links Section */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-6">
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <Link className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">FP Portal Links</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Share up to 2 custom links with your employees (Google Drive, Sheets, Docs, or any URL)</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          {/* Link Block 1 */}
+          <div className="border border-gray-200 rounded-xl p-5 bg-gray-50/50 hover:bg-white transition-colors">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold">1</span>
+              <span className="text-sm font-medium text-gray-700">Link Block 1</span>
+              {linkForms[1].id && !linkForms[1].isEditing && (
+                <span className="ml-auto flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                  <Check className="w-3 h-3" /> Saved
+                </span>
+              )}
+            </div>
+            
+            {/* Heading Row */}
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={linkForms[1].heading}
+                  onChange={(e) => handleLinkFormChange(1, 'heading', e.target.value)}
+                  placeholder="Enter Link Heading (e.g., Floor Plan Documents)"
+                  disabled={linkForms[1].id && !linkForms[1].isEditing}
+                  className={`w-full px-4 py-2.5 border rounded-lg text-sm transition-colors ${
+                    linkForms[1].id && !linkForms[1].isEditing 
+                      ? 'bg-gray-100 border-gray-200 text-gray-700' 
+                      : 'bg-white border-gray-300 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400'
+                  }`}
+                />
+              </div>
+              {linkForms[1].id && !linkForms[1].isEditing ? (
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleEditLink(1)} 
+                    className="px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1"
+                  >
+                    <Edit2 className="w-4 h-4" /> Edit
+                  </button>
+                  <button 
+                    onClick={() => handleDeletePortalLink(1)} 
+                    className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => handleSavePortalLink(1)} 
+                  disabled={linkForms[1].isSaving}
+                  className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:bg-indigo-400 transition-colors flex items-center gap-1.5"
+                >
+                  {linkForms[1].isSaving ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" /> Done
+                    </>
+                  )}
+                </button>
+              )}
+              {linkForms[1].isEditing && (
+                <button 
+                  onClick={() => handleCancelEdit(1)} 
+                  className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+            
+            {/* URL Row */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 relative">
+                <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="url"
+                  value={linkForms[1].url}
+                  onChange={(e) => handleLinkFormChange(1, 'url', e.target.value)}
+                  placeholder="Paste any external URL (Google Drive, Sheets, etc.)"
+                  disabled={linkForms[1].id && !linkForms[1].isEditing}
+                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm transition-colors ${
+                    linkForms[1].id && !linkForms[1].isEditing 
+                      ? 'bg-gray-100 border-gray-200 text-gray-600' 
+                      : 'bg-white border-gray-300 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400'
+                  }`}
+                />
+              </div>
+              {linkForms[1].id && !linkForms[1].isEditing && linkForms[1].url && (
+                <a 
+                  href={linkForms[1].url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-4 py-2.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1.5 border border-indigo-200"
+                >
+                  <ExternalLink className="w-4 h-4" /> Open Link
+                </a>
+              )}
+            </div>
+            
+            {/* Error Message */}
+            {linkErrors[1] && (
+              <div className="mt-2 flex items-center gap-1.5 text-sm text-red-600">
+                <AlertCircle className="w-4 h-4" /> {linkErrors[1]}
+              </div>
+            )}
+          </div>
+
+          {/* Link Block 2 */}
+          <div className="border border-gray-200 rounded-xl p-5 bg-gray-50/50 hover:bg-white transition-colors">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-600 text-xs font-bold">2</span>
+              <span className="text-sm font-medium text-gray-700">Link Block 2</span>
+              {linkForms[2].id && !linkForms[2].isEditing && (
+                <span className="ml-auto flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                  <Check className="w-3 h-3" /> Saved
+                </span>
+              )}
+            </div>
+            
+            {/* Heading Row */}
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={linkForms[2].heading}
+                  onChange={(e) => handleLinkFormChange(2, 'heading', e.target.value)}
+                  placeholder="Enter Link Heading (e.g., Material Selection Sheet)"
+                  disabled={linkForms[2].id && !linkForms[2].isEditing}
+                  className={`w-full px-4 py-2.5 border rounded-lg text-sm transition-colors ${
+                    linkForms[2].id && !linkForms[2].isEditing 
+                      ? 'bg-gray-100 border-gray-200 text-gray-700' 
+                      : 'bg-white border-gray-300 focus:ring-2 focus:ring-purple-200 focus:border-purple-400'
+                  }`}
+                />
+              </div>
+              {linkForms[2].id && !linkForms[2].isEditing ? (
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleEditLink(2)} 
+                    className="px-3 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex items-center gap-1"
+                  >
+                    <Edit2 className="w-4 h-4" /> Edit
+                  </button>
+                  <button 
+                    onClick={() => handleDeletePortalLink(2)} 
+                    className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => handleSavePortalLink(2)} 
+                  disabled={linkForms[2].isSaving}
+                  className="px-4 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:bg-purple-400 transition-colors flex items-center gap-1.5"
+                >
+                  {linkForms[2].isSaving ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" /> Done
+                    </>
+                  )}
+                </button>
+              )}
+              {linkForms[2].isEditing && (
+                <button 
+                  onClick={() => handleCancelEdit(2)} 
+                  className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+            
+            {/* URL Row */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 relative">
+                <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="url"
+                  value={linkForms[2].url}
+                  onChange={(e) => handleLinkFormChange(2, 'url', e.target.value)}
+                  placeholder="Paste any external URL (Google Drive, Sheets, etc.)"
+                  disabled={linkForms[2].id && !linkForms[2].isEditing}
+                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm transition-colors ${
+                    linkForms[2].id && !linkForms[2].isEditing 
+                      ? 'bg-gray-100 border-gray-200 text-gray-600' 
+                      : 'bg-white border-gray-300 focus:ring-2 focus:ring-purple-200 focus:border-purple-400'
+                  }`}
+                />
+              </div>
+              {linkForms[2].id && !linkForms[2].isEditing && linkForms[2].url && (
+                <a 
+                  href={linkForms[2].url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex items-center gap-1.5 border border-purple-200"
+                >
+                  <ExternalLink className="w-4 h-4" /> Open Link
+                </a>
+              )}
+            </div>
+            
+            {/* Error Message */}
+            {linkErrors[2] && (
+              <div className="mt-2 flex items-center gap-1.5 text-sm text-red-600">
+                <AlertCircle className="w-4 h-4" /> {linkErrors[2]}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Footer Note */}
+        <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
+          Links shared here will be visible to all employees assigned to you. Maximum 2 links allowed.
+        </div>
+      </div>
     </div>
   );
 

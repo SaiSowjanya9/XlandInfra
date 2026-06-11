@@ -3898,4 +3898,206 @@ router.post('/migrate-estimate-names', requireFPScope, async (req, res) => {
   }
 });
 
+// ============================================
+// FP PORTAL LINKS (Custom links for employees)
+// ============================================
+
+// Get all portal links for the FP
+router.get('/portal-links', requireFPScope, async (req, res) => {
+  try {
+    const [links] = await pool.execute(
+      `SELECT id, link_slot, heading, url, created_at, updated_at 
+       FROM fp_portal_links 
+       WHERE franchise_partner_id = ? AND is_active = 1 
+       ORDER BY link_slot ASC`,
+      [req.fpId]
+    );
+    
+    res.json({ success: true, data: links });
+  } catch (error) {
+    console.error('Get portal links error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch portal links',
+      error: error.message
+    });
+  }
+});
+
+// Create or update a portal link (upsert by slot)
+router.post('/portal-links', requireFPScope, async (req, res) => {
+  try {
+    const { link_slot, heading, url } = req.body;
+    
+    // Validation
+    if (!link_slot || link_slot < 1 || link_slot > 2) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid link slot. Must be 1 or 2.' 
+      });
+    }
+    
+    if (!heading || !heading.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Heading cannot be blank.' 
+      });
+    }
+    
+    if (!url || !url.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'URL cannot be blank.' 
+      });
+    }
+    
+    // URL validation - must be a valid URL
+    try {
+      new URL(url.trim());
+    } catch (e) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please enter a valid URL.' 
+      });
+    }
+    
+    // Check if link already exists for this slot
+    const [existing] = await pool.execute(
+      'SELECT id FROM fp_portal_links WHERE franchise_partner_id = ? AND link_slot = ?',
+      [req.fpId, link_slot]
+    );
+    
+    if (existing.length > 0) {
+      // Update existing link
+      await pool.execute(
+        `UPDATE fp_portal_links 
+         SET heading = ?, url = ?, is_active = 1, updated_at = NOW() 
+         WHERE franchise_partner_id = ? AND link_slot = ?`,
+        [heading.trim(), url.trim(), req.fpId, link_slot]
+      );
+      
+      res.json({ 
+        success: true, 
+        message: 'Link updated successfully.',
+        data: { id: existing[0].id, link_slot, heading: heading.trim(), url: url.trim() }
+      });
+    } else {
+      // Insert new link
+      const [result] = await pool.execute(
+        `INSERT INTO fp_portal_links (franchise_partner_id, link_slot, heading, url, is_active) 
+         VALUES (?, ?, ?, ?, 1)`,
+        [req.fpId, link_slot, heading.trim(), url.trim()]
+      );
+      
+      res.json({ 
+        success: true, 
+        message: 'Link saved successfully.',
+        data: { id: result.insertId, link_slot, heading: heading.trim(), url: url.trim() }
+      });
+    }
+  } catch (error) {
+    console.error('Save portal link error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to save portal link',
+      error: error.message
+    });
+  }
+});
+
+// Update a specific portal link
+router.put('/portal-links/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { heading, url } = req.body;
+    
+    // Validation
+    if (!heading || !heading.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Heading cannot be blank.' 
+      });
+    }
+    
+    if (!url || !url.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'URL cannot be blank.' 
+      });
+    }
+    
+    // URL validation
+    try {
+      new URL(url.trim());
+    } catch (e) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please enter a valid URL.' 
+      });
+    }
+    
+    // Verify ownership and update
+    const [result] = await pool.execute(
+      `UPDATE fp_portal_links 
+       SET heading = ?, url = ?, updated_at = NOW() 
+       WHERE id = ? AND franchise_partner_id = ?`,
+      [heading.trim(), url.trim(), id, req.fpId]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Link not found or not authorized.' 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Link updated successfully.',
+      data: { id: parseInt(id), heading: heading.trim(), url: url.trim() }
+    });
+  } catch (error) {
+    console.error('Update portal link error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update portal link',
+      error: error.message
+    });
+  }
+});
+
+// Delete a portal link
+router.delete('/portal-links/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Soft delete - set is_active to 0
+    const [result] = await pool.execute(
+      `UPDATE fp_portal_links 
+       SET is_active = 0, updated_at = NOW() 
+       WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Link not found or not authorized.' 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Link deleted successfully.' 
+    });
+  } catch (error) {
+    console.error('Delete portal link error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete portal link',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

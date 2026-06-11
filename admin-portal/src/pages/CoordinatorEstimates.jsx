@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
-  DollarSign, Layers, Filter, Download, Mail, Save, Edit, RefreshCw
+  DollarSign, Layers, Filter, Download, Mail, Save, Edit, RefreshCw, FolderOpen, ExternalLink, Link
 } from 'lucide-react';
 import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 import { exportEstimateToPDF } from '../utils/pdfExport';
@@ -98,6 +98,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
   const [viewEstimate, setViewEstimate] = useState(null);
   const [viewAmcPackage, setViewAmcPackage] = useState(null);
   const [viewAddon, setViewAddon] = useState(null);
+  const [fpPortalLinks, setFpPortalLinks] = useState([]);
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -113,21 +114,24 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
   const loadData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [estRes, amcRes, addRes, propRes, archivedRes] = await Promise.all([
+      const [estRes, amcRes, addRes, propRes, archivedRes, linksRes] = await Promise.all([
         fetch('/api/coordinator/estimates?archived=false', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/coordinator/amc-packages', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/coordinator/addons', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/coordinator/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/coordinator/estimates?archived=true', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch('/api/coordinator/estimates?archived=true', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/coordinator/fp-portal-links', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
-      const [estData, amcData, addData, propData, archivedData] = await Promise.all([estRes.json(), amcRes.json(), addRes.json(), propRes.json(), archivedRes.json()]);
+      const [estData, amcData, addData, propData, archivedData, linksData] = await Promise.all([estRes.json(), amcRes.json(), addRes.json(), propRes.json(), archivedRes.json(), linksRes.json()]);
       const estArr = estData.success ? (Array.isArray(estData.data) ? estData.data : []) : [];
       const amcArr = amcData.success ? (Array.isArray(amcData.data) ? amcData.data : []) : [];
       const addArr = addData.success ? (Array.isArray(addData.data) ? addData.data : []) : [];
       const propArr = propData.success ? (Array.isArray(propData.data) ? propData.data : []) : [];
       const archArr = archivedData.success ? (Array.isArray(archivedData.data) ? archivedData.data : []) : [];
+      const linksArr = linksData.success ? (Array.isArray(linksData.data) ? linksData.data : []) : [];
       setEstimates(estArr); setAmcPackages(amcArr); setAddons(addArr); setProperties(propArr); setArchivedEstimates(archArr);
       setStats({ estimates: estArr.length, amcPackages: amcArr.length, addons: addArr.length, archived: archArr.length });
+      setFpPortalLinks(linksArr);
     } catch (e) { console.error('Load error:', e); }
     finally { setLoading(false); }
   };
@@ -650,6 +654,47 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
 
           {renderAmcAndPriceSummary(true)}
         </>
+      )}
+
+      {/* FP Shared Resources Section - Read-only for employees */}
+      {fpPortalLinks.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-6">
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 rounded-lg">
+                <FolderOpen className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">FP Shared Resources</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Resources shared by your Franchise Partner</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {fpPortalLinks.map((link) => (
+              <div key={link.id} className="border border-gray-200 rounded-xl p-5 bg-gray-50/50 hover:bg-white hover:shadow-sm transition-all">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-indigo-100 rounded-lg flex-shrink-0">
+                    <FolderOpen className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-900 truncate">{link.heading}</h3>
+                    <p className="text-xs text-gray-500 mt-1 truncate">{link.url}</p>
+                  </div>
+                </div>
+                <a 
+                  href={link.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" /> Open Link
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
