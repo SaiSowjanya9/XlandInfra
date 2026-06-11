@@ -98,6 +98,18 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Get franchise_partner_id - check users table first, then fp_employees table
+    let franchisePartnerId = user.franchise_partner_id || null;
+    if (!franchisePartnerId) {
+      const [fpEmployee] = await pool.query(
+        `SELECT franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
+        [user.email, user.username]
+      );
+      if (fpEmployee.length > 0 && fpEmployee[0].franchise_partner_id) {
+        franchisePartnerId = fpEmployee[0].franchise_partner_id;
+      }
+    }
+
     // Generate JWT token - include franchisePartnerId for FP-created coordinators
     const token = jwt.sign(
       {
@@ -105,7 +117,7 @@ router.post('/login', async (req, res) => {
         username: user.username,
         role: user.role,
         coordinatorId: user.id,
-        franchisePartnerId: user.franchise_partner_id || null
+        franchisePartnerId: franchisePartnerId
       },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
@@ -123,7 +135,7 @@ router.post('/login', async (req, res) => {
           lastName: user.last_name,
           role: user.role,
           coordinatorId: user.id,
-          franchisePartnerId: user.franchise_partner_id || null,
+          franchisePartnerId: franchisePartnerId,
           portal: 'coordinator'
         }
       }

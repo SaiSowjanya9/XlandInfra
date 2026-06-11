@@ -92,6 +92,19 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Get franchise_partner_id - check users table first, then fp_employees table
+    let franchisePartnerId = user.franchise_partner_id || null;
+    if (!franchisePartnerId) {
+      // Check fp_employees table by email or username
+      const [fpEmployee] = await pool.execute(
+        `SELECT franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
+        [user.email, user.username]
+      );
+      if (fpEmployee.length > 0 && fpEmployee[0].franchise_partner_id) {
+        franchisePartnerId = fpEmployee[0].franchise_partner_id;
+      }
+    }
+
     // Generate token - include franchisePartnerId for FP-created managers
     const token = generateToken({
       id: user.id,
@@ -99,7 +112,7 @@ router.post('/login', async (req, res) => {
       email: user.email,
       role: user.role,
       managerId: user.id,
-      franchisePartnerId: user.franchise_partner_id || null
+      franchisePartnerId: franchisePartnerId
     });
 
     // Update last login
@@ -122,7 +135,7 @@ router.post('/login', async (req, res) => {
           role: user.role,
           roleName: ROLE_NAMES[user.role],
           managerId: user.id,
-          franchisePartnerId: user.franchise_partner_id || null,
+          franchisePartnerId: franchisePartnerId,
           portal: 'manager'
         }
       }
