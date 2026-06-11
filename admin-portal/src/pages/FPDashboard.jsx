@@ -81,15 +81,6 @@ const FPDashboard = ({ user }) => {
       link: '/fp/vendors'
     },
     {
-      title: 'Customers',
-      value: stats?.customers || 0,
-      icon: Users,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50',
-      textColor: 'text-blue-600',
-      link: '/fp/customers'
-    },
-    {
       title: 'Employees',
       value: stats?.employees || 0,
       icon: Users,
