@@ -780,7 +780,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <React.Fragment key={blockNum}>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Block Name</label>
-                          <input type="text" value={`Block ${blockNum}`} readOnly className="w-full px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-100 text-gray-600 text-sm" />
+                          <input type="text" value={estimateForm.blockNames?.[blockNum] || ''} onChange={(e) => { const newBlockNames = {...(estimateForm.blockNames || {}), [blockNum]: e.target.value}; setEstimateForm({...estimateForm, blockNames: newBlockNames}); }} placeholder={`Block ${blockNum}`} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Units <span className="text-red-500">*</span></label>
@@ -795,7 +795,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
               {/* Apartment */}
               {estimateForm.propertyType === 'Apt' && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Tower/Building Name</label>
                     <input type="text" value={estimateForm.blockName || ''} onChange={(e) => setEstimateForm({...estimateForm, blockName: e.target.value})} placeholder="Tower/Building name" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
@@ -803,10 +803,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Block Number</label>
                     <input type="text" value={estimateForm.blockNumber} onChange={(e) => setEstimateForm({...estimateForm, blockNumber: e.target.value})} placeholder="e.g., A, B, 1, 2" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Flat/Unit Number</label>
-                    <input type="text" value={estimateForm.flatNumber} onChange={(e) => setEstimateForm({...estimateForm, flatNumber: e.target.value})} placeholder="e.g., 101, 202" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Number of Units <span className="text-red-500">*</span></label>
