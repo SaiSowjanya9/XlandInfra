@@ -197,6 +197,7 @@ CREATE TABLE IF NOT EXISTS fp_estimates (
   property_code VARCHAR(50),
   property_type VARCHAR(50),
   zone VARCHAR(100),
+  division VARCHAR(100),
   city VARCHAR(100),
   address TEXT,
   -- Package Info
@@ -216,6 +217,8 @@ CREATE TABLE IF NOT EXISTS fp_estimates (
   -- Status
   status ENUM('draft', 'sent', 'approved', 'rejected', 'converted', 'archived') DEFAULT 'draft',
   valid_until DATE,
+  action_token VARCHAR(100),
+  sent_at TIMESTAMP NULL,
   -- Creator Info
   created_by_id INT,
   created_by_name VARCHAR(255),

@@ -712,7 +712,7 @@ router.get('/work-orders', async (req, res) => {
              COALESCE(p.address, op.address) as address,
              COALESCE(p.city, op.city) as city,
              COALESCE(p.state, op.state) as state,
-             COALESCE(p.contact_person, op.contact_name) as contact_person,
+             COALESCE(p.contact_person, op.contact_person) as contact_person,
              COALESCE(p.contact_phone, op.contact_phone) as contact_phone,
              COALESCE(p.contact_email, op.contact_email) as contact_email
       FROM work_orders wo

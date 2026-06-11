@@ -828,25 +828,23 @@ const Properties = () => {
                   {(viewProperty.entryType === 'GC' || viewProperty.entryType === 'APT') && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Block Details</h3>
-                      <div className="grid grid-cols-2 gap-x-8 gap-y-3 mb-3">
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Number of Blocks</label>
-                          <p className="text-sm text-gray-900">{viewProperty.numberOfBlocks || 1}</p>
-                        </div>
+                      <div className="mb-3">
+                        <label className="block text-xs text-gray-500 mb-1">Number of Blocks</label>
+                        <p className="text-sm text-gray-900">{viewProperty.numberOfBlocks || 1}</p>
                       </div>
                       {viewProperty.unitsPerBlock && Object.keys(viewProperty.unitsPerBlock).length > 0 && (
-                        <div className="space-y-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           {Object.entries(viewProperty.unitsPerBlock).map(([blockNum, units]) => (
-                            <div key={blockNum} className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg">
-                              <div>
+                            <React.Fragment key={blockNum}>
+                              <div className="p-3 bg-gray-50 rounded-lg">
                                 <label className="block text-xs text-gray-500 mb-1">Block Name</label>
                                 <p className="text-sm text-gray-900">{viewProperty.blockNames?.[blockNum] || `Block ${blockNum}`}</p>
                               </div>
-                              <div>
+                              <div className="p-3 bg-gray-50 rounded-lg">
                                 <label className="block text-xs text-gray-500 mb-1">Units</label>
                                 <p className="text-sm text-gray-900">{units}</p>
                               </div>
-                            </div>
+                            </React.Fragment>
                           ))}
                         </div>
                       )}
