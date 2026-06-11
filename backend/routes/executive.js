@@ -1217,17 +1217,17 @@ router.get('/estimates', requireExecutiveScope, async (req, res) => {
       // Get assigned zones
       const assignedZones = await getAssignedZones(employeeId);
       
-      // Build zone + creator filter
+      // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
       let zoneClause = '';
       let zoneParams = [];
       if (assignedZones.length > 0) {
         const placeholders = assignedZones.map(() => '?').join(',');
-        zoneClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_name = ? OR e.created_by_name = ?)`;
-        zoneParams = [...assignedZones, creatorEmail, req.user?.username || ''];
+        zoneClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
+        zoneParams = [...assignedZones, executiveId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
       } else {
-        // No zones = only see own created
-        zoneClause = ` AND (e.created_by_name = ? OR e.created_by_name = ?)`;
-        zoneParams = [creatorEmail, req.user?.username || ''];
+        // No zones = only see own created (by ID or by name/email/username)
+        zoneClause = ` AND (e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
+        zoneParams = [executiveId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
       }
       
       const [fpEstimates] = await pool.query(

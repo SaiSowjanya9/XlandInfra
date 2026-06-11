@@ -219,6 +219,10 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
     if (!selectedAmcPackage) { showToast('Select AMC Package', 'error'); return; }
     
     try {
+      const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
+      const pkgPrice = pkg ? getPackagePrice(pkg) : 0;
+      const pkgName = pkg?.name || pkg?.package_name || '';
+      
       const payload = estimateType === 'direct' ? {
         estimate_type: 'direct',
         client_name: directForm.customerName,
@@ -236,20 +240,45 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         tower_name: directForm.towerName,
         block_number: directForm.blockNumber,
         villa_plot_number: directForm.plotNumber,
-        amc_package_id: selectedAmcPackage,
-        addon_ids: selectedAddons,
+        package_id: selectedAmcPackage,
+        package_name: pkgName,
+        package_price: pkgPrice,
+        addons: selectedAddons.map(id => { const a = addons.find(x => getAddonId(x) === id); return a ? { id: getAddonId(a), name: getAddonName(a), price: getAddonPrice(a) } : null; }).filter(Boolean),
+        subtotal: priceSummary.subTotal,
         discount_percent: discountPercent,
+        discount_amount: priceSummary.discountAmount,
         gst_percent: gstPercent,
-        sub_total: priceSummary.subTotal,
+        gst_amount: priceSummary.gstAmount,
         total_amount: priceSummary.totalAmount
       } : {
         estimate_type: 'property_based',
         property_id: propertyIdInput,
-        amc_package_id: selectedAmcPackage,
-        addon_ids: selectedAddons,
+        property_code: selectedProperty?.property_id || propertyIdInput,
+        property_name: selectedProperty?.name || selectedProperty?.community_name || '',
+        property_type: selectedProperty?.property_type || '',
+        client_name: selectedProperty?.contact_person || selectedProperty?.contact_name || '',
+        client_phone: selectedProperty?.contact_phone || selectedProperty?.phone || '',
+        client_email: selectedProperty?.contact_email || selectedProperty?.email || '',
+        zone: selectedProperty?.zone_name || selectedProperty?.zone || '',
+        city: selectedProperty?.city || '',
+        address: selectedProperty?.address || '',
+        division: selectedProperty?.division || '',
+        number_of_blocks: selectedProperty?.number_of_blocks || selectedProperty?.blocks || 1,
+        block_names: selectedProperty?.block_names || null,
+        units_per_block: selectedProperty?.units_per_block || null,
+        total_units: selectedProperty?.total_units || selectedProperty?.units || selectedProperty?.number_of_units || 1,
+        tower_name: selectedProperty?.tower_name || '',
+        block_number: selectedProperty?.block_number || '',
+        villa_plot_number: selectedProperty?.villa_plot_number || '',
+        package_id: selectedAmcPackage,
+        package_name: pkgName,
+        package_price: pkgPrice,
+        addons: selectedAddons.map(id => { const a = addons.find(x => getAddonId(x) === id); return a ? { id: getAddonId(a), name: getAddonName(a), price: getAddonPrice(a) } : null; }).filter(Boolean),
+        subtotal: priceSummary.subTotal,
         discount_percent: discountPercent,
+        discount_amount: priceSummary.discountAmount,
         gst_percent: gstPercent,
-        sub_total: priceSummary.subTotal,
+        gst_amount: priceSummary.gstAmount,
         total_amount: priceSummary.totalAmount
       };
 
@@ -1344,9 +1373,17 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                       <div><p className="text-xs text-gray-500">Number of Units</p><p className="font-medium text-sm">{viewEstimate.total_units || '-'}</p></div>
                     </>
                   )}
-                  {/* Villa/Plot-specific fields */}
-                  {['VILLA', 'villa', 'Villa', 'PLOT', 'plot', 'Plot'].includes(viewEstimate.property_type) && viewEstimate.villa_plot_number && (
-                    <div><p className="text-xs text-gray-500">Villa/Plot Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number}</p></div>
+                  {/* Villa-specific fields */}
+                  {['VILLA', 'villa', 'Villa', 'VL'].includes(viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Villa Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.villa_number || '-'}</p></div>
+                  )}
+                  {/* Flat-specific fields */}
+                  {['FLAT', 'flat', 'Flat', 'FL'].includes(viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Flat Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.flat_number || '-'}</p></div>
+                  )}
+                  {/* Plot-specific fields */}
+                  {['PLOT', 'plot', 'Plot', 'PL'].includes(viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Plot Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.plot_number || '-'}</p></div>
                   )}
                 </div>
               </div>

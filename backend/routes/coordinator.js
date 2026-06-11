@@ -363,8 +363,9 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
         // FP Coordinators see: zone-centric onboarded properties + their own created
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                   op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
+                  op.total_units, op.number_of_blocks, op.block_names, op.units_per_block, op.number_of_units,
                   op.address, op.city, op.state, op.postal_code as zip_code,
-                  NULL as contact_person, NULL as contact_phone, NULL as email,
+                  op.contact_person, op.contact_phone, op.contact_email as email,
                   COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
                   op.created_at, op.status,
                   'onboarded_properties' as source_table
@@ -376,8 +377,9 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
       } else {
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                   op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
+                  op.total_units, op.number_of_blocks, op.block_names, op.units_per_block, op.number_of_units,
                   op.address, op.city, op.state, op.postal_code as zip_code,
-                  NULL as contact_person, NULL as contact_phone, NULL as email,
+                  op.contact_person, op.contact_phone, op.contact_email as email,
                   COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
                   op.created_at, op.status,
                   'onboarded_properties' as source_table
@@ -1318,17 +1320,17 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
       // Get assigned zones
       const assignedZones = await getAssignedZones(employeeId);
       
-      // Build zone + creator filter
+      // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
       let zoneClause = '';
       let zoneParams = [];
       if (assignedZones.length > 0) {
         const placeholders = assignedZones.map(() => '?').join(',');
-        zoneClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_name = ? OR e.created_by_name = ?)`;
-        zoneParams = [...assignedZones, creatorEmail, req.user?.username || ''];
+        zoneClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
+        zoneParams = [...assignedZones, coordinatorId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
       } else {
-        // No zones = only see own created
-        zoneClause = ` AND (e.created_by_name = ? OR e.created_by_name = ?)`;
-        zoneParams = [creatorEmail, req.user?.username || ''];
+        // No zones = only see own created (by ID or by name/email/username)
+        zoneClause = ` AND (e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
+        zoneParams = [coordinatorId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
       }
       
       const [fpEstimates] = await pool.query(

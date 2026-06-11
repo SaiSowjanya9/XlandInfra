@@ -220,6 +220,10 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     if (!selectedAmcPackage) { showToast('Select AMC Package', 'error'); return; }
     
     try {
+      const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
+      const pkgPrice = pkg ? getPackagePrice(pkg) : 0;
+      const pkgName = pkg?.name || pkg?.package_name || '';
+      
       const payload = estimateType === 'direct' ? {
         estimate_type: 'direct',
         client_name: directForm.customerName,
@@ -230,27 +234,58 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
         zone: directForm.zone,
         city: directForm.city,
         address: directForm.address,
-        number_of_blocks: directForm.numberOfBlocks,
+        // GC fields
+        number_of_blocks: directForm.numberOfBlocks || null,
         block_names: directForm.blockNames ? JSON.stringify(directForm.blockNames) : null,
         units_per_block: directForm.unitsPerBlock ? JSON.stringify(directForm.unitsPerBlock) : null,
-        total_units: directForm.totalUnits,
-        tower_name: directForm.towerName,
-        block_number: directForm.blockNumber,
-        villa_plot_number: directForm.plotNumber,
-        amc_package_id: selectedAmcPackage,
-        addon_ids: selectedAddons,
+        total_units: directForm.totalUnits || directForm.numberOfUnits || null,
+        // Apartment fields
+        tower_name: directForm.towerName || null,
+        block_number: directForm.blockNumber || null,
+        // Villa/Flat/Plot fields - combine into villa_plot_number
+        villa_plot_number: directForm.villaNumber || directForm.flatNumber || directForm.plotNumber || null,
+        flat_number: directForm.flatNumber || null,
+        villa_number: directForm.villaNumber || null,
+        plot_number: directForm.plotNumber || null,
+        package_id: selectedAmcPackage,
+        package_name: pkgName,
+        package_price: pkgPrice,
+        addons: selectedAddons.map(id => { const a = addons.find(x => getAddonId(x) === id); return a ? { id: getAddonId(a), name: getAddonName(a), price: getAddonPrice(a) } : null; }).filter(Boolean),
+        subtotal: priceSummary.subTotal,
         discount_percent: discountPercent,
+        discount_amount: priceSummary.discountAmount,
         gst_percent: gstPercent,
-        sub_total: priceSummary.subTotal,
+        gst_amount: priceSummary.gstAmount,
         total_amount: priceSummary.totalAmount
       } : {
         estimate_type: 'property_based',
         property_id: propertyIdInput,
-        amc_package_id: selectedAmcPackage,
-        addon_ids: selectedAddons,
+        property_code: selectedProperty?.property_id || propertyIdInput,
+        property_name: selectedProperty?.name || selectedProperty?.community_name || '',
+        property_type: selectedProperty?.property_type || '',
+        client_name: selectedProperty?.contact_person || selectedProperty?.contact_name || '',
+        client_phone: selectedProperty?.contact_phone || selectedProperty?.phone || '',
+        client_email: selectedProperty?.contact_email || selectedProperty?.email || '',
+        zone: selectedProperty?.zone_name || selectedProperty?.zone || '',
+        city: selectedProperty?.city || '',
+        address: selectedProperty?.address || '',
+        division: selectedProperty?.division || '',
+        number_of_blocks: selectedProperty?.number_of_blocks || selectedProperty?.blocks || 1,
+        block_names: selectedProperty?.block_names || null,
+        units_per_block: selectedProperty?.units_per_block || null,
+        total_units: selectedProperty?.total_units || selectedProperty?.units || selectedProperty?.number_of_units || 1,
+        tower_name: selectedProperty?.tower_name || '',
+        block_number: selectedProperty?.block_number || '',
+        villa_plot_number: selectedProperty?.villa_plot_number || '',
+        package_id: selectedAmcPackage,
+        package_name: pkgName,
+        package_price: pkgPrice,
+        addons: selectedAddons.map(id => { const a = addons.find(x => getAddonId(x) === id); return a ? { id: getAddonId(a), name: getAddonName(a), price: getAddonPrice(a) } : null; }).filter(Boolean),
+        subtotal: priceSummary.subTotal,
         discount_percent: discountPercent,
+        discount_amount: priceSummary.discountAmount,
         gst_percent: gstPercent,
-        sub_total: priceSummary.subTotal,
+        gst_amount: priceSummary.gstAmount,
         total_amount: priceSummary.totalAmount
       };
 
@@ -599,21 +634,29 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                   </div>
 
-                  {/* Unit Details */}
+                  {/* Unit Details - GC specific */}
                   <div className="bg-slate-50 rounded-lg p-4 mt-4">
                     <div className="flex items-center gap-2 mb-3">
                       <Building2 className="w-4 h-4 text-slate-600" />
                       <span className="text-sm font-medium text-slate-700">Unit Details</span>
                       <span className="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded">{selectedProperty.property_type?.substring(0,2).toUpperCase() || 'GC'}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-4 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
-                        <input type="text" value={selectedProperty.block_name || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                        <label className="block text-xs font-medium text-slate-500 mb-1">Number of Blocks</label>
+                        <input type="text" value={selectedProperty.number_of_blocks || selectedProperty.blocks || selectedProperty.block_count || 1} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
-                        <input type="text" value={`${selectedProperty.units || selectedProperty.total_units || selectedProperty.number_of_units || 1} Units`} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                        <label className="block text-xs font-medium text-slate-500 mb-1">Block Names</label>
+                        <input type="text" value={selectedProperty.block_names || selectedProperty.blocks_list || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-1">Units Per Block</label>
+                        <input type="text" value={selectedProperty.units_per_block || selectedProperty.flats_per_block || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-1">Total Units</label>
+                        <input type="text" value={selectedProperty.total_units || selectedProperty.units || selectedProperty.number_of_units || 1} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                       </div>
                     </div>
                   </div>
@@ -1397,9 +1440,17 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                       <div><p className="text-xs text-gray-500">Number of Units</p><p className="font-medium text-sm">{viewEstimate.total_units || '-'}</p></div>
                     </>
                   )}
-                  {/* Villa/Plot-specific fields */}
-                  {['VILLA', 'villa', 'Villa', 'PLOT', 'plot', 'Plot'].includes(viewEstimate.property_type) && viewEstimate.villa_plot_number && (
-                    <div><p className="text-xs text-gray-500">Villa/Plot Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number}</p></div>
+                  {/* Villa-specific fields */}
+                  {['VILLA', 'villa', 'Villa', 'VL'].includes(viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Villa Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.villa_number || '-'}</p></div>
+                  )}
+                  {/* Flat-specific fields */}
+                  {['FLAT', 'flat', 'Flat', 'FL'].includes(viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Flat Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.flat_number || '-'}</p></div>
+                  )}
+                  {/* Plot-specific fields */}
+                  {['PLOT', 'plot', 'Plot', 'PL'].includes(viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Plot Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.plot_number || '-'}</p></div>
                   )}
                 </div>
               </div>

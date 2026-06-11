@@ -332,8 +332,9 @@ router.get('/properties', requireManagerScope, async (req, res) => {
         const onbZoneFilter = buildOnboardedPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'op');
         let onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
                   op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
+                  op.total_units, op.number_of_blocks, op.block_names, op.units_per_block, op.number_of_units,
                   op.address, op.city, op.state, op.postal_code as zip_code,
-                  NULL as contact_person, NULL as contact_phone, NULL as email,
+                  op.contact_person, op.contact_phone, op.contact_email as email,
                   COALESCE(
                     CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
                     CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
@@ -1339,17 +1340,17 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
       // Get assigned zones
       const assignedZones = await getAssignedZones(employeeId);
       
-      // Build zone + creator filter
+      // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
       let zoneClause = '';
       let zoneParams = [];
       if (assignedZones.length > 0) {
         const placeholders = assignedZones.map(() => '?').join(',');
-        zoneClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_name = ? OR e.created_by_name = ?)`;
-        zoneParams = [...assignedZones, creatorEmail, req.user?.username || ''];
+        zoneClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
+        zoneParams = [...assignedZones, managerId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
       } else {
-        // No zones = only see own created
-        zoneClause = ` AND (e.created_by_name = ? OR e.created_by_name = ?)`;
-        zoneParams = [creatorEmail, req.user?.username || ''];
+        // No zones = only see own created (by ID or by name/email/username)
+        zoneClause = ` AND (e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
+        zoneParams = [managerId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
       }
       
       const [fpEstimates] = await pool.execute(
@@ -1424,7 +1425,9 @@ router.post('/estimates', requireManagerScope, async (req, res) => {
       estimate_type, property_id, property_code, client_name, client_phone, client_email,
       property_name, property_type, zone, city, address, package_id, package_name, package_price,
       addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
-      description
+      description, number_of_blocks, block_names, units_per_block, total_units,
+      tower_name, block_number, villa_plot_number, division,
+      flat_number, villa_number, plot_number
     } = req.body;
     
     const estimateId = `EST-MGR-${Date.now()}`;
@@ -1458,8 +1461,10 @@ router.post('/estimates', requireManagerScope, async (req, res) => {
         client_name, client_phone, client_email, property_name, property_code, property_type,
         zone, city, address, package_id, package_name, package_price,
         subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
-        addons_data, description, created_by_id, created_by_name, created_by_role, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())`,
+        addons_data, description, created_by_id, created_by_name, created_by_role, status,
+        number_of_blocks, block_names, units_per_block, total_units, tower_name, block_number, villa_plot_number, division,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         estimateId, franchisePartnerId, propertyIdValue, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
@@ -1468,7 +1473,10 @@ router.post('/estimates', requireManagerScope, async (req, res) => {
         package_id || null, package_name || '', package_price || 0,
         subtotal || 0, discount_percent || 0, discount_amount || 0,
         gst_percent || 0, gst_amount || 0, total_amount || 0,
-        JSON.stringify(addons || []), description || '', managerId, creatorName, 'manager'
+        JSON.stringify(addons || []), description || '', managerId, creatorName, 'manager',
+        number_of_blocks || null, block_names ? JSON.stringify(block_names) : null, 
+        units_per_block ? JSON.stringify(units_per_block) : null, total_units || null,
+        tower_name || null, block_number || null, villa_plot_number || null, division || null
       ]
     );
 
