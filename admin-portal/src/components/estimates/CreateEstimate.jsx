@@ -112,7 +112,11 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     services: [],
     notes: '',
     noOfVisits: '',
-    description: ''
+    description: '',
+    // Blocks & Units for GC/Apartment
+    numberOfBlocks: 1,
+    unitsPerBlock: {},
+    totalUnits: 0
   });
 
   useEffect(() => {
@@ -1773,95 +1777,78 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
 
             {/* Dynamic Fields Based on Property Type */}
             {estimateForm.propertyType === 'GC' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <div>
+              <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <h4 className="text-sm font-semibold text-blue-800 mb-3">Block & Unit Details</h4>
+                <div className="mb-4">
                   <label className="block text-xs font-medium text-gray-600 mb-1">Number of Blocks *</label>
                   <input
                     type="number"
                     min="1"
-                    value={estimateForm.blockTower}
-                    onChange={(e) => setEstimateForm({ ...estimateForm, blockTower: e.target.value })}
+                    value={estimateForm.numberOfBlocks}
+                    onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setEstimateForm({ ...estimateForm, numberOfBlocks: blocks, unitsPerBlock: {} }); }}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="Enter number of blocks"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Block Number</label>
-                  <input
-                    type="text"
-                    value={estimateForm.blockNumber || ''}
-                    onChange={(e) => setEstimateForm({ ...estimateForm, blockNumber: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="e.g., A, B, 1, 2"
-                  />
+                <div className="space-y-3">
+                  {Array.from({ length: estimateForm.numberOfBlocks }, (_, i) => i + 1).map(blockNum => (
+                    <div key={blockNum} className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Block Name</label>
+                        <input type="text" value={`Block ${blockNum}`} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-gray-100 text-gray-600" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Units *</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={estimateForm.unitsPerBlock[blockNum] || ''}
+                          onChange={(e) => { const units = parseInt(e.target.value) || 0; const newUnitsPerBlock = {...estimateForm.unitsPerBlock, [blockNum]: units}; const totalUnits = Object.values(newUnitsPerBlock).reduce((sum, u) => sum + (u || 0), 0); setEstimateForm({...estimateForm, unitsPerBlock: newUnitsPerBlock, totalUnits, numberOfUnits: totalUnits}); }}
+                          placeholder="No. of units"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Block Name</label>
-                  <input
-                    type="text"
-                    value={estimateForm.areaName}
-                    onChange={(e) => setEstimateForm({ ...estimateForm, areaName: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="e.g., Tower 1, Phase 2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Units *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={estimateForm.numberOfUnits}
-                    onChange={(e) => setEstimateForm({ ...estimateForm, numberOfUnits: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="Total units"
-                  />
-                </div>
+                {estimateForm.totalUnits > 0 && (<div className="mt-3 p-2 bg-blue-100 rounded inline-block"><span className="text-xs text-blue-700 font-medium">Total Units: {estimateForm.totalUnits}</span></div>)}
               </div>
             )}
 
             {estimateForm.propertyType === 'APT' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Tower/Building Name</label>
-                  <input
-                    type="text"
-                    value={estimateForm.blockTower}
-                    onChange={(e) => setEstimateForm({ ...estimateForm, blockTower: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="Tower/Building name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Block Number</label>
-                  <input
-                    type="text"
-                    value={estimateForm.blockNumber || ''}
-                    onChange={(e) => setEstimateForm({ ...estimateForm, blockNumber: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="e.g., A, B, 1, 2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Flat/Unit Number</label>
-                  <input
-                    type="text"
-                    value={estimateForm.flatUnit}
-                    onChange={(e) => setEstimateForm({ ...estimateForm, flatUnit: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="e.g., 101, 202"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Number of Units *</label>
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Block & Unit Details</h4>
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Number of Blocks *</label>
                   <input
                     type="number"
                     min="1"
-                    value={estimateForm.numberOfUnits}
-                    onChange={(e) => setEstimateForm({ ...estimateForm, numberOfUnits: e.target.value })}
+                    value={estimateForm.numberOfBlocks}
+                    onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setEstimateForm({ ...estimateForm, numberOfBlocks: blocks, unitsPerBlock: {} }); }}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="Total units"
                   />
                 </div>
+                <div className="space-y-3">
+                  {Array.from({ length: estimateForm.numberOfBlocks }, (_, i) => i + 1).map(blockNum => (
+                    <div key={blockNum} className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Block Name</label>
+                        <input type="text" value={`Block ${blockNum}`} readOnly className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-gray-100 text-gray-600" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Units *</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={estimateForm.unitsPerBlock[blockNum] || ''}
+                          onChange={(e) => { const units = parseInt(e.target.value) || 0; const newUnitsPerBlock = {...estimateForm.unitsPerBlock, [blockNum]: units}; const totalUnits = Object.values(newUnitsPerBlock).reduce((sum, u) => sum + (u || 0), 0); setEstimateForm({...estimateForm, unitsPerBlock: newUnitsPerBlock, totalUnits, numberOfUnits: totalUnits}); }}
+                          placeholder="No. of units"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {estimateForm.totalUnits > 0 && (<div className="mt-3 p-2 bg-gray-200 rounded inline-block"><span className="text-xs text-gray-700 font-medium">Total Units: {estimateForm.totalUnits}</span></div>)}
               </div>
             )}
 

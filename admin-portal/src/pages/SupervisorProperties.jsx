@@ -738,11 +738,17 @@ const SupervisorProperties = ({ user }) => {
                 </div>
               </div>
 
-              {/* Block Details */}
-              {(selectedProperty.block_names || selectedProperty.units_per_block) && (
+              {/* Block Details - Show for GC and Apartment */}
+              {(selectedProperty.property_type === 'gated_community' || selectedProperty.property_type === 'apartment' || selectedProperty.block_names || selectedProperty.units_per_block || selectedProperty.number_of_blocks) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Number of Blocks</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.number_of_blocks || 1}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-2">
                     {(() => {
                       try {
                         const blockNames = typeof selectedProperty.block_names === 'string' 
@@ -751,14 +757,24 @@ const SupervisorProperties = ({ user }) => {
                         const unitsPerBlock = typeof selectedProperty.units_per_block === 'string'
                           ? JSON.parse(selectedProperty.units_per_block)
                           : selectedProperty.units_per_block || {};
-                        return Object.keys(blockNames).map(key => (
-                          <div key={key}>
-                            <p className="text-xs text-gray-500">{blockNames[key] || `Block ${key}`}</p>
-                            <p className="text-sm font-medium text-gray-900">{unitsPerBlock[key] || 0} units</p>
-                          </div>
-                        ));
+                        const numBlocks = selectedProperty.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
+                        if (Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0) {
+                          return Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
+                            <div key={blockNum} className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg">
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Block Name</p>
+                                <p className="text-sm font-medium text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Units</p>
+                                <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || 0}</p>
+                              </div>
+                            </div>
+                          ));
+                        }
+                        return null;
                       } catch {
-                        return <p className="text-sm text-gray-500">No block details available</p>;
+                        return null;
                       }
                     })()}
                   </div>
