@@ -181,62 +181,58 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
             </div>
 
             <div className="flex items-center gap-6">
-              {/* FP Switcher - Hide on Create tab */}
-              {defaultTab !== 'create' && (
-                <>
-                  <div className="relative">
+              {/* FP Switcher - Show on all tabs */}
+              <div className="relative">
+                <button
+                  onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm hover:border-gray-300 hover:shadow-sm transition-all"
+                >
+                  <div className="w-2.5 h-2.5 rounded-full bg-slate-500"></div>
+                  <span className="font-medium text-gray-700">
+                    {selectedFp?.id === 'all' ? 'Admin (All FPs)' : selectedFp?.fpId || 'Select FP'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {fpDropdownOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
                     <button
-                      onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm hover:border-gray-300 hover:shadow-sm transition-all"
+                      onClick={() => handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' })}
+                      className={`w-full text-left px-4 py-3 text-sm hover:bg-slate-50 transition-colors border-b border-gray-100 ${
+                        selectedFp?.id === 'all' ? 'bg-slate-50' : ''
+                      }`}
                     >
-                      <div className="w-2.5 h-2.5 rounded-full bg-slate-500"></div>
-                      <span className="font-medium text-gray-700">
-                        {selectedFp?.id === 'all' ? 'Admin (All FPs)' : selectedFp?.fpId || 'Select FP'}
-                      </span>
-                      <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {fpDropdownOpen && (
-                      <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
-                        <button
-                          onClick={() => handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' })}
-                          className={`w-full text-left px-4 py-3 text-sm hover:bg-slate-50 transition-colors border-b border-gray-100 ${
-                            selectedFp?.id === 'all' ? 'bg-slate-50' : ''
-                          }`}
-                        >
-                          <div className="font-medium flex items-center gap-2 text-slate-700">
-                            <Users className="w-4 h-4" />
-                            Admin (All FPs)
-                          </div>
-                        </button>
-                        {fpList.map(fp => (
-                          <button
-                            key={fp.id}
-                            onClick={() => handleFpSelect(fp)}
-                            className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
-                              selectedFp?.id === fp.id ? 'bg-slate-50' : ''
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-gray-800">{fp.fpId}</span>
-                              <span className="text-xs text-gray-500">{fp.ownerName}</span>
-                            </div>
-                            <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
-                          </button>
-                        ))}
+                      <div className="font-medium flex items-center gap-2 text-slate-700">
+                        <Users className="w-4 h-4" />
+                        Admin (All FPs)
                       </div>
-                    )}
+                    </button>
+                    {fpList.map(fp => (
+                      <button
+                        key={fp.id}
+                        onClick={() => handleFpSelect(fp)}
+                        className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
+                          selectedFp?.id === fp.id ? 'bg-slate-50' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-gray-800">{fp.fpId}</span>
+                          <span className="text-xs text-gray-500">{fp.ownerName}</span>
+                        </div>
+                        <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
+                      </button>
+                    ))}
                   </div>
-                  
-                  {/* Refresh Button */}
-                  <button
-                    onClick={handleRefresh}
-                    className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                    title="Refresh"
-                  >
-                    <RefreshCw className="w-5 h-5 text-gray-600" />
-                  </button>
-                </>
-              )}
+                )}
+              </div>
+              
+              {/* Refresh Button */}
+              <button
+                onClick={handleRefresh}
+                className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                title="Refresh"
+              >
+                <RefreshCw className="w-5 h-5 text-gray-600" />
+              </button>
               
               {/* Quick Stats */}
               <div className="flex gap-6">
