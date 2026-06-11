@@ -423,27 +423,27 @@ router.post('/:id/reject', authenticate, canApprove, async (req, res) => {
   }
 });
 
-// Delete estimate (Admin only)
+// Delete estimate (Admin only) - Archives instead of hard delete
 router.delete('/:id', authenticate, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Only delete if draft or rejected
+    // Archive instead of hard delete
     const [result] = await pool.execute(
-      `DELETE FROM estimates WHERE id = ? AND status IN ('draft', 'rejected')`,
+      `UPDATE estimates SET is_archived = 1, archived_at = NOW(), status = 'Archived' WHERE id = ?`,
       [id]
     );
 
     if (result.affectedRows === 0) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
-        message: 'Cannot delete approved or converted estimates'
+        message: 'Estimate not found'
       });
     }
 
     res.json({
       success: true,
-      message: 'Estimate deleted successfully'
+      message: 'Estimate archived successfully'
     });
   } catch (error) {
     console.error('Error deleting estimate:', error);

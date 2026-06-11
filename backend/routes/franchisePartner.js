@@ -3085,6 +3085,7 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     const {
       estimate_type, property_id, property_code, client_name, client_phone, client_email,
       property_type, property_name, zone, division, city, address,
+      number_of_blocks, units_per_block, block_names, total_units,
       package_id, package_name, package_price,
       addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
       description
@@ -3110,6 +3111,10 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         division VARCHAR(100),
         city VARCHAR(100),
         address TEXT,
+        number_of_blocks INT DEFAULT 1,
+        units_per_block JSON,
+        block_names JSON,
+        total_units INT DEFAULT 0,
         package_id INT,
         package_name VARCHAR(255),
         package_price DECIMAL(12,2) DEFAULT 0.00,
@@ -3173,6 +3178,10 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     // Stringify addons for storage
     const addonsJson = addons ? JSON.stringify(addons) : null;
     
+    // Stringify block data for storage
+    const unitsPerBlockJson = units_per_block ? JSON.stringify(units_per_block) : null;
+    const blockNamesJson = block_names ? JSON.stringify(block_names) : null;
+    
     console.log('Creating FP estimate:', { estimateId, client_name, package_name, creatorName, fpId: req.fpId });
 
     // Insert into fp_estimates table (no FK constraints)
@@ -3181,15 +3190,17 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         estimate_id, franchise_partner_id, property_id, estimate_type,
         client_name, client_phone, client_email,
         property_name, property_code, property_type, zone, division, city, address,
+        number_of_blocks, units_per_block, block_names, total_units,
         package_id, package_name, package_price,
         subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
         addons_data, description, status,
         created_by_id, created_by_name, created_by_role
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
       [
         estimateId, req.fpId, property_id || null, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
         property_name || '', property_code || '', property_type || '', zone || '', division || '', city || '', address || '',
+        parseInt(number_of_blocks) || 1, unitsPerBlockJson, blockNamesJson, parseInt(total_units) || 0,
         package_id || null, package_name || '', parseFloat(package_price) || 0,
         finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,
         addonsJson, description || '', 
@@ -3348,14 +3359,14 @@ router.put('/estimates/:id/restore', requireFPScope, async (req, res) => {
   }
 });
 
-// Delete estimate permanently
+// Delete estimate - Archives instead of hard delete
 router.delete('/estimates/:id', requireFPScope, async (req, res) => {
   try {
     await pool.execute(
-      `DELETE FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?`,
+      `UPDATE fp_estimates SET is_archived = 1, archived_at = NOW(), status = 'Archived' WHERE id = ? AND franchise_partner_id = ?`,
       [req.params.id, req.fpId]
     );
-    res.json({ success: true, message: 'Estimate deleted' });
+    res.json({ success: true, message: 'Estimate archived' });
   } catch (error) {
     console.error('Delete estimate error:', error);
     res.status(500).json({ success: false, message: error.message });
