@@ -55,7 +55,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // FP Manager defaults to 'all-packages' (no create access)
   const [amcActiveTab, setAmcActiveTab] = useState(isFPManager ? 'all-packages' : 'create');
   const [selectedPropertyType, setSelectedPropertyType] = useState(null);
-  const [amcForm, setAmcForm] = useState({ packageName: '', description: '', serviceRows: [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' });
+  const [amcForm, setAmcForm] = useState({ packageName: '', description: '', serviceRows: [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' });
   const [editingAmcPackage, setEditingAmcPackage] = useState(null);
   const [filterPropertyType, setFilterPropertyType] = useState('all');
   // FP Manager defaults to 'all-addons' (no create access)
@@ -1225,12 +1225,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     } catch (e) { showToast('Failed to save package', 'error'); }
   };
   const handleDeleteAmcPackage = async (id) => { if (!window.confirm('Delete this package?')) return; try { const res = await fetch(`/api/fp/amc-packages/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
-  const handleAddServiceRow = () => setAmcForm({ ...amcForm, serviceRows: [...amcForm.serviceRows, { service: '', frequencyCount: 1, frequencyType: 'Monthly' }] });
+  const handleAddServiceRow = () => setAmcForm({ ...amcForm, serviceRows: [...amcForm.serviceRows, { service: '', frequencyCount: 12, frequencyType: 'Monthly' }] });
   const handleUpdateServiceRow = (i, f, v) => { const rows = [...amcForm.serviceRows]; if (f === 'frequencyType') { const auto = FREQUENCY_COUNT_MAP[v]; rows[i] = { ...rows[i], [f]: v, frequencyCount: auto !== null ? auto : '' }; } else rows[i][f] = v; setAmcForm({ ...amcForm, serviceRows: rows }); };
   const handleRemoveServiceRow = (i) => { if (amcForm.serviceRows.length > 1) setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, idx) => idx !== i) }); };
 
   const getPrice = () => parseFloat(amcForm.price) || 0;
-  const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); setEditingAmcPackage(null); };
+  const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); setEditingAmcPackage(null); };
   const getBillingBadgeColor = (billing) => {
     switch (billing) {
       case 'monthly': return 'bg-amber-50 text-amber-700 border-amber-200';
@@ -1401,9 +1401,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                     description: pkg.description || '',
                                     serviceRows: serviceRows.length > 0 ? serviceRows.map(s => ({
                                       service: s.name || s.service || '',
-                                      frequencyCount: s.frequency_count || s.frequencyCount || 1,
+                                      frequencyCount: s.frequency_count || s.frequencyCount || 12,
                                       frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
-                                    })) : [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }],
+                                    })) : [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }],
                                     price: pkg.base_price || pkg.price || '',
                                     billingDuration: billingDuration || 'monthly'
                                   });

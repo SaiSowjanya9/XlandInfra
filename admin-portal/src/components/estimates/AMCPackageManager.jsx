@@ -64,7 +64,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Package form with dynamic service rows
   const [amcForm, setAmcForm] = useState({
     packageName: '',
-    serviceRows: [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }],
+    serviceRows: [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }],
     price: '',
     billingDuration: 'monthly',
     description: ''
@@ -114,7 +114,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const handleAddServiceRow = () => {
     setAmcForm({
       ...amcForm,
-      serviceRows: [...amcForm.serviceRows, { service: '', frequencyCount: 1, frequencyType: 'Monthly' }]
+      serviceRows: [...amcForm.serviceRows, { service: '', frequencyCount: 12, frequencyType: 'Monthly' }]
     });
   };
 
@@ -213,11 +213,11 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     } else if (typeof pkg.services === 'string' && pkg.services) {
       loadedServiceRows = pkg.services.split(',').map(s => ({
         service: s.trim(),
-        frequencyCount: 1,
+        frequencyCount: 12,
         frequencyType: 'Monthly'
       }));
     } else {
-      loadedServiceRows = [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }];
+      loadedServiceRows = [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }];
     }
     
     setAmcForm({
@@ -271,7 +271,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const resetForm = () => {
     setAmcForm({
       packageName: '',
-      serviceRows: [{ service: '', frequencyCount: 1, frequencyType: 'Monthly' }],
+      serviceRows: [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }],
       price: '',
       billingDuration: 'monthly',
       description: ''
