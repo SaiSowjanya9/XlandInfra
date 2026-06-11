@@ -97,6 +97,31 @@ const generatePDF = (data, type, filename) => {
     const estId = String(data.estimateId || data.packageId || 'N/A');
     doc.text(estId.length > 25 ? estId.substring(0, 25) + '...' : estId, margin + 8, y);
     
+    // Status badge (for estimates)
+    if (type === 'estimate' && data.status) {
+      const status = String(data.status).toLowerCase();
+      const statusColors = {
+        'draft': [107, 114, 128],     // gray
+        'sent': [59, 130, 246],       // blue
+        'approved': [34, 197, 94],    // green
+        'rejected': [239, 68, 68],    // red
+        'expired': [249, 115, 22]     // orange
+      };
+      const statusColor = statusColors[status] || [107, 114, 128];
+      const statusText = status.charAt(0).toUpperCase() + status.slice(1);
+      
+      const statusX = pageWidth / 2 - 10;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...mediumText);
+      doc.text('Status:', statusX, y);
+      doc.setFillColor(...statusColor);
+      doc.roundedRect(statusX + 12, y - 3, 18, 5, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(6);
+      doc.text(statusText, statusX + 12 + 9, y, { align: 'center' });
+      doc.setFontSize(8);
+    }
+    
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...mediumText);
     doc.text('Date:', pageWidth - margin - 35, y);
@@ -129,7 +154,13 @@ const generatePDF = (data, type, filename) => {
     if (type !== 'package') {
       const gap = 6;
       const cardWidth = (pageWidth - margin * 2 - gap) / 2;
-      const cardHeight = 32;
+      
+      // Determine card height based on property type - need extra rows for GC/Apartment
+      const propType = String(data.propertyType || '').toUpperCase();
+      const isGC = ['GC', 'GATED COMMUNITY', 'GATED_COMMUNITY'].includes(propType);
+      const isApt = ['APT', 'APARTMENT'].includes(propType);
+      const isVilla = ['VILLA', 'PLOT'].includes(propType);
+      const cardHeight = (isGC || isApt) ? 44 : (isVilla ? 38 : 32);
       
       // Property Details Card
       doc.setFillColor(...cardBg);
@@ -154,7 +185,8 @@ const generatePDF = (data, type, filename) => {
       doc.setFont('helvetica', 'bold');
       const propId = String(data.propertyId || '-');
       doc.text(propId.length > 18 ? propId.substring(0, 18) + '...' : propId, margin + 4, py);
-      doc.text(String(data.propertyType || '-'), margin + cardWidth/2 + 2, py);
+      const typeLabel = isGC ? 'Gated Community' : isApt ? 'Apartment' : String(data.propertyType || '-');
+      doc.text(typeLabel, margin + cardWidth/2 + 2, py);
       py += 6;
       
       // Row 2: Zone | Division
@@ -167,6 +199,48 @@ const generatePDF = (data, type, filename) => {
       doc.setFont('helvetica', 'bold');
       doc.text(String(data.zone || '-'), margin + 4, py);
       doc.text(String(data.division || data.divisionName || '-'), margin + cardWidth/2 + 2, py);
+      
+      // Property-type specific fields
+      if (isGC) {
+        py += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...lightText);
+        doc.text('No. of Blocks', margin + 4, py);
+        doc.text('Total Units', margin + cardWidth/2 + 2, py);
+        py += 4;
+        doc.setTextColor(...darkText);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(data.numberOfBlocks || data.number_of_blocks || '-'), margin + 4, py);
+        doc.text(String(data.totalUnits || data.total_units || '-'), margin + cardWidth/2 + 2, py);
+      } else if (isApt) {
+        py += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...lightText);
+        doc.text('Tower/Building', margin + 4, py);
+        doc.text('Block No.', margin + cardWidth/2 + 2, py);
+        py += 4;
+        doc.setTextColor(...darkText);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(data.towerName || data.tower_name || '-'), margin + 4, py);
+        doc.text(String(data.blockNumber || data.block_number || '-'), margin + cardWidth/2 + 2, py);
+        py += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...lightText);
+        doc.text('No. of Units', margin + 4, py);
+        py += 4;
+        doc.setTextColor(...darkText);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(data.totalUnits || data.total_units || '-'), margin + 4, py);
+      } else if (isVilla) {
+        py += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...lightText);
+        doc.text('Villa/Plot No.', margin + 4, py);
+        py += 4;
+        doc.setTextColor(...darkText);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(data.villaPlotNumber || data.villa_plot_number || '-'), margin + 4, py);
+      }
       
       // Customer Details Card
       const cx = margin + cardWidth + gap;
