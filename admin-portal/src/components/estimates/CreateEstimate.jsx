@@ -43,12 +43,6 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   // Fetch FP Portal Links based on selection
   useEffect(() => {
     const fetchFpPortalLinks = async () => {
-      if (!admin) {
-        setFpPortalLinks([]);
-        setAllFpPortalLinks([]);
-        return;
-      }
-      
       try {
         if (selectedFp?.id === 'all') {
           // Fetch aggregated links from all FPs
