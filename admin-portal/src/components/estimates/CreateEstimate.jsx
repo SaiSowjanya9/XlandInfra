@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, User, Phone, Mail, Search, FileText, 
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase,
-  Package, Send, Plus, Trash2, Lock, ChevronDown
+  Package, Send, Plus, Trash2, Lock, ChevronDown, FolderOpen, ExternalLink
 } from 'lucide-react';
+import { useFP } from '../../contexts/FPContext';
 import PhoneInput from '../common/PhoneInput';
 import { 
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
@@ -27,9 +28,41 @@ const PROPERTY_ICONS = {
   Commercial: Briefcase
 };
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = admin?.role === 'operations_manager';
+  
+  // FP Context for Admin mode - to show FP Portal Links
+  const { selectedFp } = useFP();
+  const [fpPortalLinks, setFpPortalLinks] = useState([]);
+  const token = sessionStorage.getItem('pm_auth_token');
+  
+  // Fetch FP Portal Links when Admin selects a specific FP
+  useEffect(() => {
+    const fetchFpPortalLinks = async () => {
+      if (admin && selectedFp?.id && selectedFp.id !== 'all') {
+        try {
+          const res = await fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/portal-links`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (data.success && Array.isArray(data.data)) {
+            setFpPortalLinks(data.data);
+          } else {
+            setFpPortalLinks([]);
+          }
+        } catch (e) {
+          console.error('Failed to fetch FP portal links:', e);
+          setFpPortalLinks([]);
+        }
+      } else {
+        setFpPortalLinks([]);
+      }
+    };
+    fetchFpPortalLinks();
+  }, [admin, selectedFp, token]);
   
   // Show view-only message for Ops Manager
   if (isOpsManager) {
@@ -872,6 +905,40 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               <p className="font-medium text-gray-800">Direct-Based Estimate</p>
               <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* FP Shared Resources - Show when Admin selects a specific FP */}
+      {admin && fpPortalLinks.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <FolderOpen className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-gray-800">FP Shared Resources</h3>
+              <p className="text-xs text-gray-500">Quick access links from {selectedFp?.fpId || 'Franchise Partner'}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {fpPortalLinks.map((link) => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-100 hover:border-blue-300 hover:shadow-sm transition-all group"
+              >
+                <div className="w-8 h-8 bg-blue-50 rounded-md flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                  <ExternalLink className="w-4 h-4 text-blue-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-700 truncate">{link.heading}</p>
+                  <p className="text-xs text-gray-400 truncate">{link.url}</p>
+                </div>
+              </a>
+            ))}
           </div>
         </div>
       )}

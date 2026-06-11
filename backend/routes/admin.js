@@ -2420,6 +2420,29 @@ router.get('/fp-view/:fpId/addons', authenticate, adminOnly, async (req, res) =>
   }
 });
 
+// Get FP Portal Links (for Admin to view FP's shared resources)
+router.get('/fp-view/:fpId/portal-links', authenticate, adminOnly, async (req, res) => {
+  try {
+    const fpIdNum = validateFpId(req.params.fpId);
+    if (!fpIdNum) {
+      return res.status(400).json({ success: false, message: 'Invalid FP ID' });
+    }
+    
+    const [links] = await pool.execute(
+      `SELECT id, link_slot, heading, url, created_at, updated_at 
+       FROM fp_portal_links 
+       WHERE franchise_partner_id = ? AND is_active = 1 
+       ORDER BY link_slot ASC`,
+      [fpIdNum]
+    );
+    
+    res.json({ success: true, data: links || [] });
+  } catch (error) {
+    console.error('Error fetching FP portal links:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch portal links' });
+  }
+});
+
 // Get FP Customers
 router.get('/fp-view/:fpId/customers', authenticate, adminOnly, async (req, res) => {
   try {
