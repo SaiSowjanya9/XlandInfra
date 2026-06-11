@@ -639,7 +639,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                       <React.Fragment key={blockNum}>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Block Name</label>
-                          <input type="text" value={`Block ${blockNum}`} readOnly className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-100 text-gray-600" />
+                          <input type="text" value={directForm.blockNames?.[blockNum] || ''} onChange={(e) => { const newBlockNames = {...(directForm.blockNames || {}), [blockNum]: e.target.value}; setDirectForm({...directForm, blockNames: newBlockNames}); }} placeholder={`Block ${blockNum}`} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200" />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Units <span className="text-red-500">*</span></label>
@@ -654,7 +654,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
               {/* Apartment */}
               {directForm.propertyType === 'apartment' && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Tower/Building Name</label>
                     <input type="text" value={directForm.blockName || ''} onChange={(e) => setDirectForm({...directForm, blockName: e.target.value})} placeholder="Tower/Building name" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200" />
@@ -662,10 +662,6 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Block Number</label>
                     <input type="text" value={directForm.blockNumber} onChange={(e) => setDirectForm({...directForm, blockNumber: e.target.value})} placeholder="e.g., A, B, 1, 2" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Flat/Unit Number</label>
-                    <input type="text" value={directForm.flatNumber} onChange={(e) => setDirectForm({...directForm, flatNumber: e.target.value})} placeholder="e.g., 101, 202" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Number of Units <span className="text-red-500">*</span></label>
