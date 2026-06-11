@@ -1239,6 +1239,51 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                   <div><p className="text-xs text-gray-500">Division</p><p className="font-medium text-sm">{viewEstimate.division || '-'}</p></div>
                   <div><p className="text-xs text-gray-500">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
                   <div className="col-span-2"><p className="text-xs text-gray-500">Address</p><p className="font-medium text-sm">{viewEstimate.address || viewEstimate.property_address || '-'}</p></div>
+                  {/* GC-specific: Number of Blocks, Block Names, Units per Block */}
+                  {['GC', 'gated_community', 'Gated Community'].includes(viewEstimate.property_type) && (
+                    <>
+                      <div><p className="text-xs text-gray-500">Number of Blocks</p><p className="font-medium text-sm">{viewEstimate.number_of_blocks || '-'}</p></div>
+                      <div><p className="text-xs text-gray-500">Total Units</p><p className="font-medium text-sm">{viewEstimate.total_units || '-'}</p></div>
+                      {(() => {
+                        const blockNames = viewEstimate.block_names ? (typeof viewEstimate.block_names === 'string' ? JSON.parse(viewEstimate.block_names) : viewEstimate.block_names) : {};
+                        const unitsPerBlock = viewEstimate.units_per_block ? (typeof viewEstimate.units_per_block === 'string' ? JSON.parse(viewEstimate.units_per_block) : viewEstimate.units_per_block) : {};
+                        const hasBlockData = Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0;
+                        if (!hasBlockData) return null;
+                        return (
+                          <div className="col-span-2 mt-2">
+                            <p className="text-xs text-gray-500 mb-2">Block Details</p>
+                            <div className="bg-blue-50 p-3 rounded-lg">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {Object.keys(blockNames).length > 0 ? Object.entries(blockNames).map(([key, name]) => (
+                                  <div key={key} className="bg-white p-2 rounded border border-blue-100">
+                                    <p className="text-xs text-blue-600 font-medium">{name || `Block ${key}`}</p>
+                                    <p className="text-sm text-gray-700">{unitsPerBlock[key] || 0} units</p>
+                                  </div>
+                                )) : Object.entries(unitsPerBlock).map(([key, units]) => (
+                                  <div key={key} className="bg-white p-2 rounded border border-blue-100">
+                                    <p className="text-xs text-blue-600 font-medium">Block {key}</p>
+                                    <p className="text-sm text-gray-700">{units || 0} units</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </>
+                  )}
+                  {/* Apartment-specific fields */}
+                  {['APT', 'apartment', 'Apartment'].includes(viewEstimate.property_type) && (
+                    <>
+                      {viewEstimate.tower_name && <div><p className="text-xs text-gray-500">Tower/Building Name</p><p className="font-medium text-sm">{viewEstimate.tower_name}</p></div>}
+                      {viewEstimate.block_number && <div><p className="text-xs text-gray-500">Block Number</p><p className="font-medium text-sm">{viewEstimate.block_number}</p></div>}
+                      <div><p className="text-xs text-gray-500">Number of Units</p><p className="font-medium text-sm">{viewEstimate.total_units || '-'}</p></div>
+                    </>
+                  )}
+                  {/* Villa/Plot-specific fields */}
+                  {['VILLA', 'villa', 'Villa', 'PLOT', 'plot', 'Plot'].includes(viewEstimate.property_type) && viewEstimate.villa_plot_number && (
+                    <div><p className="text-xs text-gray-500">Villa/Plot Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number}</p></div>
+                  )}
                 </div>
               </div>
 

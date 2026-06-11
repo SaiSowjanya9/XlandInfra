@@ -438,12 +438,36 @@ router.post('/:estimateId/send', async (req, res) => {
     // Generate action token for approve/reject links
     const actionToken = crypto.randomBytes(32).toString('hex');
     
+    // Parse block data for GC
+    let blockNames = {};
+    let unitsPerBlock = {};
+    try {
+      if (est.block_names) blockNames = typeof est.block_names === 'string' ? JSON.parse(est.block_names) : est.block_names;
+      if (est.units_per_block) unitsPerBlock = typeof est.units_per_block === 'string' ? JSON.parse(est.units_per_block) : est.units_per_block;
+    } catch (e) {}
+
     // Prepare estimate data for email
     const estimateData = {
       estimateId: est.estimate_id,
       customerName: est.customer_name,
       customerEmail: est.customer_email,
       propertyName: est.property_name,
+      propertyType: est.property_type,
+      zone: est.zone,
+      division: est.division,
+      city: est.city,
+      address: est.address || est.property_address,
+      // GC-specific
+      numberOfBlocks: est.number_of_blocks,
+      blockNames: blockNames,
+      unitsPerBlock: unitsPerBlock,
+      totalUnits: est.total_units,
+      // Apartment-specific
+      towerName: est.tower_name,
+      blockNumber: est.block_number,
+      // Villa/Plot-specific
+      villaPlotNumber: est.villa_plot_number,
+      // Services and pricing
       services: services,
       addons: addons,
       subtotal: parseFloat(est.subtotal || 0),
