@@ -1529,12 +1529,20 @@ router.get('/amc-packages', requireManagerScope, async (req, res) => {
     const table = req.isFPManager ? 'fp_amc_packages' : 'manager_amc_packages';
     const scopeColumn = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
     
-    const [packages] = await pool.execute(
-      `SELECT * FROM ${table} WHERE ${scopeColumn} = ? ORDER BY created_at DESC`,
-      [scopeId]
-    );
-    
-    res.json({ success: true, data: packages.map(transformPackage) });
+    try {
+      const [packages] = await pool.execute(
+        `SELECT * FROM ${table} WHERE ${scopeColumn} = ? ORDER BY created_at DESC`,
+        [scopeId]
+      );
+      res.json({ success: true, data: packages.map(transformPackage) });
+    } catch (tableError) {
+      // If table doesn't exist, return empty array
+      if (tableError.code === 'ER_NO_SUCH_TABLE') {
+        console.log(`Table ${table} does not exist, returning empty array`);
+        return res.json({ success: true, data: [] });
+      }
+      throw tableError;
+    }
   } catch (error) {
     console.error('AMC packages fetch error:', error.message);
     res.status(500).json({ success: false, message: error.message });
@@ -1600,13 +1608,21 @@ router.get('/addons', requireManagerScope, async (req, res) => {
     
     console.log('[Manager Addons] isFPManager:', req.isFPManager, 'scopeId:', scopeId, 'franchisePartnerId:', req.franchisePartnerId, 'table:', table);
     
-    const [addons] = await pool.execute(
-      `SELECT * FROM ${table} WHERE ${scopeColumn} = ? ORDER BY created_at DESC`,
-      [scopeId]
-    );
-    
-    console.log('[Manager Addons] Found:', addons.length, 'addons');
-    res.json({ success: true, data: addons.map(transformAddon) });
+    try {
+      const [addons] = await pool.execute(
+        `SELECT * FROM ${table} WHERE ${scopeColumn} = ? ORDER BY created_at DESC`,
+        [scopeId]
+      );
+      console.log('[Manager Addons] Found:', addons.length, 'addons');
+      res.json({ success: true, data: addons.map(transformAddon) });
+    } catch (tableError) {
+      // If table doesn't exist, return empty array
+      if (tableError.code === 'ER_NO_SUCH_TABLE') {
+        console.log(`Table ${table} does not exist, returning empty array`);
+        return res.json({ success: true, data: [] });
+      }
+      throw tableError;
+    }
   } catch (error) {
     console.error('Addons fetch error:', error.message);
     res.status(500).json({ success: false, message: error.message });
