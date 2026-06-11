@@ -64,10 +64,44 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     fetchFpPortalLinks();
   }, [admin, selectedFp, token]);
   
-  // Show view-only message for Ops Manager
+  // Show view-only message for Ops Manager (with FP Shared Resources if FP selected)
   if (isOpsManager) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
+        {/* FP Shared Resources - Show when Ops Manager selects a specific FP */}
+        {fpPortalLinks.length > 0 && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <FolderOpen className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-800">FP Shared Resources</h3>
+                <p className="text-xs text-gray-500">Quick access links from {selectedFp?.fpId || 'Franchise Partner'}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {fpPortalLinks.map((link) => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-100 hover:border-blue-300 hover:shadow-sm transition-all group"
+                >
+                  <div className="w-8 h-8 bg-blue-50 rounded-md flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                    <ExternalLink className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-700 truncate">{link.heading}</p>
+                    <p className="text-xs text-gray-400 truncate">{link.url}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+        
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
           <Lock className="w-12 h-12 text-amber-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-amber-800 mb-2">View Only Access</h2>
