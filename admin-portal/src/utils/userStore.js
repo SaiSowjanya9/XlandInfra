@@ -12,7 +12,7 @@ const DEFAULT_USERS = [];
 // Role definitions with colors and icons (using backend role keys)
 export const USER_ROLES = {
   admin: {
-    label: 'Admin',
+    label: 'Super Admin',
     color: 'bg-red-500',
     textColor: 'text-red-600',
     bgColor: 'bg-red-50',
