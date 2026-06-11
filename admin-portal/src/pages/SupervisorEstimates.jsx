@@ -744,39 +744,27 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
               {/* FP Shared Resources Section - Read-only for employees */}
               {fpPortalLinks.length > 0 && (
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-6">
-                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-gray-200">
+                  <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-5 py-3 border-b border-gray-200">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-100 rounded-lg">
-                        <FolderOpen className="w-5 h-5 text-indigo-600" />
+                      <div className="p-2 bg-gray-100 rounded-lg">
+                        <FolderOpen className="w-5 h-5 text-gray-500" />
                       </div>
                       <div>
                         <h2 className="text-base font-semibold text-gray-900">FP Shared Resources</h2>
-                        <p className="text-xs text-gray-500 mt-0.5">Resources shared by your Franchise Partner</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Quick access links from your Franchise Partner</p>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     {fpPortalLinks.map((link) => (
-                      <div key={link.id} className="border border-gray-200 rounded-xl p-5 bg-gray-50/50 hover:bg-white hover:shadow-sm transition-all">
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-indigo-100 rounded-lg flex-shrink-0">
-                            <FolderOpen className="w-5 h-5 text-indigo-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-gray-900 truncate">{link.heading}</h3>
-                            <p className="text-xs text-gray-500 mt-1 truncate">{link.url}</p>
-                          </div>
+                      <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:shadow-sm hover:border-gray-300 transition-all group">
+                        <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-gray-500" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{link.heading}</p>
+                          <p className="text-xs text-gray-500 truncate">{link.url}</p>
                         </div>
-                        <a 
-                          href={link.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-                        >
-                          <ExternalLink className="w-4 h-4" /> Open Link
-                        </a>
-                      </div>
+                      </a>
                     ))}
                   </div>
                 </div>
