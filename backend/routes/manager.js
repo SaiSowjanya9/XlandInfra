@@ -1532,23 +1532,13 @@ router.get('/amc-packages', requireManagerScope, async (req, res) => {
     const table = req.isFPManager ? 'fp_amc_packages' : 'manager_amc_packages';
     const scopeColumn = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
     
-    try {
-      const [packages] = await pool.execute(
+    const [packages] = await pool.execute(
         `SELECT * FROM ${table} WHERE ${scopeColumn} = ? ORDER BY created_at DESC`,
         [scopeId]
       );
       res.json({ success: true, data: packages.map(transformPackage) });
-    } catch (tableError) {
-      // If table doesn't exist (standalone manager tables may not exist), return empty array
-      if (tableError.code === 'ER_NO_SUCH_TABLE' || tableError.errno === 1146 || 
-          (tableError.message && tableError.message.includes("doesn't exist"))) {
-        console.log(`[Manager AMC] Table ${table} does not exist, returning empty array`);
-        return res.json({ success: true, data: [] });
-      }
-      throw tableError;
-    }
   } catch (error) {
-    console.error('AMC packages fetch error:', error.message);
+    // Silently return empty array for missing tables (standalone manager tables may not exist)
     res.json({ success: true, data: [] });
   }
 });
@@ -1610,26 +1600,13 @@ router.get('/addons', requireManagerScope, async (req, res) => {
     const table = req.isFPManager ? 'fp_addons' : 'manager_addons';
     const scopeColumn = req.isFPManager ? 'franchise_partner_id' : 'manager_id';
     
-    console.log('[Manager Addons] isFPManager:', req.isFPManager, 'scopeId:', scopeId, 'franchisePartnerId:', req.franchisePartnerId, 'table:', table);
-    
-    try {
-      const [addons] = await pool.execute(
-        `SELECT * FROM ${table} WHERE ${scopeColumn} = ? ORDER BY created_at DESC`,
-        [scopeId]
-      );
-      console.log('[Manager Addons] Found:', addons.length, 'addons');
-      res.json({ success: true, data: addons.map(transformAddon) });
-    } catch (tableError) {
-      // If table doesn't exist (standalone manager tables may not exist), return empty array
-      if (tableError.code === 'ER_NO_SUCH_TABLE' || tableError.errno === 1146 || 
-          (tableError.message && tableError.message.includes("doesn't exist"))) {
-        console.log(`[Manager Addons] Table ${table} does not exist, returning empty array`);
-        return res.json({ success: true, data: [] });
-      }
-      throw tableError;
-    }
+    const [addons] = await pool.execute(
+      `SELECT * FROM ${table} WHERE ${scopeColumn} = ? ORDER BY created_at DESC`,
+      [scopeId]
+    );
+    res.json({ success: true, data: addons.map(transformAddon) });
   } catch (error) {
-    console.error('Addons fetch error:', error.message);
+    // Silently return empty array for missing tables (standalone manager tables may not exist)
     res.json({ success: true, data: [] });
   }
 });
