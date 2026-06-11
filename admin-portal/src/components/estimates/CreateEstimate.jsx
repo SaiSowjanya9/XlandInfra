@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, User, Phone, Mail, Search, FileText, 
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase,
