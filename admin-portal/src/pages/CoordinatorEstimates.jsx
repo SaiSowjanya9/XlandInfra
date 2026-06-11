@@ -533,7 +533,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                     <select className="px-3 py-3 border border-gray-300 rounded-l-lg bg-gray-50 text-sm">
                       <option>+91</option>
                     </select>
-                    <input type="tel" value={directForm.phone} onChange={(e) => setDirectForm({...directForm, phone: e.target.value})} placeholder="10-digit phone number" className="flex-1 px-4 py-3 border border-l-0 border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-200" />
+                    <input type="tel" value={directForm.phone} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setDirectForm({...directForm, phone: val}); }} placeholder="10-digit phone number" className="flex-1 px-4 py-3 border border-l-0 border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-200" />
                   </div>
                 </div>
                 <div>
