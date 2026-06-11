@@ -37,13 +37,33 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   // FP Context for Admin mode - to show FP Portal Links
   const { selectedFp } = useFP();
   const [fpPortalLinks, setFpPortalLinks] = useState([]);
+  const [allFpPortalLinks, setAllFpPortalLinks] = useState([]); // Aggregated from all FPs
   const token = sessionStorage.getItem('pm_auth_token');
   
-  // Fetch FP Portal Links when Admin selects a specific FP
+  // Fetch FP Portal Links based on selection
   useEffect(() => {
     const fetchFpPortalLinks = async () => {
-      if (admin && selectedFp?.id && selectedFp.id !== 'all') {
-        try {
+      if (!admin) {
+        setFpPortalLinks([]);
+        setAllFpPortalLinks([]);
+        return;
+      }
+      
+      try {
+        if (selectedFp?.id === 'all') {
+          // Fetch aggregated links from all FPs
+          const res = await fetch(`${API_BASE}/api/admin/all-fp-portal-links`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (data.success && Array.isArray(data.data)) {
+            setAllFpPortalLinks(data.data);
+          } else {
+            setAllFpPortalLinks([]);
+          }
+          setFpPortalLinks([]);
+        } else if (selectedFp?.id) {
+          // Fetch links for specific FP
           const res = await fetch(`${API_BASE}/api/admin/fp-view/${selectedFp.id}/portal-links`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -53,22 +73,56 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
           } else {
             setFpPortalLinks([]);
           }
-        } catch (e) {
-          console.error('Failed to fetch FP portal links:', e);
+          setAllFpPortalLinks([]);
+        } else {
           setFpPortalLinks([]);
+          setAllFpPortalLinks([]);
         }
-      } else {
+      } catch (e) {
+        console.error('Failed to fetch FP portal links:', e);
         setFpPortalLinks([]);
+        setAllFpPortalLinks([]);
       }
     };
     fetchFpPortalLinks();
   }, [admin, selectedFp, token]);
   
-  // Show view-only message for Ops Manager (with FP Shared Resources if FP selected)
+  // Show view-only message for Ops Manager (with FP Shared Resources)
   if (isOpsManager) {
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-6">
-        {/* FP Shared Resources - Show when Ops Manager selects a specific FP */}
+        {/* FP Shared Resources - Aggregated from all FPs */}
+        {allFpPortalLinks.length > 0 && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <FolderOpen className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-800">All FP Shared Resources</h3>
+                <p className="text-xs text-gray-500">Aggregated quick access links from all Franchise Partners</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              {allFpPortalLinks.map((fp) => (
+                <div key={fp.fpId} className="border-t border-blue-100 pt-3 first:border-0 first:pt-0">
+                  <p className="text-sm font-semibold text-indigo-700 mb-2">{fp.fpCode} - {fp.fpCompany}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {fp.links.map((link) => (
+                      <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2 bg-white rounded-lg border border-blue-100 hover:border-blue-300 hover:shadow-sm transition-all group">
+                        <ExternalLink className="w-4 h-4 text-blue-500" />
+                        <span className="text-sm text-gray-700 truncate">{link.heading}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* FP Shared Resources - Single FP */}
         {fpPortalLinks.length > 0 && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
@@ -82,13 +136,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {fpPortalLinks.map((link) => (
-                <a
-                  key={link.id}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-100 hover:border-blue-300 hover:shadow-sm transition-all group"
-                >
+                <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-100 hover:border-blue-300 hover:shadow-sm transition-all group">
                   <div className="w-8 h-8 bg-blue-50 rounded-md flex items-center justify-center group-hover:bg-blue-100 transition-colors">
                     <ExternalLink className="w-4 h-4 text-blue-500" />
                   </div>
@@ -943,7 +992,38 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
         </div>
       )}
 
-      {/* FP Shared Resources - Show when Admin selects a specific FP */}
+      {/* FP Shared Resources - Aggregated from all FPs */}
+      {admin && allFpPortalLinks.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <FolderOpen className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-gray-800">All FP Shared Resources</h3>
+              <p className="text-xs text-gray-500">Aggregated quick access links from all Franchise Partners</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {allFpPortalLinks.map((fp) => (
+              <div key={fp.fpId} className="border-t border-blue-100 pt-3 first:border-0 first:pt-0">
+                <p className="text-sm font-semibold text-indigo-700 mb-2">{fp.fpCode} - {fp.fpCompany}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {fp.links.map((link) => (
+                    <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 p-2 bg-white rounded-lg border border-blue-100 hover:border-blue-300 hover:shadow-sm transition-all group">
+                      <ExternalLink className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm text-gray-700 truncate">{link.heading}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* FP Shared Resources - Single FP selected */}
       {admin && fpPortalLinks.length > 0 && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100 shadow-sm">
           <div className="flex items-center gap-3 mb-4">
@@ -957,13 +1037,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {fpPortalLinks.map((link) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-100 hover:border-blue-300 hover:shadow-sm transition-all group"
-              >
+              <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-100 hover:border-blue-300 hover:shadow-sm transition-all group">
                 <div className="w-8 h-8 bg-blue-50 rounded-md flex items-center justify-center group-hover:bg-blue-100 transition-colors">
                   <ExternalLink className="w-4 h-4 text-blue-500" />
                 </div>

@@ -2443,6 +2443,44 @@ router.get('/fp-view/:fpId/portal-links', authenticate, adminOnly, async (req, r
   }
 });
 
+// Get ALL FP Portal Links aggregated (for Admin "All FPs" view)
+router.get('/all-fp-portal-links', authenticate, adminOnly, async (req, res) => {
+  try {
+    const [links] = await pool.execute(
+      `SELECT fpl.id, fpl.link_slot, fpl.heading, fpl.url, fpl.created_at, fpl.updated_at,
+              fp.id as fp_id, fp.fp_id as fp_code, fp.company_name as fp_company
+       FROM fp_portal_links fpl
+       JOIN franchise_partners fp ON fpl.franchise_partner_id = fp.id
+       WHERE fpl.is_active = 1 
+       ORDER BY fp.fp_id ASC, fpl.link_slot ASC`
+    );
+    
+    // Group by FP
+    const grouped = {};
+    links.forEach(link => {
+      if (!grouped[link.fp_id]) {
+        grouped[link.fp_id] = {
+          fpId: link.fp_id,
+          fpCode: link.fp_code,
+          fpCompany: link.fp_company,
+          links: []
+        };
+      }
+      grouped[link.fp_id].links.push({
+        id: link.id,
+        link_slot: link.link_slot,
+        heading: link.heading,
+        url: link.url
+      });
+    });
+    
+    res.json({ success: true, data: Object.values(grouped) });
+  } catch (error) {
+    console.error('Error fetching all FP portal links:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch portal links' });
+  }
+});
+
 // Get FP Customers
 router.get('/fp-view/:fpId/customers', authenticate, adminOnly, async (req, res) => {
   try {
