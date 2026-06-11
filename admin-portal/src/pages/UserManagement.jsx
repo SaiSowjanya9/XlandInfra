@@ -349,7 +349,7 @@ const UserManagement = () => {
 
   const getRoleLabel = (role) => {
     const labels = {
-      admin: 'Admin',
+      admin: 'Super Admin',
       operations_manager: 'Operations Manager',
       franchise_partner: 'Franchise Partner',
       franchise: 'Franchise Partner'
@@ -455,7 +455,7 @@ const UserManagement = () => {
               className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none bg-white"
             >
               <option value="all">All Roles</option>
-              <option value="admin">Admin</option>
+              <option value="admin">Super Admin</option>
               <option value="operations_manager">Operations Manager</option>
               <option value="franchise_partner">FP User</option>
             </select>
