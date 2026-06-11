@@ -1885,4 +1885,34 @@ router.get('/export/work-orders', requireManagerScope, async (req, res) => {
   }
 });
 
+// =====================================================
+// FP PORTAL LINKS (Read-only for employees)
+// =====================================================
+router.get('/fp-portal-links', requireManagerScope, async (req, res) => {
+  try {
+    const fpId = req.franchisePartnerId || req.fpId;
+    
+    if (!fpId) {
+      return res.json({ success: true, data: [] });
+    }
+    
+    const [links] = await pool.execute(
+      `SELECT id, link_slot, heading, url, created_at, updated_at 
+       FROM fp_portal_links 
+       WHERE franchise_partner_id = ? AND is_active = 1 
+       ORDER BY link_slot ASC`,
+      [fpId]
+    );
+    
+    res.json({ success: true, data: links });
+  } catch (error) {
+    console.error('Get FP portal links error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch portal links',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

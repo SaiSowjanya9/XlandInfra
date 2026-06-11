@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Download, Mail, EyeOff, Calendar, Filter, Home, Building2 } from 'lucide-react';
+import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Download, Mail, EyeOff, Calendar, Filter, Home, Building2, FolderOpen, ExternalLink, Link } from 'lucide-react';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
@@ -79,6 +79,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [viewEstimate, setViewEstimate] = useState(null);
+  const [fpPortalLinks, setFpPortalLinks] = useState([]);
   const clearAllFilters = () => { setEstimateTypeFilter('all'); setStatusFilter('all'); setCategoryFilter('all'); setFromDate(''); setToDate(''); setSearchTerm(''); };
 
   const [estimateForm, setEstimateForm] = useState({ clientId: '', propertyId: '', title: '', description: '', estimateType: '', subtotal: 0, taxPercentage: 18, discountPercentage: 0, validUntil: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
@@ -149,16 +150,17 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [estRes, archivedRes, amcRes, addRes, custRes, propRes, catRes] = await Promise.all([
+      const [estRes, archivedRes, amcRes, addRes, custRes, propRes, catRes, linksRes] = await Promise.all([
         fetch('/api/supervisor/estimates?archived=false', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/supervisor/estimates?archived=true', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/supervisor/amc-packages', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/supervisor/addons', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/supervisor/customers', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/supervisor/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/supervisor/categories', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch('/api/supervisor/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/supervisor/fp-portal-links', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
-      const [estData, archivedData, amcData, addData, custData, propData, catData] = await Promise.all([estRes.json(), archivedRes.json(), amcRes.json(), addRes.json(), custRes.json(), propRes.json(), catRes.json()]);
+      const [estData, archivedData, amcData, addData, custData, propData, catData, linksData] = await Promise.all([estRes.json(), archivedRes.json(), amcRes.json(), addRes.json(), custRes.json(), propRes.json(), catRes.json(), linksRes.json()]);
       if (estData.success) setEstimates(estData.data || []);
       if (archivedData.success) setArchivedEstimates(archivedData.data || []);
       if (amcData.success) setAmcPackages(amcData.data || []);
@@ -166,6 +168,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
       if (custData.success) setCustomers(custData.data || []);
       if (propData.success) setProperties(propData.data || []);
       if (catData.success) setCategories(catData.data || []);
+      if (linksData.success) setFpPortalLinks(linksData.data || []);
     } catch (error) {
       console.error('Fetch data error:', error);
     } finally {
@@ -736,6 +739,47 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                     <button type="submit" className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save</button>
                   </div>
                 </form>
+              )}
+
+              {/* FP Shared Resources Section - Read-only for employees */}
+              {fpPortalLinks.length > 0 && (
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-6">
+                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-gray-200">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-indigo-100 rounded-lg">
+                        <FolderOpen className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-semibold text-gray-900">FP Shared Resources</h2>
+                        <p className="text-xs text-gray-500 mt-0.5">Resources shared by your Franchise Partner</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {fpPortalLinks.map((link) => (
+                      <div key={link.id} className="border border-gray-200 rounded-xl p-5 bg-gray-50/50 hover:bg-white hover:shadow-sm transition-all">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-indigo-100 rounded-lg flex-shrink-0">
+                            <FolderOpen className="w-5 h-5 text-indigo-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-gray-900 truncate">{link.heading}</h3>
+                            <p className="text-xs text-gray-500 mt-1 truncate">{link.url}</p>
+                          </div>
+                        </div>
+                        <a 
+                          href={link.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" /> Open Link
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           )}
