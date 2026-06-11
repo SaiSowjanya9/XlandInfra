@@ -223,7 +223,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
         })
       });
       const result = await res.json();
-      if (result.success) {
+      if (res.ok || result.success) {
         showToast('Estimate created successfully!');
         setPropertyIdInput('');
         setSelectedAmcPackage('');
@@ -875,7 +875,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                           <span className="font-semibold text-gray-900">{pkg.name || 'Unnamed Package'}</span>
                         </td>
                         <td className="px-4 py-4">
-                          <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">
+                          <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200 whitespace-nowrap">
                             {PROPERTY_TYPE_OPTIONS.find(t => t.id === propertyType)?.label || propertyType || '-'}
                           </span>
                         </td>

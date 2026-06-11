@@ -243,7 +243,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
         body: JSON.stringify({ ...estimateForm, subtotal, items: estimateForm.items.map(item => ({ ...item, totalPrice: item.quantity * item.unitPrice })) })
       });
       const result = await response.json();
-      if (result.success) { setMessage({ type: 'success', text: 'Estimate created successfully!' }); resetEstimateForm(); fetchData(); setActiveTab('list'); }
+      if (response.ok || result.success) { setMessage({ type: 'success', text: 'Estimate created successfully!' }); resetEstimateForm(); fetchData(); setActiveTab('list'); }
       else setMessage({ type: 'error', text: result.message || 'Operation failed' });
     } catch (error) { setMessage({ type: 'error', text: 'Failed to create estimate' }); }
   };
@@ -257,7 +257,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
         body: JSON.stringify({ ...amcForm, services: amcForm.services.split(',').map(s => s.trim()).filter(Boolean) })
       });
       const result = await response.json();
-      if (result.success) { setMessage({ type: 'success', text: 'AMC Package created successfully!' }); setShowModal(false); resetAmcForm(); fetchData(); }
+      if (response.ok || result.success) { setMessage({ type: 'success', text: 'AMC Package created successfully!' }); setShowModal(false); resetAmcForm(); fetchData(); }
       else setMessage({ type: 'error', text: result.message || 'Operation failed' });
     } catch (error) { setMessage({ type: 'error', text: 'Failed to create AMC package' }); }
   };
@@ -271,7 +271,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
         body: JSON.stringify(addonForm)
       });
       const result = await response.json();
-      if (result.success) { setMessage({ type: 'success', text: 'Add-on created successfully!' }); setShowModal(false); resetAddonForm(); fetchData(); }
+      if (response.ok || result.success) { setMessage({ type: 'success', text: 'Add-on created successfully!' }); setShowModal(false); resetAddonForm(); fetchData(); }
       else setMessage({ type: 'error', text: result.message || 'Operation failed' });
     } catch (error) { setMessage({ type: 'error', text: 'Failed to create add-on' }); }
   };
@@ -790,7 +790,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-6 py-4"><span className="font-semibold text-gray-900">{pkg.name || 'Unnamed Package'}</span></td>
-                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{getPropertyTypeLabel(getPackagePropertyType(pkg))}</span></td>
+                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200 whitespace-nowrap">{getPropertyTypeLabel(getPackagePropertyType(pkg))}</span></td>
                               <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getBillingBadgeColor(pkg.billing_duration)}`}>{BILLING_DURATIONS.find(d => d.value === pkg.billing_duration)?.label || 'Monthly'}</span></td>
                               <td className="px-4 py-4 max-w-xs"><p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText}</p></td>
                               <td className="px-4 py-4 text-right"><span className="text-lg font-bold text-slate-800">{formatCurrency(getPackagePrice(pkg))}</span></td>
@@ -855,7 +855,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={addon.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-6 py-4"><span className="font-semibold text-gray-900">{getAddonName(addon)}</span></td>
-                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">{getPropertyTypeLabel(addon.property_type)}</span></td>
+                              <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200 whitespace-nowrap">{getPropertyTypeLabel(addon.property_type)}</span></td>
                               <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getFrequencyBadgeColor(addon.frequency_type || addon.frequency)}`}>{addon.frequency_type || addon.frequency || 'Monthly'}</span></td>
                               <td className="px-4 py-4"><span className="text-sm text-gray-600">{addon.frequency_count || addon.visits || '12'}x</span></td>
                               <td className="px-4 py-4 text-right"><span className="font-semibold text-gray-900">{formatCurrency(getAddonPrice(addon))}</span></td>

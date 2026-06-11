@@ -222,7 +222,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         })
       });
       const result = await res.json();
-      if (result.success) {
+      if (res.ok || result.success) {
         showToast('Estimate created successfully!');
         setPropertyIdInput('');
         setSelectedAmcPackage('');
@@ -688,7 +688,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
     try {
       const res = await fetch('/api/coordinator/amc-packages', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, frequency_count: parseInt(r.frequencyCount) || 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
-      if (result.success) { showToast('AMC Package created!'); setAmcForm({ packageName: '', serviceRows: [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); loadData(); setAmcActiveTab('all-packages'); }
+      if (res.ok || result.success) { showToast('AMC Package created!'); setAmcForm({ packageName: '', serviceRows: [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
     } catch (e) { showToast('Failed to create package', 'error'); }
   };
@@ -821,7 +821,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                           <span className="font-semibold text-gray-900">{pkg.name || 'Unnamed Package'}</span>
                         </td>
                         <td className="px-4 py-4">
-                          <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">
+                          <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200 whitespace-nowrap">
                             {getPropertyTypeLabel(propertyType)}
                           </span>
                         </td>
@@ -1091,7 +1091,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
     try {
       const res = await fetch('/api/coordinator/addons', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ property_type: addonSelectedPropertyType, service_name: addonForm.serviceName, frequency_count: parseInt(addonForm.frequencyCount) || 1, frequency_type: addonForm.frequencyType, billing_cycle: addonForm.billingCycle, price: parseFloat(addonForm.price), description: addonForm.description || '' }) });
       const result = await res.json();
-      if (result.success) { showToast('Add-on created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
+      if (res.ok || result.success) { showToast('Add-on created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
       else showToast(result.message || 'Failed', 'error');
     } catch (e) { showToast('Failed to create add-on', 'error'); }
   };
