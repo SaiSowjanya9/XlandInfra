@@ -1242,7 +1242,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <button 
                   onClick={() => handleSavePortalLink(1)} 
                   disabled={linkForms[1].isSaving}
-                  className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:bg-indigo-400 transition-colors flex items-center gap-1.5"
+                  className="px-4 py-2.5 bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-sm font-medium hover:bg-indigo-200 disabled:bg-indigo-50 disabled:text-indigo-400 transition-colors flex items-center gap-1.5"
                 >
                   {linkForms[1].isSaving ? (
                     <>
@@ -1349,7 +1349,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <button 
                   onClick={() => handleSavePortalLink(2)} 
                   disabled={linkForms[2].isSaving}
-                  className="px-4 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:bg-purple-400 transition-colors flex items-center gap-1.5"
+                  className="px-4 py-2.5 bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-sm font-medium hover:bg-purple-200 disabled:bg-purple-50 disabled:text-purple-400 transition-colors flex items-center gap-1.5"
                 >
                   {linkForms[2].isSaving ? (
                     <>
