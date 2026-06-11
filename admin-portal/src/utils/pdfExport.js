@@ -159,8 +159,10 @@ const generatePDF = (data, type, filename) => {
       const propType = String(data.propertyType || '').toUpperCase();
       const isGC = ['GC', 'GATED COMMUNITY', 'GATED_COMMUNITY'].includes(propType);
       const isApt = ['APT', 'APARTMENT'].includes(propType);
-      const isVilla = ['VILLA', 'PLOT'].includes(propType);
-      const cardHeight = (isGC || isApt) ? 44 : (isVilla ? 38 : 32);
+      const isVilla = ['VILLA', 'VL'].includes(propType);
+      const isFlat = ['FLAT', 'FL'].includes(propType);
+      const isPlot = ['PLOT', 'PL'].includes(propType);
+      const cardHeight = (isGC || isApt) ? 44 : ((isVilla || isFlat || isPlot) ? 38 : 32);
       
       // Property Details Card
       doc.setFillColor(...cardBg);
@@ -185,7 +187,7 @@ const generatePDF = (data, type, filename) => {
       doc.setFont('helvetica', 'bold');
       const propId = String(data.propertyId || '-');
       doc.text(propId.length > 18 ? propId.substring(0, 18) + '...' : propId, margin + 4, py);
-      const typeLabel = isGC ? 'Gated Community' : isApt ? 'Apartment' : String(data.propertyType || '-');
+      const typeLabel = isGC ? 'Gated Community' : isApt ? 'Apartment' : isVilla ? 'Villa' : isFlat ? 'Flat' : isPlot ? 'Plot' : String(data.propertyType || '-');
       doc.text(typeLabel, margin + cardWidth/2 + 2, py);
       py += 6;
       
@@ -235,11 +237,29 @@ const generatePDF = (data, type, filename) => {
         py += 6;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('Villa/Plot No.', margin + 4, py);
+        doc.text('Villa Number', margin + 4, py);
         py += 4;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.villaPlotNumber || data.villa_plot_number || '-'), margin + 4, py);
+        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.villa_number || '-'), margin + 4, py);
+      } else if (isFlat) {
+        py += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...lightText);
+        doc.text('Flat Number', margin + 4, py);
+        py += 4;
+        doc.setTextColor(...darkText);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.flat_number || '-'), margin + 4, py);
+      } else if (isPlot) {
+        py += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...lightText);
+        doc.text('Plot Number', margin + 4, py);
+        py += 4;
+        doc.setTextColor(...darkText);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.plot_number || '-'), margin + 4, py);
       }
       
       // Customer Details Card

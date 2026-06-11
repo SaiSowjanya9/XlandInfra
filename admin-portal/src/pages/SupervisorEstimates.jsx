@@ -1026,9 +1026,17 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                       <div><p className="text-xs text-gray-500">Number of Units</p><p className="font-medium text-sm">{viewEstimate.total_units || '-'}</p></div>
                     </>
                   )}
-                  {/* Villa/Plot-specific fields */}
-                  {['VILLA', 'villa', 'Villa', 'PLOT', 'plot', 'Plot'].includes(viewEstimate.property_type) && viewEstimate.villa_plot_number && (
-                    <div><p className="text-xs text-gray-500">Villa/Plot Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number}</p></div>
+                  {/* Villa-specific fields */}
+                  {['VILLA', 'villa', 'Villa', 'VL'].includes(viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Villa Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.villa_number || '-'}</p></div>
+                  )}
+                  {/* Flat-specific fields */}
+                  {['FLAT', 'flat', 'Flat', 'FL'].includes(viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Flat Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.flat_number || '-'}</p></div>
+                  )}
+                  {/* Plot-specific fields */}
+                  {['PLOT', 'plot', 'Plot', 'PL'].includes(viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Plot Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.plot_number || '-'}</p></div>
                   )}
                 </div>
               </div>
