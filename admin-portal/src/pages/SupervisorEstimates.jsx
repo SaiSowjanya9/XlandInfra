@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Download, Mail, EyeOff, Calendar, Filter, Home, Building2 } from 'lucide-react';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
