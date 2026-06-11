@@ -357,7 +357,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                 op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
-                op.contact_person, op.contact_phone, op.contact_email as email,
+                NULL as contact_person, NULL as contact_phone, NULL as email,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
                 op.created_at, op.status, TRUE as is_active,
                 'own' as access_type, FALSE as can_modify, FALSE as can_delete,

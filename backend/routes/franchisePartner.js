@@ -311,8 +311,8 @@ router.get('/properties', requireFPScope, async (req, res) => {
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
                 op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
-                op.address, op.city, op.state, op.pincode as zip_code,
-                op.contact_person, op.contact_phone, op.contact_email as email,
+                op.address, op.city, op.state, op.postal_code as zip_code,
+                NULL as contact_person, NULL as contact_phone, NULL as email,
                 COALESCE(
                   CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
                   CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
@@ -427,7 +427,7 @@ router.get('/properties/:id', requireFPScope, async (req, res) => {
     
     // Try onboarded_properties table
     const [onboarded] = await pool.execute(
-      `SELECT op.*, op.community_name as name, op.contact_person, op.contact_phone, op.contact_email
+      `SELECT op.*, op.community_name as name, NULL as contact_person, NULL as contact_phone, NULL as contact_email
        FROM onboarded_properties op
        WHERE (op.id = ? OR op.property_id = ?) AND (op.franchise_partner_id = ? OR op.franchise_partner_id IS NULL)`,
       [id, id, req.fpId]
