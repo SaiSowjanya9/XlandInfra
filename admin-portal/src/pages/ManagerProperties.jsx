@@ -739,11 +739,9 @@ const ManagerProperties = ({ user }) => {
                 {(viewingProperty.property_type === 'gated_community' || viewingProperty.property_type === 'apartment' || viewingProperty.block_names || viewingProperty.units_per_block || viewingProperty.number_of_blocks) && (
                   <div className="md:col-span-2 mt-4 p-4 bg-blue-50 rounded-lg">
                     <h4 className="text-sm font-semibold text-blue-800 mb-3">Block Details</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">Number of Blocks</p>
-                        <p className="text-gray-900">{viewingProperty.number_of_blocks || 1}</p>
-                      </div>
+                    <div className="mb-3">
+                      <p className="text-sm text-gray-500 mb-1">Number of Blocks</p>
+                      <p className="text-gray-900">{viewingProperty.number_of_blocks || 1}</p>
                     </div>
                     {(() => {
                       try {
@@ -752,12 +750,12 @@ const ManagerProperties = ({ user }) => {
                         const numBlocks = viewingProperty.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
                         if (Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0) {
                           return (
-                            <div className="mt-3 space-y-2">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                               {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
-                                <div key={blockNum} className="grid grid-cols-2 gap-4 p-2 bg-white rounded">
-                                  <div><p className="text-xs text-gray-500">Block Name</p><p className="text-sm text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</p></div>
-                                  <div><p className="text-xs text-gray-500">Units</p><p className="text-sm text-gray-900">{unitsPerBlock[blockNum] || 0}</p></div>
-                                </div>
+                                <React.Fragment key={blockNum}>
+                                  <div className="p-2 bg-white rounded"><p className="text-xs text-gray-500">Block Name</p><p className="text-sm text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</p></div>
+                                  <div className="p-2 bg-white rounded"><p className="text-xs text-gray-500">Units</p><p className="text-sm text-gray-900">{unitsPerBlock[blockNum] || 0}</p></div>
+                                </React.Fragment>
                               ))}
                             </div>
                           );

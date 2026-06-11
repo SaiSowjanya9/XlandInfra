@@ -5,6 +5,18 @@
 ALTER TABLE fp_estimates 
 ADD COLUMN IF NOT EXISTS estimate_type VARCHAR(50) DEFAULT 'standard';
 
+-- Add division column to fp_estimates table (CRITICAL - missing from original schema)
+ALTER TABLE fp_estimates 
+ADD COLUMN IF NOT EXISTS division VARCHAR(100) DEFAULT NULL AFTER zone;
+
+-- Add action_token column to fp_estimates table
+ALTER TABLE fp_estimates 
+ADD COLUMN IF NOT EXISTS action_token VARCHAR(100) DEFAULT NULL;
+
+-- Add sent_at column to fp_estimates table
+ALTER TABLE fp_estimates 
+ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP NULL DEFAULT NULL;
+
 -- Add contact_person column to onboarded_properties table
 ALTER TABLE onboarded_properties 
 ADD COLUMN IF NOT EXISTS contact_person VARCHAR(255) DEFAULT NULL;
