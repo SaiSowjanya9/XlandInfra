@@ -1194,9 +1194,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
         </div>
         
-        <div className="p-6 space-y-6">
+        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Link Block 1 */}
-          <div className="border border-gray-200 rounded-xl p-5 bg-gray-50/50 hover:bg-white transition-colors">
+          <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50 hover:bg-white transition-colors">
             <div className="flex items-center gap-2 mb-4">
               <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold">1</span>
               <span className="text-sm font-medium text-gray-700">Link Block 1</span>
@@ -1303,7 +1303,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
 
           {/* Link Block 2 */}
-          <div className="border border-gray-200 rounded-xl p-5 bg-gray-50/50 hover:bg-white transition-colors">
+          <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50 hover:bg-white transition-colors">
             <div className="flex items-center gap-2 mb-4">
               <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-600 text-xs font-bold">2</span>
               <span className="text-sm font-medium text-gray-700">Link Block 2</span>
