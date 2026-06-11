@@ -97,7 +97,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [gstPercent, setGstPercent] = useState(0);
   
   // Direct estimate form
-  const [directForm, setDirectForm] = useState({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0 });
+  const [directForm, setDirectForm] = useState({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0, villaNumber: '', flatNumber: '', blockNumber: '', plotNumber: '', numberOfUnits: '' });
 
   // Helper functions (must be defined before calculatePriceSummary)
   const formatCurrency = (amt) => { const num = parseFloat(amt); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : Math.round(num)); };
@@ -651,8 +651,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                         <div><label className="block text-sm font-medium text-gray-700 mb-1">City</label><input type="text" value={directForm.city} onChange={(e) => setDirectForm({...directForm, city: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="City" /></div>
                       </div>
                       
-                      {/* Blocks & Units - Only for GC and Apartment */}
-                      {(directForm.propertyType === 'gated_community' || directForm.propertyType === 'apartment') && (
+                      {/* Blocks & Units - Only for GC */}
+                      {directForm.propertyType === 'gated_community' && (
                         <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                           <h3 className="text-sm font-semibold text-blue-800 mb-3">Block & Unit Details</h3>
                           <div className="mb-4">
@@ -668,6 +668,44 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                             ))}
                           </div>
                           {directForm.totalUnits > 0 && (<div className="mt-3 p-2 bg-blue-100 rounded inline-block"><span className="text-sm text-blue-700 font-medium">Total Units: {directForm.totalUnits}</span></div>)}
+                        </div>
+                      )}
+
+                      {/* Apartment - Block Information & Units */}
+                      {directForm.propertyType === 'apartment' && (
+                        <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <h3 className="text-sm font-semibold text-gray-700 mb-3">Apartment Details</h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Block/Tower Name</label><input type="text" value={directForm.blockNumber} onChange={(e) => setDirectForm({...directForm, blockNumber: e.target.value})} placeholder="e.g., Tower A" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" /></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Number of Units <span className="text-red-500">*</span></label><input type="number" min="1" value={directForm.numberOfUnits} onChange={(e) => setDirectForm({...directForm, numberOfUnits: e.target.value})} placeholder="Total units" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" /></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Villa - Villa Number */}
+                      {directForm.propertyType === 'villa' && (
+                        <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                          <h3 className="text-sm font-semibold text-amber-800 mb-3">Villa Details</h3>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Villa Number <span className="text-red-500">*</span></label><input type="text" value={directForm.villaNumber} onChange={(e) => setDirectForm({...directForm, villaNumber: e.target.value})} placeholder="e.g., Villa 101" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" /></div>
+                        </div>
+                      )}
+
+                      {/* Flat - Flat Number & Block Number */}
+                      {directForm.propertyType === 'flat' && (
+                        <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                          <h3 className="text-sm font-semibold text-purple-800 mb-3">Flat Details</h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Flat Number <span className="text-red-500">*</span></label><input type="text" value={directForm.flatNumber} onChange={(e) => setDirectForm({...directForm, flatNumber: e.target.value})} placeholder="e.g., 101" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" /></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Block Number</label><input type="text" value={directForm.blockNumber} onChange={(e) => setDirectForm({...directForm, blockNumber: e.target.value})} placeholder="e.g., A, B" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" /></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Plot - Plot Number */}
+                      {directForm.propertyType === 'plot' && (
+                        <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                          <h3 className="text-sm font-semibold text-green-800 mb-3">Plot Details</h3>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Plot Number <span className="text-red-500">*</span></label><input type="text" value={directForm.plotNumber} onChange={(e) => setDirectForm({...directForm, plotNumber: e.target.value})} placeholder="e.g., Plot 25" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" /></div>
                         </div>
                       )}
                     </div>
