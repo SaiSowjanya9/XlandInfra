@@ -395,8 +395,8 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
                 op.zone as zone_name, op.area_name as area, op.division, COALESCE(op.total_units, 1) as units,
-                op.address, op.city, op.state, op.pincode as zip_code,
-                op.contact_person, op.contact_phone, op.contact_email as email,
+                op.address, op.city, op.state, op.postal_code as zip_code,
+                NULL as contact_person, NULL as contact_phone, NULL as email,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
                 op.created_at, op.status,
                 'onboarded_properties' as source_table

@@ -334,9 +334,9 @@ router.get('/properties', authenticate, dataEntryRoles, async (req, res) => {
     try {
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
-                op.zone_id as zone, op.division, op.total_units, 0 as occupied_units,
-                op.address, op.city, op.state, op.pincode as zip_code,
-                op.contact_person, op.contact_phone, op.contact_email as email,
+                op.zone as zone, op.division, op.total_units, 0 as occupied_units,
+                op.address, op.city, op.state, op.postal_code as zip_code,
+                NULL as contact_person, NULL as contact_phone, NULL as email,
                 COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
                 op.created_at, op.status,
                 'onboarded_properties' as source_table
@@ -710,11 +710,11 @@ router.get('/work-orders', async (req, res) => {
              COALESCE(p.zone_id, op.zone) as zone,
              COALESCE(p.division, op.division) as division,
              COALESCE(p.address, op.address) as address,
-             COALESCE(p.city, op.city) as city,
-             COALESCE(p.state, op.state) as state,
-             COALESCE(p.contact_person, op.contact_person) as contact_person,
-             COALESCE(p.contact_phone, op.contact_phone) as contact_phone,
-             COALESCE(p.contact_email, op.contact_email) as contact_email
+             p.city as city,
+             p.state as state,
+             p.contact_person as contact_person,
+             p.contact_phone as contact_phone,
+             p.contact_email as contact_email
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN onboarded_properties op ON wo.property_id = op.id
@@ -1352,7 +1352,7 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
                 op.zone as zone_name, op.area_name as area, op.division,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 op.number_of_units as total_units, op.total_units as units_count,
-                op.contact_person, op.contact_phone, op.contact_email,
+                NULL as contact_person, NULL as contact_phone, NULL as contact_email,
                 op.created_at, op.status,
                 COALESCE(
                   CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
