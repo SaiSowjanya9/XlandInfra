@@ -325,30 +325,33 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     console.log('[Manager Properties] Found:', regularProperties.length, 'properties');
 
     // Also fetch from onboarded_properties with creator name (zone-centric + own created)
+    // Only fetch if franchisePartnerId exists (onboarded_properties doesn't have manager_id column)
     let onboardedProperties = [];
-    try {
-      const onbZoneFilter = buildOnboardedPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'op');
-      let onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
-                op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
-                op.address, op.city, op.state, op.postal_code as zip_code,
-                NULL as contact_person, NULL as contact_phone, NULL as email,
-                COALESCE(
-                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
-                  CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
-                  op.created_by, 'System'
-                ) as created_by_name,
-                op.created_at, op.status,
-                'onboarded_properties' as source_table
-         FROM onboarded_properties op
-         LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username
-         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
-         WHERE ${franchisePartnerId ? 'op.franchise_partner_id = ?' : 'op.manager_id = ?'} AND op.status = 'active'${onbZoneFilter.clause}
-         ORDER BY op.created_at DESC`;
-      const onbParams = franchisePartnerId ? [franchisePartnerId, ...onbZoneFilter.params] : [managerId, ...onbZoneFilter.params];
-      const [rows] = await pool.execute(onbQuery, onbParams);
-      onboardedProperties = rows;
-    } catch (e) {
-      console.log('onboarded_properties fetch error:', e.message);
+    if (franchisePartnerId) {
+      try {
+        const onbZoneFilter = buildOnboardedPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'op');
+        let onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
+                  op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
+                  op.address, op.city, op.state, op.postal_code as zip_code,
+                  NULL as contact_person, NULL as contact_phone, NULL as email,
+                  COALESCE(
+                    CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                    CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+                    op.created_by, 'System'
+                  ) as created_by_name,
+                  op.created_at, op.status,
+                  'onboarded_properties' as source_table
+           FROM onboarded_properties op
+           LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username
+           LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
+           WHERE op.franchise_partner_id = ? AND op.status = 'active'${onbZoneFilter.clause}
+           ORDER BY op.created_at DESC`;
+        const onbParams = [franchisePartnerId, ...onbZoneFilter.params];
+        const [rows] = await pool.execute(onbQuery, onbParams);
+        onboardedProperties = rows;
+      } catch (e) {
+        console.log('onboarded_properties fetch error:', e.message);
+      }
     }
 
     const allProperties = [...regularProperties, ...onboardedProperties];
