@@ -3086,6 +3086,7 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       estimate_type, property_id, property_code, client_name, client_phone, client_email,
       property_type, property_name, zone, division, city, address,
       number_of_blocks, units_per_block, block_names, total_units,
+      tower_name, block_number, villa_plot_number,
       package_id, package_name, package_price,
       addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
       description
@@ -3115,6 +3116,9 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         units_per_block JSON,
         block_names JSON,
         total_units INT DEFAULT 0,
+        tower_name VARCHAR(255),
+        block_number VARCHAR(100),
+        villa_plot_number VARCHAR(100),
         package_id INT,
         package_name VARCHAR(255),
         package_price DECIMAL(12,2) DEFAULT 0.00,
@@ -3184,6 +3188,17 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     
     console.log('Creating FP estimate:', { estimateId, client_name, package_name, creatorName, fpId: req.fpId });
 
+    // Add new columns if they don't exist
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN tower_name VARCHAR(255)`);
+    } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN block_number VARCHAR(100)`);
+    } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN villa_plot_number VARCHAR(100)`);
+    } catch (e) { /* Column exists */ }
+
     // Insert into fp_estimates table (no FK constraints)
     const [result] = await pool.execute(
       `INSERT INTO fp_estimates (
@@ -3191,16 +3206,18 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         client_name, client_phone, client_email,
         property_name, property_code, property_type, zone, division, city, address,
         number_of_blocks, units_per_block, block_names, total_units,
+        tower_name, block_number, villa_plot_number,
         package_id, package_name, package_price,
         subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
         addons_data, description, status,
         created_by_id, created_by_name, created_by_role
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
       [
         estimateId, req.fpId, property_id || null, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
         property_name || '', property_code || '', property_type || '', zone || '', division || '', city || '', address || '',
         parseInt(number_of_blocks) || 1, unitsPerBlockJson, blockNamesJson, parseInt(total_units) || 0,
+        tower_name || '', block_number || '', villa_plot_number || '',
         package_id || null, package_name || '', parseFloat(package_price) || 0,
         finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,
         addonsJson, description || '', 
@@ -3305,11 +3322,35 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         } catch (e) {}
       }
       
+      // Parse block data for GC
+      let blockNames = {};
+      let unitsPerBlock = {};
+      try {
+        if (estimate.block_names) blockNames = typeof estimate.block_names === 'string' ? JSON.parse(estimate.block_names) : estimate.block_names;
+        if (estimate.units_per_block) unitsPerBlock = typeof estimate.units_per_block === 'string' ? JSON.parse(estimate.units_per_block) : estimate.units_per_block;
+      } catch (e) {}
+
       const estimateData = {
         estimateId: estimate.estimate_id,
         customerName: estimate.client_name,
         customerEmail: email,
         propertyName: estimate.property_name,
+        propertyType: estimate.property_type,
+        zone: estimate.zone,
+        division: estimate.division,
+        city: estimate.city,
+        address: estimate.address,
+        // GC-specific
+        numberOfBlocks: estimate.number_of_blocks,
+        blockNames: blockNames,
+        unitsPerBlock: unitsPerBlock,
+        totalUnits: estimate.total_units,
+        // Apartment-specific
+        towerName: estimate.tower_name,
+        blockNumber: estimate.block_number,
+        // Villa/Plot-specific
+        villaPlotNumber: estimate.villa_plot_number,
+        // Package and pricing
         services: estimate.package_name ? [{ name: estimate.package_name, price: estimate.package_price }] : [],
         addons: addons,
         subtotal: parseFloat(estimate.subtotal) || 0,
@@ -3359,21 +3400,7 @@ router.put('/estimates/:id/restore', requireFPScope, async (req, res) => {
   }
 });
 
-// Delete estimate - Archives instead of hard delete
-router.delete('/estimates/:id', requireFPScope, async (req, res) => {
-  try {
-    await pool.execute(
-      `UPDATE fp_estimates SET is_archived = 1, archived_at = NOW(), status = 'Archived' WHERE id = ? AND franchise_partner_id = ?`,
-      [req.params.id, req.fpId]
-    );
-    res.json({ success: true, message: 'Estimate archived' });
-  } catch (error) {
-    console.error('Delete estimate error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Delete all archived estimates
+// Delete all archived estimates (must be before :id route)
 router.delete('/estimates/archived/delete-all', requireFPScope, async (req, res) => {
   try {
     const [result] = await pool.execute(
@@ -3383,6 +3410,38 @@ router.delete('/estimates/archived/delete-all', requireFPScope, async (req, res)
     res.json({ success: true, message: `${result.affectedRows} archived estimates deleted`, deletedCount: result.affectedRows });
   } catch (error) {
     console.error('Delete all archived error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Permanently delete a single archived estimate
+router.delete('/estimates/:id/permanent', requireFPScope, async (req, res) => {
+  try {
+    const [result] = await pool.execute(
+      `DELETE FROM fp_estimates WHERE id = ? AND franchise_partner_id = ? AND is_archived = 1`,
+      [req.params.id, req.fpId]
+    );
+    if (result.affectedRows > 0) {
+      res.json({ success: true, message: 'Estimate permanently deleted' });
+    } else {
+      res.status(404).json({ success: false, message: 'Archived estimate not found' });
+    }
+  } catch (error) {
+    console.error('Permanent delete error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete estimate - Archives instead of hard delete (for active estimates)
+router.delete('/estimates/:id', requireFPScope, async (req, res) => {
+  try {
+    await pool.execute(
+      `UPDATE fp_estimates SET is_archived = 1, archived_at = NOW(), status = 'Archived' WHERE id = ? AND franchise_partner_id = ?`,
+      [req.params.id, req.fpId]
+    );
+    res.json({ success: true, message: 'Estimate archived' });
+  } catch (error) {
+    console.error('Delete estimate error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

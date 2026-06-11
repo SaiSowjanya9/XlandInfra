@@ -688,7 +688,13 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
 
 // Send estimate email to customer with Approve/Reject buttons
 const sendEstimateEmail = async (estimate, actionToken) => {
-  const { customerName, customerEmail, estimateId, propertyName, services, addons, subtotal, discount, tax, total, validUntil } = estimate;
+  const { 
+    customerName, customerEmail, estimateId, propertyName, propertyType,
+    zone, division, city, address,
+    numberOfBlocks, blockNames, unitsPerBlock, totalUnits,
+    towerName, blockNumber, villaPlotNumber,
+    services, addons, subtotal, discount, tax, total, validUntil 
+  } = estimate;
   
   if (!customerEmail) {
     return { success: false, error: 'No customer email provided' };
@@ -719,6 +725,52 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   const expiryDate = new Date();
   expiryDate.setMonth(expiryDate.getMonth() + 1);
 
+  // Get property type label
+  const getPropertyTypeLabel = (type) => {
+    const labels = { 'GC': 'Gated Community', 'APT': 'Apartment', 'Apt': 'Apartment', 'VILLA': 'Villa', 'PLOT': 'Plot' };
+    return labels[type] || type || '-';
+  };
+
+  // Build property details HTML based on property type
+  let propertyDetailsHtml = `
+    <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Property Type:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${getPropertyTypeLabel(propertyType)}</td></tr>
+    ${zone ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Zone:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${zone}</td></tr>` : ''}
+    ${division ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Division:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${division}</td></tr>` : ''}
+    ${city ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">City:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${city}</td></tr>` : ''}
+    ${address ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Address:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${address}</td></tr>` : ''}
+  `;
+
+  // GC-specific fields
+  if (['GC', 'gated_community', 'Gated Community'].includes(propertyType)) {
+    propertyDetailsHtml += `
+      ${numberOfBlocks ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Number of Blocks:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${numberOfBlocks}</td></tr>` : ''}
+      ${totalUnits ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Total Units:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${totalUnits}</td></tr>` : ''}
+    `;
+    // Add block details if available
+    if (blockNames && Object.keys(blockNames).length > 0) {
+      const blockDetailsList = Object.entries(blockNames).map(([key, name]) => 
+        `${name || 'Block ' + key}: ${unitsPerBlock?.[key] || 0} units`
+      ).join(', ');
+      propertyDetailsHtml += `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Block Details:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${blockDetailsList}</td></tr>`;
+    }
+  }
+
+  // Apartment-specific fields
+  if (['APT', 'Apt', 'apartment', 'Apartment'].includes(propertyType)) {
+    propertyDetailsHtml += `
+      ${towerName ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Tower/Building:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${towerName}</td></tr>` : ''}
+      ${blockNumber ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Block Number:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${blockNumber}</td></tr>` : ''}
+      ${totalUnits ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Number of Units:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${totalUnits}</td></tr>` : ''}
+    `;
+  }
+
+  // Villa/Plot-specific fields
+  if (['VILLA', 'Villa', 'villa', 'PLOT', 'Plot', 'plot'].includes(propertyType)) {
+    propertyDetailsHtml += `
+      ${villaPlotNumber ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Villa/Plot Number:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${villaPlotNumber}</td></tr>` : ''}
+    `;
+  }
+
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
     to: customerEmail,
@@ -746,6 +798,15 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">
               Thank you for your interest in our services. Please find below the estimate for your property <strong>${propertyName || 'N/A'}</strong>.
             </p>
+            
+            <!-- Property Details -->
+            <div style="background: #eff6ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+              <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Property Details</h3>
+              <table style="width: 100%;">
+                <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Property Name:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937; font-weight: 500;">${propertyName || '-'}</td></tr>
+                ${propertyDetailsHtml}
+              </table>
+            </div>
             
             <!-- Estimate Details -->
             <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">

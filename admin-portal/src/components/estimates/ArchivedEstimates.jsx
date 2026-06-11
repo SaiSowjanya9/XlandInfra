@@ -286,6 +286,25 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                   {viewEstimate.propertyId && (
                     <p className="text-sm text-gray-500">ID: {viewEstimate.propertyId}</p>
                   )}
+                  {/* GC-specific fields */}
+                  {['GC', 'gated_community', 'Gated Community'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (
+                    <>
+                      {(viewEstimate.numberOfBlocks || viewEstimate.number_of_blocks) && <p className="text-sm text-gray-600">🏗️ Blocks: {viewEstimate.numberOfBlocks || viewEstimate.number_of_blocks}</p>}
+                      {(viewEstimate.totalUnits || viewEstimate.total_units) && <p className="text-sm text-gray-600">🔢 Total Units: {viewEstimate.totalUnits || viewEstimate.total_units}</p>}
+                    </>
+                  )}
+                  {/* Apartment-specific fields */}
+                  {['APT', 'Apt', 'apartment', 'Apartment'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (
+                    <>
+                      {(viewEstimate.towerName || viewEstimate.tower_name) && <p className="text-sm text-gray-600">🏢 Tower: {viewEstimate.towerName || viewEstimate.tower_name}</p>}
+                      {(viewEstimate.blockNumber || viewEstimate.block_number) && <p className="text-sm text-gray-600">🔤 Block: {viewEstimate.blockNumber || viewEstimate.block_number}</p>}
+                      {(viewEstimate.totalUnits || viewEstimate.total_units) && <p className="text-sm text-gray-600">🔢 Units: {viewEstimate.totalUnits || viewEstimate.total_units}</p>}
+                    </>
+                  )}
+                  {/* Villa/Plot-specific */}
+                  {['VILLA', 'Villa', 'villa', 'PLOT', 'Plot', 'plot'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (viewEstimate.villaPlotNumber || viewEstimate.villa_plot_number) && (
+                    <p className="text-sm text-gray-600">🏡 Villa/Plot #: {viewEstimate.villaPlotNumber || viewEstimate.villa_plot_number}</p>
+                  )}
                 </div>
               </div>
 
