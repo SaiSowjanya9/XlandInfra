@@ -29,11 +29,12 @@ const parseUserAgent = (ua) => {
   
   const uaLower = ua.toLowerCase();
   
-  // Device detection
+  // Device detection - order matters! Check mobile/tablet first, then default to desktop
   let device = 'desktop';
   let deviceBrand = '';
   let deviceModel = '';
   
+  // Check for explicit mobile/tablet indicators first
   if (/iphone/i.test(ua)) {
     device = 'mobile';
     deviceBrand = 'Apple';
@@ -51,6 +52,19 @@ const parseUserAgent = (ua) => {
     device = 'mobile';
     deviceBrand = 'Microsoft';
     deviceModel = 'Windows Phone';
+  } else if (/macintosh|mac os x/i.test(ua) && !/mobile|iphone|ipad/i.test(ua)) {
+    // Explicitly macOS desktop (not iPad in desktop mode)
+    device = 'desktop';
+    deviceBrand = 'Apple';
+    deviceModel = 'Mac';
+  } else if (/windows nt/i.test(ua)) {
+    device = 'desktop';
+    deviceBrand = 'Microsoft';
+    deviceModel = 'PC';
+  } else if (/linux/i.test(ua) && !/android/i.test(ua)) {
+    device = 'desktop';
+    deviceBrand = 'Linux';
+    deviceModel = 'PC';
   }
   
   // OS detection
