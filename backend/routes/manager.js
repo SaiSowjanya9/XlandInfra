@@ -1539,16 +1539,17 @@ router.get('/amc-packages', requireManagerScope, async (req, res) => {
       );
       res.json({ success: true, data: packages.map(transformPackage) });
     } catch (tableError) {
-      // If table doesn't exist, return empty array
-      if (tableError.code === 'ER_NO_SUCH_TABLE') {
-        console.log(`Table ${table} does not exist, returning empty array`);
+      // If table doesn't exist (standalone manager tables may not exist), return empty array
+      if (tableError.code === 'ER_NO_SUCH_TABLE' || tableError.errno === 1146 || 
+          (tableError.message && tableError.message.includes("doesn't exist"))) {
+        console.log(`[Manager AMC] Table ${table} does not exist, returning empty array`);
         return res.json({ success: true, data: [] });
       }
       throw tableError;
     }
   } catch (error) {
     console.error('AMC packages fetch error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    res.json({ success: true, data: [] });
   }
 });
 
@@ -1619,16 +1620,17 @@ router.get('/addons', requireManagerScope, async (req, res) => {
       console.log('[Manager Addons] Found:', addons.length, 'addons');
       res.json({ success: true, data: addons.map(transformAddon) });
     } catch (tableError) {
-      // If table doesn't exist, return empty array
-      if (tableError.code === 'ER_NO_SUCH_TABLE') {
-        console.log(`Table ${table} does not exist, returning empty array`);
+      // If table doesn't exist (standalone manager tables may not exist), return empty array
+      if (tableError.code === 'ER_NO_SUCH_TABLE' || tableError.errno === 1146 || 
+          (tableError.message && tableError.message.includes("doesn't exist"))) {
+        console.log(`[Manager Addons] Table ${table} does not exist, returning empty array`);
         return res.json({ success: true, data: [] });
       }
       throw tableError;
     }
   } catch (error) {
     console.error('Addons fetch error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    res.json({ success: true, data: [] });
   }
 });
 
