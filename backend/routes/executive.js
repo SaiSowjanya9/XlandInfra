@@ -110,6 +110,18 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Get franchise_partner_id - check users table first, then fp_employees table
+    let franchisePartnerId = user.franchise_partner_id || null;
+    if (!franchisePartnerId && userSource === 'users') {
+      const [fpCheck] = await pool.query(
+        `SELECT franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
+        [user.email, user.username]
+      );
+      if (fpCheck.length > 0 && fpCheck[0].franchise_partner_id) {
+        franchisePartnerId = fpCheck[0].franchise_partner_id;
+      }
+    }
+
     // Generate JWT token (include franchise_partner_id for FP data linking)
     const token = jwt.sign(
       {
@@ -117,7 +129,7 @@ router.post('/login', async (req, res) => {
         username: user.username,
         role: user.role,
         executiveId: user.id,
-        franchisePartnerId: user.franchise_partner_id || null
+        franchisePartnerId: franchisePartnerId
       },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
@@ -135,7 +147,7 @@ router.post('/login', async (req, res) => {
           lastName: user.last_name,
           role: user.role,
           executiveId: user.id,
-          franchisePartnerId: user.franchise_partner_id || null,
+          franchisePartnerId: franchisePartnerId,
           portal: 'executive'
         }
       }

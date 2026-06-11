@@ -80,6 +80,17 @@ router.post('/login', async (req, res) => {
       user = users[0];
       userSource = 'users';
       franchisePartnerId = user.franchise_partner_id;
+      
+      // If franchise_partner_id is null, check fp_employees table
+      if (!franchisePartnerId) {
+        const [fpCheck] = await pool.query(
+          `SELECT franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
+          [user.email, user.username]
+        );
+        if (fpCheck.length > 0 && fpCheck[0].franchise_partner_id) {
+          franchisePartnerId = fpCheck[0].franchise_partner_id;
+        }
+      }
     }
 
     // If not found, try fp_employees table (FP-created supervisors)
