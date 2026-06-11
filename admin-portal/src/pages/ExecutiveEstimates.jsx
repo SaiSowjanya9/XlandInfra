@@ -141,6 +141,10 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     if (estimateForm.estimateType === 'property_based' && !propertyIdInput) {
       setMessage({ type: 'error', text: 'Enter Property ID' }); return;
     }
+    if (estimateForm.estimateType === 'direct') {
+      if (!directForm.customerName) { setMessage({ type: 'error', text: 'Enter Customer Name' }); return; }
+      if (!directForm.phone || directForm.phone.length !== 10) { setMessage({ type: 'error', text: 'Enter valid 10-digit phone' }); return; }
+    }
     if (!selectedAmcPackage) {
       setMessage({ type: 'error', text: 'Select AMC Package' }); return;
     }
@@ -573,6 +577,35 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
           {activeTab === 'create' && (
             <div className="space-y-6">
+              {/* FP Shared Resources Section - Read-only for employees */}
+              {fpPortalLinks.length > 0 && (
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-5 py-3 border-b border-gray-200">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gray-100 rounded-lg">
+                        <FolderOpen className="w-5 h-5 text-gray-500" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-semibold text-gray-900">FP Shared Resources</h2>
+                        <p className="text-xs text-gray-500 mt-0.5">Quick access links from your Franchise Partner</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {fpPortalLinks.map((link) => (
+                      <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:shadow-sm hover:border-gray-300 transition-all group">
+                        <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-gray-500" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{link.heading}</p>
+                          <p className="text-xs text-gray-500 truncate">{link.url}</p>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Type Selection */}
               {!estimateForm.estimateType && (
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -710,34 +743,6 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                 </>
               )}
 
-              {/* FP Shared Resources Section - Read-only for employees */}
-              {fpPortalLinks.length > 0 && (
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-6">
-                  <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-5 py-3 border-b border-gray-200">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-100 rounded-lg">
-                        <FolderOpen className="w-5 h-5 text-gray-500" />
-                      </div>
-                      <div>
-                        <h2 className="text-base font-semibold text-gray-900">FP Shared Resources</h2>
-                        <p className="text-xs text-gray-500 mt-0.5">Quick access links from your Franchise Partner</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {fpPortalLinks.map((link) => (
-                      <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:shadow-sm hover:border-gray-300 transition-all group">
-                        <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-gray-500" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{link.heading}</p>
-                          <p className="text-xs text-gray-500 truncate">{link.url}</p>
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
