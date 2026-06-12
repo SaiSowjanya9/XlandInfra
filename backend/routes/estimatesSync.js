@@ -382,6 +382,46 @@ router.delete('/archived/delete-all', async (req, res) => {
   }
 });
 
+// DELETE single archived estimate permanently (must be before /:estimateId route)
+router.delete('/archived/:estimateId', async (req, res) => {
+  try {
+    if (!db.isDbConnected) {
+      return res.status(503).json({ success: false, message: 'Database not connected' });
+    }
+    
+    const { estimateId } = req.params;
+    const pool = db.pool;
+    let deleted = false;
+    
+    // Delete from estimates table
+    const [result1] = await pool.execute(
+      `DELETE FROM estimates WHERE estimate_id = ? AND (is_archived = 1 OR status = 'Archived')`,
+      [estimateId]
+    );
+    if (result1.affectedRows > 0) deleted = true;
+    
+    // Also delete from fp_estimates table
+    try {
+      const [result2] = await pool.execute(
+        `DELETE FROM fp_estimates WHERE estimate_id = ? AND is_archived = 1`,
+        [estimateId]
+      );
+      if (result2.affectedRows > 0) deleted = true;
+    } catch (e) { 
+      console.log('FP estimate delete:', e.message); 
+    }
+    
+    if (deleted) {
+      res.json({ success: true, message: 'Estimate permanently deleted' });
+    } else {
+      res.status(404).json({ success: false, message: 'Archived estimate not found' });
+    }
+  } catch (error) {
+    console.error('Delete archived estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // DELETE estimate (soft delete)
 router.delete('/:estimateId', async (req, res) => {
   try {
