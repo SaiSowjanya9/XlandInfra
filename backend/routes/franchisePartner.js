@@ -2988,10 +2988,9 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     }
 
     let query = `SELECT fe.*, 
-                        COALESCE(amc.services, fpamc.services) as packageServices,
-                        COALESCE(fe.amc_package_description, amc.description, fpamc.description) as amc_package_description
+                        COALESCE(fpamc.services) as packageServices,
+                        COALESCE(fe.amc_package_description, fpamc.description) as amc_package_description
                  FROM fp_estimates fe 
-                 LEFT JOIN amc_packages amc ON fe.package_id = amc.id
                  LEFT JOIN fp_amc_packages fpamc ON fe.package_id = fpamc.id
                  WHERE fe.franchise_partner_id = ?`;
     const params = [req.fpId];
