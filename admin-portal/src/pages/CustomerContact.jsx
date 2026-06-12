@@ -706,7 +706,7 @@ const CustomerContact = ({ user }) => {
                               key={idx}
                               className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
                             >
-                              {service.name} ({service.frequency}x {service.frequencyType})
+                              {service.name} ({service.frequencyType} - {service.frequency} visits)
                             </span>
                           ))}
                         </div>

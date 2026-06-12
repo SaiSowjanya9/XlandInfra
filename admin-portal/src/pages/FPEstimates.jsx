@@ -2324,7 +2324,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                         <div>
                           <p className="font-semibold text-gray-800">{a.service_name}</p>
-                          <p className="text-sm text-gray-500">{a.frequency_count}x {a.frequency_type}</p>
+                          <p className="text-sm text-gray-500">{a.frequency_type} - {a.frequency_count} visits</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
@@ -2882,8 +2882,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-100 rounded-lg">
                       <div className="col-span-1 text-xs font-semibold text-gray-600">#</div>
                       <div className="col-span-3 text-xs font-semibold text-gray-600">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-gray-600">Description</div>
-                      <div className="col-span-3 text-xs font-semibold text-gray-600 text-right">Frequency</div>
+                      <div className="col-span-5 text-xs font-semibold text-gray-600 text-center">Description</div>
+                      <div className="col-span-2 text-xs font-semibold text-gray-600 text-center">Frequency</div>
+                      <div className="col-span-1 text-xs font-semibold text-gray-600 text-center">Visits</div>
                     </div>
                     {viewAmcPackage.servicesData.map((svc, idx) => (
                       <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-amber-50 px-3 py-3 rounded-lg border border-amber-100">
@@ -2894,12 +2895,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <p className="font-medium text-amber-900 text-sm">{svc.name || svc.service || 'Service'}</p>
                         </div>
                         <div className="col-span-5">
-                          <p className="text-xs text-amber-700 break-words whitespace-normal">{svc.description || '-'}</p>
+                          <p className={`text-xs text-amber-700 break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</p>
                         </div>
-                        <div className="col-span-3 text-right">
-                          <p className="text-sm font-medium text-amber-700">
-                            {svc.frequency_count || svc.frequencyCount || 1}x {svc.frequency_type || svc.frequencyType || 'Monthly'}
-                          </p>
+                        <div className="col-span-2 text-center">
+                          <p className="text-sm font-medium text-amber-700">{svc.frequency_type || svc.frequencyType || 'Monthly'}</p>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <p className="text-sm font-medium text-amber-700">{svc.frequency_count || svc.frequencyCount || 1}</p>
                         </div>
                       </div>
                     ))}

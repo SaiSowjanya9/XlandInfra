@@ -1661,16 +1661,30 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 <p className="text-sm font-semibold text-gray-700 mb-3">Services Included</p>
                 {viewAmcPackage.serviceRows && viewAmcPackage.serviceRows.length > 0 ? (
                   <div className="space-y-2">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-100 rounded-lg">
+                      <div className="col-span-1 text-xs font-semibold text-gray-600">#</div>
+                      <div className="col-span-3 text-xs font-semibold text-gray-600">Service</div>
+                      <div className="col-span-5 text-xs font-semibold text-gray-600 text-center">Description</div>
+                      <div className="col-span-2 text-xs font-semibold text-gray-600 text-center">Frequency</div>
+                      <div className="col-span-1 text-xs font-semibold text-gray-600 text-center">Visits</div>
+                    </div>
                     {viewAmcPackage.serviceRows.map((svc, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
-                        <div className="flex items-center gap-3">
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-blue-50 px-3 py-3 rounded-lg border border-blue-100">
+                        <div className="col-span-1">
                           <span className="w-6 h-6 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                          <p className="font-medium text-blue-900">{svc.name || svc.service || 'Service'}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-blue-700">
-                            {svc.frequency_count || svc.frequencyCount || 1}x {svc.frequency_type || svc.frequencyType || 'Monthly'}
-                          </p>
+                        <div className="col-span-3">
+                          <p className="font-medium text-blue-900 text-sm">{svc.name || svc.service || 'Service'}</p>
+                        </div>
+                        <div className="col-span-5">
+                          <p className={`text-xs text-blue-700 break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</p>
+                        </div>
+                        <div className="col-span-2 text-center">
+                          <p className="text-sm font-medium text-blue-700">{svc.frequency_type || svc.frequencyType || 'Monthly'}</p>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <p className="text-sm font-medium text-blue-700">{svc.frequency_count || svc.frequencyCount || 1}</p>
                         </div>
                       </div>
                     ))}
