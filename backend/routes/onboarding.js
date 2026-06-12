@@ -1,7 +1,27 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
+const { sendCustomerActivationEmail } = require('../services/emailService');
+
+// Constants for customer activation
+const ACTIVATION_EXPIRY_HOURS = 72;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://xlandinfra.com';
+
+// Generate secure temporary password (8 chars, alphanumeric)
+const generateCustomerTempPassword = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let password = '';
+  for (let i = 0; i < 8; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
+// Generate secure activation token
+const generateActivationToken = () => crypto.randomBytes(32).toString('hex');
 
 // Generate unique property ID: PREFIX-XXXX-YYYYMMDD
 const generatePropertyId = (entryType) => {
@@ -146,9 +166,85 @@ router.post('/', authenticate, async (req, res) => {
 
     await conn.commit();
 
+    // Create customer account and send activation email if contact email exists
+    let emailSent = false;
+    if (associationContacts && associationContacts.length > 0) {
+      const primaryContact = associationContacts[0];
+      if (primaryContact.email) {
+        try {
+          const tempPassword = generateCustomerTempPassword();
+          const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+          const activationToken = generateActivationToken();
+          const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
+          const customerId = `CUST-${Date.now()}`;
+          
+          // Check if customer already exists
+          const [existing] = await pool.execute(
+            'SELECT id, is_activated FROM customer_accounts WHERE email = ?', 
+            [primaryContact.email.toLowerCase()]
+          );
+          
+          if (existing.length === 0) {
+            // Create new customer account
+            await pool.execute(
+              `INSERT INTO customer_accounts (
+                customer_id, first_name, last_name, email, phone, temp_password_hash, property_id,
+                activation_token, activation_expires, is_activated, created_by
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                customerId,
+                primaryContact.name || '',
+                '',
+                primaryContact.email.toLowerCase(),
+                primaryContact.phone ? `${primaryContact.countryCode || '+91'}${primaryContact.phone}` : '',
+                tempPasswordHash,
+                insertedId,
+                activationToken,
+                activationExpires,
+                0,
+                creatorName
+              ]
+            );
+            
+            // Send activation email
+            const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
+            const emailResult = await sendCustomerActivationEmail({
+              email: primaryContact.email.toLowerCase(),
+              firstName: primaryContact.name || 'Customer',
+              tempPassword,
+              activationLink,
+              propertyName: communityName
+            });
+            emailSent = emailResult.success;
+            console.log(`📧 Customer activation email sent to ${primaryContact.email}: ${emailSent}`);
+          } else if (!existing[0].is_activated) {
+            // Resend activation email for inactive account
+            await pool.execute(
+              `UPDATE customer_accounts 
+               SET temp_password_hash = ?, activation_token = ?, activation_expires = ?, updated_at = NOW()
+               WHERE id = ?`,
+              [tempPasswordHash, activationToken, activationExpires, existing[0].id]
+            );
+            
+            const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
+            const emailResult = await sendCustomerActivationEmail({
+              email: primaryContact.email.toLowerCase(),
+              firstName: primaryContact.name || 'Customer',
+              tempPassword,
+              activationLink,
+              propertyName: communityName
+            });
+            emailSent = emailResult.success;
+          }
+        } catch (emailError) {
+          console.error('Error creating customer account or sending email:', emailError.message);
+        }
+      }
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Property onboarded successfully',
+      message: 'Property onboarded successfully' + (emailSent ? ', activation email sent' : ''),
       data: {
         id: insertedId.toString(),
         propertyId,
@@ -157,6 +253,7 @@ router.post('/', authenticate, async (req, res) => {
         zone,
         division,
         totalUnits,
+        emailSent,
         createdAt: new Date().toISOString()
       }
     });
