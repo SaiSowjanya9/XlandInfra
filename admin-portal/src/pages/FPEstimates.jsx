@@ -2803,14 +2803,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               )}
 
-              {/* Description */}
-              {viewEstimate.description && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Description / Notes</p>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.description}</p>
-                </div>
-              )}
-
               {/* Price Summary */}
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
@@ -2824,6 +2816,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Description / Notes - After Price Summary */}
+              {viewEstimate.description && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Description / Notes</p>
+                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.description}</p>
+                </div>
+              )}
 
               {/* Created By */}
               <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">

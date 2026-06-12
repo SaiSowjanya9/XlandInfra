@@ -162,15 +162,6 @@ const generateEstimatePDF = async (estimate) => {
         y += 10;
       }
 
-      // Notes/Description
-      if (description) {
-        doc.fontSize(10).fillColor(navy).text('NOTES / DESCRIPTION', 50, y);
-        y += 15;
-        doc.rect(50, y, 500, 30).fill(lightGray).stroke('#e0e0e0');
-        doc.fontSize(8).fillColor('#444444').text(description, 60, y + 8, { width: 480 });
-        y += 40;
-      }
-
       // Price Summary
       doc.fontSize(10).fillColor(navy).text('PRICE SUMMARY', 50, y);
       y += 15;
@@ -192,6 +183,16 @@ const generateEstimatePDF = async (estimate) => {
       doc.rect(60, y + 55, 480, 1).fill('#e0e0e0');
       doc.fontSize(12).fillColor(navy).text('TOTAL:', 60, y + 62);
       doc.fontSize(14).fillColor('#4f46e5').text(`Rs. ${Number(total || 0).toLocaleString()}`, 420, y + 60);
+      y += 90;
+
+      // Notes/Description (after Price Summary)
+      if (description) {
+        doc.fontSize(10).fillColor(navy).text('NOTES / DESCRIPTION', 50, y);
+        y += 15;
+        doc.rect(50, y, 500, 30).fill(lightGray).stroke('#e0e0e0');
+        doc.fontSize(8).fillColor('#444444').text(description, 60, y + 8, { width: 480 });
+        y += 40;
+      }
 
       doc.end();
     } catch (error) {

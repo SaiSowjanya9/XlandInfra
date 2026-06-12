@@ -633,14 +633,6 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                 </div>
               )}
 
-              {/* Description */}
-              {(viewEstimate.notes || viewEstimate.description) && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Description / Notes</p>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.notes || viewEstimate.description}</p>
-                </div>
-              )}
-
               {/* Price Summary */}
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
@@ -654,6 +646,14 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Description / Notes - After Price Summary */}
+              {(viewEstimate.notes || viewEstimate.description) && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Description / Notes</p>
+                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.notes || viewEstimate.description}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
