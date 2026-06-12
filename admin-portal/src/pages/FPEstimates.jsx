@@ -722,10 +722,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <table className="w-full text-sm bg-white">
                       <thead>
                         <tr className="border-y border-amber-100">
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[15%]">Service</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[50%]">Description</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[25%]">Frequency</th>
-                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-amber-600 uppercase w-[10%]">Visits</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[12%]">Service</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[58%]">Description</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[18%]">Frequency</th>
+                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-amber-600 uppercase w-[12%]">Visits</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -784,10 +784,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-amber-100 bg-white">
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[15%]">Service</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[45%]">Description</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[20%]">Frequency</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[10%]">Visits</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[12%]">Service</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[48%]">Description</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[18%]">Frequency</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[12%]">Visits</th>
                         <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[10%]">Action</th>
                       </tr>
                     </thead>
@@ -1064,10 +1064,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <table className="w-full text-sm bg-white">
                       <thead>
                         <tr className="border-y border-amber-100">
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[15%]">Service</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[50%]">Description</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[25%]">Frequency</th>
-                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-amber-600 uppercase w-[10%]">Visits</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[12%]">Service</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[58%]">Description</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[18%]">Frequency</th>
+                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-amber-600 uppercase w-[12%]">Visits</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -1126,10 +1126,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-amber-100 bg-white">
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[15%]">Service</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[45%]">Description</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[20%]">Frequency</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[10%]">Visits</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[12%]">Service</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[48%]">Description</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[18%]">Frequency</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[12%]">Visits</th>
                         <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[10%]">Action</th>
                       </tr>
                     </thead>
