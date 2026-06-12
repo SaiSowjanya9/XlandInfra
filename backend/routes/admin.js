@@ -1453,7 +1453,8 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
                         COALESCE(e.total, e.total_amount, 0) as totalPrice, 
                         e.archived_at as archivedAt, 
                         e.created_at as createdAt,
-                        amc.service_rows as packageServices
+                        amc.service_rows as packageServices,
+                        COALESCE(e.amc_package_description, amc.description) as amc_package_description
                  FROM estimates e
                  LEFT JOIN amc_packages amc ON e.package_id = amc.id
                  WHERE e.is_archived = 1 ORDER BY e.created_at DESC`;
@@ -1467,7 +1468,8 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
                         COALESCE(e.total, e.total_amount, 0) as totalPrice, 
                         e.archived_at as archivedAt, 
                         e.created_at as createdAt,
-                        amc.service_rows as packageServices
+                        amc.service_rows as packageServices,
+                        COALESCE(e.amc_package_description, amc.description) as amc_package_description
                  FROM estimates e
                  LEFT JOIN amc_packages amc ON e.package_id = amc.id
                  WHERE (e.is_archived = 0 OR e.is_archived IS NULL) 
@@ -1490,20 +1492,24 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
                         fe.estimate_id as estimateId, fe.client_name as clientName, fe.client_name as customerName,
                         fe.estimate_type as estimateType, fe.property_type as propertyType,
                         fe.total_amount as totalPrice, fe.archived_at as archivedAt, fe.created_at as createdAt,
-                        amc.service_rows as packageServices
+                        COALESCE(amc.services, fpamc.services) as packageServices,
+                        COALESCE(fe.amc_package_description, amc.description, fpamc.description) as amc_package_description
                  FROM fp_estimates fe
                  LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
                  LEFT JOIN amc_packages amc ON fe.package_id = amc.id
+                 LEFT JOIN fp_amc_packages fpamc ON fe.package_id = fpamc.id
                  WHERE fe.is_archived = 1 ORDER BY fe.created_at DESC`;
       } else {
         query = `SELECT fe.*, 'fp_estimates' as source_table, fp.fp_code, fp.company_name as fp_name,
                         fe.estimate_id as estimateId, fe.client_name as clientName, fe.client_name as customerName,
                         fe.estimate_type as estimateType, fe.property_type as propertyType,
                         fe.total_amount as totalPrice, fe.archived_at as archivedAt, fe.created_at as createdAt,
-                        amc.service_rows as packageServices
+                        COALESCE(amc.services, fpamc.services) as packageServices,
+                        COALESCE(fe.amc_package_description, amc.description, fpamc.description) as amc_package_description
                  FROM fp_estimates fe
                  LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
                  LEFT JOIN amc_packages amc ON fe.package_id = amc.id
+                 LEFT JOIN fp_amc_packages fpamc ON fe.package_id = fpamc.id
                  WHERE (fe.is_archived = 0 OR fe.is_archived IS NULL) ORDER BY fe.created_at DESC`;
       }
       const [results] = await pool.execute(query);

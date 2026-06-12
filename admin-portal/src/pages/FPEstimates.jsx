@@ -2623,59 +2623,73 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               </div>
 
               {/* Package */}
-              {viewEstimate.package_name && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
-                  <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold text-indigo-900">{viewEstimate.package_name}</p>
-                        <p className="text-xs text-indigo-600">Yearly Billing</p>
+              {viewEstimate.package_name && (() => {
+                // Try to get description from estimate, fallback to AMC package lookup
+                const pkgFromList = amcPackages.find(p => p.id == viewEstimate.package_id || p.name === viewEstimate.package_name);
+                const pkgDescription = viewEstimate.amc_package_description || pkgFromList?.description || '';
+                // Get services from estimate or from package lookup
+                let pkgServices = [];
+                if (viewEstimate.package_services) {
+                  pkgServices = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
+                } else if (pkgFromList?.services) {
+                  const svc = typeof pkgFromList.services === 'string' ? JSON.parse(pkgFromList.services) : pkgFromList.services;
+                  pkgServices = svc?.serviceRows || svc?.services || svc || [];
+                }
+                return (
+                  <div className="border-t border-gray-100 pt-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
+                    <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-indigo-900">{viewEstimate.package_name}</p>
+                          <p className="text-xs text-indigo-600">Yearly Billing</p>
+                        </div>
+                        <p className="text-lg font-bold text-indigo-700">{formatCurrency(viewEstimate.package_price)}</p>
                       </div>
-                      <p className="text-lg font-bold text-indigo-700">{formatCurrency(viewEstimate.package_price)}</p>
+                      {pkgDescription && (
+                        <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{pkgDescription}</p>
+                      )}
                     </div>
-                    {viewEstimate.amc_package_description && (
-                      <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{viewEstimate.amc_package_description}</p>
-                    )}
-                  </div>
-                  {/* Package Services */}
-                  {viewEstimate.package_services && (() => {
-                    const services = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
-                    if (!services || services.length === 0) return null;
-                    return (
+                    {/* Package Services */}
+                    {pkgServices.length > 0 && (
                       <div className="mt-3 space-y-2">
-                        {services.map((svc, idx) => (
+                        {pkgServices.map((svc, idx) => (
                           <div key={idx} className="bg-white p-3 rounded-lg border border-indigo-100">
                             <div className="flex justify-between items-center">
                               <p className="font-medium text-gray-800">{svc.name || svc.service}</p>
-                              <p className="text-sm text-indigo-600">{svc.frequencyCount || 1}x {svc.frequencyType || 'Monthly'}</p>
+                              <p className="text-sm text-indigo-600">{svc.frequencyCount || svc.frequency_count || 1}x {svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
                             </div>
                             {svc.description && <p className="text-xs text-gray-500 mt-1">{svc.description}</p>}
                           </div>
                         ))}
                       </div>
-                    );
-                  })()}
-                </div>
-              )}
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Add-ons */}
               {viewEstimate.addons && viewEstimate.addons.length > 0 && (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-sm font-semibold text-gray-700 mb-3">Add-ons</p>
                   <div className="space-y-2">
-                    {viewEstimate.addons.map((addon, idx) => (
-                      <div key={idx} className="bg-green-50 p-3 rounded-lg border border-green-100">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
-                            <p className="text-xs text-green-600">{addon.frequency_type || addon.frequencyType || 'One-time'}</p>
+                    {viewEstimate.addons.map((addon, idx) => {
+                      // Try to get description from addon data, fallback to addons list lookup
+                      const addonFromList = addons.find(a => a.id == addon.id || a.service_name === (addon.name || addon.service_name));
+                      const addonDescription = addon.description || addonFromList?.description || '';
+                      return (
+                        <div key={idx} className="bg-green-50 p-3 rounded-lg border border-green-100">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
+                              <p className="text-xs text-green-600">{addon.frequency_type || addon.frequencyType || 'One-time'}</p>
+                            </div>
+                            <p className="font-semibold text-green-700">{formatCurrency(addon.price)}</p>
                           </div>
-                          <p className="font-semibold text-green-700">{formatCurrency(addon.price)}</p>
+                          {addonDescription && <p className="text-xs text-green-700 mt-2 pt-2 border-t border-green-100">{addonDescription}</p>}
                         </div>
-                        {addon.description && <p className="text-xs text-green-700 mt-2 pt-2 border-t border-green-100">{addon.description}</p>}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
