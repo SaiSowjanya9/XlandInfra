@@ -501,48 +501,51 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
               </div>
 
               {/* AMC Package */}
-              {(viewEstimate.amcPackage || viewEstimate.packageName || viewEstimate.package_name) && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
-                  <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold text-indigo-900">{viewEstimate.amcPackage?.packageName || viewEstimate.amcPackage?.name || viewEstimate.packageName || viewEstimate.package_name || 'AMC Package'}</p>
-                        <p className="text-xs text-indigo-600">{viewEstimate.amcPackage?.billingDuration || viewEstimate.billingDuration || 'Yearly'} Billing</p>
+              {(viewEstimate.amcPackage || viewEstimate.packageName || viewEstimate.package_name) && (() => {
+                // Get package description from various sources
+                const pkgDescription = viewEstimate.amc_package_description || viewEstimate.amcPackageDescription || viewEstimate.amcPackage?.description || '';
+                // Get services from various sources
+                let pkgServices = [];
+                if (viewEstimate.package_services) {
+                  pkgServices = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
+                } else if (viewEstimate.packageServices) {
+                  const svc = typeof viewEstimate.packageServices === 'string' ? JSON.parse(viewEstimate.packageServices) : viewEstimate.packageServices;
+                  pkgServices = svc?.serviceRows || svc?.services || svc || [];
+                } else if (viewEstimate.amcPackage?.serviceRows) {
+                  pkgServices = viewEstimate.amcPackage.serviceRows;
+                }
+                return (
+                  <div className="border-t border-gray-100 pt-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
+                    <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-indigo-900">{viewEstimate.amcPackage?.packageName || viewEstimate.amcPackage?.name || viewEstimate.packageName || viewEstimate.package_name || 'AMC Package'}</p>
+                          <p className="text-xs text-indigo-600">{viewEstimate.amcPackage?.billingDuration || viewEstimate.billingDuration || 'Yearly'} Billing</p>
+                        </div>
+                        <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.amcPackage?.rate || viewEstimate.amcPackage?.totalRate || viewEstimate.amcPrice || viewEstimate.packagePrice || viewEstimate.package_price || viewEstimate.subtotal || 0).toLocaleString()}</p>
                       </div>
-                      <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.amcPackage?.rate || viewEstimate.amcPackage?.totalRate || viewEstimate.amcPrice || viewEstimate.packagePrice || viewEstimate.package_price || viewEstimate.subtotal || 0).toLocaleString()}</p>
+                      {pkgDescription && (
+                        <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{pkgDescription}</p>
+                      )}
                     </div>
-                    {(viewEstimate.amc_package_description || viewEstimate.amcPackageDescription) && (
-                      <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{viewEstimate.amc_package_description || viewEstimate.amcPackageDescription}</p>
-                    )}
-                  </div>
-                  {/* Package Services */}
-                  {viewEstimate.package_services && (() => {
-                    const services = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
-                    if (!services || services.length === 0) return null;
-                    return (
+                    {/* Package Services */}
+                    {pkgServices.length > 0 && (
                       <div className="mt-3 space-y-2">
-                        {services.map((svc, idx) => (
+                        {pkgServices.map((svc, idx) => (
                           <div key={idx} className="bg-white p-3 rounded-lg border border-indigo-100">
                             <div className="flex justify-between items-center">
                               <p className="font-medium text-gray-800">{svc.name || svc.service}</p>
-                              <p className="text-sm text-indigo-600">{svc.frequencyCount || 1}x {svc.frequencyType || 'Monthly'}</p>
+                              <p className="text-sm text-indigo-600">{svc.frequencyCount || svc.frequency_count || 1}x {svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
                             </div>
                             {svc.description && <p className="text-xs text-gray-500 mt-1">{svc.description}</p>}
                           </div>
                         ))}
                       </div>
-                    );
-                  })()}
-                  {viewEstimate.amcPackage?.serviceRows?.length > 0 && !viewEstimate.package_services && (
-                    <div className="mt-3 space-y-1">
-                      {viewEstimate.amcPackage.serviceRows.map((svc, i) => (
-                        <p key={i} className="text-sm text-gray-600">• {svc.service} ({svc.frequencyCount}× {svc.frequencyType})</p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Services */}
               {viewEstimate.services?.length > 0 && !viewEstimate.amcPackage && (

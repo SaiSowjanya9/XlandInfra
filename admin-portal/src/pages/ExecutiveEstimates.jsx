@@ -96,6 +96,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [selectedAddons, setSelectedAddons] = useState([]);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [gstPercent, setGstPercent] = useState(0);
+  const [viewEstimate, setViewEstimate] = useState(null);
   
   // Direct estimate form
   const [directForm, setDirectForm] = useState({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', numberOfBlocks: '', blockNumber: '', blockName: '', numberOfUnits: '', villaNumber: '', flatNumber: '', plotNumber: '' });
@@ -528,7 +529,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="py-4 px-4"><div className="flex items-center gap-1.5 text-gray-600"><Calendar className="w-4 h-4" />{estimate.created_at ? new Date(estimate.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : '-'}</div></td>
                               <td className="py-4 px-4"><div><p className="font-medium text-gray-900">{estimate.created_by_name || (estimate.created_by_role ? estimate.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</p>{estimate.created_by_name && estimate.created_by_role && <p className="text-xs text-gray-400 capitalize">{estimate.created_by_role.replace(/_/g, ' ')}</p>}</div></td>
                               <td className="py-4 px-4"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(estimate.status)}`}>{estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}</span></td>
-                              <td className="py-4 px-4"><div className="flex items-center justify-center gap-1"><button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button></div></td>
+                              <td className="py-4 px-4"><div className="flex items-center justify-center gap-1"><button onClick={() => setViewEstimate(estimate)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button></div></td>
                             </tr>
                           );
                         })}
@@ -908,6 +909,167 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           )}
         </>
+      )}
+
+      {/* View Estimate Modal */}
+      {viewEstimate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
+              <button onClick={() => setViewEstimate(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div><p className="text-xs text-gray-500">Estimate ID</p><p className="font-medium text-sm">{viewEstimate.estimate_id}</p></div>
+                <div><p className="text-xs text-gray-500">Status</p>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
+                    viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
+                    viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                  }`}>{viewEstimate.status || 'draft'}</span>
+                </div>
+                <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
+                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{viewEstimate.created_at ? new Date(viewEstimate.created_at).toLocaleDateString() : '-'}</p></div>
+              </div>
+
+              {/* Property Details */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p>
+                <div className="bg-slate-50 p-4 rounded-lg grid grid-cols-2 gap-3">
+                  <div><p className="text-xs text-gray-500">Property ID</p><p className="font-medium text-sm">{viewEstimate.property_code || viewEstimate.property_id || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Property Name</p><p className="font-medium text-sm">{viewEstimate.property_name || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Property Type</p><p className="font-medium text-sm">{getPropertyTypeLabel(viewEstimate.property_type)}</p></div>
+                  <div><p className="text-xs text-gray-500">Zone</p><p className="font-medium text-sm">{viewEstimate.zone || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Division</p><p className="font-medium text-sm">{viewEstimate.division || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-gray-500">Address</p><p className="font-medium text-sm">{viewEstimate.address || viewEstimate.property_address || '-'}</p></div>
+                </div>
+              </div>
+
+              {/* Customer Details */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p>
+                <div className="bg-blue-50 p-4 rounded-lg grid grid-cols-2 gap-3">
+                  <div><p className="text-xs text-gray-500">Contact Name</p><p className="font-medium text-sm">{viewEstimate.client_name || viewEstimate.customer_name || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium text-sm">{viewEstimate.client_phone || '-'}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-gray-500">Email</p><p className="font-medium text-sm">{viewEstimate.client_email || '-'}</p></div>
+                </div>
+              </div>
+
+              {/* Package */}
+              {viewEstimate.package_name && (() => {
+                const pkgFromList = amcPackages.find(p => p.id == viewEstimate.package_id || p.name === viewEstimate.package_name);
+                const pkgDescription = viewEstimate.amc_package_description || pkgFromList?.description || '';
+                let pkgServices = [];
+                if (viewEstimate.package_services) {
+                  pkgServices = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
+                } else if (viewEstimate.packageServices) {
+                  const svc = typeof viewEstimate.packageServices === 'string' ? JSON.parse(viewEstimate.packageServices) : viewEstimate.packageServices;
+                  pkgServices = svc?.serviceRows || svc?.services || svc || [];
+                } else if (pkgFromList?.services) {
+                  const svc = typeof pkgFromList.services === 'string' ? JSON.parse(pkgFromList.services) : pkgFromList.services;
+                  pkgServices = svc?.serviceRows || svc?.services || svc || [];
+                }
+                return (
+                  <div className="border-t border-gray-100 pt-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
+                    <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-indigo-900">{viewEstimate.package_name}</p>
+                          <p className="text-xs text-indigo-600">Yearly Billing</p>
+                        </div>
+                        <p className="text-lg font-bold text-indigo-700">{formatCurrency(viewEstimate.package_price)}</p>
+                      </div>
+                      {pkgDescription && (
+                        <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{pkgDescription}</p>
+                      )}
+                    </div>
+                    {pkgServices.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {pkgServices.map((svc, idx) => (
+                          <div key={idx} className="bg-white p-3 rounded-lg border border-indigo-100">
+                            <div className="flex justify-between items-center">
+                              <p className="font-medium text-gray-800">{svc.name || svc.service}</p>
+                              <p className="text-sm text-indigo-600">{svc.frequencyCount || svc.frequency_count || 1}x {svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
+                            </div>
+                            {svc.description && <p className="text-xs text-gray-500 mt-1">{svc.description}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Add-ons */}
+              {viewEstimate.addons && viewEstimate.addons.length > 0 && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Add-on Services</p>
+                  <div className="space-y-2">
+                    {viewEstimate.addons.map((addon, idx) => {
+                      // Try to get description from addon data, fallback to addons list lookup
+                      const addonName = addon.name || addon.service_name || '';
+                      const addonFromList = addons.find(a => 
+                        a.id == addon.id || 
+                        a.id == addon.addon_id ||
+                        a.service_name === addonName ||
+                        (a.service_name && addonName && a.service_name.toLowerCase() === addonName.toLowerCase())
+                      );
+                      const addonDescription = addon.description || addonFromList?.description || addonFromList?.services?.[0]?.description || '';
+                      const frequencyCount = addon.frequency_count || addon.frequencyCount || addonFromList?.frequency_count || 1;
+                      const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
+                      return (
+                        <div key={idx} className="bg-green-50 p-3 rounded-lg border border-green-100">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
+                              <p className="text-xs text-green-600">{frequencyCount}x {frequencyType}</p>
+                            </div>
+                          </div>
+                          {addonDescription && <p className="text-xs text-green-700 mt-2 pt-2 border-t border-green-100">{addonDescription}</p>}
+                        </div>
+                      );
+                    })}
+                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-lg mt-2">
+                      <p className="font-semibold text-green-800">Total Add-ons Price</p>
+                      <p className="font-bold text-green-700">{formatCurrency(viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0))}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Description */}
+              {viewEstimate.description && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Description / Notes</p>
+                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.description}</p>
+                </div>
+              )}
+
+              {/* Price Summary */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>{formatCurrency(viewEstimate.subtotal)}</span></div>
+                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm text-green-600"><span>Discount ({viewEstimate.discount_percent || 0}%)</span><span>-{formatCurrency(viewEstimate.discount_amount)}</span></div>}
+                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>{formatCurrency(viewEstimate.gst_amount)}</span></div>
+                  <div className="flex justify-between items-center pt-3 border-t border-gray-200">
+                    <p className="text-lg font-semibold">Total</p>
+                    <p className="text-2xl font-bold text-indigo-600">{formatCurrency(viewEstimate.total_amount)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Created By */}
+              <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
+                Created by: {viewEstimate.created_by_name || '-'} ({viewEstimate.created_by_role?.replace('_', ' ') || '-'})
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -150,6 +150,15 @@ const generatePDF = (data, type, filename) => {
       y += 13;
     }
 
+    // ===== PACKAGE PRICE =====
+    if (data.packagePrice || data.package_price) {
+      doc.setTextColor(...navy);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Package Price: ' + formatCurrency(data.packagePrice || data.package_price), margin, y);
+      y += 6;
+    }
+
     // ===== SIDE-BY-SIDE CARDS: Property + Customer =====
     if (type !== 'package') {
       const gap = 6;
@@ -329,14 +338,19 @@ const generatePDF = (data, type, filename) => {
     doc.text('SERVICES INCLUDED', margin, y);
     y += 5;
 
-    const services = data.services || [];
+    const services = data.services || data.packageServices || [];
     const tableBody = services.length > 0 
-      ? services.map((s, idx) => [
-          String(idx + 1),
-          String(s.name || s.service || 'Service') + (s.description ? `\n${s.description}` : ''),
-          String(s.frequencyType || 'Monthly'),
-          String(s.frequencyCount || s.frequency || '-')
-        ])
+      ? services.map((s, idx) => {
+          const freqCount = s.frequencyCount || s.frequency_count || s.frequency || 1;
+          const freqType = s.frequencyType || s.frequency_type || 'Monthly';
+          const freqDisplay = `${freqCount}x ${freqType}`;
+          return [
+            String(idx + 1),
+            String(s.name || s.service || 'Service') + (s.description ? `\n${s.description}` : ''),
+            freqDisplay,
+            String(freqCount)
+          ];
+        })
       : [['1', 'No services listed', '-', '-']];
 
     autoTable(doc, {
@@ -366,12 +380,17 @@ const generatePDF = (data, type, filename) => {
       doc.text('ADD-ONS', margin, y);
       y += 5;
 
-      const addonsBody = data.addons.map((a, idx) => [
-        String(idx + 1),
-        String(a.name || a.serviceName || 'Add-on') + (a.description ? `\n${a.description}` : ''),
-        String(a.frequencyType || a.frequency_type || a.frequency || 'One-time'),
-        String(a.frequencyCount || a.frequency_count || a.visits || '-')
-      ]);
+      const addonsBody = data.addons.map((a, idx) => {
+        const freqCount = a.frequencyCount || a.frequency_count || a.visits || 1;
+        const freqType = a.frequencyType || a.frequency_type || a.frequency || 'Monthly';
+        const freqDisplay = `${freqCount}x ${freqType}`;
+        return [
+          String(idx + 1),
+          String(a.name || a.serviceName || a.service_name || 'Add-on') + (a.description ? `\n${a.description}` : ''),
+          freqDisplay,
+          String(freqCount)
+        ];
+      });
 
       autoTable(doc, {
         startY: y,
