@@ -767,19 +767,27 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       estimateData.division = selectedProperty.division;
       estimateData.address = selectedProperty.address || `${selectedProperty.city || ''} ${selectedProperty.state || ''}`.trim();
       
-      // Package info
+      // Package info with descriptions
       if (selectedPackage) {
         estimateData.packageId = selectedPackage.packageId;
         estimateData.packageName = selectedPackage.packageName;
         estimateData.packageRate = getPackagePrice();
+        estimateData.amc_package_description = selectedPackage.description || '';
+        estimateData.package_services = (selectedPackage.services || []).map(s => ({
+          name: s.service || s.name,
+          frequencyCount: s.frequencyCount || 1,
+          frequencyType: s.frequencyType || 'Monthly',
+          description: s.description || ''
+        }));
       }
       
-      // Add-ons info
+      // Add-ons info with descriptions
       if (selectedAddons.length > 0) {
         estimateData.addons = selectedAddons.map(a => ({
           addonId: a.addonId,
           services: a.services,
-          totalPrice: a.totalPrice
+          totalPrice: a.totalPrice,
+          description: a.description || ''
         }));
         estimateData.addonsTotal = getAddonsTotal();
       }
@@ -803,19 +811,27 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       estimateData.blockNumber = estimateForm.blockNumber;
       estimateData.flatUnit = estimateForm.flatUnit;
       
-      // Package info for direct estimate
+      // Package info for direct estimate with descriptions
       if (directSelectedPackage) {
         estimateData.packageId = directSelectedPackage.packageId;
         estimateData.packageName = directSelectedPackage.packageName;
         estimateData.packageRate = getDirectPackagePrice();
+        estimateData.amc_package_description = directSelectedPackage.description || '';
+        estimateData.package_services = (directSelectedPackage.services || []).map(s => ({
+          name: s.service || s.name,
+          frequencyCount: s.frequencyCount || 1,
+          frequencyType: s.frequencyType || 'Monthly',
+          description: s.description || ''
+        }));
       }
       
-      // Add-ons info for direct estimate
+      // Add-ons info for direct estimate with descriptions
       if (directSelectedAddons.length > 0) {
         estimateData.addons = directSelectedAddons.map(a => ({
           addonId: a.addonId,
           services: a.services,
-          totalPrice: a.totalPrice
+          totalPrice: a.totalPrice,
+          description: a.description || ''
         }));
         estimateData.addonsTotal = getDirectAddonsTotal();
       }

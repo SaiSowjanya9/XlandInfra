@@ -504,14 +504,37 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
               {(viewEstimate.amcPackage || viewEstimate.packageName || viewEstimate.package_name) && (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
-                  <div className="flex justify-between items-center bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                    <div>
-                      <p className="font-semibold text-indigo-900">{viewEstimate.amcPackage?.packageName || viewEstimate.amcPackage?.name || viewEstimate.packageName || viewEstimate.package_name || 'AMC Package'}</p>
-                      <p className="text-xs text-indigo-600">{viewEstimate.amcPackage?.billingDuration || viewEstimate.billingDuration || 'Yearly'} Billing</p>
+                  <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold text-indigo-900">{viewEstimate.amcPackage?.packageName || viewEstimate.amcPackage?.name || viewEstimate.packageName || viewEstimate.package_name || 'AMC Package'}</p>
+                        <p className="text-xs text-indigo-600">{viewEstimate.amcPackage?.billingDuration || viewEstimate.billingDuration || 'Yearly'} Billing</p>
+                      </div>
+                      <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.amcPackage?.rate || viewEstimate.amcPackage?.totalRate || viewEstimate.amcPrice || viewEstimate.packagePrice || viewEstimate.package_price || viewEstimate.subtotal || 0).toLocaleString()}</p>
                     </div>
-                    <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.amcPackage?.rate || viewEstimate.amcPackage?.totalRate || viewEstimate.amcPrice || viewEstimate.packagePrice || viewEstimate.package_price || viewEstimate.subtotal || 0).toLocaleString()}</p>
+                    {(viewEstimate.amc_package_description || viewEstimate.amcPackageDescription) && (
+                      <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{viewEstimate.amc_package_description || viewEstimate.amcPackageDescription}</p>
+                    )}
                   </div>
-                  {viewEstimate.amcPackage?.serviceRows?.length > 0 && (
+                  {/* Package Services */}
+                  {viewEstimate.package_services && (() => {
+                    const services = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
+                    if (!services || services.length === 0) return null;
+                    return (
+                      <div className="mt-3 space-y-2">
+                        {services.map((svc, idx) => (
+                          <div key={idx} className="bg-white p-3 rounded-lg border border-indigo-100">
+                            <div className="flex justify-between items-center">
+                              <p className="font-medium text-gray-800">{svc.name || svc.service}</p>
+                              <p className="text-sm text-indigo-600">{svc.frequencyCount || 1}x {svc.frequencyType || 'Monthly'}</p>
+                            </div>
+                            {svc.description && <p className="text-xs text-gray-500 mt-1">{svc.description}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  {viewEstimate.amcPackage?.serviceRows?.length > 0 && !viewEstimate.package_services && (
                     <div className="mt-3 space-y-1">
                       {viewEstimate.amcPackage.serviceRows.map((svc, i) => (
                         <p key={i} className="text-sm text-gray-600">• {svc.service} ({svc.frequencyCount}× {svc.frequencyType})</p>
@@ -550,13 +573,17 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                       const addonName = typeof addon === 'number' ? `Add-on ${idx + 1}` : (addon.name || addon.serviceName || addon.service_name || `Add-on ${idx + 1}`);
                       const addonPrice = typeof addon === 'number' ? addon : (addon.price || addon.totalPrice || addon.rate || 0);
                       const addonFreq = typeof addon === 'object' ? (addon.frequencyType || addon.frequency_type || 'One-time') : 'One-time';
+                      const addonDesc = typeof addon === 'object' ? addon.description : '';
                       return (
-                        <div key={idx} className="flex justify-between items-center bg-green-50 p-3 rounded-lg">
-                          <div>
-                            <p className="font-medium text-green-900">{addonName}</p>
-                            <p className="text-xs text-green-600">{addonFreq}</p>
+                        <div key={idx} className="bg-green-50 p-3 rounded-lg border border-green-100">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-green-900">{addonName}</p>
+                              <p className="text-xs text-green-600">{addonFreq}</p>
+                            </div>
+                            <p className="font-semibold text-green-700">₹{Number(addonPrice).toLocaleString()}</p>
                           </div>
-                          <p className="font-semibold text-green-700">₹{Number(addonPrice).toLocaleString()}</p>
+                          {addonDesc && <p className="text-xs text-green-700 mt-2 pt-2 border-t border-green-100">{addonDesc}</p>}
                         </div>
                       );
                     })}

@@ -446,6 +446,14 @@ router.post('/:estimateId/send', async (req, res) => {
       if (est.units_per_block) unitsPerBlock = typeof est.units_per_block === 'string' ? JSON.parse(est.units_per_block) : est.units_per_block;
     } catch (e) {}
 
+    // Parse package services with descriptions
+    let packageServices = [];
+    try {
+      if (est.package_services) {
+        packageServices = typeof est.package_services === 'string' ? JSON.parse(est.package_services) : est.package_services;
+      }
+    } catch (e) {}
+
     // Prepare estimate data for email
     const estimateData = {
       estimateId: est.estimate_id,
@@ -467,8 +475,12 @@ router.post('/:estimateId/send', async (req, res) => {
       blockNumber: est.block_number,
       // Villa/Plot-specific
       villaPlotNumber: est.villa_plot_number,
-      // Services and pricing
-      services: services,
+      // Package info with description
+      packageName: est.package_name,
+      amcPackageDescription: est.amc_package_description || '',
+      description: est.description || '',
+      // Services with descriptions
+      services: packageServices.length > 0 ? packageServices : services,
       addons: addons,
       subtotal: parseFloat(est.subtotal || 0),
       discount: parseFloat(est.discount || 0),
