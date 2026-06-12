@@ -2987,9 +2987,12 @@ router.get('/estimates', requireFPScope, async (req, res) => {
       } catch (e) { /* ignore */ }
     }
 
-    let query = `SELECT fe.*, amc.service_rows as packageServices 
+    let query = `SELECT fe.*, 
+                        COALESCE(amc.services, fpamc.services) as packageServices,
+                        COALESCE(fe.amc_package_description, amc.description, fpamc.description) as amc_package_description
                  FROM fp_estimates fe 
                  LEFT JOIN amc_packages amc ON fe.package_id = amc.id
+                 LEFT JOIN fp_amc_packages fpamc ON fe.package_id = fpamc.id
                  WHERE fe.franchise_partner_id = ?`;
     const params = [req.fpId];
 
@@ -3020,12 +3023,32 @@ router.get('/estimates', requireFPScope, async (req, res) => {
       }
     } catch (e) {}
 
+    // Get all FP addons for description lookup
+    let fpAddons = [];
+    try {
+      const [addonResults] = await pool.execute(
+        `SELECT id, service_name, description FROM fp_addons WHERE franchise_partner_id = ?`,
+        [req.fpId]
+      );
+      fpAddons = addonResults;
+    } catch (e) {}
+
     // Parse addons_data JSON and fix creator name if it's an email
     const enrichedEstimates = await Promise.all(estimates.map(async (est) => {
       let addons = [];
       if (est.addons_data) {
         try {
           addons = typeof est.addons_data === 'string' ? JSON.parse(est.addons_data) : est.addons_data;
+          // Enrich addons with descriptions from fp_addons if not already present
+          addons = addons.map(addon => {
+            if (!addon.description) {
+              const foundAddon = fpAddons.find(a => a.id == addon.id || a.service_name === (addon.name || addon.service_name));
+              if (foundAddon) {
+                addon.description = foundAddon.description || '';
+              }
+            }
+            return addon;
+          });
         } catch (e) {}
       }
       // If created_by_name looks like an email, replace with FP contact name
