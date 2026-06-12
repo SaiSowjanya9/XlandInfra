@@ -902,27 +902,15 @@ const EmployeeWorkOrders = ({ admin }) => {
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="relative inline-block">
-                            <select
-                              value={wo.status}
-                              onChange={(e) => handleStatusChange(wo.id, e.target.value)}
-                              className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-semibold border cursor-pointer ${getStatusColor(wo.status)}`}
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="assigned">Assigned</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="completed">Completed</option>
-                              <option value="closed">Closed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
-                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(wo.status)}`}>
+                            {wo.status?.replace(/_/g, ' ').toUpperCase()}
+                          </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600">
                           {new Date(wo.created_at).toLocaleDateString()}
                         </td>
                         <td className="py-3 px-4">
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center justify-end">
                             <button
                               onClick={() => setSelectedOrder(wo)}
                               className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
@@ -930,38 +918,6 @@ const EmployeeWorkOrders = ({ admin }) => {
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            {!isOpsManager && (
-                              <>
-                                <button
-                                  onClick={() => handleEditWorkOrder(wo)}
-                                  className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                                  title="Edit"
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => openAssignModal(wo, 'vendor')}
-                                  className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg transition-colors"
-                                  title="Assign Vendor"
-                                >
-                                  <Truck className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => openAssignModal(wo, 'employee')}
-                                  className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
-                                  title="Assign Employee"
-                                >
-                                  <UserPlus className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteWorkOrder(wo.id)}
-                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
                           </div>
                         </td>
                       </tr>

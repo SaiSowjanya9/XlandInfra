@@ -941,8 +941,8 @@ const CoordinatorWorkOrders = ({ user }) => {
                       <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-1">
-                        {/* View Details - Always visible */}
+                      <div className="flex items-center justify-end">
+                        {/* View Details - Only action for employees */}
                         <button
                           onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
                           className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
@@ -950,104 +950,6 @@ const CoordinatorWorkOrders = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        
-                        {/* Change Status Dropdown - Always visible */}
-                        <select
-                          value={wo.status}
-                          onChange={(e) => handleStatusUpdate(wo.id, e.target.value)}
-                          className="px-2 py-1 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="assigned">Assigned</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                        
-                        {/* PENDING TAB ACTIONS */}
-                        {viewType === 'pending' && (
-                          <div className="flex items-center gap-1">
-                            {/* Assign Vendor - Hidden for FP Coordinator */}
-                            {!isFPCoordinator && (
-                              <button
-                                onClick={() => { setSelectedWorkOrder(wo); setShowAssignModal(true); }}
-                                className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                title="Assign Vendor"
-                              >
-                                <Store className="w-4 h-4" />
-                              </button>
-                            )}
-                            {/* Assign Employee - Hidden for FP Coordinator */}
-                            {!isFPCoordinator && (
-                              <button
-                                onClick={() => { setSelectedWorkOrder(wo); setShowAssignEmployeeModal(true); }}
-                                className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                title="Assign Employee"
-                              >
-                                <Users className="w-4 h-4" />
-                              </button>
-                            )}
-                            {/* Export to Excel - Hidden for FP Coordinator */}
-                            {!isFPCoordinator && (
-                              <button
-                                onClick={() => handleExportWorkOrder(wo)}
-                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Export to Excel"
-                              >
-                                <FileSpreadsheet className="w-4 h-4" />
-                              </button>
-                            )}
-                            {/* Delete - Hidden for FP Coordinator */}
-                            {!isFPCoordinator && (
-                              <button
-                                onClick={() => handleDeleteWorkOrder(wo)}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        
-                        {/* COMPLETED TAB ACTIONS */}
-                        {viewType === 'completed' && (
-                          <div className="flex items-center gap-1">
-                          </div>
-                        )}
-                        
-                        {/* ALL TAB ACTIONS */}
-                        {viewType === 'all' && (
-                          <div className="flex items-center gap-1">
-                            {!isFPCoordinator && wo.status !== 'completed' && wo.status !== 'cancelled' && (
-                              <>
-                                <button
-                                  onClick={() => { setSelectedWorkOrder(wo); setShowAssignModal(true); }}
-                                  className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                  title="Assign Vendor"
-                                >
-                                  <Store className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => { setSelectedWorkOrder(wo); setShowAssignEmployeeModal(true); }}
-                                  className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                  title="Assign Employee"
-                                >
-                                  <Users className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
-                            {!isFPCoordinator && (
-                              <button
-                                onClick={() => handleExportWorkOrder(wo)}
-                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Export to Excel"
-                              >
-                                <FileSpreadsheet className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </td>
                   </tr>
