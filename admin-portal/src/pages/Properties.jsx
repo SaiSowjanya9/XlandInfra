@@ -1100,7 +1100,7 @@ const Properties = () => {
                                       <td className="px-4 py-2 font-medium text-gray-900">{assignment.serviceType}</td>
                                       <td className="px-4 py-2 text-center">
                                         <span className="text-xs text-gray-600">
-                                          {assignment.frequencyCount}x {assignment.frequencyType}
+                                          {assignment.frequencyType} - {assignment.frequencyCount} visits
                                         </span>
                                       </td>
                                       <td className="px-4 py-2">

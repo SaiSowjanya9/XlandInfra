@@ -462,7 +462,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                               {addon.services?.[0]?.name || addon.addonId}
                             </p>
                             <p className="text-sm text-gray-500">
-                              {addon.services?.[0]?.frequency || 1}x {addon.services?.[0]?.frequencyType || 'Monthly'}
+                              {addon.services?.[0]?.frequencyType || 'Monthly'} - {addon.services?.[0]?.frequency || 1} visits
                             </p>
                           </div>
                         </div>
