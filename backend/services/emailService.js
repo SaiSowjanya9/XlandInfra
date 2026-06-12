@@ -827,27 +827,10 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px;">Hello ${customerName || 'Valued Customer'},</h2>
             
             <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">
-              Thank you for your interest in our services. Please find below the estimate for your property <strong>${propertyName || 'N/A'}</strong>.
+              Thank you for your interest in our services. Please find attached the detailed estimate for your property.
             </p>
             
-            ${packageName ? `
-            <!-- AMC Package Info -->
-            <div style="background: #eef2ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #6366f1;">
-              <h3 style="margin: 0 0 10px 0; color: #4338ca; font-size: 14px; font-weight: 600;">AMC Package: ${packageName}</h3>
-              ${amcPackageDescription ? `<p style="color: #4b5563; font-size: 13px; margin: 0; line-height: 1.5;">${amcPackageDescription}</p>` : ''}
-            </div>
-            ` : ''}
-            
-            <!-- Property Details -->
-            <div style="background: #eff6ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
-              <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Property Details</h3>
-              <table style="width: 100%;">
-                <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Property Name:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937; font-weight: 500;">${propertyName || '-'}</td></tr>
-                ${propertyDetailsHtml}
-              </table>
-            </div>
-            
-            <!-- Estimate Details -->
+            <!-- Estimate Info -->
             <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <table style="width: 100%;">
                 <tr>
@@ -858,59 +841,45 @@ const sendEstimateEmail = async (estimate, actionToken) => {
                   <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Valid Until:</td>
                   <td style="padding: 8px 0; padding-left: 15px; color: #dc2626; font-weight: 600;">${expiryDate.toLocaleDateString('en-IN')}</td>
                 </tr>
-              </table>
-            </div>
-            
-            <!-- Services Table -->
-            ${services?.length > 0 || addons?.length > 0 ? `
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-              <thead>
-                <tr style="background: #f3f4f6;">
-                  <th style="padding: 12px; text-align: left; font-size: 14px; color: #374151; border-bottom: 2px solid #e5e7eb;">Description</th>
-                  <th style="padding: 12px; text-align: right; font-size: 14px; color: #374151; border-bottom: 2px solid #e5e7eb;">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${servicesHtml}
-                ${addonsHtml}
-              </tbody>
-            </table>
-            ` : ''}
-            
-            <!-- Totals -->
-            <div style="background: #f9fafb; border-radius: 8px; padding: 15px; margin-bottom: 25px;">
-              <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; text-align: left;">Subtotal</td>
-                  <td style="padding: 8px 0; color: #1f2937; text-align: right;">₹ ${Number(subtotal || 0).toLocaleString()}</td>
-                </tr>
-                ${discount > 0 ? `
-                <tr>
-                  <td style="padding: 8px 0; color: #6b7280; text-align: left;">Discount</td>
-                  <td style="padding: 8px 0; color: #059669; text-align: right;">- ₹ ${Number(discount).toLocaleString()}</td>
-                </tr>
-                ` : ''}
-                <tr>
-                  <td style="padding: 8px 0; color: #6b7280; text-align: left;">Tax (GST)</td>
-                  <td style="padding: 8px 0; color: #1f2937; text-align: right;">₹ ${Number(tax || 0).toLocaleString()}</td>
-                </tr>
-                <tr>
-                  <td colspan="2" style="padding-top: 12px; border-top: 2px solid #e5e7eb;"></td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #1f2937; font-weight: 700; font-size: 16px; text-align: left;">Total</td>
-                  <td style="padding: 8px 0; color: #1e40af; font-weight: 700; font-size: 18px; text-align: right;">₹ ${Number(total || 0).toLocaleString()}</td>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">AMC Package:</td>
+                  <td style="padding: 8px 0; padding-left: 15px; color: #4338ca; font-weight: 600;">${packageName || '-'}</td>
                 </tr>
               </table>
             </div>
             
-            ${description ? `
-            <!-- Notes/Description -->
-            <div style="background: #f9fafb; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #9ca3af;">
-              <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600;">Notes</h3>
-              <p style="color: #4b5563; font-size: 13px; margin: 0; line-height: 1.5;">${description}</p>
+            <!-- Property Details -->
+            <div style="background: #eff6ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+              <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Property Details</h3>
+              <table style="width: 100%;">
+                <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Property Name:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937; font-weight: 500;">${propertyName || '-'}</td></tr>
+                ${propertyDetailsHtml}
+              </table>
             </div>
-            ` : ''}
+            
+            <!-- Customer Details -->
+            <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+              <h3 style="margin: 0 0 10px 0; color: #92400e; font-size: 14px; font-weight: 600;">Customer Details</h3>
+              <table style="width: 100%;">
+                <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Name:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937; font-weight: 500;">${customerName || '-'}</td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Email:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${customerEmail || '-'}</td></tr>
+              </table>
+            </div>
+            
+            <!-- Total Amount -->
+            <div style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); border-radius: 8px; padding: 20px; margin-bottom: 25px; text-align: center;">
+              <p style="color: #e0e7ff; margin: 0 0 5px 0; font-size: 14px;">Total Estimate Amount</p>
+              <p style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">₹ ${Number(total || 0).toLocaleString()}</p>
+              <p style="color: #c7d2fe; margin: 8px 0 0 0; font-size: 12px;">(Inclusive of GST)</p>
+            </div>
+            
+            <!-- PDF Notice -->
+            <div style="background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center;">
+              <p style="color: #065f46; margin: 0; font-size: 14px;">
+                📎 <strong>Detailed estimate attached as PDF</strong><br>
+                <span style="font-size: 12px; color: #047857;">Please find the complete breakdown of AMC package services, add-ons, and pricing in the attached PDF document.</span>
+              </p>
+            </div>
             
             <!-- Action Buttons -->
             <div style="text-align: center; margin: 30px 0;">
