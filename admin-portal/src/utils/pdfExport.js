@@ -321,13 +321,14 @@ const generatePDF = (data, type, filename) => {
       doc.setFillColor(...cardBg);
       doc.setDrawColor(...borderLight);
       const descLines = doc.splitTextToSize(String(data.amcPackageDescription), pageWidth - margin * 2 - 8);
-      const descBoxH = Math.min(Math.max(10, descLines.length * 4 + 4), 30);
+      // Allow full description - up to 80 height and 20 lines
+      const descBoxH = Math.min(Math.max(10, descLines.length * 4 + 4), 80);
       doc.roundedRect(margin, y, pageWidth - margin * 2, descBoxH, 2, 2, 'FD');
       
       doc.setTextColor(...mediumText);
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
-      doc.text(descLines.slice(0, 6), margin + 4, y + 4);
+      doc.text(descLines.slice(0, 20), margin + 4, y + 4);
       y += descBoxH + 4;
     }
 
