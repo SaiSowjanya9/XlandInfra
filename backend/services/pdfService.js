@@ -82,13 +82,16 @@ const generateEstimatePDF = async (estimate) => {
 
       y += 115;
 
-      // Package Description
+      // Package Description - dynamic height based on content
       if (amcPackageDescription) {
         doc.fontSize(10).fillColor(navy).text('PACKAGE DESCRIPTION', 50, y);
         y += 15;
-        doc.rect(50, y, 500, 50).fill(lightGray).stroke('#e0e0e0');
-        doc.fontSize(8).fillColor('#444444').text(amcPackageDescription, 60, y + 8, { width: 480, height: 40 });
-        y += 60;
+        // Calculate height needed for description (approx 12 chars per line at font size 8)
+        const descLines = Math.ceil(amcPackageDescription.length / 70);
+        const descBoxHeight = Math.min(Math.max(descLines * 12 + 16, 50), 150); // Min 50, max 150
+        doc.rect(50, y, 500, descBoxHeight).fill(lightGray).stroke('#e0e0e0');
+        doc.fontSize(8).fillColor('#444444').text(amcPackageDescription, 60, y + 8, { width: 480, height: descBoxHeight - 12 });
+        y += descBoxHeight + 10;
       }
 
       // Services Table
