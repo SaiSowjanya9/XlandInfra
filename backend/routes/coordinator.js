@@ -1350,12 +1350,32 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
         [franchisePartnerId, ...zoneParams]
       );
       
+      // Get FP addons for description lookup
+      let fpAddons = [];
+      try {
+        const [addonResults] = await pool.query(
+          `SELECT id, service_name, description FROM fp_addons WHERE franchise_partner_id = ?`,
+          [franchisePartnerId]
+        );
+        fpAddons = addonResults;
+      } catch (e) {}
+
       // Enrich estimates with property_code and parse addons
       estimates = await Promise.all(fpEstimates.map(async (est) => {
         // Parse addons JSON
         let addons = [];
         if (est.addons_data) {
-          try { addons = JSON.parse(est.addons_data); } catch(e) {}
+          try { 
+            addons = JSON.parse(est.addons_data);
+            // Enrich addons with descriptions
+            addons = addons.map(addon => {
+              if (!addon.description) {
+                const foundAddon = fpAddons.find(a => a.id == addon.id || a.service_name === (addon.name || addon.service_name));
+                if (foundAddon) addon.description = foundAddon.description || '';
+              }
+              return addon;
+            });
+          } catch(e) {}
         }
         
         // Get original property_code from onboarded_properties or properties table
