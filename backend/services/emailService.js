@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { generateEstimatePDF } = require('./pdfService');
 
 // Email configuration - uses environment variables
 // Supports both Gmail and custom SMTP servers (Hostinger, GoDaddy, cPanel, etc.)
@@ -780,11 +781,32 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     `;
   }
 
+  // Generate PDF attachment
+  let pdfBuffer = null;
+  try {
+    pdfBuffer = await generateEstimatePDF({
+      estimateId, customerName, customerEmail, customerPhone: estimate.customerPhone,
+      propertyName, propertyType, propertyCode: estimate.propertyCode, zone, division, city, address,
+      numberOfBlocks, totalUnits, towerName, blockNumber, villaPlotNumber,
+      packageName, packagePrice: estimate.packagePrice, amcPackageDescription, 
+      services, addons, subtotal, discount, discountAmount: estimate.discountAmount,
+      tax, gstPercent: estimate.gstPercent, total, description, createdAt: estimate.createdAt
+    });
+    console.log(`📄 PDF generated for estimate ${estimateId}`);
+  } catch (pdfError) {
+    console.error('PDF generation failed:', pdfError.message);
+  }
+
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
     to: customerEmail,
     subject: `Your Estimate ${estimateId} from XLAND INFRA - Action Required`,
     headers: getDefaultHeaders(),
+    attachments: pdfBuffer ? [{
+      filename: `Estimate_${estimateId}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf'
+    }] : [],
     html: `
       <!DOCTYPE html>
       <html>

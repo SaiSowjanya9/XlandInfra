@@ -3377,8 +3377,10 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         estimateId: estimate.estimate_id,
         customerName: estimate.client_name,
         customerEmail: email,
+        customerPhone: estimate.client_phone || '',
         propertyName: estimate.property_name,
         propertyType: estimate.property_type,
+        propertyCode: estimate.property_code || '',
         zone: estimate.zone,
         division: estimate.division,
         city: estimate.city,
@@ -3395,6 +3397,7 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         villaPlotNumber: estimate.villa_plot_number,
         // Package info with description
         packageName: estimate.package_name,
+        packagePrice: parseFloat(estimate.package_price) || 0,
         amcPackageDescription: estimate.amc_package_description || '',
         description: estimate.description || '',
         // Services with descriptions
@@ -3402,9 +3405,12 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         addons: addons,
         subtotal: parseFloat(estimate.subtotal) || 0,
         discount: parseFloat(estimate.discount_percent) || 0,
+        discountAmount: parseFloat(estimate.discount_amount) || 0,
         tax: parseFloat(estimate.gst_amount) || 0,
+        gstPercent: parseFloat(estimate.gst_percent) || 18,
         total: parseFloat(estimate.total_amount) || 0,
-        validUntil: estimate.valid_until
+        validUntil: estimate.valid_until,
+        createdAt: estimate.created_at
       };
       
       const emailResult = await sendEstimateEmail(estimateData, actionToken);
