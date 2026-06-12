@@ -66,10 +66,6 @@ const generatePDF = (data, type, filename) => {
     doc.text('XLAND INFRA', margin + 20, 10);
     
     // Tagline
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(180, 180, 180);
-    doc.text('Pvt. Ltd.', margin + 20, 16);
 
     // Document Badge (right side) - centered text
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
@@ -472,7 +468,7 @@ const generatePDF = (data, type, filename) => {
     doc.setTextColor(...lightText);
     doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.text('XLAND INFRA Pvt. Ltd. | This is a computer-generated document.', pageWidth / 2, footerY, { align: 'center' });
+    doc.text('XLAND INFRA | This is a computer-generated document.', pageWidth / 2, footerY, { align: 'center' });
 
     doc.save(filename);
     return true;
