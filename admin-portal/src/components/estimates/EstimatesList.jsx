@@ -576,7 +576,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                         <div>
                           <p className="font-medium">{service.name || service.service || service.serviceName || 'Service'}</p>
                           {(service.frequency || service.frequencyCount) && service.frequencyType && (
-                            <p className="text-xs text-gray-500">{service.frequency || service.frequencyCount}× {service.frequencyType}</p>
+                            <p className="text-xs text-gray-500">{service.frequencyType} - {service.frequency || service.frequencyCount} visits</p>
                           )}
                         </div>
                         <p className="font-semibold">₹{Number(service.price || service.rate || 0).toLocaleString()}</p>

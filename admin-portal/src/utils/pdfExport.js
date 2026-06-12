@@ -343,12 +343,13 @@ const generatePDF = (data, type, filename) => {
     const tableBody = services.length > 0 
       ? services.map((s, idx) => {
           const freqCount = s.frequencyCount || s.frequency_count || s.frequency || 1;
-          const freqType = s.frequencyType || s.frequency_type || 'Monthly';
-          const freqDisplay = `${freqCount}x ${freqType}`;
+          let freqType = s.frequencyType || s.frequency_type || 'Monthly';
+          // Remove "Nx " prefix if present
+          freqType = freqType.replace(/^\d+x\s*/i, '');
           return [
             String(idx + 1),
             String(s.name || s.service || 'Service') + (s.description ? `\n${s.description}` : ''),
-            freqDisplay,
+            freqType,
             String(freqCount)
           ];
         })
@@ -383,12 +384,13 @@ const generatePDF = (data, type, filename) => {
 
       const addonsBody = data.addons.map((a, idx) => {
         const freqCount = a.frequencyCount || a.frequency_count || a.visits || 1;
-        const freqType = a.frequencyType || a.frequency_type || a.frequency || 'Monthly';
-        const freqDisplay = `${freqCount}x ${freqType}`;
+        let freqType = a.frequencyType || a.frequency_type || a.frequency || 'Monthly';
+        // Remove "Nx " prefix if present
+        freqType = freqType.replace(/^\d+x\s*/i, '');
         return [
           String(idx + 1),
           String(a.name || a.serviceName || a.service_name || 'Add-on') + (a.description ? `\n${a.description}` : ''),
-          freqDisplay,
+          freqType,
           String(freqCount)
         ];
       });

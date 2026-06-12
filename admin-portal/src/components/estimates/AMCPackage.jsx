@@ -467,7 +467,7 @@ const AMCPackage = ({ showToast }) => {
                     <div>
                       <p className="text-sm font-medium text-gray-800">{addon.addonId}</p>
                       <p className="text-xs text-gray-600">
-                        {addon.services?.map(s => `${s.name} (${s.frequency}x ${s.frequencyType})`).join(', ')}
+                        {addon.services?.map(s => `${s.name} (${s.frequencyType} - ${s.frequency} visits)`).join(', ')}
                       </p>
                     </div>
                   </div>

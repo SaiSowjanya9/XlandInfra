@@ -712,7 +712,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
         <strong>${s.name || s.service || 'Service'}</strong>
-        ${s.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${s.frequencyCount || 1}x ${s.frequencyType}</span>` : ''}
+        ${s.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${s.frequencyType} - ${s.frequencyCount || 1} visits</span>` : ''}
         ${s.description ? `<br><span style="font-size: 12px; color: #6b7280;">${s.description}</span>` : ''}
       </td>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Number(s.price || s.rate || 0).toLocaleString()}</td>
@@ -724,7 +724,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
         <strong>${a.name || a.serviceName || a.services?.[0]?.name || 'Add-on'}</strong>
-        ${a.frequency_type || a.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${a.frequency_count || a.frequencyCount || 1}x ${a.frequency_type || a.frequencyType}</span>` : ''}
+        ${a.frequency_type || a.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${a.frequency_type || a.frequencyType} - ${a.frequency_count || a.frequencyCount || 1} visits</span>` : ''}
         ${a.description ? `<br><span style="font-size: 12px; color: #6b7280;">${a.description}</span>` : ''}
       </td>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Number(a.price || a.totalPrice || a.services?.[0]?.price || 0).toLocaleString()}</td>
