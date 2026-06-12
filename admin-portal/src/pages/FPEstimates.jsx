@@ -524,7 +524,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const result = await res.json();
       console.log('Create estimate response:', res.status, result);
       if (res.ok || res.status === 201 || result.success) {
-        showToast('Estimate created successfully!');
+        showToast('Estimate saved', 'success');
         setEstimateType(null);
         setSelectedProperty(null);
         setPropertyIdInput('');
@@ -533,11 +533,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         setActiveTab('list');
       } else {
         console.error('Create estimate failed:', result);
-        showToast(result.message || 'Failed to save estimate', 'error');
+        showToast(result.message || 'Error saving estimate', 'error');
       }
     } catch (e) {
       console.error('Save estimate error:', e);
-      showToast('Failed to save estimate', 'error');
+      showToast('Error saving estimate. Please try again.', 'error');
     }
   };
 
@@ -722,9 +722,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <table className="w-full text-sm bg-white">
                       <thead>
                         <tr className="border-y border-amber-100">
-                          <th className="px-5 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Service</th>
-                          <th className="px-5 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Frequency</th>
-                          <th className="px-5 py-2.5 text-right text-xs font-semibold text-amber-600 uppercase">No. of Visits</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-1/5">Service</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-2/5">Description</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Frequency</th>
+                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-amber-600 uppercase">Visits</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -732,13 +733,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           const freqType = svc.frequencyType || svc.frequency_type || 'Monthly';
                           const visits = FREQUENCY_COUNT_MAP?.[freqType] || 12;
                           return (
-                            <tr key={idx}>
-                              <td className="px-5 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td>
-                              <td className="px-5 py-2.5 text-gray-600">{freqType}</td>
-                              <td className="px-5 py-2.5 text-right text-gray-600">{visits}</td>
+                            <tr key={idx} className="align-top">
+                              <td className="px-3 py-2.5 text-gray-800 font-medium">{svc.service || svc.name || '-'}</td>
+                              <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal">{svc.description || '-'}</td>
+                              <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
+                              <td className="px-3 py-2.5 text-right text-gray-600">{visits}</td>
                             </tr>
                           );
-                        }) : <tr><td colSpan={3} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}
+                        }) : <tr><td colSpan={4} className="px-3 py-3 text-center text-gray-400">No services in package</td></tr>}
                       </tbody>
                     </table>
                     <div className="px-5 py-3 bg-amber-50 border-t border-amber-100">
@@ -782,10 +784,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-amber-100 bg-white">
-                        <th className="px-5 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Service</th>
-                        <th className="px-5 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Frequency</th>
-                        <th className="px-5 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase">No. of Visits</th>
-                        <th className="px-5 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase">Action</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-1/5">Service</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-2/5">Description</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Frequency</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase">Visits</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
@@ -794,11 +797,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         if (!addon) return null;
                         const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
                         return (
-                          <tr key={idx}>
-                            <td className="px-5 py-2.5 text-gray-800">{addon.service_name}</td>
-                            <td className="px-5 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
-                            <td className="px-5 py-2.5 text-center text-gray-600">{visits}</td>
-                            <td className="px-5 py-2.5 text-center">
+                          <tr key={idx} className="align-top">
+                            <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.service_name}</td>
+                            <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal">{addon.description || '-'}</td>
+                            <td className="px-3 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
+                            <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
+                            <td className="px-3 py-2.5 text-center">
                               <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                             </td>
                           </tr>
@@ -807,24 +811,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </tbody>
                     <tfoot className="bg-amber-50 border-t border-amber-200">
                       <tr>
-                        <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-amber-700">Total Add-ons Price</td>
-                        <td className="px-5 py-2.5 text-right font-bold text-amber-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
+                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-amber-700">Total Add-ons Price</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-amber-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
                       </tr>
                     </tfoot>
                   </table>
                 </div>
               )}
 
-              {/* Description / Notes */}
-              <div className="pt-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Description / Notes</label>
-                <textarea 
-                  value={estimateForm.description} 
-                  onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
-                  placeholder="Add any additional notes or description for this estimate..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm resize-y min-h-[100px]"
-                />
-              </div>
             </div>
           </div>
 
@@ -863,6 +857,21 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   </div>
                 );
               })()}
+            </div>
+          </div>
+
+          {/* Description / Notes - Under Price Summary */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">Description / Notes</h2>
+            </div>
+            <div className="p-6">
+              <textarea 
+                value={estimateForm.description} 
+                onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
+                placeholder="Add any additional notes or description for this estimate..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm resize-y min-h-[100px]"
+              />
             </div>
           </div>
 
@@ -1055,9 +1064,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <table className="w-full text-sm bg-white">
                       <thead>
                         <tr className="border-y border-amber-100">
-                          <th className="px-5 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Service</th>
-                          <th className="px-5 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Frequency</th>
-                          <th className="px-5 py-2.5 text-right text-xs font-semibold text-amber-600 uppercase">No. of Visits</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-1/5">Service</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-2/5">Description</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Frequency</th>
+                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-amber-600 uppercase">Visits</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -1065,13 +1075,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           const freqType = svc.frequencyType || svc.frequency_type || 'Monthly';
                           const visits = FREQUENCY_COUNT_MAP?.[freqType] || 12;
                           return (
-                            <tr key={idx}>
-                              <td className="px-5 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td>
-                              <td className="px-5 py-2.5 text-gray-600">{freqType}</td>
-                              <td className="px-5 py-2.5 text-right text-gray-600">{visits}</td>
+                            <tr key={idx} className="align-top">
+                              <td className="px-3 py-2.5 text-gray-800 font-medium">{svc.service || svc.name || '-'}</td>
+                              <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal">{svc.description || '-'}</td>
+                              <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
+                              <td className="px-3 py-2.5 text-right text-gray-600">{visits}</td>
                             </tr>
                           );
-                        }) : <tr><td colSpan={3} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}
+                        }) : <tr><td colSpan={4} className="px-3 py-3 text-center text-gray-400">No services in package</td></tr>}
                       </tbody>
                     </table>
                     <div className="px-5 py-3 bg-amber-50 border-t border-amber-100">
@@ -1115,10 +1126,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-amber-100 bg-white">
-                        <th className="px-5 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Service</th>
-                        <th className="px-5 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Frequency</th>
-                        <th className="px-5 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase">No. of Visits</th>
-                        <th className="px-5 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase">Action</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-1/5">Service</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-2/5">Description</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase">Frequency</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase">Visits</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
@@ -1127,11 +1139,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         if (!addon) return null;
                         const visits = FREQUENCY_COUNT_MAP?.[addon.frequency_type] || 12;
                         return (
-                          <tr key={idx}>
-                            <td className="px-5 py-2.5 text-gray-800">{addon.service_name}</td>
-                            <td className="px-5 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
-                            <td className="px-5 py-2.5 text-center text-gray-600">{visits}</td>
-                            <td className="px-5 py-2.5 text-center">
+                          <tr key={idx} className="align-top">
+                            <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.service_name}</td>
+                            <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal">{addon.description || '-'}</td>
+                            <td className="px-3 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
+                            <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
+                            <td className="px-3 py-2.5 text-center">
                               <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                             </td>
                           </tr>
@@ -1140,24 +1153,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </tbody>
                     <tfoot className="bg-amber-50 border-t border-amber-200">
                       <tr>
-                        <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-amber-700">Total Add-ons Price</td>
-                        <td className="px-5 py-2.5 text-right font-bold text-amber-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
+                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-amber-700">Total Add-ons Price</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-amber-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
                       </tr>
                     </tfoot>
                   </table>
                 </div>
               )}
 
-              {/* Description / Notes */}
-              <div className="pt-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Description / Notes</label>
-                <textarea 
-                  value={estimateForm.description} 
-                  onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
-                  placeholder="Add any additional notes or description for this estimate..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm resize-y min-h-[100px]"
-                />
-              </div>
             </div>
           </div>
 
@@ -1200,6 +1203,21 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           </div>
           )}
+
+          {/* Description / Notes - Under Price Summary */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">Description / Notes</h2>
+            </div>
+            <div className="p-6">
+              <textarea 
+                value={estimateForm.description} 
+                onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
+                placeholder="Add any additional notes or description for this estimate..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm resize-y min-h-[100px]"
+              />
+            </div>
+          </div>
 
           {/* Footer Note */}
           <div className="text-xs text-gray-500 border-t border-gray-200 pt-4">
@@ -2085,19 +2103,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   </div>
                 </div>
 
-                {/* Description - Optional */}
-                <div className="mt-6">
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
-                    Description (Optional)
-                  </label>
-                  <textarea
-                    value={amcForm.description || ''}
-                    onChange={(e) => setAmcForm({ ...amcForm, description: e.target.value })}
-                    placeholder="Add notes or description for this package..."
-                    rows={3}
-                    className="w-full max-w-2xl px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400 resize-y"
-                  />
-                </div>
               </div>
             </div>
           )}
@@ -2710,8 +2715,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
                           <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
                           <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
-                          <div className="col-span-5 text-xs font-semibold text-indigo-700">Description</div>
-                          <div className="col-span-3 text-xs font-semibold text-indigo-700 text-right">Frequency</div>
+                          <div className="col-span-4 text-xs font-semibold text-indigo-700">Description</div>
+                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-center">Frequency</div>
+                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-right">Visits</div>
                         </div>
                         {/* Rows */}
                         <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
@@ -2723,11 +2729,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               <div className="col-span-3">
                                 <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
                               </div>
-                              <div className="col-span-5">
+                              <div className="col-span-4">
                                 <p className="text-xs text-gray-500 break-words whitespace-normal">{svc.description || '-'}</p>
                               </div>
-                              <div className="col-span-3 text-right">
-                                <p className="text-sm text-indigo-600 font-medium">{svc.frequencyCount || svc.frequency_count || 1}x {svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
+                              <div className="col-span-2 text-center">
+                                <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
+                              </div>
+                              <div className="col-span-2 text-right">
+                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount || svc.frequency_count || 1}</p>
                               </div>
                             </div>
                           ))}
@@ -2747,8 +2756,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
                       <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
                       <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-green-700">Description</div>
-                      <div className="col-span-3 text-xs font-semibold text-green-700 text-right">Frequency</div>
+                      <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
+                      <div className="col-span-2 text-xs font-semibold text-green-700 text-center">Frequency</div>
+                      <div className="col-span-2 text-xs font-semibold text-green-700 text-right">Visits</div>
                     </div>
                     {/* Rows */}
                     <div className="border border-green-100 divide-y divide-green-50">
@@ -2771,11 +2781,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             <div className="col-span-3">
                               <p className="font-medium text-gray-800 text-sm">{addon.name || addon.service_name}</p>
                             </div>
-                            <div className="col-span-5">
+                            <div className="col-span-4">
                               <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
                             </div>
-                            <div className="col-span-3 text-right">
-                              <p className="text-sm text-green-600 font-medium">{frequencyCount}x {frequencyType}</p>
+                            <div className="col-span-2 text-center">
+                              <p className="text-sm text-green-600">{frequencyType}</p>
+                            </div>
+                            <div className="col-span-2 text-right">
+                              <p className="text-sm text-green-700 font-semibold">{frequencyCount}</p>
                             </div>
                           </div>
                         );

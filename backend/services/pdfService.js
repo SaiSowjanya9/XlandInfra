@@ -116,10 +116,10 @@ const generateEstimatePDF = async (estimate) => {
         doc.text(String(idx + 1), 55, y + 5);
         const svcName = s.name || s.service || 'Service';
         const svcDesc = s.description ? `${svcName} - ${s.description}` : svcName;
-        doc.text(svcDesc.substring(0, 60), 80, y + 5);
+        doc.text(svcDesc.substring(0, 55), 80, y + 5);
         const freqCount = s.frequencyCount || s.frequency_count || 1;
         const freqType = s.frequencyType || s.frequency_type || 'Monthly';
-        doc.text(`${freqCount}x ${freqType}`, 380, y + 5);
+        doc.text(freqType, 380, y + 5);
         doc.text(String(freqCount), 485, y + 5);
         y += 18;
       });
@@ -147,10 +147,10 @@ const generateEstimatePDF = async (estimate) => {
           doc.text(String(idx + 1), 55, y + 5);
           const addonName = a.name || a.service_name || 'Add-on';
           const addonDesc = a.description ? `${addonName} - ${a.description}` : addonName;
-          doc.text(addonDesc.substring(0, 60), 80, y + 5);
+          doc.text(addonDesc.substring(0, 55), 80, y + 5);
           const freqCount = a.frequency_count || a.frequencyCount || 1;
           const freqType = a.frequency_type || a.frequencyType || 'Monthly';
-          doc.text(`${freqCount}x ${freqType}`, 380, y + 5);
+          doc.text(freqType, 380, y + 5);
           doc.text(String(freqCount), 485, y + 5);
           y += 18;
         });

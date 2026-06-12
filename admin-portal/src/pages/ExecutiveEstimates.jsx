@@ -987,53 +987,89 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                         <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{pkgDescription}</p>
                       )}
                     </div>
+                    {/* Package Services - Horizontal Table */}
                     {pkgServices.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {pkgServices.map((svc, idx) => (
-                          <div key={idx} className="bg-white p-3 rounded-lg border border-indigo-100">
-                            <div className="flex justify-between items-center">
-                              <p className="font-medium text-gray-800">{svc.name || svc.service}</p>
-                              <p className="text-sm text-indigo-600">{svc.frequencyCount || svc.frequency_count || 1}x {svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
+                      <div className="mt-3">
+                        <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
+                          <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
+                          <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
+                          <div className="col-span-4 text-xs font-semibold text-indigo-700">Description</div>
+                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-center">Frequency</div>
+                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-right">Visits</div>
+                        </div>
+                        <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
+                          {pkgServices.map((svc, idx) => (
+                            <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
+                              <div className="col-span-1">
+                                <span className="w-5 h-5 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                              </div>
+                              <div className="col-span-3">
+                                <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
+                              </div>
+                              <div className="col-span-4">
+                                <p className="text-xs text-gray-500 break-words whitespace-normal">{svc.description || '-'}</p>
+                              </div>
+                              <div className="col-span-2 text-center">
+                                <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
+                              </div>
+                              <div className="col-span-2 text-right">
+                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount || svc.frequency_count || 1}</p>
+                              </div>
                             </div>
-                            {svc.description && <p className="text-xs text-gray-500 mt-1">{svc.description}</p>}
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
                 );
               })()}
 
-              {/* Add-ons */}
+              {/* Add-ons - Horizontal Table */}
               {viewEstimate.addons && viewEstimate.addons.length > 0 && (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-sm font-semibold text-gray-700 mb-3">Add-on Services</p>
-                  <div className="space-y-2">
-                    {viewEstimate.addons.map((addon, idx) => {
-                      // Try to get description from addon data, fallback to addons list lookup
-                      const addonName = addon.name || addon.service_name || '';
-                      const addonFromList = addons.find(a => 
-                        a.id == addon.id || 
-                        a.id == addon.addon_id ||
-                        a.service_name === addonName ||
-                        (a.service_name && addonName && a.service_name.toLowerCase() === addonName.toLowerCase())
-                      );
-                      const addonDescription = addon.description || addonFromList?.description || addonFromList?.services?.[0]?.description || '';
-                      const frequencyCount = addon.frequency_count || addon.frequencyCount || addonFromList?.frequency_count || 1;
-                      const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
-                      return (
-                        <div key={idx} className="bg-green-50 p-3 rounded-lg border border-green-100">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
-                              <p className="text-xs text-green-600">{frequencyCount}x {frequencyType}</p>
+                  <div>
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
+                      <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
+                      <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
+                      <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
+                      <div className="col-span-2 text-xs font-semibold text-green-700 text-center">Frequency</div>
+                      <div className="col-span-2 text-xs font-semibold text-green-700 text-right">Visits</div>
+                    </div>
+                    <div className="border border-green-100 divide-y divide-green-50">
+                      {viewEstimate.addons.map((addon, idx) => {
+                        const addonName = addon.name || addon.service_name || '';
+                        const addonFromList = addons.find(a => 
+                          a.id == addon.id || 
+                          a.id == addon.addon_id ||
+                          a.service_name === addonName ||
+                          (a.service_name && addonName && a.service_name.toLowerCase() === addonName.toLowerCase())
+                        );
+                        const addonDescription = addon.description || addonFromList?.description || '';
+                        const frequencyCount = addon.frequency_count || addon.frequencyCount || addonFromList?.frequency_count || 1;
+                        const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
+                        return (
+                          <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
+                            <div className="col-span-1">
+                              <span className="w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                            </div>
+                            <div className="col-span-3">
+                              <p className="font-medium text-gray-800 text-sm">{addon.name || addon.service_name}</p>
+                            </div>
+                            <div className="col-span-4">
+                              <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
+                            </div>
+                            <div className="col-span-2 text-center">
+                              <p className="text-sm text-green-600">{frequencyType}</p>
+                            </div>
+                            <div className="col-span-2 text-right">
+                              <p className="text-sm text-green-700 font-semibold">{frequencyCount}</p>
                             </div>
                           </div>
-                          {addonDescription && <p className="text-xs text-green-700 mt-2 pt-2 border-t border-green-100">{addonDescription}</p>}
-                        </div>
-                      );
-                    })}
-                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-lg mt-2">
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
                       <p className="font-semibold text-green-800">Total Add-ons Price</p>
                       <p className="font-bold text-green-700">{formatCurrency(viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0))}</p>
                     </div>
