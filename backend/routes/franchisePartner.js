@@ -3035,9 +3035,11 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     // Parse addons_data JSON and fix creator name if it's an email
     const enrichedEstimates = await Promise.all(estimates.map(async (est) => {
       let addons = [];
+      console.log('Estimate', est.estimate_id, 'addons_data:', est.addons_data);
       if (est.addons_data) {
         try {
           addons = typeof est.addons_data === 'string' ? JSON.parse(est.addons_data) : est.addons_data;
+          console.log('Parsed addons for', est.estimate_id, ':', addons);
           // Enrich addons with descriptions from fp_addons if not already present
           addons = addons.map(addon => {
             if (!addon.description) {
@@ -3048,7 +3050,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
             }
             return addon;
           });
-        } catch (e) {}
+        } catch (e) { console.log('Error parsing addons:', e.message); }
       }
       // If created_by_name looks like an email, replace with FP contact name
       let creatorName = est.created_by_name;
@@ -3202,7 +3204,9 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     const finalTotal = parseFloat(total_amount) || (finalSubtotal - finalDiscountAmount + finalGstAmount);
 
     // Stringify addons for storage
-    const addonsJson = addons ? JSON.stringify(addons) : null;
+    console.log('Received addons:', addons);
+    const addonsJson = addons && addons.length > 0 ? JSON.stringify(addons) : null;
+    console.log('Stringified addons:', addonsJson);
     
     // Stringify block data for storage
     const unitsPerBlockJson = units_per_block ? JSON.stringify(units_per_block) : null;
