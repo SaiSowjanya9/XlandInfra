@@ -1007,7 +1007,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                                 <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
                               </div>
                               <div className="col-span-5">
-                                <p className="text-xs text-gray-500 break-words whitespace-normal">{svc.description || '-'}</p>
+                                <p className={`text-xs text-gray-500 break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>

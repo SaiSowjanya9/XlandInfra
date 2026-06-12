@@ -549,7 +549,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                                 <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
                               </div>
                               <div className="col-span-5">
-                                <p className="text-xs text-gray-500 break-words whitespace-normal">{svc.description || '-'}</p>
+                                <p className={`text-xs text-gray-500 break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
@@ -613,7 +613,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                               <p className="font-medium text-gray-800 text-sm">{addonName}</p>
                             </div>
                             <div className="col-span-5">
-                              <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDesc || '-'}</p>
+                              <p className={`text-xs text-gray-500 break-words whitespace-normal ${!addonDesc ? 'text-center' : ''}`}>{addonDesc || '-'}</p>
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>
