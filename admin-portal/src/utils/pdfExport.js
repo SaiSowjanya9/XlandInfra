@@ -393,7 +393,33 @@ const generatePDF = (data, type, filename) => {
       y = doc.lastAutoTable.finalY + 6;
     }
 
-    // ===== TOTAL BOX (Compact, Right-Aligned) =====
+    // ===== NOTES/DESCRIPTION (Before Total) =====
+    if (data.description && data.description.trim()) {
+      if (y + 30 > pageHeight - 25) {
+        doc.addPage();
+        y = 20;
+      }
+      
+      doc.setTextColor(...navy);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('NOTES / DESCRIPTION', margin, y);
+      y += 4;
+      
+      doc.setFillColor(...cardBg);
+      doc.setDrawColor(...borderLight);
+      const noteLines = doc.splitTextToSize(String(data.description), pageWidth - margin * 2 - 8);
+      const noteBoxH = Math.min(Math.max(12, noteLines.length * 4 + 6), 40);
+      doc.roundedRect(margin, y, pageWidth - margin * 2, noteBoxH, 2, 2, 'FD');
+      
+      doc.setTextColor(...mediumText);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(noteLines.slice(0, 8), margin + 4, y + 5);
+      y += noteBoxH + 6;
+    }
+
+    // ===== PRICE SUMMARY BOX =====
     const total = parseFloat(data.totalPrice) || parseFloat(data.subtotal) || 0;
     const totalBoxW = 75;
     const totalBoxH = 12;
@@ -414,31 +440,6 @@ const generatePDF = (data, type, filename) => {
     doc.text(formatCurrency(total), totalBoxX + totalBoxW - 5, y + 8, { align: 'right' });
 
     y += totalBoxH + 8;
-
-    // ===== NOTES/DESCRIPTION =====
-    if (data.description && data.description.trim()) {
-      if (y + 30 > pageHeight - 25) {
-        doc.addPage();
-        y = 20;
-      }
-      
-      doc.setTextColor(...navy);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text('NOTES', margin, y);
-      y += 4;
-      
-      doc.setFillColor(...cardBg);
-      doc.setDrawColor(...borderLight);
-      const noteLines = doc.splitTextToSize(String(data.description), pageWidth - margin * 2 - 8);
-      const noteBoxH = Math.min(Math.max(12, noteLines.length * 4 + 6), 40);
-      doc.roundedRect(margin, y, pageWidth - margin * 2, noteBoxH, 2, 2, 'FD');
-      
-      doc.setTextColor(...mediumText);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.text(noteLines.slice(0, 8), margin + 4, y + 5);
-    }
 
     // ===== FOOTER =====
     const footerY = pageHeight - 12;

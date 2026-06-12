@@ -2671,25 +2671,35 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               {/* Add-ons */}
               {viewEstimate.addons && viewEstimate.addons.length > 0 && (
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Add-ons</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Add-on Services</p>
                   <div className="space-y-2">
                     {viewEstimate.addons.map((addon, idx) => {
                       // Try to get description from addon data, fallback to addons list lookup
-                      const addonFromList = addons.find(a => a.id == addon.id || a.service_name === (addon.name || addon.service_name));
+                      const addonFromList = addons.find(a => 
+                        a.id == addon.id || 
+                        a.id == addon.addon_id ||
+                        a.service_name === (addon.name || addon.service_name)
+                      );
                       const addonDescription = addon.description || addonFromList?.description || '';
+                      const frequencyCount = addon.frequency_count || addon.frequencyCount || addonFromList?.frequency_count || 1;
+                      const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
                       return (
                         <div key={idx} className="bg-green-50 p-3 rounded-lg border border-green-100">
                           <div className="flex justify-between items-center">
                             <div>
                               <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
-                              <p className="text-xs text-green-600">{addon.frequency_type || addon.frequencyType || 'One-time'}</p>
+                              <p className="text-xs text-green-600">{frequencyCount}x {frequencyType}</p>
                             </div>
-                            <p className="font-semibold text-green-700">{formatCurrency(addon.price)}</p>
                           </div>
                           {addonDescription && <p className="text-xs text-green-700 mt-2 pt-2 border-t border-green-100">{addonDescription}</p>}
                         </div>
                       );
                     })}
+                    {/* Total Add-ons Price */}
+                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-lg mt-2">
+                      <p className="font-semibold text-green-800">Total Add-ons Price</p>
+                      <p className="font-bold text-green-700">{formatCurrency(viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0))}</p>
+                    </div>
                   </div>
                 </div>
               )}
