@@ -664,16 +664,44 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <span className="text-sm font-medium text-slate-700">Unit Details</span>
                       <span className="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded">{selectedProperty.property_type?.substring(0,2).toUpperCase() || 'GC'}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
-                        <input type="text" value={selectedProperty.block_name || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
-                        <input type="text" value={`${selectedProperty.units || selectedProperty.total_units || 1} Units`} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
-                      </div>
-                    </div>
+                    {(() => {
+                      // Parse block_names and units_per_block
+                      let blockNames = selectedProperty.block_names || selectedProperty.blockNames;
+                      let unitsPerBlock = selectedProperty.units_per_block || selectedProperty.unitsPerBlock;
+                      if (typeof blockNames === 'string') try { blockNames = JSON.parse(blockNames); } catch(e) { blockNames = {}; }
+                      if (typeof unitsPerBlock === 'string') try { unitsPerBlock = JSON.parse(unitsPerBlock); } catch(e) { unitsPerBlock = {}; }
+                      const numBlocks = selectedProperty.number_of_blocks || selectedProperty.numberOfBlocks || Object.keys(blockNames || {}).length || 1;
+                      
+                      if (numBlocks > 1 || Object.keys(blockNames || {}).length > 0) {
+                        // Multiple blocks - show all
+                        return (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
+                              <div key={blockNum} className="bg-white border border-gray-200 rounded-lg p-3">
+                                <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
+                                <p className="text-sm font-medium text-gray-800">{blockNames?.[blockNum] || blockNames?.[String(blockNum)] || `Block ${blockNum}`}</p>
+                                <label className="block text-xs font-medium text-slate-500 mt-2 mb-1">Units</label>
+                                <p className="text-sm text-gray-700">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</p>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      } else {
+                        // Single block or fallback
+                        return (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
+                              <input type="text" value={selectedProperty.block_name || blockNames?.[1] || blockNames?.['1'] || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
+                              <input type="text" value={`${selectedProperty.units || selectedProperty.total_units || unitsPerBlock?.[1] || 1} Units`} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                            </div>
+                          </div>
+                        );
+                      }
+                    })()}
                   </div>
                 </>
               )}
