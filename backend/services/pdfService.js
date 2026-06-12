@@ -20,18 +20,24 @@ const generateEstimatePDF = async (estimate) => {
       } = estimate;
 
       // Colors
-      const navy = '#1e3a5f';
+      const black = '#1a1a1a';
       const gold = '#d4a84b';
+      const navy = '#1e3a5f';
       const lightGray = '#f8f9fa';
 
-      // Header
-      doc.rect(0, 0, 612, 70).fill(navy);
-      doc.fontSize(22).fillColor('#ffffff').text('XLAND INFRA', 50, 25);
-      doc.fontSize(10).fillColor('#cccccc').text('Pvt. Ltd.', 50, 50);
+      // Header - Black background with gold accent
+      doc.rect(0, 0, 612, 50).fill(black);
+      
+      // Gold logo square
+      doc.rect(50, 12, 26, 26).fill(gold);
+      doc.fontSize(14).fillColor(black).text('XI', 56, 20);
+      
+      // Company name
+      doc.fontSize(18).fillColor('#ffffff').text('XLAND INFRA', 85, 20);
       
       // ESTIMATE badge
-      doc.rect(470, 20, 80, 30).fill(gold);
-      doc.fontSize(12).fillColor(navy).text('ESTIMATE', 480, 32);
+      doc.rect(470, 15, 80, 22).fill(gold);
+      doc.fontSize(10).fillColor(black).text('ESTIMATE', 485, 22);
 
       let y = 90;
 
@@ -110,7 +116,7 @@ const generateEstimatePDF = async (estimate) => {
       // Services rows
       const svcList = services || [];
       svcList.forEach((s, idx) => {
-        const rowColor = idx % 2 === 0 ? '#ffffff' : '#f8f9fa';
+        const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
         doc.rect(50, y, 500, 18).fill(rowColor).stroke('#e0e0e0');
         doc.fontSize(8).fillColor('#333333');
         doc.text(String(idx + 1), 55, y + 5);
@@ -143,7 +149,7 @@ const generateEstimatePDF = async (estimate) => {
         y += 20;
 
         addonList.forEach((a, idx) => {
-          const rowColor = idx % 2 === 0 ? '#ffffff' : '#f0fdf4';
+          const rowColor = idx % 2 === 0 ? '#f0fdf4' : '#ffffff';
           doc.rect(50, y, 500, 18).fill(rowColor).stroke('#e0e0e0');
           doc.fontSize(8).fillColor('#333333');
           doc.text(String(idx + 1), 55, y + 5);
@@ -182,16 +188,16 @@ const generateEstimatePDF = async (estimate) => {
       // Total line
       doc.rect(60, y + 55, 480, 1).fill('#e0e0e0');
       doc.fontSize(12).fillColor(navy).text('TOTAL:', 60, y + 62);
-      doc.fontSize(14).fillColor('#4f46e5').text(`Rs. ${Number(total || 0).toLocaleString()}`, 420, y + 60);
+      doc.font('Helvetica-Bold').fontSize(12).fillColor('#000000').text(`Rs. ${Number(total || 0).toLocaleString()}`, 450, y + 62);
+      doc.font('Helvetica');
       y += 90;
 
       // Notes/Description (after Price Summary)
       if (description) {
         doc.fontSize(10).fillColor(navy).text('NOTES / DESCRIPTION', 50, y);
-        y += 15;
-        doc.rect(50, y, 500, 30).fill(lightGray).stroke('#e0e0e0');
-        doc.fontSize(8).fillColor('#444444').text(description, 60, y + 8, { width: 480 });
-        y += 40;
+        y += 18;
+        doc.fontSize(9).fillColor('#333333').text(description, 50, y, { width: 500, lineGap: 4 });
+        y += 50;
       }
 
       doc.end();

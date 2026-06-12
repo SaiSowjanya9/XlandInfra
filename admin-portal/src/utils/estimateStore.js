@@ -186,11 +186,12 @@ export const createEstimate = async (estimateData) => {
       body: JSON.stringify(estimateData)
     });
     const result = await response.json();
-    if (result.success) {
+    // Check for success - either result.success flag or HTTP 200/201
+    if (result.success || response.ok) {
       estimatesCache = null;
-      return { ...estimateData, estimateId: result.data?.estimateId };
+      return { ...estimateData, estimateId: result.data?.estimateId || result.estimateId };
     }
-    throw new Error(result.message);
+    throw new Error(result.message || 'Failed to save estimate');
   } catch (error) {
     console.error('Create estimate error:', error);
     throw error;
