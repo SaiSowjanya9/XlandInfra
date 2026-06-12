@@ -567,26 +567,30 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
               {/* Add-ons */}
               {viewEstimate.addons?.length > 0 && (
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Add-ons</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Add-on Services</p>
                   <div className="space-y-2">
                     {viewEstimate.addons.map((addon, idx) => {
                       const addonName = typeof addon === 'number' ? `Add-on ${idx + 1}` : (addon.name || addon.serviceName || addon.service_name || `Add-on ${idx + 1}`);
                       const addonPrice = typeof addon === 'number' ? addon : (addon.price || addon.totalPrice || addon.rate || 0);
-                      const addonFreq = typeof addon === 'object' ? (addon.frequencyType || addon.frequency_type || 'One-time') : 'One-time';
+                      const frequencyCount = typeof addon === 'object' ? (addon.frequency_count || addon.frequencyCount || 1) : 1;
+                      const frequencyType = typeof addon === 'object' ? (addon.frequencyType || addon.frequency_type || 'Monthly') : 'Monthly';
                       const addonDesc = typeof addon === 'object' ? addon.description : '';
                       return (
                         <div key={idx} className="bg-green-50 p-3 rounded-lg border border-green-100">
                           <div className="flex justify-between items-center">
                             <div>
                               <p className="font-medium text-green-900">{addonName}</p>
-                              <p className="text-xs text-green-600">{addonFreq}</p>
+                              <p className="text-xs text-green-600">{frequencyCount}x {frequencyType}</p>
                             </div>
-                            <p className="font-semibold text-green-700">₹{Number(addonPrice).toLocaleString()}</p>
                           </div>
                           {addonDesc && <p className="text-xs text-green-700 mt-2 pt-2 border-t border-green-100">{addonDesc}</p>}
                         </div>
                       );
                     })}
+                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-lg mt-2">
+                      <p className="font-semibold text-green-800">Total Add-ons Price</p>
+                      <p className="font-bold text-green-700">₹{viewEstimate.addons.reduce((sum, a) => sum + Number(typeof a === 'number' ? a : (a.price || 0)), 0).toLocaleString()}</p>
+                    </div>
                   </div>
                 </div>
               )}
