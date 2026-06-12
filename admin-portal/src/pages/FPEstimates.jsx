@@ -723,9 +723,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <thead>
                         <tr className="border-y border-amber-100">
                           <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[12%]">Service</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[58%]">Description</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[18%]">Frequency</th>
-                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-amber-600 uppercase w-[12%]">Visits</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[53%]">Description</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[20%]">Frequency</th>
+                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[15%]">Visits</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -737,7 +737,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{svc.service || svc.name || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal">{svc.description || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
-                              <td className="px-3 py-2.5 text-right text-gray-600">{visits}</td>
+                              <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             </tr>
                           );
                         }) : <tr><td colSpan={4} className="px-3 py-3 text-center text-gray-400">No services in package</td></tr>}
@@ -784,10 +784,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-amber-100 bg-white">
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[12%]">Service</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[10%]">Service</th>
                         <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[48%]">Description</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[18%]">Frequency</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[12%]">Visits</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[18%]">Frequency</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[14%]">Visits</th>
                         <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[10%]">Action</th>
                       </tr>
                     </thead>
@@ -800,7 +800,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <tr key={idx} className="align-top">
                             <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.service_name}</td>
                             <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal">{addon.description || '-'}</td>
-                            <td className="px-3 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
+                            <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
                               <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
@@ -1065,9 +1065,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <thead>
                         <tr className="border-y border-amber-100">
                           <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[12%]">Service</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[58%]">Description</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[18%]">Frequency</th>
-                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-amber-600 uppercase w-[12%]">Visits</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[53%]">Description</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[20%]">Frequency</th>
+                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[15%]">Visits</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -1079,7 +1079,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{svc.service || svc.name || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal">{svc.description || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
-                              <td className="px-3 py-2.5 text-right text-gray-600">{visits}</td>
+                              <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             </tr>
                           );
                         }) : <tr><td colSpan={4} className="px-3 py-3 text-center text-gray-400">No services in package</td></tr>}
@@ -1126,10 +1126,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-amber-100 bg-white">
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[12%]">Service</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[10%]">Service</th>
                         <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[48%]">Description</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[18%]">Frequency</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[12%]">Visits</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[18%]">Frequency</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[14%]">Visits</th>
                         <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[10%]">Action</th>
                       </tr>
                     </thead>
@@ -1142,7 +1142,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <tr key={idx} className="align-top">
                             <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.service_name}</td>
                             <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal">{addon.description || '-'}</td>
-                            <td className="px-3 py-2.5 text-gray-600">{addon.frequency_type || 'Monthly'}</td>
+                            <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
                               <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
