@@ -56,7 +56,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // FP Manager defaults to 'all-packages' (no create access)
   const [amcActiveTab, setAmcActiveTab] = useState(isFPManager ? 'all-packages' : 'create');
   const [selectedPropertyType, setSelectedPropertyType] = useState(null);
-  const [amcForm, setAmcForm] = useState({ packageName: '', description: '', serviceRows: [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' });
+  const [amcForm, setAmcForm] = useState({ packageName: '', description: '', serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' });
   const [editingAmcPackage, setEditingAmcPackage] = useState(null);
   const [filterPropertyType, setFilterPropertyType] = useState('all');
   // FP Manager defaults to 'all-addons' (no create access)
@@ -1624,19 +1624,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const isEditing = !!editingAmcPackage;
       const url = isEditing ? `/api/fp/amc-packages/${editingAmcPackage}` : '/api/fp/amc-packages';
       const method = isEditing ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, frequency_count: parseInt(r.frequencyCount) || 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
+      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, description: r.description || '', frequency_count: parseInt(r.frequencyCount) || 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
       if (res.ok || result.success) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
     } catch (e) { showToast('Failed to save package', 'error'); }
   };
   const handleDeleteAmcPackage = async (id) => { if (!window.confirm('Delete this package?')) return; try { const res = await fetch(`/api/fp/amc-packages/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
-  const handleAddServiceRow = () => setAmcForm({ ...amcForm, serviceRows: [...amcForm.serviceRows, { service: '', frequencyCount: 12, frequencyType: 'Monthly' }] });
+  const handleAddServiceRow = () => setAmcForm({ ...amcForm, serviceRows: [...amcForm.serviceRows, { service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }] });
   const handleUpdateServiceRow = (i, f, v) => { const rows = [...amcForm.serviceRows]; if (f === 'frequencyType') { const auto = FREQUENCY_COUNT_MAP[v]; rows[i] = { ...rows[i], [f]: v, frequencyCount: auto !== null ? auto : '' }; } else rows[i][f] = v; setAmcForm({ ...amcForm, serviceRows: rows }); };
   const handleRemoveServiceRow = (i) => { if (amcForm.serviceRows.length > 1) setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, idx) => idx !== i) }); };
 
   const getPrice = () => parseFloat(amcForm.price) || 0;
-  const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); setEditingAmcPackage(null); };
+  const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); setEditingAmcPackage(null); };
   const getBillingBadgeColor = (billing) => {
     switch (billing) {
       case 'monthly': return 'bg-amber-50 text-amber-700 border-amber-200';
@@ -1807,9 +1807,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                     description: pkg.description || '',
                                     serviceRows: serviceRows.length > 0 ? serviceRows.map(s => ({
                                       service: s.name || s.service || '',
+                                      description: s.description || '',
                                       frequencyCount: s.frequency_count || s.frequencyCount || 12,
                                       frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
-                                    })) : [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }],
+                                    })) : [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }],
                                     price: pkg.base_price || pkg.price || '',
                                     billingDuration: billingDuration || 'monthly'
                                   });
@@ -1939,14 +1940,17 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <h3 className="text-sm font-semibold text-gray-700 mb-4">Service Configuration</h3>
                     
                     {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-3 px-4 py-2 bg-slate-50 rounded-lg mb-3">
-                      <div className="col-span-5">
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-50 rounded-lg mb-3">
+                      <div className="col-span-3">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</span>
                       </div>
-                      <div className="col-span-3">
+                      <div className="col-span-4">
+                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</span>
+                      </div>
+                      <div className="col-span-2">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
                       </div>
-                      <div className="col-span-3">
+                      <div className="col-span-2">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Visits</span>
                       </div>
                       <div className="col-span-1">
@@ -1957,40 +1961,51 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     {/* Service Rows */}
                     <div className="space-y-3">
                       {amcForm.serviceRows.map((row, index) => (
-                        <div key={index} className="grid grid-cols-12 gap-3 items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
                           {/* Service Name */}
-                          <div className="col-span-5">
+                          <div className="col-span-3">
                             <input
                               type="text"
                               value={row.service}
                               onChange={(e) => handleUpdateServiceRow(index, 'service', e.target.value)}
                               placeholder="e.g., Deep Cleaning"
-                              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                              className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                            />
+                          </div>
+                          
+                          {/* Description */}
+                          <div className="col-span-4">
+                            <input
+                              type="text"
+                              value={row.description || ''}
+                              onChange={(e) => handleUpdateServiceRow(index, 'description', e.target.value)}
+                              placeholder="Service description..."
+                              className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
                             />
                           </div>
                           
                           {/* Frequency Type */}
-                          <div className="col-span-3 relative">
+                          <div className="col-span-2 relative">
                             <select
                               value={row.frequencyType}
                               onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
-                              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 bg-white appearance-none"
+                              className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 bg-white appearance-none"
                             >
                               {FREQUENCY_TYPES.map(type => (
                                 <option key={type} value={type}>{type}</option>
                               ))}
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                           </div>
                           
                           {/* Frequency Count */}
-                          <div className="col-span-3">
+                          <div className="col-span-2">
                             <input
                               type="number"
                               min="1"
                               value={row.frequencyCount}
                               readOnly
-                              className="w-full px-3 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
+                              className="w-full px-2 py-2 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
                             />
                           </div>
                           
@@ -2215,19 +2230,29 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <h3 className="text-lg font-semibold text-gray-800 mb-1">Create Add-on</h3>
               <p className="text-sm text-gray-500 mb-6">For: <span className="font-medium text-indigo-600">{PROPERTY_TYPE_OPTIONS.find(t => t.id === addonSelectedPropertyType)?.label}</span></p>
               
-              {/* Form Row */}
-              <div className="flex items-end gap-4 mb-6">
-                <div className="flex-1 max-w-xs">
-                  <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Select Service</label>
+              {/* Form Row - SERVICE | DESCRIPTION | FREQUENCY | VISITS | PRICE | SAVE */}
+              <div className="flex items-end gap-3">
+                <div className="w-44">
+                  <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Service</label>
                   <input 
                     type="text" 
                     value={addonForm.serviceName} 
                     onChange={(e) => setAddonForm({ ...addonForm, serviceName: e.target.value })} 
-                    placeholder="Select or type service" 
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400" 
+                    placeholder="Service name" 
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400" 
                   />
                 </div>
-                <div className="w-36">
+                <div className="flex-1">
+                  <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Description</label>
+                  <input 
+                    type="text" 
+                    value={addonForm.description} 
+                    onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })} 
+                    placeholder="Add-on description..." 
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400" 
+                  />
+                </div>
+                <div className="w-32">
                   <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Frequency</label>
                   <div className="relative">
                     <select 
@@ -2237,53 +2262,41 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         const auto = FREQUENCY_COUNT_MAP[v]; 
                         setAddonForm({ ...addonForm, frequencyType: v, frequencyCount: auto !== null ? auto : '' }); 
                       }} 
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-white appearance-none focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
+                      className="w-full px-2 py-2.5 border border-gray-300 rounded-lg text-sm bg-white appearance-none focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
                     >
                       {FREQUENCY_TYPES.map(f => <option key={f} value={f}>{f}</option>)}
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
-                <div className="w-20">
+                <div className="w-16">
                   <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Visits</label>
                   <input 
                     type="number" 
                     value={addonForm.frequencyCount} 
                     readOnly 
-                    className="w-full px-3 py-2.5 border border-gray-300 bg-gray-50 rounded-lg text-sm text-center" 
+                    className="w-full px-2 py-2.5 border border-gray-300 bg-gray-50 rounded-lg text-sm text-center" 
                   />
                 </div>
-                <div className="w-28">
+                <div className="w-24">
                   <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Price (₹)</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">₹</span>
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
                     <input 
                       type="text" 
                       value={addonForm.price} 
                       onChange={(e) => setAddonForm({ ...addonForm, price: e.target.value.replace(/[^0-9]/g, '') })} 
                       placeholder="0" 
-                      className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400" 
+                      className="w-full pl-6 pr-2 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400" 
                     />
                   </div>
                 </div>
                 <button 
                   onClick={handleSaveAddon} 
-                  className="px-6 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium flex items-center gap-2 whitespace-nowrap"
+                  className="px-5 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium flex items-center gap-2 whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4" />Save
                 </button>
-              </div>
-              
-              {/* Description */}
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wider">Description (Optional)</label>
-                <textarea 
-                  value={addonForm.description} 
-                  onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })} 
-                  placeholder="Add notes or description for this add-on..." 
-                  rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400 resize-y" 
-                />
               </div>
             </div>
           )}
@@ -2357,36 +2370,54 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <p className="text-gray-500">No add-ons found</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
-                {filteredAddons.map(a => (
-                  <div key={a.id} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                        <PlusCircle className="w-5 h-5 text-gray-400" />
+              <div>
+                {/* Table Header */}
+                <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-slate-50 border-b border-gray-200">
+                  <div className="col-span-2 text-xs font-semibold text-gray-600 uppercase">Service</div>
+                  <div className="col-span-3 text-xs font-semibold text-gray-600 uppercase">Description</div>
+                  <div className="col-span-2 text-xs font-semibold text-gray-600 uppercase">Frequency</div>
+                  <div className="col-span-1 text-xs font-semibold text-gray-600 uppercase">Visits</div>
+                  <div className="col-span-2 text-xs font-semibold text-gray-600 uppercase">Property Type</div>
+                  <div className="col-span-1 text-xs font-semibold text-gray-600 uppercase text-right">Price</div>
+                  <div className="col-span-1 text-xs font-semibold text-gray-600 uppercase text-center">Actions</div>
+                </div>
+                {/* Rows */}
+                <div className="divide-y divide-gray-100">
+                  {filteredAddons.map(a => (
+                    <div key={a.id} className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-gray-50 transition-colors">
+                      <div className="col-span-2">
+                        <p className="font-medium text-gray-800 text-sm">{a.service_name || a.name || 'Unnamed'}</p>
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-800">{a.service_name || a.name || 'Unnamed Add-on'}</p>
-                        <p className="text-sm text-gray-500">{a.frequency_count || 1}x {a.frequency_type || 'Monthly'} • {getPropertyTypeLabel(a.property_type) || 'GC'}</p>
+                      <div className="col-span-3">
+                        <p className="text-xs text-gray-500 break-words">{a.description || '-'}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-sm text-gray-600">{a.frequency_type || 'Monthly'}</p>
+                      </div>
+                      <div className="col-span-1">
+                        <p className="text-sm text-gray-600">{a.frequency_count || 1}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">{getPropertyTypeLabel(a.property_type) || 'GC'}</span>
+                      </div>
+                      <div className="col-span-1 text-right">
+                        <p className="font-bold text-gray-800 text-sm">{formatCurrency(a.price)}</p>
+                      </div>
+                      <div className="col-span-1 flex justify-center gap-1">
+                        {!isFPManager && (
+                          <>
+                            <button onClick={() => openEditAddon(a)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleDeleteAddon(a.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-xs text-gray-400 uppercase">Price</p>
-                        <p className="font-bold text-gray-800">{formatCurrency(a.price)}</p>
-                      </div>
-                      {!isFPManager && (
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => openEditAddon(a)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => handleDeleteAddon(a.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -2404,17 +2435,31 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               </button>
             </div>
             
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Service Name <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={editingAddon.serviceName}
-                  onChange={(e) => setEditingAddon({ ...editingAddon, serviceName: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
-                />
+            <div className="space-y-4">
+              {/* Service Name and Description in one row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Service Name <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    value={editingAddon.serviceName}
+                    onChange={(e) => setEditingAddon({ ...editingAddon, serviceName: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <input
+                    type="text"
+                    value={editingAddon.description}
+                    onChange={(e) => setEditingAddon({ ...editingAddon, description: e.target.value })}
+                    placeholder="Add-on description..."
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
+                  />
+                </div>
               </div>
               
+              {/* Frequency and Visits */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Frequency</label>
@@ -2425,7 +2470,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       const auto = FREQUENCY_COUNT_MAP[v];
                       setEditingAddon({ ...editingAddon, frequencyType: v, frequencyCount: auto !== null ? auto : editingAddon.frequencyCount });
                     }}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
                   >
                     {FREQUENCY_TYPES.map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
@@ -2436,41 +2481,32 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     type="number"
                     value={editingAddon.frequencyCount}
                     readOnly
-                    className="w-full px-4 py-2.5 border border-gray-300 bg-gray-50 rounded-lg text-sm"
+                    className="w-full px-3 py-2.5 border border-gray-300 bg-gray-50 rounded-lg text-sm"
                   />
                 </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Property Type <span className="text-red-500">*</span></label>
-                <select
-                  value={editingAddon.propertyType}
-                  onChange={(e) => setEditingAddon({ ...editingAddon, propertyType: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
-                >
-                  {PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Price (₹) <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={editingAddon.price}
-                  onChange={(e) => setEditingAddon({ ...editingAddon, price: e.target.value.replace(/[^0-9]/g, '') })}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
-                <textarea
-                  value={editingAddon.description}
-                  onChange={(e) => setEditingAddon({ ...editingAddon, description: e.target.value })}
-                  rows={3}
-                  placeholder="Add notes or description..."
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-200 focus:border-gray-400 resize-none"
-                />
+              {/* Property Type and Price */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Property Type <span className="text-red-500">*</span></label>
+                  <select
+                    value={editingAddon.propertyType}
+                    onChange={(e) => setEditingAddon({ ...editingAddon, propertyType: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
+                  >
+                    {PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Price (₹) <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    value={editingAddon.price}
+                    onChange={(e) => setEditingAddon({ ...editingAddon, price: e.target.value.replace(/[^0-9]/g, '') })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
+                  />
+                </div>
               </div>
             </div>
             
@@ -2667,55 +2703,86 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{pkgDescription}</p>
                       )}
                     </div>
-                    {/* Package Services */}
+                    {/* Package Services - Horizontal Table */}
                     {pkgServices.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {pkgServices.map((svc, idx) => (
-                          <div key={idx} className="bg-white p-3 rounded-lg border border-indigo-100">
-                            <div className="flex justify-between items-center">
-                              <p className="font-medium text-gray-800">{svc.name || svc.service}</p>
-                              <p className="text-sm text-indigo-600">{svc.frequencyCount || svc.frequency_count || 1}x {svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
+                      <div className="mt-3">
+                        {/* Table Header */}
+                        <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
+                          <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
+                          <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
+                          <div className="col-span-5 text-xs font-semibold text-indigo-700">Description</div>
+                          <div className="col-span-3 text-xs font-semibold text-indigo-700 text-right">Frequency</div>
+                        </div>
+                        {/* Rows */}
+                        <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
+                          {pkgServices.map((svc, idx) => (
+                            <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
+                              <div className="col-span-1">
+                                <span className="w-5 h-5 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                              </div>
+                              <div className="col-span-3">
+                                <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
+                              </div>
+                              <div className="col-span-5">
+                                <p className="text-xs text-gray-500 break-words whitespace-normal">{svc.description || '-'}</p>
+                              </div>
+                              <div className="col-span-3 text-right">
+                                <p className="text-sm text-indigo-600 font-medium">{svc.frequencyCount || svc.frequency_count || 1}x {svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
+                              </div>
                             </div>
-                            {svc.description && <p className="text-xs text-gray-500 mt-1">{svc.description}</p>}
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
                 );
               })()}
 
-              {/* Add-ons */}
+              {/* Add-ons - Horizontal Table */}
               {viewEstimate.addons && viewEstimate.addons.length > 0 && (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-sm font-semibold text-gray-700 mb-3">Add-on Services</p>
-                  <div className="space-y-2">
-                    {viewEstimate.addons.map((addon, idx) => {
-                      // Try to get description from addon data, fallback to addons list lookup
-                      const addonName = addon.name || addon.service_name || '';
-                      const addonFromList = addons.find(a => 
-                        a.id == addon.id || 
-                        a.id == addon.addon_id ||
-                        a.service_name === addonName ||
-                        (a.service_name && addonName && a.service_name.toLowerCase() === addonName.toLowerCase())
-                      );
-                      const addonDescription = addon.description || addonFromList?.description || addonFromList?.services?.[0]?.description || '';
-                      const frequencyCount = addon.frequency_count || addon.frequencyCount || addonFromList?.frequency_count || 1;
-                      const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
-                      return (
-                        <div key={idx} className="bg-green-50 p-3 rounded-lg border border-green-100">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
-                              <p className="text-xs text-green-600">{frequencyCount}x {frequencyType}</p>
+                  <div>
+                    {/* Table Header */}
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
+                      <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
+                      <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
+                      <div className="col-span-5 text-xs font-semibold text-green-700">Description</div>
+                      <div className="col-span-3 text-xs font-semibold text-green-700 text-right">Frequency</div>
+                    </div>
+                    {/* Rows */}
+                    <div className="border border-green-100 divide-y divide-green-50">
+                      {viewEstimate.addons.map((addon, idx) => {
+                        const addonName = addon.name || addon.service_name || '';
+                        const addonFromList = addons.find(a => 
+                          a.id == addon.id || 
+                          a.id == addon.addon_id ||
+                          a.service_name === addonName ||
+                          (a.service_name && addonName && a.service_name.toLowerCase() === addonName.toLowerCase())
+                        );
+                        const addonDescription = addon.description || addonFromList?.description || '';
+                        const frequencyCount = addon.frequency_count || addon.frequencyCount || addonFromList?.frequency_count || 1;
+                        const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
+                        return (
+                          <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
+                            <div className="col-span-1">
+                              <span className="w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                            </div>
+                            <div className="col-span-3">
+                              <p className="font-medium text-gray-800 text-sm">{addon.name || addon.service_name}</p>
+                            </div>
+                            <div className="col-span-5">
+                              <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
+                            </div>
+                            <div className="col-span-3 text-right">
+                              <p className="text-sm text-green-600 font-medium">{frequencyCount}x {frequencyType}</p>
                             </div>
                           </div>
-                          {addonDescription && <p className="text-xs text-green-700 mt-2 pt-2 border-t border-green-100">{addonDescription}</p>}
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                     {/* Total Add-ons Price */}
-                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-lg mt-2">
+                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
                       <p className="font-semibold text-green-800">Total Add-ons Price</p>
                       <p className="font-bold text-green-700">{formatCurrency(viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0))}</p>
                     </div>
@@ -2798,13 +2865,25 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <p className="text-sm font-semibold text-gray-700 mb-3">Services Included</p>
                 {viewAmcPackage.servicesData && viewAmcPackage.servicesData.length > 0 ? (
                   <div className="space-y-2">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-100 rounded-lg">
+                      <div className="col-span-1 text-xs font-semibold text-gray-600">#</div>
+                      <div className="col-span-3 text-xs font-semibold text-gray-600">Service</div>
+                      <div className="col-span-5 text-xs font-semibold text-gray-600">Description</div>
+                      <div className="col-span-3 text-xs font-semibold text-gray-600 text-right">Frequency</div>
+                    </div>
                     {viewAmcPackage.servicesData.map((svc, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-amber-50 p-3 rounded-lg border border-amber-100">
-                        <div className="flex items-center gap-3">
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-amber-50 px-3 py-3 rounded-lg border border-amber-100">
+                        <div className="col-span-1">
                           <span className="w-6 h-6 bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                          <p className="font-medium text-amber-900">{svc.name || svc.service || 'Service'}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="col-span-3">
+                          <p className="font-medium text-amber-900 text-sm">{svc.name || svc.service || 'Service'}</p>
+                        </div>
+                        <div className="col-span-5">
+                          <p className="text-xs text-amber-700 break-words whitespace-normal">{svc.description || '-'}</p>
+                        </div>
+                        <div className="col-span-3 text-right">
                           <p className="text-sm font-medium text-amber-700">
                             {svc.frequency_count || svc.frequencyCount || 1}x {svc.frequency_type || svc.frequencyType || 'Monthly'}
                           </p>

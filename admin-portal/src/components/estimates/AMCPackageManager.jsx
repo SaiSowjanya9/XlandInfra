@@ -64,7 +64,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Package form with dynamic service rows
   const [amcForm, setAmcForm] = useState({
     packageName: '',
-    serviceRows: [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }],
+    serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }],
     price: '',
     billingDuration: 'monthly',
     description: ''
@@ -114,7 +114,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const handleAddServiceRow = () => {
     setAmcForm({
       ...amcForm,
-      serviceRows: [...amcForm.serviceRows, { service: '', frequencyCount: 12, frequencyType: 'Monthly' }]
+      serviceRows: [...amcForm.serviceRows, { service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }]
     });
   };
 
@@ -172,6 +172,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       propertyType: selectedPropertyType, // Link package to property type
       serviceRows: validServices.map(row => ({
         service: row.service.trim(),
+        description: row.description || '',
         frequencyCount: parseInt(row.frequencyCount) || 1,
         frequencyType: row.frequencyType
       })),
@@ -207,17 +208,19 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     if (Array.isArray(pkg.serviceRows) && pkg.serviceRows.length > 0) {
       loadedServiceRows = pkg.serviceRows.map(row => ({
         service: row.service || '',
+        description: row.description || '',
         frequencyCount: row.frequencyCount || 1,
         frequencyType: row.frequencyType || 'Monthly'
       }));
     } else if (typeof pkg.services === 'string' && pkg.services) {
       loadedServiceRows = pkg.services.split(',').map(s => ({
         service: s.trim(),
+        description: '',
         frequencyCount: 12,
         frequencyType: 'Monthly'
       }));
     } else {
-      loadedServiceRows = [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }];
+      loadedServiceRows = [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }];
     }
     
     setAmcForm({
@@ -271,7 +274,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const resetForm = () => {
     setAmcForm({
       packageName: '',
-      serviceRows: [{ service: '', frequencyCount: 12, frequencyType: 'Monthly' }],
+      serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }],
       price: '',
       billingDuration: 'monthly',
       description: ''
@@ -623,14 +626,17 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                   <h3 className="text-sm font-semibold text-gray-700 mb-4">Service Configuration</h3>
                   
                   {/* Table Header */}
-                  <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-2 bg-slate-50 rounded-lg mb-3">
-                    <div className="col-span-5">
+                  <div className="hidden md:grid grid-cols-12 gap-2 px-3 py-2 bg-slate-50 rounded-lg mb-3">
+                    <div className="col-span-3">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</span>
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-4">
+                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</span>
+                    </div>
+                    <div className="col-span-2">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Visits</span>
                     </div>
                     <div className="col-span-1">
@@ -641,41 +647,52 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     {/* Service Rows */}
                   <div className="space-y-3">
                     {amcForm.serviceRows.map((row, index) => (
-                      <div key={index} className="flex flex-col md:grid md:grid-cols-12 gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div key={index} className="flex flex-col md:grid md:grid-cols-12 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                         {/* Service Name */}
-                        <div className="md:col-span-5">
+                        <div className="md:col-span-3">
                           <input
                             type="text"
                             value={row.service}
                             onChange={(e) => handleUpdateServiceRow(index, 'service', e.target.value)}
                             placeholder="e.g., Deep Cleaning"
-                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                            className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                          />
+                        </div>
+                        
+                        {/* Description */}
+                        <div className="md:col-span-4">
+                          <input
+                            type="text"
+                            value={row.description || ''}
+                            onChange={(e) => handleUpdateServiceRow(index, 'description', e.target.value)}
+                            placeholder="Service description..."
+                            className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
                           />
                         </div>
                         
                         {/* Frequency Type - First to trigger auto-calculation */}
-                        <div className="md:col-span-3 relative">
+                        <div className="md:col-span-2 relative">
                           <select
                             value={row.frequencyType}
                             onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
-                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 bg-white appearance-none"
+                            className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 bg-white appearance-none"
                           >
                             {FREQUENCY_TYPES.map(type => (
                               <option key={type} value={type}>{type}</option>
                             ))}
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                         </div>
                         
                         {/* Visits - Auto-set based on frequency */}
-                        <div className="md:col-span-3">
+                        <div className="md:col-span-2">
                           <input
                             type="number"
                             min="1"
                             value={row.frequencyCount}
                             readOnly
                             title={`Auto-set to ${FREQUENCY_COUNT_MAP[row.frequencyType] || 1} visits`}
-                            className="w-full px-3 py-2.5 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
+                            className="w-full px-2 py-2 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
                           />
                         </div>
                         
@@ -918,31 +935,42 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 </div>
                 
                 {/* Table Header */}
-                <div className="hidden sm:grid grid-cols-12 gap-3 px-3 py-2 bg-slate-50 rounded-lg mb-2">
-                  <div className="col-span-5"><span className="text-xs font-semibold text-gray-600 uppercase">Service</span></div>
-                  <div className="col-span-3"><span className="text-xs font-semibold text-gray-600 uppercase">Frequency</span></div>
-                  <div className="col-span-3"><span className="text-xs font-semibold text-gray-600 uppercase">Visits</span></div>
+                <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-2 bg-slate-50 rounded-lg mb-2">
+                  <div className="col-span-3"><span className="text-xs font-semibold text-gray-600 uppercase">Service</span></div>
+                  <div className="col-span-4"><span className="text-xs font-semibold text-gray-600 uppercase">Description</span></div>
+                  <div className="col-span-2"><span className="text-xs font-semibold text-gray-600 uppercase">Frequency</span></div>
+                  <div className="col-span-2"><span className="text-xs font-semibold text-gray-600 uppercase">Visits</span></div>
                   <div className="col-span-1"></div>
                 </div>
                 
                 <div className="space-y-2">
                   {amcForm.serviceRows.map((row, index) => (
-                    <div key={index} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-3 p-2 sm:p-2 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="sm:col-span-5">
+                    <div key={index} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="sm:col-span-3">
                         <input
                           type="text"
                           value={row.service}
                           onChange={(e) => handleUpdateServiceRow(index, 'service', e.target.value)}
                           placeholder="Service name"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      {/* Description */}
+                      <div className="sm:col-span-4">
+                        <input
+                          type="text"
+                          value={row.description || ''}
+                          onChange={(e) => handleUpdateServiceRow(index, 'description', e.target.value)}
+                          placeholder="Description..."
+                          className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm"
                         />
                       </div>
                       {/* Frequency Type - First to trigger auto-calculation */}
-                      <div className="sm:col-span-3">
+                      <div className="sm:col-span-2">
                         <select
                           value={row.frequencyType}
                           onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                          className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                         >
                           {FREQUENCY_TYPES.map(type => (
                             <option key={type} value={type}>{type}</option>
@@ -950,13 +978,13 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         </select>
                       </div>
                       {/* Visits - Auto-set based on frequency */}
-                      <div className="sm:col-span-3">
+                      <div className="sm:col-span-2">
                         <input
                           type="number"
                           min="1"
                           value={row.frequencyCount}
                           readOnly
-                          className="w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
+                          className="w-full px-2 py-2 border border-gray-300 bg-gray-100 rounded-lg text-sm cursor-not-allowed"
                         />
                       </div>
                       <div className="sm:col-span-1 flex justify-end sm:justify-center">
