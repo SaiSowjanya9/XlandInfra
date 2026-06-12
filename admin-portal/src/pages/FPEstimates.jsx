@@ -735,7 +735,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={idx} className="align-top">
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{svc.service || svc.name || '-'}</td>
-                              <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal">{svc.description || '-'}</td>
+                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                               <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             </tr>
@@ -799,7 +799,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <tr key={idx} className="align-top">
                             <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.service_name}</td>
-                            <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal">{addon.description || '-'}</td>
+                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
@@ -1077,7 +1077,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={idx} className="align-top">
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{svc.service || svc.name || '-'}</td>
-                              <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal">{svc.description || '-'}</td>
+                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                               <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             </tr>
@@ -1141,7 +1141,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <tr key={idx} className="align-top">
                             <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.service_name}</td>
-                            <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal">{addon.description || '-'}</td>
+                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
@@ -2730,7 +2730,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                 <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
                               </div>
                               <div className="col-span-5">
-                                <p className="text-xs text-gray-500 break-words whitespace-normal">{svc.description || '-'}</p>
+                                <p className={`text-xs text-gray-500 break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
