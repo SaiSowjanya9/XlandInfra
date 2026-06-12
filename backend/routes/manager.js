@@ -1354,7 +1354,8 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
       }
       
       const [fpEstimates] = await pool.execute(
-        `SELECT e.*, amc.service_rows as packageServices,
+        `SELECT e.*, fpamc.services as packageServices,
+                COALESCE(e.amc_package_description, fpamc.description) as amc_package_description,
                 COALESCE(
                   CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
                   CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
@@ -1363,7 +1364,7 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
          FROM fp_estimates e
          LEFT JOIN fp_employees fpe ON e.created_by_name = fpe.email OR e.created_by_name = fpe.username
          LEFT JOIN users u ON e.created_by_name = u.email
-         LEFT JOIN amc_packages amc ON e.package_id = amc.id
+         LEFT JOIN fp_amc_packages fpamc ON e.package_id = fpamc.id
          WHERE e.franchise_partner_id = ? AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}${zoneClause}
          ORDER BY e.created_at DESC`,
         [franchisePartnerId, ...zoneParams]
