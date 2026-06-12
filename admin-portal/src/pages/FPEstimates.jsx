@@ -520,8 +520,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         body: JSON.stringify(payload)
       });
       const result = await res.json();
-      if (res.ok || result.success) {
-        showToast('Estimate saved successfully!');
+      console.log('Create estimate response:', res.status, result);
+      if (res.ok || res.status === 201 || result.success) {
+        showToast('Estimate created successfully!');
         setEstimateType(null);
         setSelectedProperty(null);
         setPropertyIdInput('');
@@ -529,6 +530,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         loadData();
         setActiveTab('list');
       } else {
+        console.error('Create estimate failed:', result);
         showToast(result.message || 'Failed to save estimate', 'error');
       }
     } catch (e) {
