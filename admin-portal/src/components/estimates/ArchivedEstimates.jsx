@@ -308,10 +308,42 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                 </div>
               </div>
 
+              {/* AMC Package */}
+              {(viewEstimate.packageName || viewEstimate.package_name) && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm text-gray-500 mb-2">AMC Package</p>
+                  <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold text-indigo-900">{viewEstimate.packageName || viewEstimate.package_name}</p>
+                        <p className="text-xs text-indigo-600">Yearly Billing</p>
+                      </div>
+                      <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.packagePrice || viewEstimate.package_price || 0).toLocaleString()}</p>
+                    </div>
+                    {(viewEstimate.amc_package_description || viewEstimate.amcPackageDescription) && (
+                      <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{viewEstimate.amc_package_description || viewEstimate.amcPackageDescription}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm text-gray-500 mb-2">Services / Package</p>
                 <div className="space-y-2">
-                  {viewEstimate.services?.length > 0 ? viewEstimate.services.map((service, idx) => (
+                  {viewEstimate.package_services && (() => {
+                    const services = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
+                    if (!services || services.length === 0) return null;
+                    return services.map((service, idx) => (
+                      <div key={idx} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div className="flex justify-between items-center">
+                          <p className="font-medium">{service.name || service.service}</p>
+                          <p className="text-sm text-gray-600">{service.frequencyCount || 1}x {service.frequencyType || 'Monthly'}</p>
+                        </div>
+                        {service.description && <p className="text-xs text-gray-500 mt-1">{service.description}</p>}
+                      </div>
+                    ));
+                  })()}
+                  {!viewEstimate.package_services && viewEstimate.services?.length > 0 ? viewEstimate.services.map((service, idx) => (
                     <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
                       <div>
                         <p className="font-medium">{service.name || service.service}</p>
@@ -321,7 +353,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                       </div>
                       <p className="font-semibold">₹{Number(service.price || 0).toLocaleString()}</p>
                     </div>
-                  )) : (
+                  )) : !viewEstimate.package_services && (
                     <p className="text-gray-400 text-sm">No services listed</p>
                   )}
                 </div>
@@ -342,14 +374,17 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                         (addon.services?.reduce((sum, s) => sum + (parseFloat(s.price) || 0), 0)) || 0;
                       
                       return (
-                        <div key={idx} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
-                          <div>
-                            <p className="font-medium text-blue-800">{addonName}</p>
-                            {addon.services?.length > 1 && (
-                              <p className="text-xs text-blue-600">{addon.services.length} services included</p>
-                            )}
+                        <div key={idx} className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-blue-800">{addonName}</p>
+                              {addon.services?.length > 1 && (
+                                <p className="text-xs text-blue-600">{addon.services.length} services included</p>
+                              )}
+                            </div>
+                            <p className="font-semibold text-blue-700">₹{Number(addonPrice).toLocaleString()}</p>
                           </div>
-                          <p className="font-semibold text-blue-700">₹{Number(addonPrice).toLocaleString()}</p>
+                          {addon.description && <p className="text-xs text-blue-700 mt-2 pt-2 border-t border-blue-100">{addon.description}</p>}
                         </div>
                       );
                     })}

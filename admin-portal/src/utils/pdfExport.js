@@ -69,7 +69,7 @@ const generatePDF = (data, type, filename) => {
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(180, 180, 180);
-    doc.text('Property Management Solutions Pvt. Ltd.', margin + 20, 16);
+    doc.text('Pvt. Ltd.', margin + 20, 16);
 
     // Document Badge (right side) - centered text
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
@@ -301,6 +301,27 @@ const generatePDF = (data, type, filename) => {
       y += cardHeight + 6;
     }
 
+    // ===== AMC PACKAGE DESCRIPTION =====
+    if (data.amcPackageDescription && data.amcPackageDescription.trim()) {
+      doc.setTextColor(...navy);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PACKAGE DESCRIPTION', margin, y);
+      y += 4;
+      
+      doc.setFillColor(...cardBg);
+      doc.setDrawColor(...borderLight);
+      const descLines = doc.splitTextToSize(String(data.amcPackageDescription), pageWidth - margin * 2 - 8);
+      const descBoxH = Math.min(Math.max(10, descLines.length * 4 + 4), 30);
+      doc.roundedRect(margin, y, pageWidth - margin * 2, descBoxH, 2, 2, 'FD');
+      
+      doc.setTextColor(...mediumText);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(descLines.slice(0, 6), margin + 4, y + 4);
+      y += descBoxH + 4;
+    }
+
     // ===== SERVICES TABLE =====
     doc.setTextColor(...navy);
     doc.setFontSize(9);
@@ -312,7 +333,7 @@ const generatePDF = (data, type, filename) => {
     const tableBody = services.length > 0 
       ? services.map((s, idx) => [
           String(idx + 1),
-          String(s.name || s.service || 'Service'),
+          String(s.name || s.service || 'Service') + (s.description ? `\n${s.description}` : ''),
           String(s.frequencyType || 'Monthly'),
           String(s.frequencyCount || s.frequency || '-')
         ])
@@ -328,7 +349,7 @@ const generatePDF = (data, type, filename) => {
       bodyStyles: { textColor: darkText, lineColor: [100, 100, 100] },
       columnStyles: {
         0: { cellWidth: 10 },
-        1: { cellWidth: 'auto' },
+        1: { cellWidth: 'auto', halign: 'left' },
         2: { cellWidth: 25 },
         3: { cellWidth: 20 }
       },
@@ -347,9 +368,9 @@ const generatePDF = (data, type, filename) => {
 
       const addonsBody = data.addons.map((a, idx) => [
         String(idx + 1),
-        String(a.name || a.serviceName || 'Add-on'),
-        String(a.frequencyType || a.frequency || 'One-time'),
-        String(a.frequencyCount || a.visits || '-')
+        String(a.name || a.serviceName || 'Add-on') + (a.description ? `\n${a.description}` : ''),
+        String(a.frequencyType || a.frequency_type || a.frequency || 'One-time'),
+        String(a.frequencyCount || a.frequency_count || a.visits || '-')
       ]);
 
       autoTable(doc, {
@@ -362,7 +383,7 @@ const generatePDF = (data, type, filename) => {
         bodyStyles: { textColor: darkText, lineColor: [100, 100, 100] },
         columnStyles: {
           0: { cellWidth: 10 },
-          1: { cellWidth: 'auto' },
+          1: { cellWidth: 'auto', halign: 'left' },
           2: { cellWidth: 25 },
           3: { cellWidth: 20 }
         },
@@ -428,7 +449,7 @@ const generatePDF = (data, type, filename) => {
     doc.setTextColor(...lightText);
     doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.text('XLAND INFRA Property Management Solutions Pvt. Ltd. | This is a computer-generated document.', pageWidth / 2, footerY, { align: 'center' });
+    doc.text('XLAND INFRA Pvt. Ltd. | This is a computer-generated document.', pageWidth / 2, footerY, { align: 'center' });
 
     doc.save(filename);
     return true;
@@ -454,13 +475,29 @@ export const exportEstimateToPDF = (estimate) => {
     debug('[PDF] Estimate type:', estimate.estimateType || estimate.estimate_type);
     debug('[PDF] Package services:', estimate.packageServices);
     
-    // PRIORITY 1: Check packageServices (services from selected AMC package)
-    if (estimate.packageServices && Array.isArray(estimate.packageServices) && estimate.packageServices.length > 0) {
+    // PRIORITY 1: Check package_services (from database with descriptions)
+    if (estimate.package_services) {
+      try {
+        const pkgServices = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+        if (Array.isArray(pkgServices) && pkgServices.length > 0) {
+          debug('[PDF] Using package_services:', pkgServices);
+          services = pkgServices.map(s => ({
+            name: s.service || s.name || s.serviceName || 'Service',
+            frequencyCount: s.frequencyCount || s.frequency_count || s.frequency || s.visits || 1,
+            frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
+            description: s.description || ''
+          }));
+        }
+      } catch (e) { debug('[PDF] package_services parse error:', e); }
+    }
+    // PRIORITY 2: Check packageServices (services from selected AMC package)
+    if (services.length === 0 && estimate.packageServices && Array.isArray(estimate.packageServices) && estimate.packageServices.length > 0) {
       debug('[PDF] Using packageServices:', estimate.packageServices);
       services = estimate.packageServices.map(s => ({
         name: s.service || s.name || s.serviceName || 'Service',
         frequencyCount: s.frequencyCount || s.frequency || s.visits || 1,
-        frequencyType: s.frequencyType || 'Monthly'
+        frequencyType: s.frequencyType || 'Monthly',
+        description: s.description || ''
       }));
     }
     // PRIORITY 2: Check serviceRows (package service rows from form)
@@ -515,7 +552,7 @@ export const exportEstimateToPDF = (estimate) => {
     
     debug('[PDF] Final services:', services);
 
-    // Parse addons from various formats (no prices - only names and frequency)
+    // Parse addons from various formats (including descriptions)
     let addons = [];
     
     // Try addons array first
@@ -523,7 +560,8 @@ export const exportEstimateToPDF = (estimate) => {
       addons = estimate.addons.map(a => ({
         name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
         frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
-        frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1
+        frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1,
+        description: a.description || ''
       }));
     }
     // Try addons_data JSON string (from backend)
@@ -534,7 +572,8 @@ export const exportEstimateToPDF = (estimate) => {
           addons = parsed.map(a => ({
             name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
             frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
-            frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1
+            frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1,
+            description: a.description || ''
           }));
         }
       } catch (e) { debug('[PDF] addons_data parse error:', e); }
@@ -544,7 +583,8 @@ export const exportEstimateToPDF = (estimate) => {
       addons = estimate.selectedAddons.map(a => ({
         name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
         frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
-        frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1
+        frequencyCount: a.frequencyCount || a.frequency_count || a.visits || a.noOfVisits || a.no_of_visits || a.services?.[0]?.frequency || a.services?.[0]?.frequencyCount || 1,
+        description: a.description || ''
       }));
     }
     
@@ -554,6 +594,7 @@ export const exportEstimateToPDF = (estimate) => {
       estimateId: estimate.estimateId || estimate.estimate_id || estimate.id || 'EST-' + Date.now(),
       estimateType: estimate.estimateType || estimate.estimate_type || (estimate.propertyId || estimate.property_id ? 'property-based' : 'direct'),
       packageName: estimate.packageName || estimate.package_name,
+      amcPackageDescription: estimate.amc_package_description || estimate.amcPackageDescription || '',
       propertyId: estimate.propertyId || estimate.property_id,
       propertyType: estimate.propertyType || estimate.property_type || estimate.entryType || 'N/A',
       propertyName: estimate.propertyName || estimate.property_name,

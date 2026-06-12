@@ -3087,7 +3087,7 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       property_type, property_name, zone, division, city, address,
       number_of_blocks, units_per_block, block_names, total_units,
       tower_name, block_number, villa_plot_number,
-      package_id, package_name, package_price,
+      package_id, package_name, package_price, amc_package_description, package_services,
       addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
       description
     } = req.body;
@@ -3198,6 +3198,15 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     try {
       await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN villa_plot_number VARCHAR(100)`);
     } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN amc_package_description TEXT`);
+    } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN package_services TEXT`);
+    } catch (e) { /* Column exists */ }
+
+    // Stringify package_services for storage
+    const packageServicesJson = package_services ? JSON.stringify(package_services) : null;
 
     // Insert into fp_estimates table (no FK constraints)
     const [result] = await pool.execute(
@@ -3207,18 +3216,18 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         property_name, property_code, property_type, zone, division, city, address,
         number_of_blocks, units_per_block, block_names, total_units,
         tower_name, block_number, villa_plot_number,
-        package_id, package_name, package_price,
+        package_id, package_name, package_price, amc_package_description, package_services,
         subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
         addons_data, description, status,
         created_by_id, created_by_name, created_by_role
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
       [
         estimateId, req.fpId, property_id || null, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
         property_name || '', property_code || '', property_type || '', zone || '', division || '', city || '', address || '',
         parseInt(number_of_blocks) || 1, unitsPerBlockJson, blockNamesJson, parseInt(total_units) || 0,
         tower_name || '', block_number || '', villa_plot_number || '',
-        package_id || null, package_name || '', parseFloat(package_price) || 0,
+        package_id || null, package_name || '', parseFloat(package_price) || 0, amc_package_description || '', packageServicesJson,
         finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,
         addonsJson, description || '', 
         creatorId, creatorName, creatorRole
@@ -3330,6 +3339,14 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         if (estimate.units_per_block) unitsPerBlock = typeof estimate.units_per_block === 'string' ? JSON.parse(estimate.units_per_block) : estimate.units_per_block;
       } catch (e) {}
 
+      // Parse package services with descriptions
+      let packageServices = [];
+      try {
+        if (estimate.package_services) {
+          packageServices = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+        }
+      } catch (e) {}
+
       const estimateData = {
         estimateId: estimate.estimate_id,
         customerName: estimate.client_name,
@@ -3350,8 +3367,12 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         blockNumber: estimate.block_number,
         // Villa/Plot-specific
         villaPlotNumber: estimate.villa_plot_number,
-        // Package and pricing
-        services: estimate.package_name ? [{ name: estimate.package_name, price: estimate.package_price }] : [],
+        // Package info with description
+        packageName: estimate.package_name,
+        amcPackageDescription: estimate.amc_package_description || '',
+        description: estimate.description || '',
+        // Services with descriptions
+        services: packageServices.length > 0 ? packageServices : (estimate.package_name ? [{ name: estimate.package_name, price: estimate.package_price }] : []),
         addons: addons,
         subtotal: parseFloat(estimate.subtotal) || 0,
         discount: parseFloat(estimate.discount_percent) || 0,

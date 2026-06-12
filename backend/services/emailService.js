@@ -693,7 +693,8 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     zone, division, city, address,
     numberOfBlocks, blockNames, unitsPerBlock, totalUnits,
     towerName, blockNumber, villaPlotNumber,
-    services, addons, subtotal, discount, tax, total, validUntil 
+    services, addons, subtotal, discount, tax, total, validUntil,
+    amcPackageDescription, packageName, description
   } = estimate;
   
   if (!customerEmail) {
@@ -705,19 +706,27 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   const approveUrl = `${baseUrl}/estimate-action/${estimateId}?action=approve&token=${actionToken}`;
   const rejectUrl = `${baseUrl}/estimate-action/${estimateId}?action=reject&token=${actionToken}`;
 
-  // Format services list
+  // Format services list with descriptions
   const servicesHtml = (services || []).map(s => `
     <tr>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">${s.name || s.service || 'Service'}</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${Number(s.price || s.rate || 0).toLocaleString()}</td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
+        <strong>${s.name || s.service || 'Service'}</strong>
+        ${s.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${s.frequencyCount || 1}x ${s.frequencyType}</span>` : ''}
+        ${s.description ? `<br><span style="font-size: 12px; color: #6b7280;">${s.description}</span>` : ''}
+      </td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Number(s.price || s.rate || 0).toLocaleString()}</td>
     </tr>
   `).join('');
 
-  // Format addons list
+  // Format addons list with descriptions
   const addonsHtml = (addons || []).map(a => `
     <tr>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">${a.name || a.serviceName || a.services?.[0]?.name || 'Add-on'}</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${Number(a.price || a.totalPrice || a.services?.[0]?.price || 0).toLocaleString()}</td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
+        <strong>${a.name || a.serviceName || a.services?.[0]?.name || 'Add-on'}</strong>
+        ${a.frequency_type || a.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${a.frequency_count || a.frequencyCount || 1}x ${a.frequency_type || a.frequencyType}</span>` : ''}
+        ${a.description ? `<br><span style="font-size: 12px; color: #6b7280;">${a.description}</span>` : ''}
+      </td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Number(a.price || a.totalPrice || a.services?.[0]?.price || 0).toLocaleString()}</td>
     </tr>
   `).join('');
 
@@ -788,7 +797,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
             <h1 style="color: #ffffff; margin: 0; font-size: 24px;">XLAND INFRA</h1>
-            <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 14px;">Property Management Solutions</p>
+            <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 14px;">Pvt. Ltd.</p>
           </div>
           
           <!-- Content -->
@@ -798,6 +807,14 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">
               Thank you for your interest in our services. Please find below the estimate for your property <strong>${propertyName || 'N/A'}</strong>.
             </p>
+            
+            ${packageName ? `
+            <!-- AMC Package Info -->
+            <div style="background: #eef2ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #6366f1;">
+              <h3 style="margin: 0 0 10px 0; color: #4338ca; font-size: 14px; font-weight: 600;">AMC Package: ${packageName}</h3>
+              ${amcPackageDescription ? `<p style="color: #4b5563; font-size: 13px; margin: 0; line-height: 1.5;">${amcPackageDescription}</p>` : ''}
+            </div>
+            ` : ''}
             
             <!-- Property Details -->
             <div style="background: #eff6ff; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
@@ -864,6 +881,14 @@ const sendEstimateEmail = async (estimate, actionToken) => {
                 </tr>
               </table>
             </div>
+            
+            ${description ? `
+            <!-- Notes/Description -->
+            <div style="background: #f9fafb; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #9ca3af;">
+              <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600;">Notes</h3>
+              <p style="color: #4b5563; font-size: 13px; margin: 0; line-height: 1.5;">${description}</p>
+            </div>
+            ` : ''}
             
             <!-- Action Buttons -->
             <div style="text-align: center; margin: 30px 0;">

@@ -446,6 +446,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const pricing = calculatePricing();
     const selectedAddonsList = estimateForm.selectedAddons.map(id => addons.find(a => a.id === id)).filter(Boolean);
 
+    // Get package services with descriptions
+    const pkgServices = pkg?.parsedServices || [];
+
     try {
       const payload = {
         estimate_type: estimateType === 'property-based' ? 'property_based' : 'direct',
@@ -474,7 +477,21 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         package_id: estimateForm.selectedPackage,
         package_name: pkg?.name || '',
         package_price: pkg?.price || 0,
-        addons: selectedAddonsList.map(a => ({ id: a.id, name: a.service_name, price: a.price, frequency_count: a.frequency_count, frequency_type: a.frequency_type })),
+        amc_package_description: pkg?.description || '',
+        package_services: pkgServices.map(s => ({ 
+          name: s.service || s.name, 
+          frequencyCount: s.frequencyCount || s.frequency_count || 1, 
+          frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
+          description: s.description || ''
+        })),
+        addons: selectedAddonsList.map(a => ({ 
+          id: a.id, 
+          name: a.service_name, 
+          price: a.price, 
+          frequency_count: a.frequency_count, 
+          frequency_type: a.frequency_type,
+          description: a.description || ''
+        })),
         subtotal: pricing.subtotal,
         discount_percent: estimateForm.discount,
         discount_amount: pricing.discountAmt,
@@ -2609,13 +2626,36 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               {viewEstimate.package_name && (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
-                  <div className="flex justify-between items-center bg-indigo-50 p-4 rounded-lg">
-                    <div>
-                      <p className="font-semibold text-indigo-900">{viewEstimate.package_name}</p>
-                      <p className="text-xs text-indigo-600">Yearly Billing</p>
+                  <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold text-indigo-900">{viewEstimate.package_name}</p>
+                        <p className="text-xs text-indigo-600">Yearly Billing</p>
+                      </div>
+                      <p className="text-lg font-bold text-indigo-700">{formatCurrency(viewEstimate.package_price)}</p>
                     </div>
-                    <p className="text-lg font-bold text-indigo-700">{formatCurrency(viewEstimate.package_price)}</p>
+                    {viewEstimate.amc_package_description && (
+                      <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{viewEstimate.amc_package_description}</p>
+                    )}
                   </div>
+                  {/* Package Services */}
+                  {viewEstimate.package_services && (() => {
+                    const services = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
+                    if (!services || services.length === 0) return null;
+                    return (
+                      <div className="mt-3 space-y-2">
+                        {services.map((svc, idx) => (
+                          <div key={idx} className="bg-white p-3 rounded-lg border border-indigo-100">
+                            <div className="flex justify-between items-center">
+                              <p className="font-medium text-gray-800">{svc.name || svc.service}</p>
+                              <p className="text-sm text-indigo-600">{svc.frequencyCount || 1}x {svc.frequencyType || 'Monthly'}</p>
+                            </div>
+                            {svc.description && <p className="text-xs text-gray-500 mt-1">{svc.description}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -2625,12 +2665,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <p className="text-sm font-semibold text-gray-700 mb-3">Add-ons</p>
                   <div className="space-y-2">
                     {viewEstimate.addons.map((addon, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-green-50 p-3 rounded-lg">
-                        <div>
-                          <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
-                          <p className="text-xs text-green-600">{addon.frequency_type || addon.frequencyType || 'One-time'}</p>
+                      <div key={idx} className="bg-green-50 p-3 rounded-lg border border-green-100">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium text-green-900">{addon.name || addon.service_name}</p>
+                            <p className="text-xs text-green-600">{addon.frequency_type || addon.frequencyType || 'One-time'}</p>
+                          </div>
+                          <p className="font-semibold text-green-700">{formatCurrency(addon.price)}</p>
                         </div>
-                        <p className="font-semibold text-green-700">{formatCurrency(addon.price)}</p>
+                        {addon.description && <p className="text-xs text-green-700 mt-2 pt-2 border-t border-green-100">{addon.description}</p>}
                       </div>
                     ))}
                   </div>
