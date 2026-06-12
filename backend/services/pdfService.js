@@ -103,8 +103,8 @@ const generateEstimatePDF = async (estimate) => {
       doc.fontSize(8).fillColor('#ffffff');
       doc.text('#', 55, y + 6);
       doc.text('Service Description', 80, y + 6);
-      doc.text('Frequency', 380, y + 6);
-      doc.text('Visits', 480, y + 6);
+      doc.text('Frequency', 420, y + 6);
+      doc.text('Visits', 510, y + 6);
       y += 20;
 
       // Services rows
@@ -121,8 +121,8 @@ const generateEstimatePDF = async (estimate) => {
         let freqType = s.frequencyType || s.frequency_type || 'Monthly';
         // Remove "Nx " prefix if present (e.g., "12x Monthly" -> "Monthly")
         freqType = freqType.replace(/^\d+x\s*/i, '');
-        doc.text(freqType, 380, y + 5);
-        doc.text(String(freqCount), 485, y + 5);
+        doc.text(freqType, 420, y + 5);
+        doc.text(String(freqCount), 520, y + 5);
         y += 18;
       });
 
@@ -138,8 +138,8 @@ const generateEstimatePDF = async (estimate) => {
         doc.fontSize(8).fillColor('#ffffff');
         doc.text('#', 55, y + 6);
         doc.text('Add-on Service', 80, y + 6);
-        doc.text('Frequency', 380, y + 6);
-        doc.text('Visits', 480, y + 6);
+        doc.text('Frequency', 420, y + 6);
+        doc.text('Visits', 510, y + 6);
         y += 20;
 
         addonList.forEach((a, idx) => {
