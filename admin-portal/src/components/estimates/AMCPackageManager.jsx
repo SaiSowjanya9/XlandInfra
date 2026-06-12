@@ -714,18 +714,6 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     ))}
                   </div>
 
-                  {/* Description - Optional */}
-                  <div className="mt-5">
-                    <label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Description (Optional)</label>
-                    <textarea
-                      value={amcForm.description}
-                      onChange={(e) => setAmcForm({ ...amcForm, description: e.target.value })}
-                      placeholder="Add notes or description for this package..."
-                      rows={3}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 resize-y"
-                      style={{ minHeight: '80px' }}
-                    />
-                  </div>
                 </div>
 
                 {/* Price Section - Right Side - LIGHT/ELEGANT Design */}
@@ -1001,18 +989,6 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 </div>
               </div>
 
-              {/* Description - Optional */}
-              <div className="border-t border-gray-100 pt-5">
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Description (Optional)</label>
-                <textarea
-                  value={amcForm.description}
-                  onChange={(e) => setAmcForm({ ...amcForm, description: e.target.value })}
-                  placeholder="Add notes or description for this package..."
-                  rows={3}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 resize-y"
-                  style={{ minHeight: '80px' }}
-                />
-              </div>
 
               {/* Price Summary - LIGHT Design */}
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">

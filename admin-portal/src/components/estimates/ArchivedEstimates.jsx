@@ -327,67 +327,92 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                 </div>
               )}
 
+              {/* Package Services - Horizontal Table */}
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm text-gray-500 mb-2">Services / Package</p>
-                <div className="space-y-2">
-                  {viewEstimate.package_services && (() => {
-                    const services = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
-                    if (!services || services.length === 0) return null;
-                    return services.map((service, idx) => (
-                      <div key={idx} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                        <div className="flex justify-between items-center">
-                          <p className="font-medium">{service.name || service.service}</p>
-                          <p className="text-sm text-gray-600">{service.frequencyCount || 1}x {service.frequencyType || 'Monthly'}</p>
-                        </div>
-                        {service.description && <p className="text-xs text-gray-500 mt-1">{service.description}</p>}
+                {viewEstimate.package_services && (() => {
+                  const services = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
+                  if (!services || services.length === 0) return <p className="text-gray-400 text-sm">No services listed</p>;
+                  return (
+                    <div>
+                      <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
+                        <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
+                        <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
+                        <div className="col-span-4 text-xs font-semibold text-indigo-700">Description</div>
+                        <div className="col-span-2 text-xs font-semibold text-indigo-700 text-center">Frequency</div>
+                        <div className="col-span-2 text-xs font-semibold text-indigo-700 text-right">Visits</div>
                       </div>
-                    ));
-                  })()}
-                  {!viewEstimate.package_services && viewEstimate.services?.length > 0 ? viewEstimate.services.map((service, idx) => (
-                    <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
-                      <div>
-                        <p className="font-medium">{service.name || service.service}</p>
-                        {(service.frequency || service.frequencyType) && (
-                          <p className="text-sm text-gray-500">{service.frequency || service.frequencyCount} × {service.frequencyType}</p>
-                        )}
+                      <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
+                        {services.map((service, idx) => (
+                          <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
+                            <div className="col-span-1">
+                              <span className="w-5 h-5 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                            </div>
+                            <div className="col-span-3">
+                              <p className="font-medium text-gray-800 text-sm">{service.name || service.service}</p>
+                            </div>
+                            <div className="col-span-4">
+                              <p className="text-xs text-gray-500 break-words whitespace-normal">{service.description || '-'}</p>
+                            </div>
+                            <div className="col-span-2 text-center">
+                              <p className="text-sm text-indigo-600">{service.frequencyType || 'Monthly'}</p>
+                            </div>
+                            <div className="col-span-2 text-right">
+                              <p className="text-sm text-indigo-700 font-semibold">{service.frequencyCount || 1}</p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <p className="font-semibold">₹{Number(service.price || 0).toLocaleString()}</p>
                     </div>
-                  )) : !viewEstimate.package_services && (
-                    <p className="text-gray-400 text-sm">No services listed</p>
-                  )}
-                </div>
+                  );
+                })()}
+                {!viewEstimate.package_services && (
+                  <p className="text-gray-400 text-sm">No services listed</p>
+                )}
               </div>
 
-              {/* Addons Section */}
+              {/* Add-ons - Horizontal Table */}
               {viewEstimate.addons?.length > 0 && (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-sm text-gray-500 mb-2">Add-ons</p>
-                  <div className="space-y-2">
-                    {viewEstimate.addons.map((addon, idx) => {
-                      // Get addon name from various possible structures
-                      const addonName = addon.name || addon.serviceName || 
-                        (addon.services?.[0]?.name) || 
-                        (Array.isArray(addon.services) ? addon.services.map(s => s.name || s.service).join(', ') : null) ||
-                        'Add-on';
-                      const addonPrice = addon.price || addon.totalPrice || 
-                        (addon.services?.reduce((sum, s) => sum + (parseFloat(s.price) || 0), 0)) || 0;
-                      
-                      return (
-                        <div key={idx} className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="font-medium text-blue-800">{addonName}</p>
-                              {addon.services?.length > 1 && (
-                                <p className="text-xs text-blue-600">{addon.services.length} services included</p>
-                              )}
+                  <div>
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
+                      <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
+                      <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
+                      <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
+                      <div className="col-span-2 text-xs font-semibold text-green-700 text-center">Frequency</div>
+                      <div className="col-span-2 text-xs font-semibold text-green-700 text-right">Visits</div>
+                    </div>
+                    <div className="border border-green-100 divide-y divide-green-50">
+                      {viewEstimate.addons.map((addon, idx) => {
+                        const addonName = addon.name || addon.serviceName || addon.service_name || 'Add-on';
+                        const frequencyCount = addon.frequency_count || addon.frequencyCount || 1;
+                        const frequencyType = addon.frequency_type || addon.frequencyType || 'Monthly';
+                        return (
+                          <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
+                            <div className="col-span-1">
+                              <span className="w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                             </div>
-                            <p className="font-semibold text-blue-700">₹{Number(addonPrice).toLocaleString()}</p>
+                            <div className="col-span-3">
+                              <p className="font-medium text-gray-800 text-sm">{addonName}</p>
+                            </div>
+                            <div className="col-span-4">
+                              <p className="text-xs text-gray-500 break-words whitespace-normal">{addon.description || '-'}</p>
+                            </div>
+                            <div className="col-span-2 text-center">
+                              <p className="text-sm text-green-600">{frequencyType}</p>
+                            </div>
+                            <div className="col-span-2 text-right">
+                              <p className="text-sm text-green-700 font-semibold">{frequencyCount}</p>
+                            </div>
                           </div>
-                          {addon.description && <p className="text-xs text-blue-700 mt-2 pt-2 border-t border-blue-100">{addon.description}</p>}
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
+                      <p className="font-semibold text-green-800">Total Add-ons Price</p>
+                      <p className="font-bold text-green-700">₹{viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0).toLocaleString()}</p>
+                    </div>
                   </div>
                 </div>
               )}
