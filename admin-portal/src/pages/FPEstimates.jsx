@@ -357,17 +357,30 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       totalPrice: parseFloat(estimate.total_amount) || 0,
       discount: parseFloat(estimate.discount_percent) || 0,
       description: estimate.description || '',
-      // Include package services (no prices)
+      // Include package services with descriptions
       packageServices: packageServices.map(s => ({
         name: s.service || s.name || s.serviceName || 'Service',
-        frequencyCount: s.frequencyCount || s.frequency || 1,
-        frequencyType: s.frequencyType || 'Monthly'
+        frequencyCount: s.frequencyCount || s.frequency_count || s.frequency || 1,
+        frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
+        description: s.description || ''
       })),
-      // Include addons (no prices)
-      addons: addonsArray.map(a => ({
-        name: a.name || a.service_name || a.serviceName || 'Add-on',
-        frequencyType: a.frequency_type || a.frequencyType || 'One-time'
-      }))
+      // Include addons with descriptions
+      addons: addonsArray.map(a => {
+        // Try to get description from addon data, fallback to addons list lookup
+        const addonName = a.name || a.service_name || a.serviceName || '';
+        const addonFromList = addons.find(ad => 
+          ad.id == a.id || 
+          ad.id == a.addon_id ||
+          ad.service_name === addonName ||
+          (ad.service_name && addonName && ad.service_name.toLowerCase() === addonName.toLowerCase())
+        );
+        return {
+          name: addonName || 'Add-on',
+          frequencyType: a.frequency_type || a.frequencyType || addonFromList?.frequency_type || 'One-time',
+          frequencyCount: a.frequency_count || a.frequencyCount || addonFromList?.frequency_count || 1,
+          description: a.description || addonFromList?.description || addonFromList?.services?.[0]?.description || ''
+        };
+      })
     };
     
     console.log('PDF Data:', pdfData);
@@ -2675,12 +2688,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <div className="space-y-2">
                     {viewEstimate.addons.map((addon, idx) => {
                       // Try to get description from addon data, fallback to addons list lookup
+                      const addonName = addon.name || addon.service_name || '';
                       const addonFromList = addons.find(a => 
                         a.id == addon.id || 
                         a.id == addon.addon_id ||
-                        a.service_name === (addon.name || addon.service_name)
+                        a.service_name === addonName ||
+                        (a.service_name && addonName && a.service_name.toLowerCase() === addonName.toLowerCase())
                       );
-                      const addonDescription = addon.description || addonFromList?.description || '';
+                      const addonDescription = addon.description || addonFromList?.description || addonFromList?.services?.[0]?.description || '';
                       const frequencyCount = addon.frequency_count || addon.frequencyCount || addonFromList?.frequency_count || 1;
                       const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
                       return (
