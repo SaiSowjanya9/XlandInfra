@@ -457,7 +457,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
     const pkg = getSelectedPackage();
     const pricing = calculatePricing();
-    const selectedAddonsList = estimateForm.selectedAddons.map(id => addons.find(a => a.id === id)).filter(Boolean);
+    // Use loose equality to handle string/number type mismatch
+    const selectedAddonsList = estimateForm.selectedAddons.map(id => addons.find(a => a.id == id)).filter(Boolean);
+    console.log('Selected Addons for estimate:', selectedAddonsList);
 
     // Get package services with descriptions
     const pkgServices = pkg?.parsedServices || [];
