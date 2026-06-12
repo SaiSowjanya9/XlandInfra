@@ -8,6 +8,7 @@ const WorkOrders = ({ admin }) => {
   const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'completed'
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [success, setSuccess] = useState('');
@@ -172,8 +173,12 @@ const WorkOrders = ({ admin }) => {
     return `Viewing all work orders (Admin Mode)`;
   };
 
-  // Filter by search
+  // Filter by search and status
   const filteredOrders = workOrders.filter(wo => {
+    // Status filter
+    if (statusFilter && wo.status !== statusFilter) return false;
+    
+    // Search filter
     if (!searchTerm) return true;
     const q = searchTerm.toLowerCase();
     return (
@@ -325,17 +330,39 @@ const WorkOrders = ({ admin }) => {
         </button>
       </div>
 
-      {/* Search */}
+      {/* Search & Filter */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input 
-            type="text" 
-            placeholder="Search by ID, title, property, or category..." 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex-1 relative min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Search by ID, title, property, or category..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
+          >
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="assigned">Assigned</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="closed">Closed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <button 
+            onClick={() => { setSearchTerm(''); setStatusFilter(''); }} 
+            className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Clear</span>
+          </button>
         </div>
       </div>
 

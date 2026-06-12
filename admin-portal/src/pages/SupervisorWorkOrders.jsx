@@ -700,7 +700,7 @@ const SupervisorWorkOrders = ({ user }) => {
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-500">{formatDate(wo.created_at)}</td>
                         <td className="py-4 px-4">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end">
                             <button
                               onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
                               className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -708,25 +708,6 @@ const SupervisorWorkOrders = ({ user }) => {
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            {/* Change Status Dropdown */}
-                            <select
-                              value={wo.status}
-                              onChange={(e) => {
-                                if (e.target.value === 'cancelled') {
-                                  setSelectedWorkOrder(wo);
-                                  setShowCancelModal(true);
-                                } else {
-                                  handleStatusChange(wo, e.target.value);
-                                }
-                              }}
-                              className="px-2 py-1 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="assigned">Assigned</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="completed">Completed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
                           </div>
                         </td>
                       </tr>

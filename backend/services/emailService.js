@@ -1539,9 +1539,15 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
     categoryName, subcategoryName, completedBy, completedByRole
   } = workOrderData;
 
+  // Send to both admin AND customer
+  const recipients = [NOTIFICATION_EMAIL];
+  if (customerEmail) {
+    recipients.push(customerEmail);
+  }
+
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
-    to: NOTIFICATION_EMAIL,
+    to: recipients.join(', '),
     subject: `✅ Work Order Completed - ${orderNumber || orderId}`,
     html: `
       <!DOCTYPE html>
