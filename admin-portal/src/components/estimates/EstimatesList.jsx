@@ -113,6 +113,8 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
     
     setTimeout(() => {
       try {
+        console.log('PDF Export - Full estimate:', estimate);
+        
         // Parse addons from multiple possible sources (same as FP portal)
         let addonsArray = [];
         if (estimate.addons && Array.isArray(estimate.addons) && estimate.addons.length > 0) {
@@ -122,31 +124,43 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
             const parsed = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
             if (Array.isArray(parsed)) addonsArray = parsed;
           } catch (e) { console.log('Addon parse error:', e); }
+        } else if (estimate.selected_addons) {
+          try {
+            const parsed = typeof estimate.selected_addons === 'string' ? JSON.parse(estimate.selected_addons) : estimate.selected_addons;
+            if (Array.isArray(parsed)) addonsArray = parsed;
+          } catch (e) { console.log('Selected addons parse error:', e); }
         }
         
-        // Parse AMC package services from backend
-        let servicesArray = [];
-        if (estimate.packageServices) {
+        // Parse package services from multiple sources (same as FP portal)
+        let packageServices = [];
+        
+        // Try services_data JSON string (contains package services)
+        if (estimate.services_data) {
+          try {
+            const parsed = typeof estimate.services_data === 'string' ? JSON.parse(estimate.services_data) : estimate.services_data;
+            if (parsed.serviceRows && Array.isArray(parsed.serviceRows)) {
+              packageServices = parsed.serviceRows;
+            } else if (Array.isArray(parsed)) {
+              packageServices = parsed;
+            }
+          } catch (e) { console.log('Services parse error:', e); }
+        }
+        // Try package_services
+        else if (estimate.package_services) {
+          try {
+            const parsed = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+            if (Array.isArray(parsed)) packageServices = parsed;
+          } catch (e) { console.log('Package services parse error:', e); }
+        }
+        // Try packageServices
+        else if (estimate.packageServices) {
           try {
             const parsed = typeof estimate.packageServices === 'string' ? JSON.parse(estimate.packageServices) : estimate.packageServices;
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              servicesArray = parsed.map(s => ({
-                name: s.service || s.name || 'Service',
-                frequencyCount: s.frequencyCount || s.frequency || 1,
-                frequencyType: s.frequencyType || 'Monthly'
-              }));
-            }
+            if (Array.isArray(parsed)) packageServices = parsed;
           } catch (e) { console.log('Package services parse error:', e); }
         }
         
-        // Fallback to package name if no services found
-        if (servicesArray.length === 0 && (estimate.packageName || estimate.package_name)) {
-          servicesArray = [{
-            name: estimate.packageName || estimate.package_name,
-            frequencyCount: 1,
-            frequencyType: 'Yearly'
-          }];
-        }
+        console.log('PDF Export - Package Services:', packageServices, 'Addons:', addonsArray);
         
         // Prepare estimate data for PDF (same mapping as FP portal)
         const pdfData = {
@@ -170,15 +184,23 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
           totalPrice: parseFloat(estimate.totalPrice || estimate.total || estimate.total_amount) || 0,
           discount: parseFloat(estimate.discount || estimate.discount_percent) || 0,
           description: estimate.description || estimate.notes || '',
-          services: servicesArray,
+          // Include package services with descriptions (same as FP portal)
+          packageServices: packageServices.map(s => ({
+            name: s.service || s.name || s.serviceName || 'Service',
+            frequencyCount: s.frequencyCount || s.frequency_count || s.frequency || 1,
+            frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
+            description: s.description || ''
+          })),
+          // Include addons with descriptions (same as FP portal)
           addons: addonsArray.map(a => ({
             name: a.name || a.service_name || a.serviceName || 'Add-on',
-            price: parseFloat(a.price) || 0,
             frequencyType: a.frequency_type || a.frequencyType || 'One-time',
-            frequency: a.frequency_count || a.frequencyCount || 1
+            frequencyCount: a.frequency_count || a.frequencyCount || 1,
+            description: a.description || ''
           }))
         };
         
+        console.log('PDF Data:', pdfData);
         const success = exportEstimateToPDF(pdfData);
         if (success) {
           showToast('PDF downloaded successfully!');

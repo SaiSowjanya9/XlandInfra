@@ -344,26 +344,28 @@ const generatePDF = (data, type, filename) => {
           freqType = freqType.replace(/^\d+x\s*/i, '');
           return [
             String(idx + 1),
-            String(s.name || s.service || 'Service') + (s.description ? `\n${s.description}` : ''),
+            String(s.name || s.service || 'Service'),
+            String(s.description || '-'),
             freqType,
             String(freqCount)
           ];
         })
-      : [['1', 'No services listed', '-', '-']];
+      : [['1', 'No services listed', '-', '-', '-']];
 
     autoTable(doc, {
       startY: y,
-      head: [['#', 'Service Description', 'Frequency', 'Visits']],
+      head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
       body: tableBody,
       margin: { left: margin, right: margin },
-      styles: { fontSize: 8, cellPadding: 3, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center' },
+      styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center' },
       headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
       bodyStyles: { textColor: darkText, lineColor: [100, 100, 100] },
       columnStyles: {
-        0: { cellWidth: 10 },
-        1: { cellWidth: 'auto', halign: 'left' },
-        2: { cellWidth: 25 },
-        3: { cellWidth: 20 }
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 35, halign: 'left' },
+        2: { cellWidth: 'auto', halign: 'left' },
+        3: { cellWidth: 22, halign: 'center' },
+        4: { cellWidth: 15, halign: 'center' }
       },
       alternateRowStyles: { fillColor: [252, 252, 253] }
     });
@@ -375,7 +377,7 @@ const generatePDF = (data, type, filename) => {
       doc.setTextColor(...navy);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('ADD-ONS', margin, y);
+      doc.text('ADD-ON SERVICES', margin, y);
       y += 5;
 
       const addonsBody = data.addons.map((a, idx) => {
@@ -385,7 +387,8 @@ const generatePDF = (data, type, filename) => {
         freqType = freqType.replace(/^\d+x\s*/i, '');
         return [
           String(idx + 1),
-          String(a.name || a.serviceName || a.service_name || 'Add-on') + (a.description ? `\n${a.description}` : ''),
+          String(a.name || a.serviceName || a.service_name || 'Add-on'),
+          String(a.description || '-'),
           freqType,
           String(freqCount)
         ];
@@ -393,17 +396,18 @@ const generatePDF = (data, type, filename) => {
 
       autoTable(doc, {
         startY: y,
-        head: [['#', 'Add-on Service', 'Frequency', 'Visits']],
+        head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
         body: addonsBody,
         margin: { left: margin, right: margin },
-        styles: { fontSize: 8, cellPadding: 3, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center' },
+        styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center' },
         headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
         bodyStyles: { textColor: darkText, lineColor: [100, 100, 100] },
         columnStyles: {
-          0: { cellWidth: 10 },
-          1: { cellWidth: 'auto', halign: 'left' },
-          2: { cellWidth: 25 },
-          3: { cellWidth: 20 }
+          0: { cellWidth: 8, halign: 'center' },
+          1: { cellWidth: 35, halign: 'left' },
+          2: { cellWidth: 'auto', halign: 'left' },
+          3: { cellWidth: 22, halign: 'center' },
+          4: { cellWidth: 15, halign: 'center' }
         },
         alternateRowStyles: { fillColor: [252, 252, 253] }
       });
@@ -411,7 +415,29 @@ const generatePDF = (data, type, filename) => {
       y = doc.lastAutoTable.finalY + 6;
     }
 
-    // ===== NOTES/DESCRIPTION (Before Total) =====
+    // ===== PRICE SUMMARY BOX =====
+    const total = parseFloat(data.totalPrice) || parseFloat(data.subtotal) || 0;
+    const totalBoxW = 75;
+    const totalBoxH = 12;
+    const totalBoxX = pageWidth - margin - totalBoxW;
+
+    if (y + totalBoxH + 25 > pageHeight) {
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.setFillColor(...navy);
+    doc.roundedRect(totalBoxX, y, totalBoxW, totalBoxH, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL', totalBoxX + 5, y + 8);
+    doc.setFontSize(10);
+    doc.text(formatCurrency(total), totalBoxX + totalBoxW - 5, y + 8, { align: 'right' });
+
+    y += totalBoxH + 8;
+
+    // ===== NOTES/DESCRIPTION (After Price Summary) =====
     if (data.description && data.description.trim()) {
       if (y + 30 > pageHeight - 25) {
         doc.addPage();
@@ -436,28 +462,6 @@ const generatePDF = (data, type, filename) => {
       doc.text(noteLines.slice(0, 8), margin + 4, y + 5);
       y += noteBoxH + 6;
     }
-
-    // ===== PRICE SUMMARY BOX =====
-    const total = parseFloat(data.totalPrice) || parseFloat(data.subtotal) || 0;
-    const totalBoxW = 75;
-    const totalBoxH = 12;
-    const totalBoxX = pageWidth - margin - totalBoxW;
-
-    if (y + totalBoxH + 25 > pageHeight) {
-      doc.addPage();
-      y = 20;
-    }
-
-    doc.setFillColor(...navy);
-    doc.roundedRect(totalBoxX, y, totalBoxW, totalBoxH, 2, 2, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL', totalBoxX + 5, y + 8);
-    doc.setFontSize(10);
-    doc.text(formatCurrency(total), totalBoxX + totalBoxW - 5, y + 8, { align: 'right' });
-
-    y += totalBoxH + 8;
 
     // ===== FOOTER =====
     const footerY = pageHeight - 12;
