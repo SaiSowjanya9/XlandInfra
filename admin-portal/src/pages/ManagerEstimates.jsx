@@ -1619,7 +1619,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
               {/* Created By */}
               <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
-                Created by: {viewEstimate.created_by_name || (viewEstimate.created_by_role ? viewEstimate.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')} {viewEstimate.created_by_name && viewEstimate.created_by_role ? `(${viewEstimate.created_by_role.replace(/_/g, ' ')})` : ''}
+                Created by: {viewEstimate.created_by_name || '-'}
               </div>
             </div>
           </div>

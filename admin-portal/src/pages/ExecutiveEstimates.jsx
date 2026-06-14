@@ -1136,7 +1136,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
               {/* Created By */}
               <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
-                Created by: {viewEstimate.created_by_name || '-'} ({viewEstimate.created_by_role?.replace('_', ' ') || '-'})
+                Created by: {viewEstimate.created_by_name || '-'}
               </div>
             </div>
           </div>
