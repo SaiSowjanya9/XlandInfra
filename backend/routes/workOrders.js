@@ -167,6 +167,18 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
           if (opData.length > 0) {
             propDetails = opData[0];
             franchisePartnerId = opData[0].franchise_partner_id;
+          } else {
+            // Try fp_properties table
+            const [fpPropData] = await pool.query(
+              `SELECT franchise_partner_id, name, property_type, zone_id as zone, division,
+                      address, city, state, contact_person, contact_phone, contact_email
+               FROM fp_properties WHERE id = ?`,
+              [propId]
+            );
+            if (fpPropData.length > 0) {
+              propDetails = fpPropData[0];
+              franchisePartnerId = fpPropData[0].franchise_partner_id;
+            }
           }
         }
         console.log('[WorkOrder] Property lookup - fpId:', franchisePartnerId, 'zone:', propDetails.zone);

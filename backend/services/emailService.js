@@ -1432,20 +1432,75 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
       <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Arial, sans-serif;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
           <!-- Header -->
-          <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
-            <h1 style="margin: 0; color: #fbbf24; font-size: 24px;">🔔 New Work Order Created</h1>
+          <div style="background: linear-gradient(135deg, #334155 0%, #1e293b 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+            <h1 style="margin: 0; color: #c9a227; font-size: 22px; font-weight: 600;">New Work Order Created</h1>
             <p style="margin: 10px 0 0 0; color: #94a3b8; font-size: 14px;">
-              Created from <span style="color: ${portalColors[createdFromPortal] || '#94a3b8'}; font-weight: bold;">${createdFromPortal}</span>
+              Created from <span style="color: ${portalColors[createdFromPortal] || '#94a3b8'}; font-weight: 600;">${createdFromPortal}</span>
             </p>
-            <p style="margin: 5px 0 0 0; color: #fbbf24; font-size: 18px; font-weight: bold;">${orderNumber || orderId}</p>
           </div>
           
           <!-- Content -->
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
             
-            <!-- Customer Info - First & Prominent -->
-            <div style="background: #eff6ff; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
-              <h2 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">� Customer Details</h2>
+            <!-- Work Order Details - First -->
+            <div style="background: #fafafa; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #c9a227;">
+              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">📋 Work Order Details</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b; width: 120px;">Order ID:</td>
+                  <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${orderNumber || orderId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Title:</td>
+                  <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${title || `Service Request - ${categoryName}`}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Category:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${categoryName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Subcategory:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${subcategoryName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Priority:</td>
+                  <td style="padding: 8px 0;">
+                    <span style="background: ${priorityColors[priority] || '#64748b'}; color: white; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                      ${(priority || 'MEDIUM').toUpperCase()}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Property Info -->
+            <div style="background: #f8faf8; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #6b7280;">
+              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">🏠 Property</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b; width: 120px;">Name:</td>
+                  <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${propertyName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Type:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${propertyType || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">ID:</td>
+                  <td style="padding: 8px 0; color: #64748b; font-family: monospace;">${propertyId || '-'}</td>
+                </tr>
+                ${fullAddress ? `
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Address:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${fullAddress}</td>
+                </tr>
+                ` : ''}
+              </table>
+            </div>
+            
+            <!-- Customer Info -->
+            <div style="background: #f8f9fc; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #6b7280;">
+              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">👤 Customer</h2>
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 0; color: #64748b; width: 120px;">Name:</td>
@@ -1462,102 +1517,36 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
               </table>
             </div>
             
-            <!-- Property Info -->
-            <div style="background: #f0fdf4; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #22c55e;">
-              <h2 style="margin: 0 0 15px 0; color: #166534; font-size: 18px;">🏠 Property Details</h2>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b; width: 120px;">Property:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold; font-size: 16px;">${propertyName || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Type:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${propertyType || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Property ID:</td>
-                  <td style="padding: 8px 0; color: #64748b; font-family: monospace;">${propertyId || '-'}</td>
-                </tr>
-                ${fullAddress ? `
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Address:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${fullAddress}</td>
-                </tr>
-                ` : ''}
-              </table>
-            </div>
-            
-            <!-- Work Order Details -->
-            <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #fbbf24;">
-              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px;">
-                📋 Work Order Details
-              </h2>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b; width: 140px;">Order ID:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold;">${orderNumber || orderId}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Category:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold;">${categoryName || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Subcategory:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${subcategoryName || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Priority:</td>
-                  <td style="padding: 8px 0;">
-                    <span style="background: ${priorityColors[priority] || '#64748b'}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">
-                      ${(priority || 'MEDIUM').toUpperCase()}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Permission to Enter:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${permissionToEnter === 'yes' ? '✅ Yes' : '❌ No'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Has Pet:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${hasPet === 'yes' ? '🐾 Yes' : 'No'}</td>
-                </tr>
-              </table>
-            </div>
-            
             <!-- Description -->
             ${description ? `
-            <div style="background: #fefce8; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #eab308;">
-              <h2 style="margin: 0 0 10px 0; color: #854d0e; font-size: 18px;">📝 Description</h2>
-              <p style="margin: 0; color: #1e293b; line-height: 1.6; white-space: pre-wrap;">${description}</p>
+            <div style="background: #fafafa; border-radius: 8px; padding: 16px; margin-bottom: 16px; border-left: 4px solid #9ca3af;">
+              <h2 style="margin: 0 0 10px 0; color: #1e293b; font-size: 14px; font-weight: 600;">📝 Description</h2>
+              <p style="margin: 0; color: #374151; line-height: 1.5; font-size: 14px;">${description}</p>
             </div>
             ` : ''}
             
             <!-- Entry Notes -->
             ${entryNotes ? `
-            <div style="background: #fef2f2; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #ef4444;">
-              <h2 style="margin: 0 0 10px 0; color: #991b1b; font-size: 18px;">⚠️ Entry Notes</h2>
-              <p style="margin: 0; color: #1e293b; line-height: 1.6;">${entryNotes}</p>
+            <div style="background: #fef2f2; border-radius: 8px; padding: 16px; margin-bottom: 16px; border-left: 4px solid #f87171;">
+              <h2 style="margin: 0 0 10px 0; color: #991b1b; font-size: 14px; font-weight: 600;">⚠️ Entry Notes</h2>
+              <p style="margin: 0; color: #374151; line-height: 1.5; font-size: 14px;">${entryNotes}</p>
             </div>
             ` : ''}
             
             <!-- Created By -->
-            <div style="background: #f1f5f9; border-radius: 12px; padding: 15px; text-align: center;">
-              <p style="margin: 0; color: #64748b; font-size: 14px;">
+            <div style="background: #f1f5f9; border-radius: 8px; padding: 12px; text-align: center; margin-top: 20px;">
+              <p style="margin: 0; color: #64748b; font-size: 13px;">
                 Created by <strong style="color: #1e293b;">${createdBy || 'System'}</strong>
-                ${createdByRole ? `(${createdByRole})` : ''}
               </p>
-              <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">
+              <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 12px;">
                 ${new Date().toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}
               </p>
             </div>
           </div>
           
           <!-- Footer -->
-          <div style="background: #1e293b; padding: 20px; border-radius: 0 0 16px 16px; text-align: center;">
-            <p style="margin: 0; color: #fbbf24; font-size: 14px; font-weight: bold;">
-              Action Required: Assign this work order to a vendor
-            </p>
-            <p style="margin: 10px 0 0 0; color: #94a3b8; font-size: 12px;">
+          <div style="background: #334155; padding: 16px; border-radius: 0 0 12px 12px; text-align: center;">
+            <p style="margin: 0; color: #e2e8f0; font-size: 12px;">
               XLAND INFRA Private Limited | Automated Notification
             </p>
           </div>
