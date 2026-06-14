@@ -33,11 +33,14 @@ setTimeout(() => initContactTable(), 2000);
 
 // Submit contact form
 router.post('/', async (req, res) => {
+  console.log('📝 Contact form submission received:', { name: req.body.name, email: req.body.email, phone: req.body.phone });
+  
   try {
     const { name, email, phone, message } = req.body;
 
     // Validate required fields
     if (!name || !email || !message) {
+      console.log('❌ Contact form validation failed - missing fields');
       return res.status(400).json({
         success: false,
         message: 'Name, email, and message are required'
