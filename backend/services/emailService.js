@@ -1391,8 +1391,10 @@ const sendVendorAssignmentEmail = async (vendorEmail, vendorName, property) => {
 const sendWorkOrderCreatedNotification = async (workOrderData) => {
   const {
     orderId, orderNumber, title, propertyName, propertyId,
+    propertyType, propertyAddress, propertyCity, propertyState,
     customerName, customerEmail, customerPhone,
     categoryName, subcategoryName, priority, description,
+    permissionToEnter, hasPet, entryNotes,
     createdBy, createdByRole, createdFromPortal
   } = workOrderData;
 
@@ -1410,10 +1412,19 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
     'FP Portal': '#f59e0b'
   };
 
+  // Build full address
+  const fullAddress = [propertyAddress, propertyCity, propertyState].filter(Boolean).join(', ');
+
+  // Send to both admin (info@) AND customer
+  const recipients = [NOTIFICATION_EMAIL];
+  if (customerEmail) {
+    recipients.push(customerEmail);
+  }
+
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
-    to: NOTIFICATION_EMAIL,
-    subject: `🔔 New Work Order Created - ${orderNumber || orderId}`,
+    to: recipients.join(', '),
+    subject: `🔔 Work Order Created - ${orderNumber || orderId} | ${propertyName || 'Service Request'}`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -1422,17 +1433,63 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
-            <h1 style="margin: 0; color: #fbbf24; font-size: 24px;">New Work Order Created</h1>
+            <h1 style="margin: 0; color: #fbbf24; font-size: 24px;">🔔 New Work Order Created</h1>
             <p style="margin: 10px 0 0 0; color: #94a3b8; font-size: 14px;">
               Created from <span style="color: ${portalColors[createdFromPortal] || '#94a3b8'}; font-weight: bold;">${createdFromPortal}</span>
             </p>
+            <p style="margin: 5px 0 0 0; color: #fbbf24; font-size: 18px; font-weight: bold;">${orderNumber || orderId}</p>
           </div>
           
           <!-- Content -->
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-            <!-- Order Info -->
-            <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px; border-bottom: 2px solid #fbbf24; padding-bottom: 10px;">
+            
+            <!-- Customer Info - First & Prominent -->
+            <div style="background: #eff6ff; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+              <h2 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">� Customer Details</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b; width: 120px;">Name:</td>
+                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold; font-size: 16px;">${customerName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Email:</td>
+                  <td style="padding: 8px 0; color: #1e293b;"><a href="mailto:${customerEmail}" style="color: #3b82f6;">${customerEmail || '-'}</a></td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Phone:</td>
+                  <td style="padding: 8px 0; color: #1e293b;"><a href="tel:${customerPhone}" style="color: #3b82f6; font-weight: bold;">${customerPhone || '-'}</a></td>
+                </tr>
+              </table>
+            </div>
+            
+            <!-- Property Info -->
+            <div style="background: #f0fdf4; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #22c55e;">
+              <h2 style="margin: 0 0 15px 0; color: #166534; font-size: 18px;">🏠 Property Details</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b; width: 120px;">Property:</td>
+                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold; font-size: 16px;">${propertyName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Type:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${propertyType || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Property ID:</td>
+                  <td style="padding: 8px 0; color: #64748b; font-family: monospace;">${propertyId || '-'}</td>
+                </tr>
+                ${fullAddress ? `
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Address:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${fullAddress}</td>
+                </tr>
+                ` : ''}
+              </table>
+            </div>
+            
+            <!-- Work Order Details -->
+            <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #fbbf24;">
+              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px;">
                 📋 Work Order Details
               </h2>
               <table style="width: 100%; border-collapse: collapse;">
@@ -1441,12 +1498,8 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
                   <td style="padding: 8px 0; color: #1e293b; font-weight: bold;">${orderNumber || orderId}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Title:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${title || 'Service Request'}</td>
-                </tr>
-                <tr>
                   <td style="padding: 8px 0; color: #64748b;">Category:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${categoryName || '-'}</td>
+                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold;">${categoryName || '-'}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #64748b;">Subcategory:</td>
@@ -1460,40 +1513,30 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
                     </span>
                   </td>
                 </tr>
-              </table>
-            </div>
-            
-            <!-- Property Info -->
-            <div style="background: #f0fdf4; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-              <h2 style="margin: 0 0 15px 0; color: #166534; font-size: 18px;">🏠 Property</h2>
-              <p style="margin: 0; color: #1e293b; font-size: 16px; font-weight: bold;">${propertyName || '-'}</p>
-              <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">ID: ${propertyId || '-'}</p>
-            </div>
-            
-            <!-- Customer Info -->
-            <div style="background: #eff6ff; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-              <h2 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">👤 Customer</h2>
-              <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                  <td style="padding: 5px 0; color: #64748b;">Name:</td>
-                  <td style="padding: 5px 0; color: #1e293b; font-weight: bold;">${customerName || '-'}</td>
+                  <td style="padding: 8px 0; color: #64748b;">Permission to Enter:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${permissionToEnter === 'yes' ? '✅ Yes' : '❌ No'}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 5px 0; color: #64748b;">Email:</td>
-                  <td style="padding: 5px 0; color: #1e293b;">${customerEmail || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #64748b;">Phone:</td>
-                  <td style="padding: 5px 0; color: #1e293b;">${customerPhone || '-'}</td>
+                  <td style="padding: 8px 0; color: #64748b;">Has Pet:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${hasPet === 'yes' ? '🐾 Yes' : 'No'}</td>
                 </tr>
               </table>
             </div>
             
             <!-- Description -->
             ${description ? `
-            <div style="background: #fefce8; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <div style="background: #fefce8; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #eab308;">
               <h2 style="margin: 0 0 10px 0; color: #854d0e; font-size: 18px;">📝 Description</h2>
-              <p style="margin: 0; color: #1e293b; line-height: 1.6;">${description}</p>
+              <p style="margin: 0; color: #1e293b; line-height: 1.6; white-space: pre-wrap;">${description}</p>
+            </div>
+            ` : ''}
+            
+            <!-- Entry Notes -->
+            ${entryNotes ? `
+            <div style="background: #fef2f2; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #ef4444;">
+              <h2 style="margin: 0 0 10px 0; color: #991b1b; font-size: 18px;">⚠️ Entry Notes</h2>
+              <p style="margin: 0; color: #1e293b; line-height: 1.6;">${entryNotes}</p>
             </div>
             ` : ''}
             
@@ -1511,7 +1554,10 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
           
           <!-- Footer -->
           <div style="background: #1e293b; padding: 20px; border-radius: 0 0 16px 16px; text-align: center;">
-            <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+            <p style="margin: 0; color: #fbbf24; font-size: 14px; font-weight: bold;">
+              Action Required: Assign this work order to a vendor
+            </p>
+            <p style="margin: 10px 0 0 0; color: #94a3b8; font-size: 12px;">
               XLAND INFRA Private Limited | Automated Notification
             </p>
           </div>
@@ -1523,7 +1569,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`📧 Work order creation notification sent for ${orderNumber || orderId}`);
+    console.log(`📧 Work order creation notification sent for ${orderNumber || orderId} to: ${recipients.join(', ')}`);
     return { success: true };
   } catch (error) {
     console.error('Error sending work order notification:', error.message);
