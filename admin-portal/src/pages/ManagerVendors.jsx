@@ -47,9 +47,7 @@ const ManagerVendors = ({ user }) => {
     address: '',
     city: '',
     state: '',
-    zipCode: '',
-    gstNumber: '',
-    panNumber: ''
+    zipCode: ''
   });
 
   // Service type tabs config
@@ -178,9 +176,7 @@ const ManagerVendors = ({ user }) => {
       address: vendor.address || '',
       city: vendor.city || '',
       state: vendor.state || '',
-      zipCode: vendor.zip_code || '',
-      gstNumber: vendor.gst_number || '',
-      panNumber: vendor.pan_number || ''
+      zipCode: vendor.zip_code || ''
     });
     setShowModal(true);
   };
@@ -196,9 +192,7 @@ const ManagerVendors = ({ user }) => {
       address: '',
       city: '',
       state: '',
-      zipCode: '',
-      gstNumber: '',
-      panNumber: ''
+      zipCode: ''
     });
   };
 
@@ -535,35 +529,6 @@ const ManagerVendors = ({ user }) => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
-                  <input
-                    type="text"
-                    value={formData.gstNumber}
-                    onChange={(e) => {
-                      const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                      if (value.length <= 15) {
-                        setFormData({ ...formData, gstNumber: value });
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="22AAAAA0000A1Z5"
-                    maxLength={15}
-                  />
-                  {formData.gstNumber && formData.gstNumber.length !== 15 && (
-                    <p className="text-xs text-red-500 mt-1">GST must be 15 characters</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">PAN Number</label>
-                  <input
-                    type="text"
-                    value={formData.panNumber}
-                    onChange={(e) => setFormData({ ...formData, panNumber: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
