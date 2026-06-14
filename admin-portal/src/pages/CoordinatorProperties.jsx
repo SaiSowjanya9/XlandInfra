@@ -311,29 +311,42 @@ const CoordinatorProperties = ({ user }) => {
   // Property type tabs
   const tabs = [
     { id: 'all', label: 'All Customers', icon: Users },
-    { id: 'gated_community', label: 'Gated Communities', icon: Grid3X3 },
-    { id: 'apartment', label: 'Apartments', icon: Building },
-    { id: 'villa', label: 'Villas', icon: Home },
-    { id: 'plot', label: 'Plots', icon: LayoutGrid },
-    { id: 'flat', label: 'Flats', icon: Landmark }
+    { id: 'GC', label: 'Gated Communities', icon: Grid3X3 },
+    { id: 'APT', label: 'Apartments', icon: Building },
+    { id: 'VILLA', label: 'Villas', icon: Home },
+    { id: 'PLOT', label: 'Plots', icon: LayoutGrid },
+    { id: 'FLAT', label: 'Flats', icon: Landmark }
   ];
+
+  // Helper to normalize property type for consistent filtering
+  const normalizePropertyType = (type) => {
+    if (!type) return '';
+    const upper = type.toUpperCase().replace(/[_\s-]/g, '');
+    if (upper === 'GC' || upper.includes('GATED')) return 'GC';
+    if (upper === 'APT' || upper.includes('APARTMENT')) return 'APT';
+    if (upper === 'VILLA' || upper === 'VILLAS') return 'VILLA';
+    if (upper === 'FLAT' || upper === 'FLATS') return 'FLAT';
+    if (upper === 'PLOT' || upper === 'PLOTS') return 'PLOT';
+    return upper;
+  };
 
   // Get type badge color
   const getTypeBadgeColor = (type) => {
+    const normalized = normalizePropertyType(type);
     const colors = {
-      'apartment': 'bg-blue-100 text-blue-700',
-      'gated_community': 'bg-teal-100 text-teal-700',
-      'villa': 'bg-amber-100 text-amber-700',
-      'plot': 'bg-purple-100 text-purple-700',
-      'flat': 'bg-pink-100 text-pink-700'
+      'APT': 'bg-blue-100 text-blue-700',
+      'GC': 'bg-teal-100 text-teal-700',
+      'VILLA': 'bg-amber-100 text-amber-700',
+      'PLOT': 'bg-purple-100 text-purple-700',
+      'FLAT': 'bg-pink-100 text-pink-700'
     };
-    return colors[type] || 'bg-gray-100 text-gray-700';
+    return colors[normalized] || 'bg-gray-100 text-gray-700';
   };
 
   // Filter properties
   const filteredProperties = properties.filter(p => {
     // Tab filter
-    if (activeTab !== 'all' && p.property_type !== activeTab) return false;
+    if (activeTab !== 'all' && normalizePropertyType(p.property_type) !== activeTab) return false;
     
     // Search filter
     if (searchTerm) {
@@ -362,7 +375,7 @@ const CoordinatorProperties = ({ user }) => {
   // Count properties by type
   const getTypeCount = (type) => {
     if (type === 'all') return properties.length;
-    return properties.filter(p => p.property_type === type).length;
+    return properties.filter(p => normalizePropertyType(p.property_type) === type).length;
   };
 
   // Get unique divisions from properties

@@ -195,7 +195,7 @@ router.post('/', authenticate, canMakeEstimate, async (req, res) => {
       subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
     }
 
-    const taxPct = taxPercentage || 18;
+    const taxPct = taxPercentage !== undefined && taxPercentage !== null && taxPercentage !== '' ? parseFloat(taxPercentage) : 0;
     const discountPct = discountPercentage || 0;
     const taxAmount = subtotal * (taxPct / 100);
     const discountAmount = subtotal * (discountPct / 100);
@@ -286,7 +286,7 @@ router.put('/:id', authenticate, canMakeEstimate, async (req, res) => {
       subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
     }
 
-    const taxPct = taxPercentage || 18;
+    const taxPct = taxPercentage !== undefined && taxPercentage !== null && taxPercentage !== '' ? parseFloat(taxPercentage) : 0;
     const discountPct = discountPercentage || 0;
     const taxAmount = subtotal * (taxPct / 100);
     const discountAmount = subtotal * (discountPct / 100);

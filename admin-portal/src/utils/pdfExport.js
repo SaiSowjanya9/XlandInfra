@@ -8,6 +8,43 @@ const isDev = import.meta.env.DEV;
 const debug = (...args) => isDev && console.log(...args);
 
 const GST_RATE = 0.18;
+
+// Detect iOS devices (iPhone, iPad, iPod)
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
+
+// Cross-platform PDF save function - handles iOS Safari limitations
+const savePDFCrossPlatform = (doc, filename) => {
+  if (isIOS()) {
+    // iOS Safari doesn't support direct download via doc.save()
+    // Open PDF in new tab where user can share/save
+    const pdfBlob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    
+    // Open in new tab - iOS will show native PDF viewer with share options
+    const newWindow = window.open(blobUrl, '_blank');
+    
+    // If popup blocked, try alternative approach
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      // Create a link and simulate click for in-app browsers
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    // Clean up blob URL after delay to allow download
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  } else {
+    // Standard download for desktop and Android
+    doc.save(filename);
+  }
+};
 let isExporting = false;
 
 // Format currency with proper Indian formatting
@@ -474,7 +511,7 @@ const generatePDF = (data, type, filename) => {
     doc.setFont('helvetica', 'normal');
     doc.text('XLAND INFRA | This is a computer-generated document.', pageWidth / 2, footerY, { align: 'center' });
 
-    doc.save(filename);
+    savePDFCrossPlatform(doc, filename);
     return true;
   } catch (error) {
     console.error('[PDF] Error:', error);

@@ -182,7 +182,7 @@ const generateEstimatePDF = async (estimate) => {
         doc.text(`-Rs. ${Number(discountAmount || 0).toLocaleString()}`, 450, y + 25);
       }
       
-      doc.fillColor('#666666').text(`GST (${gstPercent || 18}%):`, 60, y + 40);
+      doc.fillColor('#666666').text(`GST (${gstPercent ?? 0}%):`, 60, y + 40);
       doc.fillColor('#333333').text(`Rs. ${Number(tax || 0).toLocaleString()}`, 450, y + 40);
       
       // Total line

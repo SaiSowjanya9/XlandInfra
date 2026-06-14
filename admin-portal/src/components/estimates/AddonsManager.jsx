@@ -8,11 +8,23 @@ import {
 // Property Type options for Add-ons (simple style matching other sections)
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
-  { id: 'Apt', label: 'Apartment' },
-  { id: 'Villa', label: 'Villa' },
-  { id: 'Flat', label: 'Flat' },
-  { id: 'Plot', label: 'Plot' },
+  { id: 'APT', label: 'Apartment' },
+  { id: 'VILLA', label: 'Villa' },
+  { id: 'FLAT', label: 'Flat' },
+  { id: 'PLOT', label: 'Plot' },
 ];
+
+// Helper to normalize property type for consistent filtering
+const normalizePropertyType = (type) => {
+  if (!type) return '';
+  const upper = type.toUpperCase();
+  if (upper === 'GC' || upper.includes('GATED')) return 'GC';
+  if (upper === 'APT' || upper.includes('APARTMENT')) return 'APT';
+  if (upper === 'VILLA') return 'VILLA';
+  if (upper === 'FLAT') return 'FLAT';
+  if (upper === 'PLOT') return 'PLOT';
+  return upper;
+};
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -513,7 +525,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 <p className="text-sm text-gray-500">
                   {filterPropertyType === 'all' 
                     ? `${addons.length} add-on(s) available` 
-                    : `${addons.filter(a => a.propertyType === filterPropertyType).length} add-on(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
+                    : `${addons.filter(a => normalizePropertyType(a.propertyType) === filterPropertyType).length} add-on(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
                 </p>
               </div>
             </div>
@@ -564,7 +576,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               {(() => {
                 const filteredAddons = filterPropertyType === 'all' 
                   ? addons 
-                  : addons.filter(a => a.propertyType === filterPropertyType);
+                  : addons.filter(a => normalizePropertyType(a.propertyType) === filterPropertyType);
                 
                 if (filteredAddons.length === 0) {
                   return (

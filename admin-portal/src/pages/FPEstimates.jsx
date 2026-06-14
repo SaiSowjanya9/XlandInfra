@@ -11,10 +11,10 @@ import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
-  { id: 'Apt', label: 'Apartment' },
-  { id: 'Villa', label: 'Villa' },
-  { id: 'Flat', label: 'Flat' },
-  { id: 'Plot', label: 'Plot' },
+  { id: 'APT', label: 'Apartment' },
+  { id: 'VILLA', label: 'Villa' },
+  { id: 'FLAT', label: 'Flat' },
+  { id: 'PLOT', label: 'Plot' },
 ];
 
 const BILLING_DURATIONS = [
@@ -69,6 +69,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [viewEstimate, setViewEstimate] = useState(null);
   const [viewAmcPackage, setViewAmcPackage] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [sendingEmailId, setSendingEmailId] = useState(null); // Track which estimate email is being sent
   
   // FP Portal Links state
   const [portalLinks, setPortalLinks] = useState([]);
@@ -244,14 +245,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // Helper to normalize property type to match PROPERTY_TYPE_OPTIONS IDs
   const normalizePropertyType = (type) => {
     if (!type) return '';
-    const upper = type.toUpperCase();
+    const upper = type.toUpperCase().replace(/[_\s-]/g, '');
     // Map full names to short codes (matching PROPERTY_TYPE_OPTIONS IDs)
     if (upper.includes('GATED') || upper === 'GC') return 'GC';
-    if (upper.includes('APARTMENT') || upper === 'APT') return 'Apt';
-    if (upper.includes('VILLA')) return 'Villa';
-    if (upper.includes('FLAT')) return 'Flat';
-    if (upper.includes('PLOT')) return 'Plot';
-    return type;
+    if (upper.includes('APARTMENT') || upper === 'APT') return 'APT';
+    if (upper === 'VILLA' || upper === 'VILLAS') return 'VILLA';
+    if (upper === 'FLAT' || upper === 'FLATS') return 'FLAT';
+    if (upper === 'PLOT' || upper === 'PLOTS') return 'PLOT';
+    return upper;
   };
 
   // Helper to get property type label
@@ -387,13 +388,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     exportEstimateToPDF(pdfData);
   };
 
-  // Send email with estimate
+  // Send email with estimate - with guard against double sending
   const handleSendEmail = async (estimate) => {
+    // Prevent double sending
+    if (sendingEmailId === estimate.id) {
+      console.log('Email already being sent for this estimate');
+      return;
+    }
+    
     const clientEmail = estimate.client_email;
     if (!clientEmail) {
       showToast('No email address found for this client', 'error');
       return;
     }
+    
+    setSendingEmailId(estimate.id);
+    
     try {
       const res = await fetch('/api/fp/estimates/send-email', {
         method: 'POST',
@@ -409,6 +419,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     } catch (e) {
       console.error('Send email error:', e);
       showToast('Failed to send email', 'error');
+    } finally {
+      setSendingEmailId(null);
     }
   };
 
@@ -922,20 +934,20 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
             <div className="p-6">
               <div className="grid grid-cols-3 gap-4">
-                <div>
+                <div className="min-w-0">
                   <label className="block text-sm font-medium text-slate-600 mb-1.5">Customer Name <span className="text-red-500">*</span></label>
                   <input type="text" placeholder="Enter customer name" value={estimateForm.customerName} onChange={(e) => setEstimateForm({...estimateForm, customerName: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="block text-sm font-medium text-slate-600 mb-1.5">Phone <span className="text-red-500">*</span></label>
-                  <div className="flex">
-                    <select className="px-2 py-2.5 border border-gray-300 border-r-0 rounded-l-lg text-sm bg-gray-50">
+                  <div className="flex w-full">
+                    <select className="shrink-0 px-2 py-2.5 border border-gray-300 border-r-0 rounded-l-lg text-sm bg-gray-50">
                       <option>+91</option>
                     </select>
-                    <input type="tel" placeholder="10-digit phone number" value={estimateForm.phone} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setEstimateForm({...estimateForm, phone: val}); }} className="flex-1 px-3 py-2.5 border border-gray-300 rounded-r-lg text-sm" />
+                    <input type="tel" placeholder="10-digit phone number" value={estimateForm.phone} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setEstimateForm({...estimateForm, phone: val}); }} className="min-w-0 flex-1 px-3 py-2.5 border border-gray-300 rounded-r-lg text-sm" />
                   </div>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="block text-sm font-medium text-slate-600 mb-1.5">Email</label>
                   <input type="email" placeholder="Enter email address" value={estimateForm.email} onChange={(e) => setEstimateForm({...estimateForm, email: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
                 </div>
@@ -1261,7 +1273,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       )}
 
-      {/* FP Portal Links Section */}
+      {/* FP Portal Links Section - Only show when estimate type is not selected */}
+      {!estimateType && (
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-6">
         <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
@@ -1496,6 +1509,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           Links shared here will be visible to all employees assigned to you. Maximum 2 links allowed.
         </div>
       </div>
+      )}
     </div>
   );
 
@@ -1645,7 +1659,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="View"><Eye className="w-4 h-4" /></button>
                         <button onClick={() => handleExportPDF(est)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button>
-                        <button onClick={() => handleSendEmail(est)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded" title="Send Email"><Send className="w-4 h-4" /></button>
+                        <button onClick={() => handleSendEmail(est)} disabled={sendingEmailId === est.id} className={`p-1.5 rounded ${sendingEmailId === est.id ? 'text-indigo-400 cursor-wait' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`} title="Send Email"><Send className={`w-4 h-4 ${sendingEmailId === est.id ? 'animate-pulse' : ''}`} /></button>
                         <button onClick={() => handleArchiveEstimate(est.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
@@ -1659,8 +1673,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     </div>
   );
 
-  // AMC PACKAGES
-  const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType));
+  // AMC PACKAGES - Use getPkgPropertyType to correctly extract property type from services JSON
+  const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => getPkgPropertyType(p) === filterPropertyType);
   const handleSaveAmcPackage = async () => {
     if (!amcForm.packageName.trim()) { showToast('Enter package name', 'error'); return; }
     if (!selectedPropertyType) { showToast('Select property type', 'error'); return; }
@@ -2165,8 +2179,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     </div>
   );
 
-  // ADDONS
-  const filteredAddons = addonFilterPropertyType === 'all' ? addons : addons.filter(a => matchPropertyType(a.property_type, addonFilterPropertyType));
+  // ADDONS - Use normalizePropertyType for consistent filtering
+  const filteredAddons = addonFilterPropertyType === 'all' ? addons : addons.filter(a => normalizePropertyType(a.property_type) === addonFilterPropertyType);
   const handleSaveAddon = async () => {
     if (!addonSelectedPropertyType) { showToast('Select property type', 'error'); return; }
     if (!addonForm.serviceName.trim()) { showToast('Enter service name', 'error'); return; }
@@ -2339,13 +2353,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {addonSelectedPropertyType && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h3 className="text-base font-semibold text-gray-800 mb-1">Add-ons for {PROPERTY_TYPE_OPTIONS.find(t => t.id === addonSelectedPropertyType)?.label}</h3>
-              <p className="text-sm text-gray-500 mb-4">{addons.filter(a => a.property_type === addonSelectedPropertyType).length} add-on(s) available</p>
+              <p className="text-sm text-gray-500 mb-4">{addons.filter(a => normalizePropertyType(a.property_type) === addonSelectedPropertyType).length} add-on(s) available</p>
               
-              {addons.filter(a => a.property_type === addonSelectedPropertyType).length === 0 ? (
+              {addons.filter(a => normalizePropertyType(a.property_type) === addonSelectedPropertyType).length === 0 ? (
                 <div className="py-8 text-center text-gray-400">No add-ons created yet for this property type</div>
               ) : (
                 <div className="space-y-3">
-                  {addons.filter(a => a.property_type === addonSelectedPropertyType).map(a => (
+                  {addons.filter(a => normalizePropertyType(a.property_type) === addonSelectedPropertyType).map(a => (
                     <div key={a.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">

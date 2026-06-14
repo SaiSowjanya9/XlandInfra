@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { seedTestData } from './utils/estimateStore';
 
 import PortalSelector from './pages/PortalSelector';
 import EmployeeLogin from './pages/EmployeeLogin';
@@ -111,8 +110,7 @@ function App() {
   };
 
   useEffect(() => {
-    // Initialize seed data once on app load (only creates if none exists)
-    seedTestData();
+    // NOTE: seedTestData() removed - no seed data in production
     
     try {
       // Check if session is still valid (not expired)

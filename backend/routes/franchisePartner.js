@@ -184,8 +184,8 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       // Properties count
       safeCount('SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ? AND (status IS NULL OR status != \'deleted\')', [fpId]),
       
-      // Vendors count
-      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ?', [fpId]),
+      // Vendors count - match the vendor details query, exclude seed data
+      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE (franchise_partner_id = ? OR franchise_partner_id IS NULL) AND vendor_id NOT LIKE \'%SEED%\'', [fpId]),
       
       // Customers count
       safeCount('SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?', [fpId]),
@@ -1471,6 +1471,7 @@ router.get('/vendors', requireFPScope, async (req, res) => {
        FROM onboarded_vendors ov
        LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
        WHERE (ov.franchise_partner_id = ? OR ov.franchise_partner_id IS NULL)
+         AND ov.vendor_id NOT LIKE '%SEED%'
        ORDER BY ov.created_at DESC`,
       [req.fpId]
     );
@@ -2953,7 +2954,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
         subtotal DECIMAL(12,2) DEFAULT 0.00,
         discount_percent DECIMAL(5,2) DEFAULT 0.00,
         discount_amount DECIMAL(12,2) DEFAULT 0.00,
-        gst_percent DECIMAL(5,2) DEFAULT 18.00,
+        gst_percent DECIMAL(5,2) DEFAULT 0.00,
         gst_amount DECIMAL(12,2) DEFAULT 0.00,
         total_amount DECIMAL(12,2) DEFAULT 0.00,
         addons_data JSON,
@@ -3149,7 +3150,7 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         subtotal DECIMAL(12,2) DEFAULT 0.00,
         discount_percent DECIMAL(5,2) DEFAULT 0.00,
         discount_amount DECIMAL(12,2) DEFAULT 0.00,
-        gst_percent DECIMAL(5,2) DEFAULT 18.00,
+        gst_percent DECIMAL(5,2) DEFAULT 0.00,
         gst_amount DECIMAL(12,2) DEFAULT 0.00,
         total_amount DECIMAL(12,2) DEFAULT 0.00,
         addons_data JSON,
@@ -3195,10 +3196,10 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         : req.user?.name || creatorName;
     }
     
-    // Calculate amounts
+    // Calculate amounts - use ?? to allow 0 values (|| would default 0 to fallback)
     const finalSubtotal = parseFloat(subtotal) || 0;
-    const finalGstPercent = parseFloat(gst_percent) || 18;
-    const finalGstAmount = parseFloat(gst_amount) || (finalSubtotal * finalGstPercent / 100);
+    const finalGstPercent = gst_percent !== undefined && gst_percent !== null && gst_percent !== '' ? parseFloat(gst_percent) : 0;
+    const finalGstAmount = gst_amount !== undefined && gst_amount !== null ? parseFloat(gst_amount) : (finalSubtotal * finalGstPercent / 100);
     const finalDiscountPercent = parseFloat(discount_percent) || 0;
     const finalDiscountAmount = parseFloat(discount_amount) || (finalSubtotal * finalDiscountPercent / 100);
     const finalTotal = parseFloat(total_amount) || (finalSubtotal - finalDiscountAmount + finalGstAmount);
@@ -3407,7 +3408,7 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         discount: parseFloat(estimate.discount_percent) || 0,
         discountAmount: parseFloat(estimate.discount_amount) || 0,
         tax: parseFloat(estimate.gst_amount) || 0,
-        gstPercent: parseFloat(estimate.gst_percent) || 18,
+        gstPercent: estimate.gst_percent !== null ? parseFloat(estimate.gst_percent) : 0,
         total: parseFloat(estimate.total_amount) || 0,
         validUntil: estimate.valid_until,
         createdAt: estimate.created_at

@@ -58,6 +58,18 @@ const TYPE_STYLES = {
 
 const TYPE_LABELS = { GC: 'Gated Community', APT: 'Apartment', VILLA: 'Villa', PLOT: 'Plot', FLAT: 'Flat' };
 
+// Helper to normalize property type for consistent filtering
+const normalizePropertyType = (type) => {
+  if (!type) return '';
+  const upper = type.toUpperCase().replace(/[_\s-]/g, '');
+  if (upper === 'GC' || upper.includes('GATED')) return 'GC';
+  if (upper === 'APT' || upper.includes('APARTMENT')) return 'APT';
+  if (upper === 'VILLA' || upper === 'VILLAS') return 'VILLA';
+  if (upper === 'FLAT' || upper === 'FLATS') return 'FLAT';
+  if (upper === 'PLOT' || upper === 'PLOTS') return 'PLOT';
+  return upper;
+};
+
 const CustomerSubmissions = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [properties, setProperties] = useState([]);
@@ -465,7 +477,7 @@ const CustomerSubmissions = () => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredProperties = properties.filter(p => {
-    if (activeTab !== 'all' && p.entryType !== activeTab) return false;
+    if (activeTab !== 'all' && normalizePropertyType(p.entryType) !== activeTab) return false;
     if (divisionFilter && p.division !== divisionFilter) return false;
     if (zoneFilter && p.zone !== zoneFilter) return false;
     if (searchTerm) {
@@ -484,8 +496,8 @@ const CustomerSubmissions = () => {
   // Stats per type
   const statsByType = TABS.filter(t => t.id !== 'all').map(tab => ({
     ...tab,
-    count: properties.filter(p => p.entryType === tab.id).length,
-    units: properties.filter(p => p.entryType === tab.id).reduce((sum, p) => sum + (p.totalUnits || 0), 0)
+    count: properties.filter(p => normalizePropertyType(p.entryType) === tab.id).length,
+    units: properties.filter(p => normalizePropertyType(p.entryType) === tab.id).reduce((sum, p) => sum + (p.totalUnits || 0), 0)
   }));
 
   const formatDate = (iso) => {
