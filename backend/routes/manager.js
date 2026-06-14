@@ -1269,8 +1269,9 @@ router.get('/fp-employee-zones', requireManagerScope, async (req, res) => {
       // Filter to only show employees who have at least one zone that overlaps with manager's zones
       const placeholders = managerZones.map(() => '?').join(',');
       employeeZoneFilter = ` AND e.id IN (
-        SELECT DISTINCT fp_employee_id FROM fp_employee_zones 
-        WHERE franchise_partner_id = ? AND zone_name IN (${placeholders})
+        SELECT DISTINCT ez2.fp_employee_id FROM fp_employee_zones ez2
+        JOIN zones z2 ON ez2.zone_id = z2.id
+        WHERE ez2.franchise_partner_id = ? AND z2.name IN (${placeholders})
       )`;
       employeeParams.push(req.franchisePartnerId, ...managerZones);
     }
@@ -1278,9 +1279,10 @@ router.get('/fp-employee-zones', requireManagerScope, async (req, res) => {
     const [employees] = await pool.execute(
       `SELECT e.id, e.first_name, e.last_name, CONCAT(e.first_name, ' ', e.last_name) as name,
               e.email, e.phone, e.role, e.is_active,
-              GROUP_CONCAT(DISTINCT ez.zone_name ORDER BY ez.zone_name) as zone_names
+              GROUP_CONCAT(DISTINCT z.name ORDER BY z.name) as zone_names
        FROM fp_employees e
        LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
+       LEFT JOIN zones z ON ez.zone_id = z.id
        WHERE e.franchise_partner_id = ? AND e.is_active = 1${employeeZoneFilter}
        GROUP BY e.id
        ORDER BY e.first_name, e.last_name`,
@@ -1295,8 +1297,9 @@ router.get('/fp-employee-zones', requireManagerScope, async (req, res) => {
     } else {
       // Manager has full access - show all zones
       const [allZones] = await pool.execute(
-        `SELECT DISTINCT ez.zone_name as name FROM fp_employee_zones ez 
-         WHERE ez.franchise_partner_id = ? ORDER BY ez.zone_name`,
+        `SELECT DISTINCT z.name FROM fp_employee_zones ez 
+         JOIN zones z ON ez.zone_id = z.id
+         WHERE ez.franchise_partner_id = ? ORDER BY z.name`,
         [req.franchisePartnerId]
       );
       zones = allZones;
