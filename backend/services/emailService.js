@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const { generateEstimatePDF } = require('./pdfService');
 
 // Email configuration - uses environment variables
-// Supports both Gmail and custom SMTP servers (Hostinger, GoDaddy, cPanel, etc.)
+// Supports custom SMTP servers (Hostinger, GoDaddy, cPanel, etc.)
 const createTransporter = () => {
   const host = process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.hostinger.com';
   const port = parseInt(process.env.EMAIL_PORT || process.env.SMTP_PORT) || 465;
@@ -38,9 +38,9 @@ const getDefaultHeaders = () => ({
   'Organization': 'XLAND INFRA Private Limited'
 });
 
-// Notification email addresses
+// Notification email addresses - Use info@xlandinfra.com only (no Gmail)
 const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'info@xlandinfra.com';
-const CONTACT_EMAILS = ['info@xlandinfra.com', 'xlandinfra@gmail.com'];
+const CONTACT_EMAILS = ['info@xlandinfra.com'];
 
 // Send notification for new work order submission
 const sendWorkOrderNotification = async (workOrder) => {
@@ -993,8 +993,8 @@ const sendEstimateActionNotification = async (estimate, action, customerName) =>
     </html>
   `;
 
-  // Send to admin emails
-  const adminEmails = ['info@xlandinfra.com', 'xlandinfra@gmail.com'];
+  // Send to admin emails - info@xlandinfra.com only
+  const adminEmails = ['info@xlandinfra.com'];
   
   try {
     const emailPromises = adminEmails.map(async (email) => {
