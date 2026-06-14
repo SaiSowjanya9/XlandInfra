@@ -9,37 +9,29 @@ import { FREQUENCY_TYPES, FREQUENCY_COUNT_MAP } from '../utils/estimateStore';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
-  { id: 'gated_community', label: 'Gated Community' },
-  { id: 'apartment', label: 'Apartment' },
-  { id: 'villa', label: 'Villa' },
-  { id: 'flat', label: 'Flat' },
-  { id: 'plot', label: 'Plot' },
+  { id: 'GC', label: 'Gated Community' },
+  { id: 'APT', label: 'Apartment' },
+  { id: 'VILLA', label: 'Villa' },
+  { id: 'FLAT', label: 'Flat' },
+  { id: 'PLOT', label: 'Plot' },
 ];
+
+// Helper to normalize property type to standard format
+const normalizePropertyType = (type) => {
+  if (!type) return '';
+  const upper = type.toUpperCase().replace(/[_\s-]/g, '');
+  if (upper === 'GC' || upper.includes('GATED')) return 'GC';
+  if (upper === 'APT' || upper.includes('APARTMENT')) return 'APT';
+  if (upper === 'VILLA' || upper === 'VILLAS') return 'VILLA';
+  if (upper === 'FLAT' || upper === 'FLATS') return 'FLAT';
+  if (upper === 'PLOT' || upper === 'PLOTS') return 'PLOT';
+  return upper;
+};
 
 // Helper to match property types (handles different formats)
 const matchPropertyType = (value, filterId) => {
   if (!value || !filterId) return false;
-  const normalize = (str) => str.toLowerCase().replace(/[_\s-]/g, '');
-  const filterOption = PROPERTY_TYPE_OPTIONS.find(t => t.id === filterId);
-  const normalizedValue = normalize(value);
-  const aliases = {
-    gc: ['gc', 'gatedcommunity'],
-    gatedcommunity: ['gc', 'gatedcommunity'],
-    apartment: ['apt', 'apartment'],
-    apt: ['apt', 'apartment'],
-    villa: ['villa', 'villas'],
-    villas: ['villa', 'villas'],
-    flat: ['flat', 'flats'],
-    flats: ['flat', 'flats'],
-    plot: ['plot', 'plots'],
-    plots: ['plot', 'plots']
-  };
-  const normalizedFilter = normalize(filterId);
-  const filterAliases = aliases[normalizedFilter] || [normalizedFilter];
-  const valueAliases = aliases[normalizedValue] || [normalizedValue];
-  return normalize(filterId) === normalizedValue || 
-         (filterOption && normalize(filterOption.label) === normalizedValue) ||
-         filterAliases.some(alias => valueAliases.includes(alias));
+  return normalizePropertyType(value) === normalizePropertyType(filterId);
 };
 
 // Helper to get property type label from any format
@@ -449,8 +441,8 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
 
   const renderCreateEstimate = () => (
     <div className="space-y-6">
-      {/* FP Shared Resources Section - Read-only for employees */}
-      {fpPortalLinks.length > 0 && (
+      {/* FP Shared Resources Section - Read-only for employees, only show before selecting estimate type */}
+      {!estimateType && fpPortalLinks.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-5 py-3 border-b border-gray-200">
             <div className="flex items-center gap-3">
@@ -636,20 +628,20 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
+                <div className="min-w-0">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Customer Name <span className="text-red-500">*</span></label>
                   <input type="text" value={directForm.customerName} onChange={(e) => setDirectForm({...directForm, customerName: e.target.value})} placeholder="Enter customer name" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Phone <span className="text-red-500">*</span></label>
-                  <div className="flex">
-                    <select className="px-3 py-3 border border-gray-300 rounded-l-lg bg-gray-50 text-sm">
+                  <div className="flex w-full">
+                    <select className="shrink-0 px-3 py-3 border border-gray-300 rounded-l-lg bg-gray-50 text-sm">
                       <option>+91</option>
                     </select>
-                    <input type="tel" value={directForm.phone} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setDirectForm({...directForm, phone: val}); }} placeholder="10-digit phone number" className="flex-1 px-4 py-3 border border-l-0 border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-200" />
+                    <input type="tel" value={directForm.phone} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setDirectForm({...directForm, phone: val}); }} placeholder="10-digit phone number" className="min-w-0 flex-1 px-4 py-3 border border-l-0 border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-200" />
                   </div>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                   <input type="email" value={directForm.email} onChange={(e) => setDirectForm({...directForm, email: e.target.value})} placeholder="Enter email address" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200" />
                 </div>

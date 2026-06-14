@@ -163,6 +163,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   const [lastCreatedEstimate, setLastCreatedEstimate] = useState(null);
   const [lockedServices, setLockedServices] = useState([]); // Services from existing AMC package (locked/read-only)
   const [hasStartedTyping, setHasStartedTyping] = useState(false); // Track if user started typing in ID field
+  const [sendingEmail, setSendingEmail] = useState(false); // Guard against double email sending
   
   // New state for AMC Package selection and Add-ons
   const [availablePackages, setAvailablePackages] = useState([]); // AMC Packages from manager
@@ -851,10 +852,18 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
   };
 
   const handleSendEmail = async () => {
+    // Prevent double sending
+    if (sendingEmail) {
+      console.log('Email already being sent');
+      return;
+    }
+    
     if (!lastCreatedEstimate?.estimateId) {
       showToast?.('No estimate to send', 'error');
       return;
     }
+    
+    setSendingEmail(true);
     
     try {
       const response = await fetch(`/api/estimates-sync/${lastCreatedEstimate.estimateId}/send`, {
@@ -871,6 +880,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     } catch (error) {
       console.error('Send email error:', error);
       showToast?.('Failed to send email', 'error');
+    } finally {
+      setSendingEmail(false);
     }
     
     setShowEmailConfirm(false);
@@ -1000,8 +1011,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
         </div>
       )}
 
-      {/* FP Shared Resources - Aggregated from all FPs */}
-      {admin && allFpPortalLinks.length > 0 && allFpPortalLinks.map((fp) => (
+      {/* FP Shared Resources - Aggregated from all FPs, only show before selecting estimate type */}
+      {!estimateType && admin && allFpPortalLinks.length > 0 && allFpPortalLinks.map((fp) => (
         <div key={fp.fpId} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-5 py-3 border-b border-gray-200">
             <div className="flex items-center gap-3">
@@ -1029,8 +1040,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
         </div>
       ))}
       
-      {/* FP Shared Resources - Single FP selected */}
-      {admin && fpPortalLinks.length > 0 && (
+      {/* FP Shared Resources - Single FP selected, only show before selecting estimate type */}
+      {!estimateType && admin && fpPortalLinks.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-5 py-3 border-b border-gray-200">
             <div className="flex items-center gap-3">
@@ -1853,7 +1864,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
           <div className="px-6 py-4">
             {/* Customer Information Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Customer Name *</label>
                 <input
                   type="text"
@@ -1864,13 +1875,13 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   required
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Phone *</label>
-                <div className="flex">
+                <div className="flex w-full">
                   <select
                     value={estimateForm.countryCode}
                     onChange={(e) => setEstimateForm({ ...estimateForm, countryCode: e.target.value })}
-                    className="px-2 py-2 text-sm border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-200 bg-gray-50"
+                    className="shrink-0 px-2 py-2 text-sm border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-200 bg-gray-50"
                   >
                     <option value="+91">+91</option>
                     <option value="+1">+1</option>
@@ -1880,7 +1891,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     type="text"
                     value={estimateForm.phone}
                     onChange={(e) => handlePhoneChange(e.target.value)}
-                    className={`flex-1 px-3 py-2 text-sm border border-l-0 rounded-r-md focus:ring-2 focus:ring-blue-200 ${phoneError ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                    className={`min-w-0 flex-1 px-3 py-2 text-sm border border-l-0 rounded-r-md focus:ring-2 focus:ring-blue-200 ${phoneError ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                     placeholder="10-digit phone number"
                     maxLength={10}
                     required
@@ -1888,7 +1899,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 </div>
                 {phoneError && <p className="text-xs text-red-500 mt-1">{phoneError}</p>}
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
                 <input
                   type="email"
@@ -2486,10 +2497,11 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
               </button>
               <button
                 onClick={handleSendEmail}
-                className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2"
+                disabled={sendingEmail}
+                className={`flex-1 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 ${sendingEmail ? 'bg-indigo-400 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
               >
-                <Send className="w-4 h-4" />
-                Send Email
+                <Send className={`w-4 h-4 ${sendingEmail ? 'animate-pulse' : ''}`} />
+                {sendingEmail ? 'Sending...' : 'Send Email'}
               </button>
             </div>
           </div>

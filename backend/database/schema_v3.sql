@@ -199,7 +199,7 @@ CREATE TABLE IF NOT EXISTS estimates (
   description TEXT,
   -- Pricing
   subtotal DECIMAL(12,2) DEFAULT 0.00,
-  tax_percentage DECIMAL(5,2) DEFAULT 18.00,
+  tax_percentage DECIMAL(5,2) DEFAULT 0.00,
   tax_amount DECIMAL(12,2) DEFAULT 0.00,
   discount_percentage DECIMAL(5,2) DEFAULT 0.00,
   discount_amount DECIMAL(12,2) DEFAULT 0.00,

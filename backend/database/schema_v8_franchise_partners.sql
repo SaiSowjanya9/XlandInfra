@@ -208,7 +208,7 @@ CREATE TABLE IF NOT EXISTS fp_estimates (
   subtotal DECIMAL(12,2) DEFAULT 0.00,
   discount_percent DECIMAL(5,2) DEFAULT 0.00,
   discount_amount DECIMAL(12,2) DEFAULT 0.00,
-  gst_percent DECIMAL(5,2) DEFAULT 18.00,
+  gst_percent DECIMAL(5,2) DEFAULT 0.00,
   gst_amount DECIMAL(12,2) DEFAULT 0.00,
   total_amount DECIMAL(12,2) DEFAULT 0.00,
   -- Additional Data (JSON for addons, services, etc.)

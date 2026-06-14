@@ -7,6 +7,12 @@
 // For production, consider using local library like 'qrcode' npm package
 const QR_API_BASE = 'https://api.qrserver.com/v1/create-qr-code/';
 
+// Detect iOS devices (iPhone, iPad, iPod)
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
+
 /**
  * Generate QR code URL
  * @param {string} data - Data to encode
@@ -100,13 +106,33 @@ export const downloadQR = async (data, filename, format = 'png', options = {}) =
     const blob = await response.blob();
     
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${filename}.${format}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    
+    if (isIOS()) {
+      // iOS Safari doesn't support download attribute
+      // Open in new tab where user can long-press to save
+      const newWindow = window.open(url, '_blank');
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        // Fallback for popup blockers
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      // Clean up after delay
+      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+    } else {
+      // Standard download for desktop and Android
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${filename}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }
     
     return true;
   } catch (error) {

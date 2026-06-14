@@ -3,37 +3,29 @@ import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, P
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
 const PROPERTY_TYPE_OPTIONS = [
-  { id: 'gated_community', label: 'Gated Community' },
-  { id: 'apartment', label: 'Apartment' },
-  { id: 'villa', label: 'Villa' },
-  { id: 'flat', label: 'Flat' },
-  { id: 'plot', label: 'Plot' },
+  { id: 'GC', label: 'Gated Community' },
+  { id: 'APT', label: 'Apartment' },
+  { id: 'VILLA', label: 'Villa' },
+  { id: 'FLAT', label: 'Flat' },
+  { id: 'PLOT', label: 'Plot' },
 ];
+
+// Helper to normalize property type to standard format
+const normalizePropertyType = (type) => {
+  if (!type) return '';
+  const upper = type.toUpperCase().replace(/[_\s-]/g, '');
+  if (upper === 'GC' || upper.includes('GATED')) return 'GC';
+  if (upper === 'APT' || upper.includes('APARTMENT')) return 'APT';
+  if (upper === 'VILLA' || upper === 'VILLAS') return 'VILLA';
+  if (upper === 'FLAT' || upper === 'FLATS') return 'FLAT';
+  if (upper === 'PLOT' || upper === 'PLOTS') return 'PLOT';
+  return upper;
+};
 
 // Helper to match property types (handles different formats)
 const matchPropertyType = (value, filterId) => {
   if (!value || !filterId) return false;
-  const normalize = (str) => str.toLowerCase().replace(/[_\s-]/g, '');
-  const filterOption = PROPERTY_TYPE_OPTIONS.find(t => t.id === filterId);
-  const normalizedValue = normalize(value);
-  const aliases = {
-    gc: ['gc', 'gatedcommunity'],
-    gatedcommunity: ['gc', 'gatedcommunity'],
-    apartment: ['apt', 'apartment'],
-    apt: ['apt', 'apartment'],
-    villa: ['villa', 'villas'],
-    villas: ['villa', 'villas'],
-    flat: ['flat', 'flats'],
-    flats: ['flat', 'flats'],
-    plot: ['plot', 'plots'],
-    plots: ['plot', 'plots']
-  };
-  const normalizedFilter = normalize(filterId);
-  const filterAliases = aliases[normalizedFilter] || [normalizedFilter];
-  const valueAliases = aliases[normalizedValue] || [normalizedValue];
-  return normalize(filterId) === normalizedValue || 
-         (filterOption && normalize(filterOption.label) === normalizedValue) ||
-         filterAliases.some(alias => valueAliases.includes(alias));
+  return normalizePropertyType(value) === normalizePropertyType(filterId);
 };
 
 // Helper to get property type label from any format
@@ -496,8 +488,8 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
 
           {activeTab === 'create' && (
             <div className="space-y-6">
-              {/* FP Shared Resources Section - Read-only for employees */}
-              {fpPortalLinks.length > 0 && (
+              {/* FP Shared Resources Section - Read-only for employees, only show before selecting estimate type */}
+              {!estimateType && fpPortalLinks.length > 0 && (
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                   <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-5 py-3 border-b border-gray-200">
                     <div className="flex items-center gap-3">

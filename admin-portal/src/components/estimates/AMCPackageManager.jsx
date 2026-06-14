@@ -33,11 +33,23 @@ import { Home, Building, TreePine, Map, Layers as LayersIcon } from 'lucide-reac
 // Property Types for AMC Package Configuration (simple style)
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
-  { id: 'Apt', label: 'Apartment' },
-  { id: 'Villa', label: 'Villa' },
-  { id: 'Flat', label: 'Flat' },
-  { id: 'Plot', label: 'Plot' },
+  { id: 'APT', label: 'Apartment' },
+  { id: 'VILLA', label: 'Villa' },
+  { id: 'FLAT', label: 'Flat' },
+  { id: 'PLOT', label: 'Plot' },
 ];
+
+// Helper to normalize property type for consistent filtering
+const normalizePropertyType = (type) => {
+  if (!type) return '';
+  const upper = type.toUpperCase();
+  if (upper === 'GC' || upper.includes('GATED')) return 'GC';
+  if (upper === 'APT' || upper.includes('APARTMENT')) return 'APT';
+  if (upper === 'VILLA') return 'VILLA';
+  if (upper === 'FLAT') return 'FLAT';
+  if (upper === 'PLOT') return 'PLOT';
+  return upper;
+};
 
 // FREQUENCY_COUNT_MAP imported from estimateStore
 
@@ -373,7 +385,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 <p className="text-sm text-gray-500">
                   {filterPropertyType === 'all' 
                     ? `${amcPackages.length} package(s) available` 
-                    : `${amcPackages.filter(p => p.propertyType === filterPropertyType).length} package(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
+                    : `${amcPackages.filter(p => normalizePropertyType(p.propertyType) === filterPropertyType).length} package(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
                 </p>
               </div>
             </div>
@@ -423,7 +435,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               {(() => {
                 const filteredPackages = filterPropertyType === 'all' 
                   ? amcPackages 
-                  : amcPackages.filter(p => p.propertyType === filterPropertyType);
+                  : amcPackages.filter(p => normalizePropertyType(p.propertyType) === filterPropertyType);
                 
                 if (filteredPackages.length === 0) {
                   return (
