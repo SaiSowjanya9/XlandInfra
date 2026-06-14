@@ -170,7 +170,7 @@ const sendContactNotification = async (contactData) => {
     // Send separate emails to each recipient for reliable delivery
     const emailPromises = CONTACT_EMAILS.map(async (email) => {
       const mailOptions = {
-        from: process.env.EMAIL_USER,
+        from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
         to: email,
         subject: `New Contact Inquiry from ${contactData.name} - XLAND INFRA`,
         html: emailHtml
