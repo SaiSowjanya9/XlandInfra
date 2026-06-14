@@ -2948,9 +2948,18 @@ router.get('/estimates', requireFPScope, async (req, res) => {
         division VARCHAR(100),
         city VARCHAR(100),
         address TEXT,
+        number_of_blocks INT DEFAULT 1,
+        units_per_block JSON,
+        block_names JSON,
+        total_units INT DEFAULT 0,
+        tower_name VARCHAR(255),
+        block_number VARCHAR(100),
+        villa_plot_number VARCHAR(100),
         package_id INT,
         package_name VARCHAR(255),
         package_price DECIMAL(12,2) DEFAULT 0.00,
+        amc_package_description TEXT,
+        package_services TEXT,
         subtotal DECIMAL(12,2) DEFAULT 0.00,
         discount_percent DECIMAL(5,2) DEFAULT 0.00,
         discount_amount DECIMAL(12,2) DEFAULT 0.00,
@@ -2977,7 +2986,16 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     const columnsToAdd = [
       { name: 'action_token', def: 'VARCHAR(100)' },
       { name: 'sent_at', def: 'TIMESTAMP NULL' },
-      { name: 'division', def: 'VARCHAR(100)' }
+      { name: 'division', def: 'VARCHAR(100)' },
+      { name: 'number_of_blocks', def: 'INT DEFAULT 1' },
+      { name: 'units_per_block', def: 'JSON' },
+      { name: 'block_names', def: 'JSON' },
+      { name: 'total_units', def: 'INT DEFAULT 0' },
+      { name: 'tower_name', def: 'VARCHAR(255)' },
+      { name: 'block_number', def: 'VARCHAR(100)' },
+      { name: 'villa_plot_number', def: 'VARCHAR(100)' },
+      { name: 'amc_package_description', def: 'TEXT' },
+      { name: 'package_services', def: 'TEXT' }
     ];
     for (const col of columnsToAdd) {
       try {
