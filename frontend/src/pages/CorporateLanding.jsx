@@ -266,7 +266,7 @@ function CorporateLanding() {
     setFormSubmitting(true);
     
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://api.xlandinfra.com/api');
+      const apiUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://xlandinfra.com/api');
       const response = await fetch(`${apiUrl}/contact`, {
         method: 'POST',
         headers: {

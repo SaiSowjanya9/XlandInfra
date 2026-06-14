@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
     // Also fetch from fp_estimates table (where FP creates estimates)
     let fpEstimates = [];
     try {
-      const [fpEst] = await pool.execute(
+      constq [fpEst] = await pool.execute(
         `SELECT * FROM fp_estimates WHERE (is_archived = ? OR is_archived IS NULL) ORDER BY created_at DESC`,
         [isArchived ? 1 : 0]
       );
