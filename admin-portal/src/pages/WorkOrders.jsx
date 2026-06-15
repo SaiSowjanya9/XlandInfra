@@ -83,7 +83,7 @@ const WorkOrders = ({ admin }) => {
     fetchCategories();
   }, [token]);
 
-  // Fetch properties when FP is selected
+  // Fetch properties when FP is selected or tab changes to create
   useEffect(() => {
     const fetchProperties = async () => {
       if (!selectedFp) return;
@@ -100,13 +100,18 @@ const WorkOrders = ({ admin }) => {
         });
         const result = await response.json();
         console.log('[WorkOrders] Properties response:', result.success, 'count:', result.data?.length);
-        if (result.success) setProperties(result.data || []);
+        if (result.success) {
+          setProperties(result.data || []);
+          console.log('[WorkOrders] First property sample:', result.data?.[0]);
+        } else {
+          console.error('[WorkOrders] API error:', result.message);
+        }
       } catch (error) {
         console.error('Error fetching properties:', error);
       }
     };
     fetchProperties();
-  }, [selectedFp, token]);
+  }, [selectedFp, token, activeTab]);
 
   // Filter properties based on search - also check propertyId (camelCase from onboarded)
   const filteredProperties = properties.filter(p => {
