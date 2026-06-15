@@ -448,24 +448,91 @@ router.get('/properties/:id', requireManagerScope, async (req, res) => {
   }
 });
 
-// Update property
-router.put('/properties/:id', requireManagerScope, validateOwnership('properties'), async (req, res) => {
+// Update property (handles both properties and onboarded_properties)
+router.put('/properties/:id', requireManagerScope, async (req, res) => {
   try {
-    const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
+    const { id } = req.params;
+    const updates = req.body;
     const scopeId = getScopeId(req);
     const scopeColumn = getScopeColumn(req);
+    const sourceTable = updates.sourceTable || updates.source_table;
+
+    // Check which table the property belongs to
+    let tableName = 'properties';
     
+    if (sourceTable === 'onboarded_properties') {
+      tableName = 'onboarded_properties';
+    } else {
+      const [propCheck] = await pool.execute(
+        `SELECT id FROM properties WHERE id = ? AND ${scopeColumn} = ?`,
+        [id, scopeId]
+      );
+      
+      if (propCheck.length === 0) {
+        const [onboardedCheck] = await pool.execute(
+          `SELECT id FROM onboarded_properties WHERE id = ? AND ${scopeColumn} = ?`,
+          [id, scopeId]
+        );
+        
+        if (onboardedCheck.length > 0) {
+          tableName = 'onboarded_properties';
+        } else {
+          return res.status(404).json({ success: false, message: 'Property not found or access denied' });
+        }
+      }
+    }
+
+    const allowedFieldsMap = {
+      properties: ['name', 'property_type', 'address', 'city', 'state', 'zip_code', 'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active'],
+      onboarded_properties: ['community_name', 'property_type', 'address', 'city', 'state', 'postal_code', 'zone', 'division', 'area_name', 'status', 'number_of_units', 'total_units']
+    };
+
+    const fieldMapping = {
+      name: tableName === 'onboarded_properties' ? 'community_name' : 'name',
+      zipCode: tableName === 'onboarded_properties' ? 'postal_code' : 'zip_code',
+      zip_code: tableName === 'onboarded_properties' ? 'postal_code' : 'zip_code',
+      zoneId: tableName === 'onboarded_properties' ? 'zone' : 'zone_id',
+      zone_id: tableName === 'onboarded_properties' ? 'zone' : 'zone_id',
+      divisionId: tableName === 'onboarded_properties' ? 'division' : 'division_id',
+      division_id: tableName === 'onboarded_properties' ? 'division' : 'division_id'
+    };
+
+    const allowedFields = allowedFieldsMap[tableName];
+    const setClauses = [];
+    const values = [];
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (key === 'sourceTable' || key === 'source_table') continue;
+      let dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      if (fieldMapping[key]) dbKey = fieldMapping[key];
+      else if (fieldMapping[dbKey]) dbKey = fieldMapping[dbKey];
+      
+      let finalValue = value;
+      if (tableName === 'onboarded_properties' && (key === 'isActive' || key === 'is_active')) {
+        dbKey = 'status';
+        finalValue = value ? 'active' : 'inactive';
+      }
+      
+      if (allowedFields.includes(dbKey)) {
+        setClauses.push(`${dbKey} = ?`);
+        values.push(finalValue);
+      }
+    }
+
+    if (setClauses.length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid fields to update' });
+    }
+
+    values.push(id, scopeId);
     await pool.execute(
-      `UPDATE properties SET name = ?, property_type = ?, address = ?, city = ?, state = ?, 
-        zip_code = ?, contact_person = ?, contact_phone = ?, contact_email = ?, zone_id = ?, updated_at = NOW()
-       WHERE id = ? AND ${scopeColumn} = ?`,
-      [name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, 
-       zoneId || null, req.params.id, scopeId]
+      `UPDATE ${tableName} SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = ? AND ${scopeColumn} = ?`,
+      values
     );
 
     res.json({ success: true, message: 'Property updated' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Update property error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update property', error: error.message });
   }
 });
 

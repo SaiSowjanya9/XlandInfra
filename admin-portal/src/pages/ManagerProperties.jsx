@@ -247,7 +247,8 @@ const ManagerProperties = ({ user }) => {
       contactPerson: property.contact_person || '',
       contactPhone: property.contact_phone || '',
       contactEmail: property.contact_email || '',
-      zoneId: property.zone_id || ''
+      zoneId: property.zone_id || '',
+      sourceTable: property.source_table || 'properties'
     });
     setShowModal(true);
   };
@@ -270,7 +271,8 @@ const ManagerProperties = ({ user }) => {
       contactPerson: '',
       contactPhone: '',
       contactEmail: '',
-      zoneId: ''
+      zoneId: '',
+      sourceTable: ''
     });
   };
 

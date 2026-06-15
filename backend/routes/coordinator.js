@@ -455,21 +455,71 @@ router.post('/properties', requireCoordinatorScope, async (req, res) => {
   }
 });
 
-router.put('/properties/:id', requireCoordinatorScope, validateOwnership('properties', 'id', true), async (req, res) => {
+router.put('/properties/:id', requireCoordinatorScope, async (req, res) => {
   try {
-    if (!req.canModify) {
-      return res.status(403).json({ success: false, message: 'You do not have permission to modify this property' });
+    const { id } = req.params;
+    const updates = req.body;
+    const sourceTable = updates.sourceTable || updates.source_table;
+
+    let tableName = 'properties';
+    
+    if (sourceTable === 'onboarded_properties') {
+      tableName = 'onboarded_properties';
+    } else {
+      const [propCheck] = await pool.query('SELECT id FROM properties WHERE id = ?', [id]);
+      if (propCheck.length === 0) {
+        const [onboardedCheck] = await pool.query('SELECT id FROM onboarded_properties WHERE id = ?', [id]);
+        if (onboardedCheck.length > 0) {
+          tableName = 'onboarded_properties';
+        } else {
+          return res.status(404).json({ success: false, message: 'Property not found' });
+        }
+      }
     }
 
-    const { id } = req.params;
-    const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
+    const allowedFieldsMap = {
+      properties: ['name', 'property_type', 'address', 'city', 'state', 'zip_code', 'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active'],
+      onboarded_properties: ['community_name', 'property_type', 'address', 'city', 'state', 'postal_code', 'zone', 'division', 'area_name', 'status', 'number_of_units', 'total_units']
+    };
 
-    await pool.query(
-      `UPDATE properties SET name = ?, property_type = ?, address = ?, city = ?, state = ?, 
-        zip_code = ?, contact_person = ?, contact_phone = ?, contact_email = ?, zone_id = ?
-       WHERE id = ?`,
-      [name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId || null, id]
-    );
+    const fieldMapping = {
+      name: tableName === 'onboarded_properties' ? 'community_name' : 'name',
+      zipCode: tableName === 'onboarded_properties' ? 'postal_code' : 'zip_code',
+      zip_code: tableName === 'onboarded_properties' ? 'postal_code' : 'zip_code',
+      zoneId: tableName === 'onboarded_properties' ? 'zone' : 'zone_id',
+      zone_id: tableName === 'onboarded_properties' ? 'zone' : 'zone_id',
+      divisionId: tableName === 'onboarded_properties' ? 'division' : 'division_id',
+      division_id: tableName === 'onboarded_properties' ? 'division' : 'division_id'
+    };
+
+    const allowedFields = allowedFieldsMap[tableName];
+    const setClauses = [];
+    const values = [];
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (key === 'sourceTable' || key === 'source_table') continue;
+      let dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      if (fieldMapping[key]) dbKey = fieldMapping[key];
+      else if (fieldMapping[dbKey]) dbKey = fieldMapping[dbKey];
+      
+      let finalValue = value;
+      if (tableName === 'onboarded_properties' && (key === 'isActive' || key === 'is_active')) {
+        dbKey = 'status';
+        finalValue = value ? 'active' : 'inactive';
+      }
+      
+      if (allowedFields.includes(dbKey)) {
+        setClauses.push(`${dbKey} = ?`);
+        values.push(finalValue);
+      }
+    }
+
+    if (setClauses.length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid fields to update' });
+    }
+
+    values.push(id);
+    await pool.query(`UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE id = ?`, values);
 
     res.json({ success: true, message: 'Property updated successfully' });
   } catch (error) {

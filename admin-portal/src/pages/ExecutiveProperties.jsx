@@ -197,7 +197,8 @@ const ExecutiveProperties = ({ user }) => {
       zone: property.zone_name || property.zone_id || '',
       division: property.division || property.division_id || '',
       area: property.area || property.area_name || '',
-      isActive: property.is_active !== false
+      isActive: property.is_active !== false,
+      sourceTable: property.source_table || 'properties'
     });
     setShowEditModal(true);
   };
@@ -223,7 +224,8 @@ const ExecutiveProperties = ({ user }) => {
           zoneId: editFormData.zone,
           divisionId: editFormData.division,
           areaName: editFormData.area,
-          isActive: editFormData.isActive
+          isActive: editFormData.isActive,
+          sourceTable: editFormData.sourceTable
         })
       });
 
