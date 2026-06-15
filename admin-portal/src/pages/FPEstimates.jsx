@@ -2341,9 +2341,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
                 <button 
                   onClick={handleSaveAddon} 
-                  className="px-5 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium flex items-center gap-2 whitespace-nowrap"
+                  className="px-5 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium whitespace-nowrap"
                 >
-                  <Plus className="w-4 h-4" />Save
+                  Save
                 </button>
               </div>
             </div>
