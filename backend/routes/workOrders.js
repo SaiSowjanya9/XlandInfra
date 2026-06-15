@@ -140,15 +140,16 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
 
     // Try to save to database
     try {
-      // Get property details including franchise_partner_id, zone, division, address, contact info
+      // Get property details including franchise_partner_id, zone, division, address, contact info, and actual property_id
       let franchisePartnerId = null;
       let propDetails = {};
+      let actualPropertyId = null;
       const propId = propertyId && propertyId !== 'undefined' ? propertyId : null;
       
       if (propId) {
         // Try properties table first
         const [propData] = await pool.query(
-          `SELECT franchise_partner_id, name, property_type, zone_id as zone, division,
+          `SELECT franchise_partner_id, name, property_type, property_id, zone_id as zone, division,
                   address, city, state, contact_person, contact_phone, contact_email
            FROM properties WHERE id = ?`,
           [propId]
@@ -156,10 +157,11 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
         if (propData.length > 0) {
           propDetails = propData[0];
           franchisePartnerId = propData[0].franchise_partner_id;
+          actualPropertyId = propData[0].property_id;
         } else {
           // Try onboarded_properties
           const [opData] = await pool.query(
-            `SELECT franchise_partner_id, community_name as name, property_type, zone, division,
+            `SELECT franchise_partner_id, community_name as name, property_type, property_id, zone, division,
                     address, city, state, contact_person, contact_phone, contact_email
              FROM onboarded_properties WHERE id = ?`,
             [propId]
@@ -167,10 +169,11 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
           if (opData.length > 0) {
             propDetails = opData[0];
             franchisePartnerId = opData[0].franchise_partner_id;
+            actualPropertyId = opData[0].property_id;
           } else {
             // Try fp_properties table
             const [fpPropData] = await pool.query(
-              `SELECT franchise_partner_id, name, property_type, zone_id as zone, division,
+              `SELECT franchise_partner_id, name, property_type, property_id, zone_id as zone, division,
                       address, city, state, contact_person, contact_phone, contact_email
                FROM fp_properties WHERE id = ?`,
               [propId]
@@ -178,10 +181,11 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
             if (fpPropData.length > 0) {
               propDetails = fpPropData[0];
               franchisePartnerId = fpPropData[0].franchise_partner_id;
+              actualPropertyId = fpPropData[0].property_id;
             }
           }
         }
-        console.log('[WorkOrder] Property lookup - fpId:', franchisePartnerId, 'zone:', propDetails.zone);
+        console.log('[WorkOrder] Property lookup - fpId:', franchisePartnerId, 'zone:', propDetails.zone, 'propertyId:', actualPropertyId);
       }
 
       // Use property details as fallbacks for customer info
@@ -249,7 +253,7 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
         orderNumber,
         title: `Service Request - ${category.name}`,
         propertyName: finalPropertyName,
-        propertyId,
+        propertyId: actualPropertyId || propertyId,
         propertyType: propDetails.property_type || '',
         propertyAddress: propDetails.address || '',
         propertyCity: propDetails.city || '',
@@ -265,8 +269,7 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
         hasPet: hasPet || 'no',
         entryNotes: entryNotes || '',
         createdBy: finalCustomerName || finalCustomerEmail || 'Customer',
-        createdByRole: 'Customer',
-        createdFromPortal: 'Customer Portal'
+        createdByRole: 'Customer'
       }).catch(err => console.error('Email notification error:', err));
 
       return res.status(201).json({
@@ -571,6 +574,25 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
       filePath: file.path
     })) : [];
 
+    // Fetch actual property_id from database
+    let actualPropertyId = null;
+    let finalPropertyName = propertyName;
+    let finalPropertyType = propertyType;
+    const propId = propertyId && propertyId !== 'undefined' ? propertyId : null;
+    
+    if (propId) {
+      const [propData] = await pool.query(
+        `SELECT property_id, name, property_type FROM properties WHERE id = ?
+         UNION SELECT property_id, community_name as name, property_type FROM onboarded_properties WHERE id = ?`,
+        [propId, propId]
+      );
+      if (propData.length > 0) {
+        actualPropertyId = propData[0].property_id;
+        finalPropertyName = finalPropertyName || propData[0].name;
+        finalPropertyType = finalPropertyType || propData[0].property_type;
+      }
+    }
+
     try {
       const [result] = await pool.query(
         `INSERT INTO work_orders (
@@ -627,8 +649,9 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
         orderId: workOrderId,
         orderNumber,
         title: `Service Request - ${category.name}`,
-        propertyName,
-        propertyId,
+        propertyName: finalPropertyName,
+        propertyId: actualPropertyId || propertyId,
+        propertyType: finalPropertyType,
         customerName,
         customerEmail,
         customerPhone,
@@ -637,8 +660,7 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
         priority: priority || 'medium',
         description,
         createdBy: 'Admin',
-        createdByRole: 'Admin',
-        createdFromPortal: 'Admin Portal'
+        createdByRole: 'Admin'
       }).catch(err => console.error('Email notification error:', err));
 
       return res.status(201).json({

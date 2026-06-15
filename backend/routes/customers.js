@@ -406,12 +406,20 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find customer
+    // Find customer - check both onboarded_properties and properties tables for property_id
     const [customers] = await pool.execute(
-      `SELECT ca.*, op.community_name, op.zone, op.division, op.entry_type,
-              op.address, op.city, op.state, op.property_id as onboarded_property_id
+      `SELECT ca.*, 
+              COALESCE(op.community_name, p.name) as community_name,
+              COALESCE(op.zone, p.zone) as zone, 
+              COALESCE(op.division, p.division) as division, 
+              op.entry_type,
+              COALESCE(op.address, p.address) as address, 
+              COALESCE(op.city, p.city) as city, 
+              COALESCE(op.state, p.state) as state, 
+              COALESCE(op.property_id, p.property_id) as actual_property_id
        FROM customer_accounts ca
        LEFT JOIN onboarded_properties op ON ca.property_id = op.id
+       LEFT JOIN properties p ON ca.property_id = p.id
        WHERE ca.email = ? AND ca.is_active = 1`,
       [email.toLowerCase()]
     );
@@ -509,9 +517,9 @@ router.post('/login', async (req, res) => {
           firstName: customer.first_name,
           lastName: customer.last_name,
           phone: customer.phone,
-          propertyId: customer.onboarded_property_id || customer.property_code || customer.property_id,
+          propertyId: customer.actual_property_id || customer.property_code || customer.property_id,
           propertyName: customer.property_name || customer.community_name,
-          propertyCode: customer.onboarded_property_id || customer.property_code,
+          propertyCode: customer.actual_property_id || customer.property_code,
           zone: customer.zone,
           division: customer.division,
           address: customer.address,
@@ -829,13 +837,21 @@ router.get('/profile', async (req, res) => {
       });
     }
 
-    // Get customer profile
+    // Get customer profile - check both onboarded_properties and properties tables
     const [customers] = await pool.execute(
-      `SELECT ca.*, op.community_name, op.zone, op.division, op.entry_type,
-              op.address as prop_address, op.city as prop_city, op.state as prop_state,
-              op.total_units, op.property_id as onboarded_property_id
+      `SELECT ca.*, 
+              COALESCE(op.community_name, p.name) as community_name,
+              COALESCE(op.zone, p.zone) as zone, 
+              COALESCE(op.division, p.division) as division, 
+              op.entry_type,
+              COALESCE(op.address, p.address) as prop_address, 
+              COALESCE(op.city, p.city) as prop_city, 
+              COALESCE(op.state, p.state) as prop_state,
+              op.total_units, 
+              COALESCE(op.property_id, p.property_id) as actual_property_id
        FROM customer_accounts ca
        LEFT JOIN onboarded_properties op ON ca.property_id = op.id
+       LEFT JOIN properties p ON ca.property_id = p.id
        WHERE ca.id = ? AND ca.is_active = 1`,
       [decoded.id]
     );
@@ -858,9 +874,9 @@ router.get('/profile', async (req, res) => {
         firstName: customer.first_name,
         lastName: customer.last_name,
         phone: customer.phone,
-        propertyId: customer.onboarded_property_id || customer.property_code || customer.property_id,
+        propertyId: customer.actual_property_id || customer.property_code || customer.property_id,
         propertyName: customer.property_name || customer.community_name,
-        propertyCode: customer.onboarded_property_id || customer.property_code,
+        propertyCode: customer.actual_property_id || customer.property_code,
         zone: customer.zone,
         division: customer.division,
         address: customer.prop_address,
@@ -987,10 +1003,13 @@ router.get('/dashboard', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Customer ID not found in token' });
     }
 
-    // Get customer details
+    // Get customer details - check both onboarded_properties and properties tables
     const [customer] = await pool.execute(
-      `SELECT ca.*, p.property_name, p.property_id as property_code
+      `SELECT ca.*, 
+              COALESCE(op.community_name, p.name) as property_name,
+              COALESCE(op.property_id, p.property_id) as actual_property_id
        FROM customer_accounts ca
+       LEFT JOIN onboarded_properties op ON ca.property_id = op.id
        LEFT JOIN properties p ON ca.property_id = p.id
        WHERE ca.id = ?`,
       [customerId]
@@ -1031,7 +1050,8 @@ router.get('/dashboard', async (req, res) => {
           lastName: customer[0].last_name,
           email: customer[0].email,
           propertyName: customer[0].property_name,
-          propertyCode: customer[0].property_code
+          propertyId: customer[0].actual_property_id || customer[0].property_code || customer[0].property_id,
+          propertyCode: customer[0].actual_property_id || customer[0].property_code
         },
         recentWorkOrders: workOrders,
         stats: {
