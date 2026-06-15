@@ -379,7 +379,7 @@ router.post('/properties', authenticate, managerOrAdmin, async (req, res) => {
       });
     }
 
-    const propertyId = `PROP-${Date.now().toString(36).toUpperCase()}`;
+    const propertyId = `PROP-${Date.now()}`;
     
     // Get actual user name from database (check both users and fp_employees tables)
     let creatorName = req.user?.username || req.user?.email || 'System';
