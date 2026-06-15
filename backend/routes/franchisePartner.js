@@ -787,7 +787,7 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
 
     if (status) {
       if (status === 'pending') {
-        query += ` AND wo.status IN ('pending', 'requested', 'assigned', 'in_progress')`;
+        query += ` AND wo.status IN ('pending', 'assigned', 'in_progress')`;
       } else if (status === 'completed') {
         query += ` AND wo.status IN ('completed', 'closed')`;
       } else {

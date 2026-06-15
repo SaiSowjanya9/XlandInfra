@@ -243,7 +243,7 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
     const [pendingWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
        WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR executive_id = ?)
-       AND status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
+       AND status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')`,
       [franchisePartnerId, creatorEmail, req.user?.username || '', executiveId]
     );
 
@@ -574,7 +574,7 @@ router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
-       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
+       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
        ORDER BY wo.created_at DESC`;
     const params = franchisePartnerId ? [franchisePartnerId, ...zoneFilter.params] : [creatorEmail, ...zoneFilter.params];
 
@@ -676,7 +676,7 @@ router.patch('/work-orders/:id/status', requireExecutiveScope, async (req, res) 
     const { id } = req.params;
     const { status } = req.body;
 
-    const allowedStatuses = ['draft', 'requested', 'in_progress', 'completed', 'cancelled'];
+    const allowedStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
     }

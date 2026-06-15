@@ -281,7 +281,7 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
     const [pendingWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
        WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR supervisor_id = ?)
-       AND status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
+       AND status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')`,
       [franchisePartnerId, creatorEmail, req.user?.username || '', supervisorId]
     );
 
@@ -677,7 +677,7 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
+       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
        ORDER BY wo.created_at DESC`;
     const params = franchisePartnerId ? [franchisePartnerId, ...zoneFilter.params] : [creatorEmail, ...zoneFilter.params];
 
@@ -773,7 +773,7 @@ router.patch('/work-orders/:id/status', requireSupervisorScope, validateOwnershi
     const { status } = req.body;
 
     // Supervisors can change status for completed work orders and revert to pending
-    const allowedStatuses = ['requested', 'under_review', 'assigned', 'in_progress', 'completed', 'cancelled', 'closed'];
+    const allowedStatuses = ['pending', 'under_review', 'assigned', 'in_progress', 'completed', 'cancelled', 'closed'];
     if (!allowedStatuses.includes(status)) {
       return res.status(403).json({ success: false, message: 'Invalid status value' });
     }
