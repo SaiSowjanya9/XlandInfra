@@ -59,6 +59,12 @@ const formatDate = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
+// Safe string helper - ensures all values passed to jsPDF are valid strings
+const safeStr = (val, fallback = '-') => {
+  if (val === null || val === undefined || val === '') return fallback;
+  return String(val);
+};
+
 // Generate Premium PDF with professional design
 const generatePDF = (data, type, filename) => {
   try {
@@ -376,14 +382,14 @@ const generatePDF = (data, type, filename) => {
     const tableBody = services.length > 0 
       ? services.map((s, idx) => {
           const freqCount = s.frequencyCount || s.frequency_count || s.frequency || 1;
-          let freqType = s.frequencyType || s.frequency_type || 'Monthly';
+          let freqType = String(s.frequencyType || s.frequency_type || 'Monthly');
           // Remove "Nx " prefix if present
           freqType = freqType.replace(/^\d+x\s*/i, '');
           return [
             String(idx + 1),
             String(s.name || s.service || 'Service'),
             String(s.description || '-'),
-            freqType,
+            String(freqType),
             String(freqCount)
           ];
         })
@@ -419,14 +425,14 @@ const generatePDF = (data, type, filename) => {
 
       const addonsBody = data.addons.map((a, idx) => {
         const freqCount = a.frequencyCount || a.frequency_count || a.visits || 1;
-        let freqType = a.frequencyType || a.frequency_type || a.frequency || 'Monthly';
+        let freqType = String(a.frequencyType || a.frequency_type || a.frequency || 'Monthly');
         // Remove "Nx " prefix if present
         freqType = freqType.replace(/^\d+x\s*/i, '');
         return [
           String(idx + 1),
           String(a.name || a.serviceName || a.service_name || 'Add-on'),
           String(a.description || '-'),
-          freqType,
+          String(freqType),
           String(freqCount)
         ];
       });
