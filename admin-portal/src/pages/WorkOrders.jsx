@@ -86,7 +86,10 @@ const WorkOrders = ({ admin }) => {
   // Fetch properties when FP is selected or tab changes to create
   useEffect(() => {
     const fetchProperties = async () => {
-      if (!selectedFp) return;
+      if (!selectedFp) {
+        console.log('[WorkOrders] No FP selected, skipping property fetch');
+        return;
+      }
       try {
         let endpoint;
         if (selectedFp.id === 'all') {
@@ -94,23 +97,28 @@ const WorkOrders = ({ admin }) => {
         } else {
           endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/properties`;
         }
-        console.log('[WorkOrders] Fetching properties from:', endpoint);
+        console.log('[WorkOrders] Fetching properties from:', endpoint, 'Token:', token ? 'present' : 'missing');
         const response = await fetch(endpoint, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
+        console.log('[WorkOrders] Response status:', response.status);
         const result = await response.json();
         console.log('[WorkOrders] Properties response:', result.success, 'count:', result.data?.length);
         if (result.success) {
           setProperties(result.data || []);
-          console.log('[WorkOrders] First property sample:', result.data?.[0]);
+          if (result.data?.length > 0) {
+            console.log('[WorkOrders] First property:', result.data[0].property_id, result.data[0].name);
+          }
         } else {
           console.error('[WorkOrders] API error:', result.message);
         }
       } catch (error) {
-        console.error('Error fetching properties:', error);
+        console.error('[WorkOrders] Error fetching properties:', error);
       }
     };
-    fetchProperties();
+    if (activeTab === 'create') {
+      fetchProperties();
+    }
   }, [selectedFp, token, activeTab]);
 
   // Filter properties based on search - also check propertyId (camelCase from onboarded)
@@ -120,6 +128,11 @@ const WorkOrders = ({ admin }) => {
     const propName = (p.name || p.communityName || '').toLowerCase();
     return propId.includes(searchLower) || propName.includes(searchLower);
   }) : [];
+  
+  // Debug log for filtering
+  if (propertySearch && properties.length > 0) {
+    console.log('[WorkOrders] Filtering:', propertySearch, 'from', properties.length, 'properties, found:', filteredProperties.length);
+  }
 
   // Handle property selection
   const handlePropertySelect = (property) => {
