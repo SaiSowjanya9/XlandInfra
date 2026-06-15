@@ -629,10 +629,6 @@ const FPVendors = ({ user }) => {
                     <p className="text-xs text-gray-500">Area</p>
                     <p className="font-medium">{viewVendor.area || viewVendor.areaName || viewVendor.area_name || '-'}</p>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Division</p>
-                    <p className="font-medium">{viewVendor.division || '-'}</p>
-                  </div>
                 </div>
               </div>
 

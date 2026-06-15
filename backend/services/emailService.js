@@ -89,7 +89,7 @@ const sendWorkOrderNotification = async (workOrder) => {
             </tr>
             <tr>
               <td style="padding: 10px; color: #94a3b8;">Submitted At:</td>
-              <td style="padding: 10px; color: #f1f5f9;">${new Date(workOrder.createdAt).toLocaleString()}</td>
+              <td style="padding: 10px; color: #f1f5f9;">${new Date(workOrder.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })}</td>
             </tr>
           </table>
           
@@ -150,7 +150,7 @@ const sendContactNotification = async (contactData) => {
           </tr>
           <tr>
             <td style="padding: 10px; color: #94a3b8;">Submitted At:</td>
-            <td style="padding: 10px; color: #f1f5f9;">${new Date().toLocaleString()}</td>
+            <td style="padding: 10px; color: #f1f5f9;">${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })}</td>
           </tr>
         </table>
         
@@ -230,7 +230,7 @@ const sendRegistrationNotification = async (userData) => {
             </tr>
             <tr>
               <td style="padding: 10px; color: #94a3b8;">Registered At:</td>
-              <td style="padding: 10px; color: #f1f5f9;">${new Date().toLocaleString()}</td>
+              <td style="padding: 10px; color: #f1f5f9;">${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })}</td>
             </tr>
           </table>
         </div>
@@ -974,7 +974,7 @@ const sendEstimateActionNotification = async (estimate, action, customerName) =>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #6b7280;">Action Date:</td>
-                <td style="padding: 8px 0; color: #1f2937; text-align: right;">${new Date().toLocaleString('en-IN')}</td>
+                <td style="padding: 8px 0; color: #1f2937; text-align: right;">${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })}</td>
               </tr>
             </table>
           </div>
@@ -1539,7 +1539,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
                 Created by <strong style="color: #1e293b;">${createdBy || 'System'}</strong>
               </p>
               <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 12px;">
-                ${new Date().toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}
+                ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' })}
               </p>
             </div>
           </div>
@@ -1662,7 +1662,7 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
                 ${completedByRole ? `(${completedByRole})` : ''}
               </p>
               <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">
-                ${new Date().toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}
+                ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' })}
               </p>
             </div>
           </div>

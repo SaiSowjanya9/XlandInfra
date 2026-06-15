@@ -421,9 +421,8 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     <label className="text-xs font-medium text-transparent mb-2 block uppercase tracking-wider">Action</label>
                     <button
                       onClick={handleSaveAddon}
-                      className="w-full px-4 py-2.5 bg-stone-700 text-white rounded-lg hover:bg-stone-800 font-medium transition-colors flex items-center justify-center gap-2"
+                      className="w-full px-4 py-2.5 bg-stone-700 text-white rounded-lg hover:bg-stone-800 font-medium transition-colors flex items-center justify-center"
                     >
-                      <Plus className="w-4 h-4" />
                       Save
                     </button>
                   </div>
