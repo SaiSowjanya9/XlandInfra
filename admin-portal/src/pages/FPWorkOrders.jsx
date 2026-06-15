@@ -706,8 +706,8 @@ const FPWorkOrders = ({ user }) => {
                         onClick={() => handlePropertySelect(p)}
                         className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
                       >
-                        <span className="font-medium">{p.name}</span>
-                        <span className="text-gray-500 ml-2">{p.property_id}</span>
+                        <span className="font-medium">{p.property_id}</span>
+                        <span className="text-gray-500 ml-2">{p.name}</span>
                       </button>
                     ))}
                   </div>
