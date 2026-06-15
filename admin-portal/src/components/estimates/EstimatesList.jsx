@@ -182,7 +182,10 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
           billingDuration: estimate.billingDuration || 'Yearly',
           subtotal: parseFloat(estimate.subtotal) || 0,
           totalPrice: parseFloat(estimate.totalPrice || estimate.total || estimate.total_amount) || 0,
-          discount: parseFloat(estimate.discount || estimate.discount_percent) || 0,
+          discountPercent: parseFloat(estimate.discount_percent || estimate.discount) || 0,
+          discountAmount: parseFloat(estimate.discount_amount) || 0,
+          gstPercent: parseFloat(estimate.gst_percent || estimate.gst) || 0,
+          gstAmount: parseFloat(estimate.gst_amount) || 0,
           description: estimate.description || estimate.notes || '',
           // Include package services with descriptions (same as FP portal)
           packageServices: packageServices.map(s => ({
