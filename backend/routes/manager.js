@@ -305,9 +305,9 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     
     // Fetch from properties table with creator name - filter by FP for FP employees
     let propQuery = `SELECT p.*, 
-        p.zone_id as zone_name,
+        COALESCE(z.name, zn.name, p.zone_id) as zone_name,
         COALESCE(p.area_name, p.city) as area,
-        p.division, p.division as division_name,
+        COALESCE(fd.name, p.division) as division, COALESCE(fd.name, p.division) as division_name,
         COALESCE(p.number_of_units, 1) as units,
         COALESCE(
           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
@@ -316,6 +316,9 @@ router.get('/properties', requireManagerScope, async (req, res) => {
         ) as created_by_name,
         'properties' as source_table
        FROM properties p 
+       LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id
+       LEFT JOIN zones zn ON p.zone_id = zn.name
+       LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
        LEFT JOIN users u ON p.created_by = u.email OR CAST(p.created_by AS UNSIGNED) = u.id
        WHERE ${franchisePartnerId ? 'p.franchise_partner_id = ?' : 'p.manager_id = ?'} AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
@@ -725,7 +728,7 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
 // Create work order
 router.post('/work-orders', requireManagerScope, async (req, res) => {
   try {
-    const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate,
+    const { propertyId, categoryId, subcategoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate,
             propertyName, categoryName, subcategoryName, customerName, customerEmail, customerPhone } = req.body;
     
     const workOrderId = `WO-${Date.now()}`;
@@ -733,43 +736,58 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
     // For FP-created managers: store BOTH franchise_partner_id AND manager_id
     // So work order shows in both FP dashboard and Manager dashboard
     const managerId = req.managerId;
-    const franchisePartnerId = req.franchisePartnerId || null;
+    const franchisePartnerId = req.franchisePartnerId || req.fpId || null;
+    console.log('[Manager WO Create] ManagerID:', managerId, 'FP:', franchisePartnerId);
 
-    // Fetch property details if not provided - including actual property_id
+    // Fetch property details if not provided - including actual property_id and zone
     let finalPropertyName = propertyName;
     let finalPropertyType = null;
     let actualPropertyId = null;
+    let propertyZone = null;
     if (propertyId) {
       const [props] = await pool.execute(
-        `SELECT name, property_type, property_id FROM properties WHERE id = ? 
-         UNION SELECT community_name as name, property_type, property_id FROM onboarded_properties WHERE id = ?`,
+        `SELECT name, property_type, property_id, zone_id as zone FROM properties WHERE id = ? 
+         UNION SELECT community_name as name, property_type, property_id, zone FROM onboarded_properties WHERE id = ?`,
         [propertyId, propertyId]
       );
       if (props.length > 0) {
         finalPropertyName = finalPropertyName || props[0].name;
         finalPropertyType = props[0].property_type;
         actualPropertyId = props[0].property_id;
+        propertyZone = props[0].zone;
       }
     }
 
-    // Fetch category details if not provided
+    // Fetch category and subcategory details
     let finalCategoryName = categoryName;
     let finalSubcategoryName = subcategoryName;
-    if (categoryId && !categoryName) {
-      const [cats] = await pool.execute('SELECT name FROM categories WHERE id = ?', [categoryId]);
-      if (cats.length > 0) finalCategoryName = cats[0].name;
+    if (categoryId) {
+      const [cats] = await pool.execute('SELECT name, subcategories FROM categories WHERE id = ?', [categoryId]);
+      if (cats.length > 0) {
+        if (!finalCategoryName) finalCategoryName = cats[0].name;
+        if (!finalSubcategoryName && subcategoryId && cats[0].subcategories) {
+          try {
+            const subcats = typeof cats[0].subcategories === 'string' ? JSON.parse(cats[0].subcategories) : cats[0].subcategories;
+            const subcat = subcats?.find(s => s.id === parseInt(subcategoryId) || s.id === subcategoryId);
+            if (subcat) finalSubcategoryName = subcat.name;
+          } catch (e) { /* ignore parse errors */ }
+        }
+      }
     }
+    
+    // Get creator identifier for zone-centric filtering
+    const createdBy = req.user?.email || req.user?.username || `manager-${managerId}`;
     
     const [result] = await pool.execute(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
         priority, permission_to_enter, has_pet, scheduled_date, status, manager_id, franchise_partner_id, created_by, created_at,
-        property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?)`,
+        property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone, zone)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`,
       [workOrderId, propertyId || null, categoryId || null, clientId || null, title || null, description || null,
        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null,
-       managerId || null, franchisePartnerId || null, req.user?.id || null,
+       managerId || null, franchisePartnerId || null, createdBy,
        finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
-       customerName || null, customerEmail || null, customerPhone || null]
+       customerName || null, customerEmail || null, customerPhone || null, propertyZone]
     );
 
     // Send email notification for new work order

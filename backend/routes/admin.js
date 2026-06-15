@@ -807,7 +807,7 @@ router.get('/work-orders', async (req, res) => {
     
     if (status && status !== 'all') {
       if (status === 'pending') {
-        conditions.push(`wo.status IN ('pending', 'assigned', 'in_progress')`);
+        conditions.push(`wo.status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')`);
       } else if (status === 'completed' || status === 'completed,closed') {
         conditions.push(`wo.status IN ('completed', 'closed')`);
       } else if (status.includes(',')) {

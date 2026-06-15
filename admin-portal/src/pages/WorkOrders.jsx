@@ -774,9 +774,15 @@ const WorkOrders = ({ admin }) => {
                   <p className="text-sm text-gray-500">Phone</p>
                   <p className="font-medium">{selectedOrder.customer_phone || selectedOrder.phone || 'N/A'}</p>
                 </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Property/Community</p>
+                  <p className="font-medium">{selectedOrder.property_name || 'N/A'}</p>
+                </div>
                 <div>
                   <p className="text-sm text-gray-500">Property ID</p>
-                  <p className="font-medium">{selectedOrder.property_id || 'N/A'}</p>
+                  <p className="font-medium font-mono text-blue-600">{selectedOrder.property_code || selectedOrder.actual_property_id || 'N/A'}</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -785,8 +791,8 @@ const WorkOrders = ({ admin }) => {
                   <p className="font-medium">{selectedOrder.block || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Property/Community</p>
-                  <p className="font-medium">{selectedOrder.property_name || 'N/A'}</p>
+                  <p className="text-sm text-gray-500">Property Type</p>
+                  <p className="font-medium capitalize">{selectedOrder.property_type?.replace(/_/g, ' ') || 'N/A'}</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">

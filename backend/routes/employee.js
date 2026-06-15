@@ -73,6 +73,18 @@ router.post('/login', async (req, res) => {
       user = users[0];
       userSource = 'users';
       console.log(`[Employee Login] Found user in users table: ${user.email}, role: ${user.role}`);
+      
+      // Also check fp_employees to get franchise_partner_id if not in users table
+      if (!user.franchise_partner_id) {
+        const [fpEmpCheck] = await pool.query(
+          `SELECT franchise_partner_id FROM fp_employees WHERE user_id = ? OR email = ? OR username = ?`,
+          [user.id, user.email, user.username || '']
+        );
+        if (fpEmpCheck.length > 0 && fpEmpCheck[0].franchise_partner_id) {
+          user.franchise_partner_id = fpEmpCheck[0].franchise_partner_id;
+          console.log(`[Employee Login] Merged FP ID from fp_employees: ${user.franchise_partner_id}`);
+        }
+      }
     }
 
     // If not found in users table, also check fp_employees table as fallback
@@ -95,8 +107,10 @@ router.post('/login', async (req, res) => {
           );
           if (linkedUsers.length > 0) {
             user = linkedUsers[0];
+            // IMPORTANT: Merge franchise_partner_id from fp_employees
+            user.franchise_partner_id = fpEmp.franchise_partner_id;
             userSource = 'fp_employees_linked';
-            console.log(`[Employee Login] Found user via fp_employees link: ${user.email}`);
+            console.log(`[Employee Login] Found user via fp_employees link: ${user.email}, FP ID: ${user.franchise_partner_id}`);
           }
         }
         
