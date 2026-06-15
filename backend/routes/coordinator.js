@@ -310,7 +310,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
       propQuery = `SELECT p.*, 
           COALESCE(z.name, zn.name, p.zone_id) as zone_name,
           COALESCE(p.area_name, p.city) as area,
-          COALESCE(p.division_id, p.division, 'General') as division,
+          p.division, p.division as division_name,
           1 as units,
           COALESCE(p.status, 'active') as status,
           COALESCE(
@@ -332,7 +332,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
       propQuery = `SELECT p.*, 
           COALESCE(z.name, zn.name, p.zone_id) as zone_name,
           COALESCE(p.area_name, p.city) as area,
-          COALESCE(p.division_id, p.division, 'General') as division,
+          p.division, p.division as division_name,
           1 as units,
           COALESCE(p.status, 'active') as status,
           COALESCE(
@@ -362,7 +362,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
       if (isFPCoordinator) {
         // FP Coordinators see: zone-centric onboarded properties + their own created
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                  op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
+                  op.zone as zone_name, op.area_name as area, op.division, op.division as division_name, op.total_units as units,
                   op.total_units, op.number_of_blocks, op.block_names, op.units_per_block, op.number_of_units,
                   op.address, op.city, op.state, op.postal_code as zip_code,
                   op.contact_person, op.contact_phone, op.contact_email as email,
@@ -376,7 +376,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
         onbParams = [franchisePartnerId, ...onbZoneFilter.params];
       } else {
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                  op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
+                  op.zone as zone_name, op.area_name as area, op.division, op.division as division_name, op.total_units as units,
                   op.total_units, op.number_of_blocks, op.block_names, op.units_per_block, op.number_of_units,
                   op.address, op.city, op.state, op.postal_code as zip_code,
                   op.contact_person, op.contact_phone, op.contact_email as email,

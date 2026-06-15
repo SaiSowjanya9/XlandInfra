@@ -367,7 +367,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
     // Get own, assigned, and FP properties with creator name (zone-centric + own created)
     const query = `SELECT p.*, p.zone_id as zone_name, 
               COALESCE(p.area_name, p.city) as area,
-              COALESCE(p.division_id, p.division, 'General') as division,
+              p.division, p.division as division_name,
               COALESCE(p.number_of_units, 1) as units,
               COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'own' as access_type, TRUE as can_modify, TRUE as can_delete,
@@ -380,7 +380,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
        UNION
        SELECT p.*, p.zone_id as zone_name,
               COALESCE(p.area_name, p.city) as area,
-              COALESCE(p.division_id, p.division, 'General') as division,
+              p.division, p.division as division_name,
               COALESCE(p.number_of_units, 1) as units,
               COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'assigned' as access_type, sap.can_modify, sap.can_delete,
@@ -405,7 +405,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
       const scopeId = franchisePartnerId || supervisorId;
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                op.zone as zone_name, op.area_name as area, op.division, COALESCE(op.total_units, 1) as units,
+                op.zone as zone_name, op.area_name as area, op.division, op.division as division_name, COALESCE(op.total_units, 1) as units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 NULL as contact_person, NULL as contact_phone, NULL as email,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,

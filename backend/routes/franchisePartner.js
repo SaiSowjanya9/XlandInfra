@@ -282,7 +282,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
     const [regularProperties] = await pool.execute(
       `SELECT p.*,
         p.zone_id as zone_name,
-        p.division_id as division,
+        p.division, p.division as division_name,
         p.area_name as area,
         COALESCE(p.number_of_units, p.number_of_blocks, 1) as units,
         p.block_names,
@@ -310,7 +310,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
     try {
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
+                op.zone as zone_name, op.area_name as area, op.division, op.division as division_name, op.total_units as units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 NULL as contact_person, NULL as contact_phone, NULL as email,
                 COALESCE(
