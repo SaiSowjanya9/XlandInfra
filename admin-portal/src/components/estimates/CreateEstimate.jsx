@@ -1521,8 +1521,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-3">
                       <Package className="w-5 h-5 text-blue-600" />
-                      <span className="font-semibold text-blue-800">{selectedPackage.packageName}</span>
-                      <span className="text-xs bg-blue-200 text-blue-700 px-2 py-0.5 rounded">{selectedPackage.packageId}</span>
+                      <span className="font-semibold text-blue-800">Package Services</span>
                     </div>
                     {/* Services Table - Without individual Price column */}
                     <div className="bg-white rounded border border-blue-100 overflow-hidden">
@@ -2132,8 +2131,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                 <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center gap-2 mb-3">
                     <Package className="w-5 h-5 text-blue-600" />
-                    <span className="font-semibold text-blue-800">{directSelectedPackage.packageName}</span>
-                    <span className="text-xs bg-blue-200 text-blue-700 px-2 py-0.5 rounded">{directSelectedPackage.packageId}</span>
+                    <span className="font-semibold text-blue-800">Package Services</span>
                   </div>
                   {/* Services Table */}
                   <div className="bg-white rounded border border-blue-100 overflow-hidden">

@@ -406,8 +406,7 @@ const AMCPackage = ({ showToast }) => {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Package className="w-5 h-5 text-blue-600" />
-                  <span className="font-semibold text-blue-800">{selectedPackage.packageName}</span>
-                  <span className="text-xs text-blue-600">({selectedPackage.packageId})</span>
+                  <span className="font-semibold text-blue-800">Package Services</span>
                 </div>
                 <span className="text-lg font-bold text-blue-700">₹{getPackagePrice().toLocaleString()}</span>
               </div>
