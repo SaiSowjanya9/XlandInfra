@@ -496,9 +496,9 @@ const generatePDF = (data, type, filename) => {
     
     const priceBoxW = 85;
     const priceBoxX = pageWidth - margin - priceBoxW;
-    const hasDiscount = discountAmount > 0;
-    const hasGst = gstAmount > 0;
-    const priceBoxH = 12 + (hasDiscount ? 6 : 0) + (hasGst ? 6 : 0) + 8; // Dynamic height based on content
+    const hasDiscount = discountAmount > 0; // Only show discount if > 0
+    // Always show GST row (even if 0)
+    const priceBoxH = 12 + (hasDiscount ? 6 : 0) + 6 + 8; // Subtotal + Discount(if any) + GST(always) + Total
 
     if (y + priceBoxH + 25 > pageHeight) {
       doc.addPage();
@@ -529,14 +529,12 @@ const generatePDF = (data, type, filename) => {
       py += 6;
     }
     
-    // GST row (if applicable)
-    if (hasGst) {
-      doc.setTextColor(...mediumText);
-      doc.text(`GST (${gstPercent}%)`, priceBoxX + 4, py);
-      doc.setTextColor(...darkText);
-      doc.text(formatCurrency(gstAmount), priceBoxX + priceBoxW - 4, py, { align: 'right' });
-      py += 6;
-    }
+    // GST row (always show, even if 0)
+    doc.setTextColor(...mediumText);
+    doc.text(`GST (${gstPercent}%)`, priceBoxX + 4, py);
+    doc.setTextColor(...darkText);
+    doc.text(formatCurrency(gstAmount), priceBoxX + priceBoxW - 4, py, { align: 'right' });
+    py += 6;
     
     // Total row with dark background
     py += 2;
