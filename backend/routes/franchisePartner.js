@@ -184,8 +184,8 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       // Properties count
       safeCount('SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ? AND (status IS NULL OR status != \'deleted\')', [fpId]),
       
-      // Vendors count - match the vendor details query, exclude seed data
-      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE (franchise_partner_id = ? OR franchise_partner_id IS NULL) AND vendor_id NOT LIKE \'%SEED%\'', [fpId]),
+      // Vendors count - only this FP's vendors
+      safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND vendor_id NOT LIKE \'%SEED%\'', [fpId]),
       
       // Customers count
       safeCount('SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?', [fpId]),
@@ -429,7 +429,7 @@ router.get('/properties/:id', requireFPScope, async (req, res) => {
     const [onboarded] = await pool.execute(
       `SELECT op.*, op.community_name as name, NULL as contact_person, NULL as contact_phone, NULL as contact_email
        FROM onboarded_properties op
-       WHERE (op.id = ? OR op.property_id = ?) AND (op.franchise_partner_id = ? OR op.franchise_partner_id IS NULL)`,
+       WHERE (op.id = ? OR op.property_id = ?) AND op.franchise_partner_id = ?`,
       [id, id, req.fpId]
     );
     
@@ -579,7 +579,7 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
     // Verify vendor belongs to this FP (check onboarded_vendors table)
     const [vendor] = await pool.execute(
       `SELECT id, owner_name, owner_email, owner_mobile, service_type FROM onboarded_vendors 
-       WHERE (id = ? OR vendor_id = ?) AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
+       WHERE (id = ? OR vendor_id = ?) AND franchise_partner_id = ?`,
       [vendorId, vendorId, req.fpId]
     );
 
@@ -927,7 +927,7 @@ router.patch('/work-orders/:id/assign-vendor', requireFPScope, validateOwnership
 
     // Validate vendor belongs to FP (check onboarded_vendors table)
     const [vendor] = await pool.execute(
-      `SELECT id FROM onboarded_vendors WHERE (id = ? OR vendor_id = ?) AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
+      `SELECT id FROM onboarded_vendors WHERE (id = ? OR vendor_id = ?) AND franchise_partner_id = ?`,
       [vendorId, vendorId, req.fpId]
     );
 
@@ -995,7 +995,7 @@ router.put('/work-orders/:id', requireFPScope, async (req, res) => {
     params.push(id, req.fpId);
 
     await pool.execute(
-      `UPDATE work_orders SET ${updates.join(', ')} WHERE id = ? AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
+      `UPDATE work_orders SET ${updates.join(', ')} WHERE id = ? AND franchise_partner_id = ?`,
       params
     );
 
@@ -1056,7 +1056,7 @@ router.delete('/work-orders/:id', requireFPScope, async (req, res) => {
 
     // Delete work orders that belong to this FP or have no FP assigned
     const [result] = await pool.execute(
-      `DELETE FROM work_orders WHERE id = ? AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
+      `DELETE FROM work_orders WHERE id = ? AND franchise_partner_id = ?`,
       [id, req.fpId]
     );
 
@@ -1333,19 +1333,17 @@ router.post('/customers', requireFPScope, async (req, res) => {
   }
 });
 
-// Get customer accounts for FP
-// Includes both FP-created customers AND admin-created customers (from onboarded_properties)
+// Get customer accounts for FP - only this FP's customers
 router.get('/customer-accounts', requireFPScope, async (req, res) => {
   try {
     const [accounts] = await pool.execute(
       `SELECT ca.*, 
-              COALESCE(p.name, op.community_name) as property_name, 
-              COALESCE(p.property_id, op.property_id) as property_code,
-              CASE WHEN ca.franchise_partner_id IS NULL THEN 'admin' ELSE 'fp' END as created_source
+              p.name as property_name, 
+              p.property_id as property_code,
+              'fp' as created_source
        FROM customer_accounts ca
-       LEFT JOIN properties p ON ca.property_id = p.id AND ca.franchise_partner_id IS NOT NULL
-       LEFT JOIN onboarded_properties op ON ca.property_id = op.id AND ca.franchise_partner_id IS NULL
-       WHERE ca.franchise_partner_id = ? OR ca.franchise_partner_id IS NULL
+       LEFT JOIN properties p ON ca.property_id = p.id
+       WHERE ca.franchise_partner_id = ?
        ORDER BY ca.created_at DESC`,
       [req.fpId]
     );
@@ -1369,7 +1367,7 @@ router.post('/customer-accounts/:id/activate', requireFPScope, async (req, res) 
     await pool.execute(
       `UPDATE customer_accounts 
        SET is_activated = 1, password_hash = ?, temp_password = ?, updated_at = NOW()
-       WHERE id = ? AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
+       WHERE id = ? AND franchise_partner_id = ?`,
       [hashedPassword, tempPassword, id, req.fpId]
     );
     
@@ -1398,7 +1396,7 @@ router.post('/customer-accounts/:id/deactivate', requireFPScope, async (req, res
     
     await pool.execute(
       `UPDATE customer_accounts SET is_activated = 0, updated_at = NOW()
-       WHERE id = ? AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
+       WHERE id = ? AND franchise_partner_id = ?`,
       [id, req.fpId]
     );
     
@@ -1420,7 +1418,7 @@ router.post('/customer-accounts/:id/resend-activation', requireFPScope, async (r
     
     await pool.execute(
       `UPDATE customer_accounts SET password_hash = ?, temp_password = ?, updated_at = NOW()
-       WHERE id = ? AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)`,
+       WHERE id = ? AND franchise_partner_id = ?`,
       [hashedPassword, tempPassword, id, req.fpId]
     );
     
@@ -1470,7 +1468,7 @@ router.get('/vendors', requireFPScope, async (req, res) => {
               'own' as vendor_type
        FROM onboarded_vendors ov
        LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
-       WHERE (ov.franchise_partner_id = ? OR ov.franchise_partner_id IS NULL)
+       WHERE ov.franchise_partner_id = ?
          AND ov.vendor_id NOT LIKE '%SEED%'
        ORDER BY ov.created_at DESC`,
       [req.fpId]
@@ -1582,10 +1580,8 @@ router.put('/vendors/assignments/:id', requireFPScope, async (req, res) => {
 
     // Verify new vendor belongs to this FP
     const [vendor] = await pool.execute(
-      `SELECT id FROM onboarded_vendors WHERE id = ? AND (franchise_partner_id = ? OR id IN (
-        SELECT vendor_id FROM fp_assigned_vendors WHERE franchise_partner_id = ? AND is_active = 1
-      ))`,
-      [newVendorId, req.fpId, req.fpId]
+      `SELECT id FROM onboarded_vendors WHERE id = ? AND franchise_partner_id = ?`,
+      [newVendorId, req.fpId]
     );
 
     if (vendor.length === 0) {
@@ -1698,7 +1694,7 @@ router.put('/vendors/:id', requireFPScope, async (req, res) => {
 
     // Verify vendor exists in onboarded_vendors
     const [existing] = await pool.execute(
-      'SELECT id FROM onboarded_vendors WHERE id = ? AND (franchise_partner_id = ? OR franchise_partner_id IS NULL)',
+      'SELECT id FROM onboarded_vendors WHERE id = ? AND franchise_partner_id = ?',
       [id, req.fpId]
     );
 

@@ -2046,7 +2046,7 @@ router.get('/fp-view/:fpId/vendors', authenticate, adminOnly, async (req, res) =
               ) as created_by_name
        FROM onboarded_vendors ov
        LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
-       WHERE (ov.franchise_partner_id = ? OR ov.franchise_partner_id IS NULL) 
+       WHERE ov.franchise_partner_id = ?
          AND ov.status = 'active' AND ov.vendor_id NOT LIKE '%SEED%'
        ORDER BY ov.created_at DESC`,
       [fpIdNum]
