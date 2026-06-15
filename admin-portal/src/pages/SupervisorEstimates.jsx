@@ -489,7 +489,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
           {activeTab === 'create' && (
             <div className="space-y-6">
               {/* FP Shared Resources Section - Read-only for employees, only show before selecting estimate type */}
-              {!estimateType && fpPortalLinks.length > 0 && (
+              {!estimateForm.estimateType && fpPortalLinks.length > 0 && (
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                   <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-5 py-3 border-b border-gray-200">
                     <div className="flex items-center gap-3">
