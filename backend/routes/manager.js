@@ -716,7 +716,7 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
     const [result] = await pool.execute(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
         priority, permission_to_enter, has_pet, scheduled_date, status, manager_id, franchise_partner_id, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?, ?, NOW())`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW())`,
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null,
        managerId, franchisePartnerId, req.user.id]

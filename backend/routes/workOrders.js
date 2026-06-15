@@ -331,7 +331,7 @@ router.get('/', async (req, res) => {
       // Filter by status
       if (status && status !== 'all') {
         if (status === 'pending') {
-          conditions.push(`wo.status IN ('pending', 'assigned', 'in_progress')`);
+          conditions.push(`wo.status IN ('pending', 'requested', 'assigned', 'in_progress')`);
         } else if (status === 'closed') {
           conditions.push(`wo.status IN ('completed', 'closed')`);
         } else {
