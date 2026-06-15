@@ -713,18 +713,20 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId || null;
 
-    // Fetch property details if not provided
+    // Fetch property details if not provided - including actual property_id
     let finalPropertyName = propertyName;
     let finalPropertyType = null;
-    if (propertyId && !propertyName) {
+    let actualPropertyId = null;
+    if (propertyId) {
       const [props] = await pool.execute(
-        `SELECT name, property_type FROM properties WHERE id = ? 
-         UNION SELECT community_name as name, property_type FROM onboarded_properties WHERE id = ?`,
+        `SELECT name, property_type, property_id FROM properties WHERE id = ? 
+         UNION SELECT community_name as name, property_type, property_id FROM onboarded_properties WHERE id = ?`,
         [propertyId, propertyId]
       );
       if (props.length > 0) {
-        finalPropertyName = props[0].name;
+        finalPropertyName = finalPropertyName || props[0].name;
         finalPropertyType = props[0].property_type;
+        actualPropertyId = props[0].property_id;
       }
     }
 
@@ -755,7 +757,7 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
       orderNumber: workOrderId,
       title: title || `Service Request - ${finalCategoryName || 'General'}`,
       propertyName: finalPropertyName,
-      propertyId,
+      propertyId: actualPropertyId || propertyId,
       propertyType: finalPropertyType,
       customerName,
       customerEmail,
