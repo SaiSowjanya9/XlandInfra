@@ -1447,7 +1447,8 @@ router.post('/customer-accounts/:id/resend-activation', requireFPScope, async (r
 // Get all FP vendors (own + assigned) - fetch from onboarded_vendors
 router.get('/vendors', requireFPScope, async (req, res) => {
   try {
-    // Fetch ALL vendors from onboarded_vendors (shared across FP)
+    console.log('[FP Vendors] Fetching vendors for FP ID:', req.fpId);
+    // Fetch vendors for this FP only
     const [vendors] = await pool.execute(
       `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
               ov.zone, ov.zone as zone_name, ov.area_name, ov.area_name as area, ov.division,
@@ -1473,6 +1474,8 @@ router.get('/vendors', requireFPScope, async (req, res) => {
        ORDER BY ov.created_at DESC`,
       [req.fpId]
     );
+
+    console.log('[FP Vendors] Found', vendors.length, 'vendors for FP ID:', req.fpId);
 
     res.json({
       success: true,
