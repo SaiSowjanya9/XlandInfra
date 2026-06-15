@@ -446,6 +446,22 @@ const initOnboardingTables = async () => {
     `);
     console.log('  ✅ Work order attachments & history tables initialized');
 
+    // Create work_order_status_history table (used by vendors)
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS work_order_status_history (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        work_order_id INT NOT NULL,
+        from_status VARCHAR(50),
+        to_status VARCHAR(50) NOT NULL,
+        changed_by INT DEFAULT NULL,
+        changed_by_role VARCHAR(50) DEFAULT 'system',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_wo_status_history_order (work_order_id)
+      )
+    `);
+    console.log('  ✅ Work order status history table initialized');
+
     // Create customer_accounts table for customer portal
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS customer_accounts (
@@ -490,7 +506,11 @@ const initOnboardingTables = async () => {
       { name: 'manager_id', def: "INT DEFAULT NULL" },
       { name: 'coordinator_id', def: "INT DEFAULT NULL" },
       { name: 'supervisor_id', def: "INT DEFAULT NULL" },
-      { name: 'executive_id', def: "INT DEFAULT NULL" }
+      { name: 'executive_id', def: "INT DEFAULT NULL" },
+      // Password reset columns - CRITICAL for forgot password functionality
+      { name: 'reset_token', def: "VARCHAR(255) NULL" },
+      { name: 'reset_token_expires', def: "DATETIME NULL" },
+      { name: 'reset_temp_password_hash', def: "VARCHAR(255) NULL" }
     ];
     for (const col of customerAccountColumns) {
       try {
@@ -500,6 +520,91 @@ const initOnboardingTables = async () => {
         // Column already exists
       }
     }
+
+    // Create customer_activity_log table - CRITICAL for login/activation tracking
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS customer_activity_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        customer_id INT NOT NULL,
+        action VARCHAR(100) NOT NULL,
+        details JSON,
+        ip_address VARCHAR(45),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_customer_activity_customer (customer_id),
+        INDEX idx_customer_activity_action (action)
+      )
+    `);
+    console.log('  ✅ Customer activity log table initialized');
+
+    // Create estimates table
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS estimates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        estimate_id VARCHAR(50) UNIQUE NOT NULL,
+        client_id INT,
+        property_id INT,
+        franchise_partner_id INT,
+        title VARCHAR(255),
+        description TEXT,
+        subtotal DECIMAL(12,2) DEFAULT 0.00,
+        tax_percentage DECIMAL(5,2) DEFAULT 0.00,
+        tax_amount DECIMAL(12,2) DEFAULT 0.00,
+        discount_percentage DECIMAL(5,2) DEFAULT 0.00,
+        discount_amount DECIMAL(12,2) DEFAULT 0.00,
+        total_amount DECIMAL(12,2) DEFAULT 0.00,
+        status VARCHAR(50) DEFAULT 'draft',
+        valid_until DATE,
+        created_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_estimates_client (client_id),
+        INDEX idx_estimates_property (property_id),
+        INDEX idx_estimates_status (status)
+      )
+    `);
+
+    // Create estimate_items table
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS estimate_items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        estimate_id INT NOT NULL,
+        package_id INT,
+        category_id INT,
+        description TEXT,
+        quantity INT DEFAULT 1,
+        unit_price DECIMAL(12,2) DEFAULT 0.00,
+        total_price DECIMAL(12,2) DEFAULT 0.00,
+        sort_order INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_estimate_items_estimate (estimate_id)
+      )
+    `);
+    console.log('  ✅ Estimates tables initialized');
+
+    // Create schedules table
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS schedules (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        schedule_id VARCHAR(50) UNIQUE NOT NULL,
+        estimate_id INT,
+        package_id INT,
+        property_id INT,
+        franchise_partner_id INT,
+        title VARCHAR(255),
+        description TEXT,
+        start_date DATE,
+        end_date DATE,
+        frequency VARCHAR(50),
+        frequency_details JSON,
+        status VARCHAR(50) DEFAULT 'active',
+        created_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_schedules_property (property_id),
+        INDEX idx_schedules_status (status)
+      )
+    `);
+    console.log('  ✅ Schedules table initialized');
 
     // Create users table for employee portal
     await conn.execute(`
@@ -727,6 +832,22 @@ const initOnboardingTables = async () => {
       )
     `);
     console.log('  ✅ FP assigned vendors table initialized');
+
+    // Create property_vendor_assignments table (used for vendor assignment to properties)
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS property_vendor_assignments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        property_id INT NOT NULL,
+        vendor_id INT NOT NULL,
+        assigned_by INT,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT TRUE,
+        UNIQUE KEY unique_property_vendor (property_id, vendor_id),
+        INDEX idx_pva_property (property_id),
+        INDEX idx_pva_vendor (vendor_id)
+      )
+    `);
+    console.log('  ✅ Property vendor assignments table initialized');
 
     // Add franchise_partner_id to related tables for FP data isolation
     const fpTables = ['properties', 'clients', 'vendors', 'work_orders', 'estimates', 'schedules'];
