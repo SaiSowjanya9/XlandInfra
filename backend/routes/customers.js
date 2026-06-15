@@ -495,20 +495,21 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find customer - fetch property details from onboarded_properties
+    // Find customer - fetch property details from both properties and onboarded_properties tables
     // Try joining by both id (numeric) and property_id (string) in case either was stored
     const [customers] = await pool.execute(
       `SELECT ca.*, 
-              COALESCE(op1.community_name, op2.community_name) as op_property_name,
-              COALESCE(op1.property_id, op2.property_id) as op_property_id,
-              COALESCE(op1.zone, op2.zone) as op_zone, 
-              COALESCE(op1.division, op2.division) as op_division, 
+              COALESCE(p.name, op1.community_name, op2.community_name) as op_property_name,
+              COALESCE(p.property_id, op1.property_id, op2.property_id) as op_property_id,
+              COALESCE(p.zone_id, op1.zone, op2.zone) as op_zone, 
+              COALESCE(p.division, op1.division, op2.division) as op_division, 
               COALESCE(op1.entry_type, op2.entry_type) as entry_type,
-              COALESCE(op1.address, op2.address) as op_address, 
-              COALESCE(op1.city, op2.city) as op_city, 
-              COALESCE(op1.state, op2.state) as op_state,
-              COALESCE(op1.property_type, op2.property_type) as op_property_type
+              COALESCE(p.address, op1.address, op2.address) as op_address, 
+              COALESCE(p.city, op1.city, op2.city) as op_city, 
+              COALESCE(p.state, op1.state, op2.state) as op_state,
+              COALESCE(p.property_type, op1.property_type, op2.property_type) as op_property_type
        FROM customer_accounts ca
+       LEFT JOIN properties p ON CAST(ca.property_id AS UNSIGNED) = p.id
        LEFT JOIN onboarded_properties op1 ON CAST(ca.property_id AS UNSIGNED) = op1.id
        LEFT JOIN onboarded_properties op2 ON ca.property_id = op2.property_id
        WHERE ca.email = ? AND ca.is_active = 1`,
