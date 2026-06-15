@@ -1377,7 +1377,6 @@ const EmployeeWorkOrders = ({ admin }) => {
                   </>
                 ) : (
                   <>
-                    <Send className="w-5 h-5" />
                     <span>Create Work Order</span>
                   </>
                 )}
