@@ -419,7 +419,7 @@ router.get('/properties/:id', requireManagerScope, async (req, res) => {
     
     // Try properties table first
     const [properties] = await pool.execute(
-      `SELECT p.*, p.contact_person, p.contact_phone, p.contact_email
+      `SELECT p.*, p.division as division_name, p.contact_person, p.contact_phone, p.contact_email
        FROM properties p
        WHERE (p.id = ? OR p.property_id = ?) AND p.${scopeColumn} = ?`,
       [id, id, scopeId]
@@ -431,7 +431,8 @@ router.get('/properties/:id', requireManagerScope, async (req, res) => {
     
     // Try onboarded_properties table
     const [onboarded] = await pool.execute(
-      `SELECT op.*, op.community_name as name, NULL as contact_person, NULL as contact_phone, NULL as contact_email
+      `SELECT op.*, op.community_name as name, op.division as division_name, 
+              op.contact_person, op.contact_phone, op.contact_email
        FROM onboarded_properties op
        WHERE (op.id = ? OR op.property_id = ?) AND op.${scopeColumn} = ?`,
       [id, id, scopeId]

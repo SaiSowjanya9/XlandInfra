@@ -182,8 +182,8 @@ router.post('/login', async (req, res) => {
         phone: resident.phone,
         unitId: resident.unit_id,
         unitNumber: resident.unit_number,
-        propertyId: resident.property_db_id,
-        propertyCode: resident.property_id,
+        propertyId: resident.property_id || `PROP-${resident.property_db_id}`,
+        propertyCode: resident.property_id || `PROP-${resident.property_db_id}`,
         propertyName: resident.property_name
       }
     });

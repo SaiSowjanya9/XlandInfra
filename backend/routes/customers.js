@@ -602,6 +602,10 @@ router.post('/login', async (req, res) => {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
+    // Determine the actual property code - never return database ID
+    const actualPropertyCode = customer.op_property_id || customer.property_code || 
+      (customer.property_id ? `PROP-${customer.property_id}` : null);
+
     res.json({
       success: true,
       message: 'Login successful',
@@ -614,9 +618,9 @@ router.post('/login', async (req, res) => {
           firstName: customer.first_name,
           lastName: customer.last_name,
           phone: customer.phone,
-          propertyId: customer.op_property_id || customer.property_code || null,
+          propertyId: actualPropertyCode,
           propertyName: customer.op_property_name || customer.property_name || null,
-          propertyCode: customer.op_property_id || customer.property_code || null,
+          propertyCode: actualPropertyCode,
           propertyType: customer.op_property_type || null,
           zone: customer.op_zone || customer.zone || null,
           division: customer.op_division || customer.division || null,
@@ -996,6 +1000,10 @@ router.get('/profile', async (req, res) => {
 
     const customer = customers[0];
 
+    // Determine actual property code - never return raw database ID
+    const actualPropCode = customer.actual_property_id || customer.property_code || 
+      (customer.property_id ? `PROP-${customer.property_id}` : null);
+
     res.json({
       success: true,
       data: {
@@ -1005,9 +1013,9 @@ router.get('/profile', async (req, res) => {
         firstName: customer.first_name,
         lastName: customer.last_name,
         phone: customer.phone,
-        propertyId: customer.actual_property_id || customer.property_code || customer.property_id,
+        propertyId: actualPropCode,
         propertyName: customer.property_name || customer.community_name,
-        propertyCode: customer.actual_property_id || customer.property_code,
+        propertyCode: actualPropCode,
         zone: customer.zone,
         division: customer.division,
         address: customer.prop_address,
@@ -1172,6 +1180,10 @@ router.get('/dashboard', async (req, res) => {
       [customerId]
     );
 
+    // Determine actual property code - never return raw database ID
+    const dashPropCode = customer[0].actual_property_id || customer[0].property_code || 
+      (customer[0].property_id ? `PROP-${customer[0].property_id}` : null);
+
     res.json({
       success: true,
       data: {
@@ -1181,8 +1193,8 @@ router.get('/dashboard', async (req, res) => {
           lastName: customer[0].last_name,
           email: customer[0].email,
           propertyName: customer[0].property_name,
-          propertyId: customer[0].actual_property_id || customer[0].property_code || customer[0].property_id,
-          propertyCode: customer[0].actual_property_id || customer[0].property_code
+          propertyId: dashPropCode,
+          propertyCode: dashPropCode
         },
         recentWorkOrders: workOrders,
         stats: {
