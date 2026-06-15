@@ -444,25 +444,96 @@ router.get('/properties/:id', requireFPScope, async (req, res) => {
   }
 });
 
-// Update property
-router.put('/properties/:id', requireFPScope, validateOwnership('properties'), async (req, res) => {
+// Update property (handles both properties and onboarded_properties tables)
+router.put('/properties/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    const sourceTable = updates.sourceTable || updates.source_table;
 
-    const allowedFields = [
-      'name', 'property_type', 'address', 'city', 'state', 'zip_code',
-      'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active'
-    ];
+    // Check which table the property belongs to
+    let tableName = 'properties';
+    let ownerColumn = 'franchise_partner_id';
+    
+    if (sourceTable === 'onboarded_properties') {
+      tableName = 'onboarded_properties';
+    } else {
+      // Check if property exists in properties table
+      const [propCheck] = await pool.execute(
+        'SELECT id FROM properties WHERE id = ? AND franchise_partner_id = ?',
+        [id, req.fpId]
+      );
+      
+      if (propCheck.length === 0) {
+        // Check onboarded_properties table
+        const [onboardedCheck] = await pool.execute(
+          'SELECT id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?',
+          [id, req.fpId]
+        );
+        
+        if (onboardedCheck.length > 0) {
+          tableName = 'onboarded_properties';
+        } else {
+          return res.status(404).json({
+            success: false,
+            message: 'Property not found or access denied'
+          });
+        }
+      }
+    }
 
+    // Define allowed fields for each table
+    const allowedFieldsMap = {
+      properties: [
+        'name', 'property_type', 'address', 'city', 'state', 'zip_code',
+        'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active'
+      ],
+      onboarded_properties: [
+        'community_name', 'property_type', 'address', 'city', 'state', 'postal_code',
+        'zone', 'division', 'area_name', 'status', 'number_of_units', 'total_units'
+      ]
+    };
+
+    // Field mapping for onboarded_properties (camelCase/frontend -> snake_case/db)
+    const fieldMapping = {
+      name: tableName === 'onboarded_properties' ? 'community_name' : 'name',
+      zipCode: tableName === 'onboarded_properties' ? 'postal_code' : 'zip_code',
+      zip_code: tableName === 'onboarded_properties' ? 'postal_code' : 'zip_code',
+      zoneId: tableName === 'onboarded_properties' ? 'zone' : 'zone_id',
+      zone_id: tableName === 'onboarded_properties' ? 'zone' : 'zone_id',
+      divisionId: tableName === 'onboarded_properties' ? 'division' : 'division_id',
+      division_id: tableName === 'onboarded_properties' ? 'division' : 'division_id',
+      isActive: 'status',
+      is_active: 'status'
+    };
+
+    const allowedFields = allowedFieldsMap[tableName];
     const setClauses = [];
     const values = [];
 
     for (const [key, value] of Object.entries(updates)) {
-      const dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      if (key === 'sourceTable' || key === 'source_table') continue;
+      
+      // Convert camelCase to snake_case
+      let dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      
+      // Apply field mapping if exists
+      if (fieldMapping[key]) {
+        dbKey = fieldMapping[key];
+      } else if (fieldMapping[dbKey]) {
+        dbKey = fieldMapping[dbKey];
+      }
+      
+      // Handle is_active -> status conversion for onboarded_properties
+      let finalValue = value;
+      if (tableName === 'onboarded_properties' && (key === 'isActive' || key === 'is_active')) {
+        dbKey = 'status';
+        finalValue = value ? 'active' : 'inactive';
+      }
+      
       if (allowedFields.includes(dbKey)) {
         setClauses.push(`${dbKey} = ?`);
-        values.push(value);
+        values.push(finalValue);
       }
     }
 
@@ -476,7 +547,7 @@ router.put('/properties/:id', requireFPScope, validateOwnership('properties'), a
     values.push(id, req.fpId);
 
     await pool.execute(
-      `UPDATE properties SET ${setClauses.join(', ')} WHERE id = ? AND franchise_partner_id = ?`,
+      `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE id = ? AND franchise_partner_id = ?`,
       values
     );
 

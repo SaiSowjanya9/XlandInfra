@@ -427,23 +427,102 @@ router.post('/properties', authenticate, managerOrAdmin, async (req, res) => {
   }
 });
 
-// Update property (Admin, Manager only)
+// Update property (Admin, Manager only) - handles both properties and onboarded_properties
 router.put('/properties/:id', authenticate, managerOrAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, address, city, state, zipCode, country, isActive } = req.body;
+    const updates = req.body;
+    const sourceTable = updates.sourceTable || updates.source_table;
+
+    // Check which table the property belongs to
+    let tableName = 'properties';
+    
+    if (sourceTable === 'onboarded_properties') {
+      tableName = 'onboarded_properties';
+    } else {
+      // Check if property exists in properties table
+      const [propCheck] = await pool.execute('SELECT id FROM properties WHERE id = ?', [id]);
+      
+      if (propCheck.length === 0) {
+        // Check onboarded_properties table
+        const [onboardedCheck] = await pool.execute('SELECT id FROM onboarded_properties WHERE id = ?', [id]);
+        
+        if (onboardedCheck.length > 0) {
+          tableName = 'onboarded_properties';
+        } else {
+          return res.status(404).json({
+            success: false,
+            message: 'Property not found'
+          });
+        }
+      }
+    }
+
+    // Define allowed fields for each table
+    const allowedFieldsMap = {
+      properties: [
+        'name', 'property_type', 'address', 'city', 'state', 'zip_code', 'country',
+        'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active'
+      ],
+      onboarded_properties: [
+        'community_name', 'property_type', 'address', 'city', 'state', 'postal_code',
+        'zone', 'division', 'area_name', 'status', 'number_of_units', 'total_units'
+      ]
+    };
+
+    // Field mapping for onboarded_properties
+    const fieldMapping = {
+      name: tableName === 'onboarded_properties' ? 'community_name' : 'name',
+      zipCode: tableName === 'onboarded_properties' ? 'postal_code' : 'zip_code',
+      zip_code: tableName === 'onboarded_properties' ? 'postal_code' : 'zip_code',
+      zoneId: tableName === 'onboarded_properties' ? 'zone' : 'zone_id',
+      zone_id: tableName === 'onboarded_properties' ? 'zone' : 'zone_id',
+      divisionId: tableName === 'onboarded_properties' ? 'division' : 'division_id',
+      division_id: tableName === 'onboarded_properties' ? 'division' : 'division_id'
+    };
+
+    const allowedFields = allowedFieldsMap[tableName];
+    const setClauses = [];
+    const values = [];
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (key === 'sourceTable' || key === 'source_table') continue;
+      
+      // Convert camelCase to snake_case
+      let dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      
+      // Apply field mapping if exists
+      if (fieldMapping[key]) {
+        dbKey = fieldMapping[key];
+      } else if (fieldMapping[dbKey]) {
+        dbKey = fieldMapping[dbKey];
+      }
+      
+      // Handle is_active -> status conversion for onboarded_properties
+      let finalValue = value;
+      if (tableName === 'onboarded_properties' && (key === 'isActive' || key === 'is_active')) {
+        dbKey = 'status';
+        finalValue = value ? 'active' : 'inactive';
+      }
+      
+      if (allowedFields.includes(dbKey)) {
+        setClauses.push(`${dbKey} = ?`);
+        values.push(finalValue);
+      }
+    }
+
+    if (setClauses.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid fields to update'
+      });
+    }
+
+    values.push(id);
 
     const [result] = await pool.execute(
-      `UPDATE properties SET 
-        name = COALESCE(?, name),
-        address = COALESCE(?, address),
-        city = ?,
-        state = ?,
-        zip_code = ?,
-        country = COALESCE(?, country),
-        is_active = COALESCE(?, is_active)
-       WHERE id = ?`,
-      [name, address, city, state, zipCode, country, isActive, id]
+      `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE id = ?`,
+      values
     );
 
     if (result.affectedRows === 0) {
