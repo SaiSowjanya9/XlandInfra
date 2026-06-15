@@ -52,11 +52,13 @@ const Dashboard = ({ user }) => {
             </div>
             <div>
               <p className="text-gold-400/80 text-sm">Your Property</p>
-              <h2 className="text-xl font-bold text-white">{user.propertyName}</h2>
-              <div className="flex items-center space-x-2 mt-1">
-                <Home className="w-4 h-4 text-gold-500/70" />
-                <span className="text-dark-300">Unit {user.unitNumber}</span>
-              </div>
+              <h2 className="text-xl font-bold text-white">{user.propertyName || 'XLAND INFRA'}</h2>
+              {(user.propertyId || user.propertyCode) && (
+                <div className="flex items-center space-x-2 mt-1">
+                  <Home className="w-4 h-4 text-gold-500/70" />
+                  <span className="text-dark-300">ID: {user.propertyId || user.propertyCode}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

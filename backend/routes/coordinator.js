@@ -927,7 +927,8 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
               firstName: contactName,
               tempPassword,
               activationLink,
-              propertyName: communityName
+              propertyName: communityName,
+              propertyId: propertyIdGen
             });
             emailSent = emailResult.success;
             console.log('📧 [Coordinator] Email result:', emailResult);
@@ -949,7 +950,8 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
             firstName: contactName,
             tempPassword,
             activationLink,
-            propertyName: communityName
+            propertyName: communityName,
+            propertyId: propertyIdGen
           });
           emailSent = emailResult.success;
         }
@@ -994,7 +996,7 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
           console.log('📧 Sending activation email (coordinator simple create) to:', email.toLowerCase());
           try {
             const emailResult = await sendCustomerActivationEmail({
-              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA'
+              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA', propertyId: propertyId || clientId
             });
             emailSent = emailResult.success;
           } catch (emailError) {
@@ -1008,7 +1010,7 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
           const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
           try {
             const emailResult = await sendCustomerActivationEmail({
-              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA'
+              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA', propertyId: propertyId || clientId
             });
             emailSent = emailResult.success;
           } catch (emailError) {

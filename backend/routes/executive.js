@@ -757,7 +757,8 @@ async function createCustomerAccountAndSendEmail(customerData) {
       firstName: customerName || 'Customer',
       tempPassword,
       activationLink,
-      propertyName: propertyName || 'XLAND INFRA'
+      propertyName: propertyName || 'XLAND INFRA',
+      propertyId: propertyId || clientId
     });
 
     console.log('� [CreateCustomerAccount] Email result:', emailResult);

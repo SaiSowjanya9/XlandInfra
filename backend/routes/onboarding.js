@@ -213,7 +213,8 @@ router.post('/', authenticate, async (req, res) => {
               firstName: primaryContact.name || 'Customer',
               tempPassword,
               activationLink,
-              propertyName: communityName
+              propertyName: communityName,
+              propertyId: propertyId
             });
             emailSent = emailResult.success;
             console.log(`📧 Customer activation email sent to ${primaryContact.email}: ${emailSent}`);
@@ -232,7 +233,8 @@ router.post('/', authenticate, async (req, res) => {
               firstName: primaryContact.name || 'Customer',
               tempPassword,
               activationLink,
-              propertyName: communityName
+              propertyName: communityName,
+              propertyId: propertyId
             });
             emailSent = emailResult.success;
           }

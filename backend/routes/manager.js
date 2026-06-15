@@ -884,7 +884,8 @@ router.post('/customers', requireManagerScope, async (req, res) => {
               firstName: contactName,
               tempPassword,
               activationLink,
-              propertyName: communityName
+              propertyName: communityName,
+              propertyId: propertyIdGen
             });
             emailSent = emailResult.success;
             console.log('📧 Email result:', emailResult);
@@ -909,7 +910,8 @@ router.post('/customers', requireManagerScope, async (req, res) => {
               firstName: contactName,
               tempPassword,
               activationLink,
-              propertyName: communityName
+              propertyName: communityName,
+              propertyId: propertyIdGen
             });
             emailSent = emailResult.success;
             console.log('📧 Resend email result:', emailResult);
@@ -972,7 +974,8 @@ router.post('/customers', requireManagerScope, async (req, res) => {
               firstName: name,
               tempPassword,
               activationLink,
-              propertyName: companyName || 'XLAND INFRA'
+              propertyName: companyName || 'XLAND INFRA',
+              propertyId: propertyId || clientId
             });
             emailSent = emailResult.success;
             console.log('📧 Email result:', emailResult);
@@ -993,7 +996,8 @@ router.post('/customers', requireManagerScope, async (req, res) => {
               firstName: name,
               tempPassword,
               activationLink,
-              propertyName: companyName || 'XLAND INFRA'
+              propertyName: companyName || 'XLAND INFRA',
+              propertyId: propertyId || clientId
             });
             emailSent = emailResult.success;
           } catch (emailError) {

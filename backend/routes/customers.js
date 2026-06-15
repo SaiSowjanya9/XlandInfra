@@ -111,7 +111,8 @@ router.post('/create', async (req, res) => {
         firstName,
         tempPassword,
         activationLink,
-        propertyName
+        propertyName,
+        propertyId: propertyId || propertyCode
       });
 
       return res.json({
@@ -166,7 +167,8 @@ router.post('/create', async (req, res) => {
       firstName,
       tempPassword,
       activationLink,
-      propertyName
+      propertyName,
+      propertyId: propertyId || propertyCode
     });
 
     res.status(201).json({

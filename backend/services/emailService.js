@@ -254,9 +254,9 @@ const sendRegistrationNotification = async (userData) => {
 
 // Send customer account activation email
 const sendCustomerActivationEmail = async (customerData) => {
-  const { email, firstName, tempPassword, activationLink, propertyName } = customerData;
+  const { email, firstName, tempPassword, activationLink, propertyName, propertyId } = customerData;
   
-  console.log('📧 sendCustomerActivationEmail called with:', { email, firstName, propertyName, activationLink: activationLink?.substring(0, 50) + '...' });
+  console.log('📧 sendCustomerActivationEmail called with:', { email, firstName, propertyName, propertyId, activationLink: activationLink?.substring(0, 50) + '...' });
   console.log('📧 EMAIL_USER configured:', process.env.EMAIL_USER ? 'Yes' : 'NO - MISSING!');
   console.log('📧 EMAIL_PASS configured:', process.env.EMAIL_PASS ? 'Yes' : 'NO - MISSING!');
   
@@ -275,7 +275,7 @@ const sendCustomerActivationEmail = async (customerData) => {
       'X-Entity-Ref-ID': `activation-${Date.now()}`,
       'Message-ID': `<activation-${Date.now()}@xlandinfra.com>`
     },
-    text: `Welcome to XLAND INFRA Customer Portal!\n\nHello ${firstName || 'Valued Customer'},\n\nYour account has been created for ${propertyName || 'XLAND INFRA'} property portal.\n\nYour Login Credentials:\nEmail: ${email}\nTemporary Password: ${tempPassword}\n\nActivate your account: ${activationLink}\n\nThis link expires in 72 hours.\n\nRegards,\nXLAND INFRA Team`,
+    text: `Welcome to XLAND INFRA Customer Portal!\n\nHello ${firstName || 'Valued Customer'},\n\nYour account has been created for ${propertyName || 'XLAND INFRA'} property portal.${propertyId ? `\nProperty ID: ${propertyId}` : ''}\n\nYour Login Credentials:\nEmail: ${email}\nTemporary Password: ${tempPassword}\n\nActivate your account: ${activationLink}\n\nThis link expires in 72 hours.\n\nRegards,\nXLAND INFRA Team`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -298,8 +298,8 @@ const sendCustomerActivationEmail = async (customerData) => {
             <h2 style="color: #D8B25C; margin: 0 0 20px 0; font-size: 24px; font-weight: 400;">Welcome, ${firstName || 'Valued Customer'}!</h2>
             
             <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 25px 0;">
-              Your customer account has been created for the <strong style="color: #D8B25C;">${propertyName || 'XLAND INFRA'}</strong> property portal. 
-              Please activate your account to access your personalized dashboard.
+              Your customer account has been created for the <strong style="color: #D8B25C;">${propertyName || 'XLAND INFRA'}</strong> property portal.${propertyId ? `<br><span style="color: #888; font-size: 13px;">Property ID: <strong style="color: #D8B25C;">${propertyId}</strong></span>` : ''}
+              <br>Please activate your account to access your personalized dashboard.
             </p>
             
             <!-- Credentials Box -->
