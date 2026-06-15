@@ -1,19 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Eye, X, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle2, Pencil } from 'lucide-react';
+import { Search, Eye, X, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle2, Pencil, Plus, Building2, User } from 'lucide-react';
 import { useFP } from '../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const WorkOrders = ({ admin }) => {
   const [workOrders, setWorkOrders] = useState([]);
+  const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'completed'
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'completed', or 'create'
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [success, setSuccess] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [propertySearch, setPropertySearch] = useState('');
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [formData, setFormData] = useState({
+    propertyId: '', categoryId: '', subcategoryId: '',
+    customerName: '', customerEmail: '', customerPhone: '',
+    description: '', priority: 'medium',
+    permissionToEnter: 'no', hasPet: 'no', entryNotes: ''
+  });
   const [editFormData, setEditFormData] = useState({
     categoryId: '', subcategoryId: '', description: '',
     permissionToEnter: '', hasPet: '', entryNotes: '',
@@ -72,6 +82,111 @@ const WorkOrders = ({ admin }) => {
     };
     fetchCategories();
   }, [token]);
+
+  // Fetch properties when FP is selected
+  useEffect(() => {
+    const fetchProperties = async () => {
+      if (!selectedFp) return;
+      try {
+        let endpoint;
+        if (selectedFp.id === 'all') {
+          endpoint = `${API_BASE}/api/admin/all-properties`;
+        } else {
+          endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/properties`;
+        }
+        const response = await fetch(endpoint, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) setProperties(result.data || []);
+      } catch (error) {
+        console.error('Error fetching properties:', error);
+      }
+    };
+    fetchProperties();
+  }, [selectedFp, token]);
+
+  // Filter properties based on search
+  const filteredProperties = properties.filter(p =>
+    propertySearch && (
+      p.name?.toLowerCase().includes(propertySearch.toLowerCase()) ||
+      p.property_id?.toLowerCase().includes(propertySearch.toLowerCase())
+    )
+  );
+
+  // Handle property selection
+  const handlePropertySelect = (property) => {
+    setSelectedProperty(property);
+    setFormData({
+      ...formData,
+      propertyId: property.id,
+      customerName: property.contact_person || property.contactPerson || property.owner_name || '',
+      customerEmail: property.contact_email || property.contactEmail || property.email || '',
+      customerPhone: property.contact_phone || property.contactPhone || property.phone || property.mobile || ''
+    });
+    setPropertySearch(`${property.property_id} - ${property.name}`);
+  };
+
+  // Handle category change
+  const handleCategoryChange = (categoryId) => {
+    setFormData({ ...formData, categoryId, subcategoryId: '' });
+    const category = categories.find(c => c.id === parseInt(categoryId));
+    setSubcategories(category?.subcategories || []);
+  };
+
+  // Handle create work order submit
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.propertyId || !formData.categoryId) {
+      setSuccess('Please select property and category');
+      return;
+    }
+    try {
+      const property = properties.find(p => p.id === formData.propertyId);
+      const category = categories.find(c => c.id === parseInt(formData.categoryId));
+      const subcategory = subcategories.find(s => s.id === parseInt(formData.subcategoryId));
+      
+      const payload = {
+        propertyId: formData.propertyId,
+        propertyName: property?.name || '',
+        categoryId: formData.categoryId,
+        categoryName: category?.name || '',
+        subcategoryId: formData.subcategoryId,
+        subcategoryName: subcategory?.name || '',
+        description: formData.description,
+        priority: formData.priority,
+        permissionToEnter: formData.permissionToEnter,
+        hasPet: formData.hasPet,
+        entryNotes: formData.entryNotes,
+        customerName: formData.customerName,
+        customerEmail: formData.customerEmail,
+        customerPhone: formData.customerPhone
+      };
+      
+      const response = await fetch(`${API_BASE}/api/admin/work-orders`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSuccess('Work order created successfully!');
+        setFormData({
+          propertyId: '', categoryId: '', subcategoryId: '',
+          customerName: '', customerEmail: '', customerPhone: '',
+          description: '', priority: 'medium',
+          permissionToEnter: 'no', hasPet: 'no', entryNotes: ''
+        });
+        setPropertySearch('');
+        setSelectedProperty(null);
+        setActiveTab('pending');
+        fetchWorkOrders();
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error creating work order:', error);
+    }
+  };
   
   const handleFpSelect = (fp) => {
     selectFp(fp);
@@ -322,6 +437,17 @@ const WorkOrders = ({ admin }) => {
           </span>
         </button>
         <button
+          onClick={() => setActiveTab('create')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-colors ${
+            activeTab === 'create'
+              ? 'bg-blue-100 text-blue-700 border border-blue-200'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }`}
+        >
+          <Plus className="w-4 h-4" />
+          Create New
+        </button>
+        <button
           onClick={fetchWorkOrders}
           className="ml-auto flex items-center gap-2 px-4 py-2.5 bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
         >
@@ -330,7 +456,155 @@ const WorkOrders = ({ admin }) => {
         </button>
       </div>
 
+      {/* Create New Work Order Form */}
+      {activeTab === 'create' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <Plus className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Create New Work Order</h2>
+              <p className="text-sm text-gray-500">Fill in the details to create a work order on behalf of a resident</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleCreateSubmit} className="space-y-6">
+            {/* Property Information */}
+            <div className="bg-gray-50 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Building2 className="w-5 h-5 text-gray-600" />
+                <h3 className="font-semibold text-gray-900">Property Information</h3>
+              </div>
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property ID <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={propertySearch}
+                  onChange={(e) => { setPropertySearch(e.target.value); setFormData({ ...formData, propertyId: '' }); setSelectedProperty(null); }}
+                  placeholder="Search by Property ID or Community Name..."
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                {filteredProperties.length > 0 && !formData.propertyId && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {filteredProperties.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handlePropertySelect(p)}
+                        className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 last:border-0"
+                      >
+                        <p className="font-medium text-gray-900">{p.property_id}</p>
+                        <p className="text-sm text-gray-500">{p.name}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {propertySearch && filteredProperties.length === 0 && !formData.propertyId && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm text-gray-500">
+                    No properties found
+                  </div>
+                )}
+              </div>
+
+              {/* Property Details - Show after selection */}
+              {selectedProperty && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Property Name</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.name || selectedProperty.community_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Property Type</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Zone</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.zone_name || selectedProperty.zone || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Division</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.division || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">City</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.city || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.total_units || selectedProperty.units || '1'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500 mb-1">Address</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.address || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Customer Details */}
+            <div className="bg-gray-50 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <User className="w-5 h-5 text-gray-600" />
+                <h3 className="font-semibold text-gray-900">Customer Details</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
+                  <input type="text" required value={formData.customerName} onChange={(e) => setFormData({ ...formData, customerName: e.target.value })} placeholder="Customer name" className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input type="email" value={formData.customerEmail} onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })} placeholder="customer@email.com" className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number <span className="text-red-500">*</span></label>
+                  <input type="tel" required value={formData.customerPhone} onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })} placeholder="Phone number" className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+            </div>
+
+            {/* Category & Subcategory */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-500">*</span></label>
+                <select required value={formData.categoryId} onChange={(e) => handleCategoryChange(e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="">Select a category</option>
+                  {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                <select value={formData.subcategoryId} onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })} className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" disabled={!formData.categoryId}>
+                  <option value="">{formData.categoryId ? 'Select a subcategory' : 'Select a category first'}</option>
+                  {subcategories.map(sub => <option key={sub.id} value={sub.id}>{sub.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-gray-400">(Optional)</span></label>
+              <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={4} placeholder="Describe the issue or request in detail..." className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+
+            {/* Submit */}
+            <div className="flex justify-end">
+              <button type="submit" className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                Create Work Order
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Search & Filter */}
+      {activeTab !== 'create' && (
+        <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 relative min-w-[200px]">
@@ -438,6 +712,8 @@ const WorkOrders = ({ admin }) => {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">

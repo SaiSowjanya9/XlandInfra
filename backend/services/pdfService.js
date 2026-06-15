@@ -157,7 +157,7 @@ const generateEstimatePDF = async (estimate) => {
         y += 20;
 
         addonList.forEach((a, idx) => {
-          const rowColor = idx % 2 === 0 ? '#f0fdf4' : '#ffffff';
+          const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
           doc.rect(50, y, 500, 18).fill(rowColor).stroke('#e0e0e0');
           doc.fontSize(8).fillColor('#333333');
           doc.text(String(idx + 1), 55, y + 5);

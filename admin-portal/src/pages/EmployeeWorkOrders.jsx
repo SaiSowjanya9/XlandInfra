@@ -207,7 +207,7 @@ const EmployeeWorkOrders = ({ admin }) => {
 
   const handlePropertySelect = (property) => {
     setSelectedProperty(property);
-    setPropertySearch(property.propertyId);
+    setPropertySearch((property.propertyId || property.property_id || '') + ' - ' + (property.communityName || property.name || ''));
     setShowPropertyDropdown(false);
     
     // Auto-populate customer details from property's contacts (backend returns 'contacts')

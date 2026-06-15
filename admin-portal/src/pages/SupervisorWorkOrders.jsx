@@ -22,6 +22,7 @@ const SupervisorWorkOrders = ({ user }) => {
   const [submitting, setSubmitting] = useState(false);
   const [propertySearchResults, setPropertySearchResults] = useState([]);
   const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState(null);
   const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
@@ -74,6 +75,7 @@ const SupervisorWorkOrders = ({ user }) => {
 
   const handlePropertySearch = (value) => {
     setFormData({ ...formData, propertySearch: value, propertyId: '' });
+    setSelectedProperty(null);
     if (value.length > 1) {
       const results = properties.filter(p => 
         p.name?.toLowerCase().includes(value.toLowerCase()) ||
@@ -88,10 +90,11 @@ const SupervisorWorkOrders = ({ user }) => {
   };
 
   const selectProperty = (property) => {
+    setSelectedProperty(property);
     setFormData({ 
       ...formData, 
       propertyId: property.id, 
-      propertySearch: property.name || property.property_id,
+      propertySearch: (property.property_id || '') + ' - ' + (property.name || ''),
       customerName: property.contact_person || property.contactPerson || property.owner_name || '',
       customerEmail: property.contact_email || property.contactEmail || property.email || '',
       customerPhone: property.contact_phone || property.contactPhone || property.phone || property.mobile || ''
@@ -356,6 +359,44 @@ const SupervisorWorkOrders = ({ user }) => {
                   </div>
                 )}
               </div>
+
+              {/* Property Details - Show after selection */}
+              {selectedProperty && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Property Name</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.name || selectedProperty.community_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Property Type</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Zone</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.zone_name || selectedProperty.zone || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Division</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.division || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">City</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.city || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.total_units || selectedProperty.units || '1'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500 mb-1">Address</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.address || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Customer Details */}
