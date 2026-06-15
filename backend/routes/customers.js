@@ -409,7 +409,7 @@ router.post('/login', async (req, res) => {
     // Find customer
     const [customers] = await pool.execute(
       `SELECT ca.*, op.community_name, op.zone, op.division, op.entry_type,
-              op.address, op.city, op.state
+              op.address, op.city, op.state, op.property_id as onboarded_property_id
        FROM customer_accounts ca
        LEFT JOIN onboarded_properties op ON ca.property_id = op.id
        WHERE ca.email = ? AND ca.is_active = 1`,
@@ -509,9 +509,9 @@ router.post('/login', async (req, res) => {
           firstName: customer.first_name,
           lastName: customer.last_name,
           phone: customer.phone,
-          propertyId: customer.property_id,
+          propertyId: customer.onboarded_property_id || customer.property_code || customer.property_id,
           propertyName: customer.property_name || customer.community_name,
-          propertyCode: customer.property_code,
+          propertyCode: customer.onboarded_property_id || customer.property_code,
           zone: customer.zone,
           division: customer.division,
           address: customer.address,
@@ -833,7 +833,7 @@ router.get('/profile', async (req, res) => {
     const [customers] = await pool.execute(
       `SELECT ca.*, op.community_name, op.zone, op.division, op.entry_type,
               op.address as prop_address, op.city as prop_city, op.state as prop_state,
-              op.total_units
+              op.total_units, op.property_id as onboarded_property_id
        FROM customer_accounts ca
        LEFT JOIN onboarded_properties op ON ca.property_id = op.id
        WHERE ca.id = ? AND ca.is_active = 1`,
@@ -858,9 +858,9 @@ router.get('/profile', async (req, res) => {
         firstName: customer.first_name,
         lastName: customer.last_name,
         phone: customer.phone,
-        propertyId: customer.property_id,
+        propertyId: customer.onboarded_property_id || customer.property_code || customer.property_id,
         propertyName: customer.property_name || customer.community_name,
-        propertyCode: customer.property_code,
+        propertyCode: customer.onboarded_property_id || customer.property_code,
         zone: customer.zone,
         division: customer.division,
         address: customer.prop_address,
