@@ -3483,7 +3483,15 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         if (estimate.package_services) {
           packageServices = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
         }
-      } catch (e) {}
+        // If no package_services stored, fetch from AMC package
+        if (packageServices.length === 0 && estimate.package_id) {
+          const [pkgRows] = await pool.execute('SELECT services FROM amc_packages WHERE id = ?', [estimate.package_id]);
+          if (pkgRows.length > 0 && pkgRows[0].services) {
+            const svcData = typeof pkgRows[0].services === 'string' ? JSON.parse(pkgRows[0].services) : pkgRows[0].services;
+            packageServices = svcData?.serviceRows || svcData?.services || (Array.isArray(svcData) ? svcData : []);
+          }
+        }
+      } catch (e) { console.log('Package services parse error:', e); }
 
       const estimateData = {
         estimateId: estimate.estimate_id,
