@@ -274,7 +274,7 @@ const FPWorkOrders = ({ user }) => {
       customerEmail: property.contact_email || property.email || '',
       customerPhone: property.contact_phone || ''
     }));
-    setPropertySearch((property.property_id || '') + ' - ' + property.name);
+    setPropertySearch(property.property_id || '');
   };
 
   const handleAddCategory = () => {

@@ -127,7 +127,7 @@ const WorkOrders = ({ admin }) => {
       customerEmail: property.contact_email || property.contactEmail || property.email || '',
       customerPhone: property.contact_phone || property.contactPhone || property.phone || property.mobile || ''
     });
-    setPropertySearch(`${property.property_id} - ${property.name}`);
+    setPropertySearch(property.property_id || '');
   };
 
   // Handle category change
