@@ -370,7 +370,7 @@ router.post('/properties', requireManagerScope, async (req, res) => {
   try {
     const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
     
-    const propertyId = `PROP-MGR-${Date.now()}`;
+    const propertyId = `PROP-${Date.now()}`;
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId || null;
     
@@ -706,20 +706,46 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
     const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate,
             propertyName, categoryName, subcategoryName, customerName, customerEmail, customerPhone } = req.body;
     
-    const workOrderId = `WO-MGR-${Date.now()}`;
+    const workOrderId = `WO-${Date.now()}`;
     
     // For FP-created managers: store BOTH franchise_partner_id AND manager_id
     // So work order shows in both FP dashboard and Manager dashboard
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId || null;
+
+    // Fetch property details if not provided
+    let finalPropertyName = propertyName;
+    let finalPropertyType = null;
+    if (propertyId && !propertyName) {
+      const [props] = await pool.execute(
+        `SELECT name, property_type FROM properties WHERE id = ? 
+         UNION SELECT community_name as name, property_type FROM onboarded_properties WHERE id = ?`,
+        [propertyId, propertyId]
+      );
+      if (props.length > 0) {
+        finalPropertyName = props[0].name;
+        finalPropertyType = props[0].property_type;
+      }
+    }
+
+    // Fetch category details if not provided
+    let finalCategoryName = categoryName;
+    let finalSubcategoryName = subcategoryName;
+    if (categoryId && !categoryName) {
+      const [cats] = await pool.execute('SELECT name FROM categories WHERE id = ?', [categoryId]);
+      if (cats.length > 0) finalCategoryName = cats[0].name;
+    }
     
     const [result] = await pool.execute(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
-        priority, permission_to_enter, has_pet, scheduled_date, status, manager_id, franchise_partner_id, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW())`,
+        priority, permission_to_enter, has_pet, scheduled_date, status, manager_id, franchise_partner_id, created_by, created_at,
+        property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?)`,
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null,
-       managerId, franchisePartnerId, req.user.id]
+       managerId, franchisePartnerId, req.user.id,
+       finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
+       customerName || null, customerEmail || null, customerPhone || null]
     );
 
     // Send email notification for new work order
@@ -727,19 +753,19 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
     sendWorkOrderCreatedNotification({
       orderId: result.insertId,
       orderNumber: workOrderId,
-      title,
-      propertyName,
+      title: title || `Service Request - ${finalCategoryName || 'General'}`,
+      propertyName: finalPropertyName,
       propertyId,
+      propertyType: finalPropertyType,
       customerName,
       customerEmail,
       customerPhone,
-      categoryName,
-      subcategoryName,
+      categoryName: finalCategoryName,
+      subcategoryName: finalSubcategoryName,
       priority,
       description,
       createdBy: req.user?.username || req.user?.email || 'Manager',
-      createdByRole: 'Manager',
-      createdFromPortal: 'Manager Portal'
+      createdByRole: 'Manager'
     }).catch(err => console.error('Email notification error:', err));
 
     res.json({ success: true, message: 'Work order created', data: { id: result.insertId, workOrderId } });
@@ -869,10 +895,10 @@ router.post('/customers', requireManagerScope, async (req, res) => {
     // Check if this is a property form submission (has zone/communityName)
     if (zone && communityName) {
       // Generate IDs
-      const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'VLA', PLOT: 'PLT', FLAT: 'FLT' };
+      const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'V', PLOT: 'PL', FLAT: 'FL' };
       const prefix = prefixMap[entryType] || 'PROP';
-      const propertyIdGen = `${prefix}-MGR-${Date.now()}`;
-      const clientId = `MGR-CLT-${Date.now()}`;
+      const propertyIdGen = `${prefix}-${Date.now()}`;
+      const clientId = `CLT-${Date.now()}`;
       
       // Get contact info
       const contact = associationContacts?.[0] || {};
@@ -1001,7 +1027,7 @@ router.post('/customers', requireManagerScope, async (req, res) => {
       });
     } else {
       // Simple customer creation (backward compatibility)
-      const clientId = `CLT-MGR-${Date.now()}`;
+      const clientId = `CLT-${Date.now()}`;
       
       const [result] = await pool.execute(
         `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
@@ -1249,7 +1275,7 @@ router.post('/vendors', requireManagerScope, async (req, res) => {
       gstNumber, panNumber, licenseNumber
     } = req.body;
     
-    const vendorId = `MGR-${serviceType?.substring(0, 3).toUpperCase() || 'VND'}-${Date.now()}`;
+    const vendorId = `VND-${Date.now()}`;
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId || null;
     
@@ -1531,7 +1557,7 @@ router.post('/estimates', requireManagerScope, async (req, res) => {
       flat_number, villa_number, plot_number
     } = req.body;
     
-    const estimateId = `EST-MGR-${Date.now()}`;
+    const estimateId = `EST-${Date.now()}`;
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId || 1;
     

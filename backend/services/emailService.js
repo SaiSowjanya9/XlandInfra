@@ -1434,9 +1434,6 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #334155 0%, #1e293b 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
             <h1 style="margin: 0; color: #c9a227; font-size: 22px; font-weight: 600;">New Work Order Created</h1>
-            <p style="margin: 10px 0 0 0; color: #94a3b8; font-size: 14px;">
-              Created from <span style="color: ${portalColors[createdFromPortal] || '#94a3b8'}; font-weight: 600;">${createdFromPortal}</span>
-            </p>
           </div>
           
           <!-- Content -->
@@ -1444,7 +1441,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
             
             <!-- Work Order Details - First -->
             <div style="background: #fafafa; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #c9a227;">
-              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">📋 Work Order Details</h2>
+              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Work Order Details</h2>
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 0; color: #64748b; width: 120px;">Order ID:</td>
@@ -1475,7 +1472,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
 
             <!-- Property Info -->
             <div style="background: #f8faf8; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #6b7280;">
-              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">🏠 Property</h2>
+              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Property</h2>
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 0; color: #64748b; width: 120px;">Name:</td>
@@ -1500,7 +1497,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
             
             <!-- Customer Info -->
             <div style="background: #f8f9fc; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #6b7280;">
-              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">👤 Customer</h2>
+              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Customer</h2>
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 0; color: #64748b; width: 120px;">Name:</td>
@@ -1520,7 +1517,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
             <!-- Description -->
             ${description ? `
             <div style="background: #fafafa; border-radius: 8px; padding: 16px; margin-bottom: 16px; border-left: 4px solid #9ca3af;">
-              <h2 style="margin: 0 0 10px 0; color: #1e293b; font-size: 14px; font-weight: 600;">📝 Description</h2>
+              <h2 style="margin: 0 0 10px 0; color: #1e293b; font-size: 14px; font-weight: 600;">Description</h2>
               <p style="margin: 0; color: #374151; line-height: 1.5; font-size: 14px;">${description}</p>
             </div>
             ` : ''}
@@ -1528,7 +1525,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
             <!-- Entry Notes -->
             ${entryNotes ? `
             <div style="background: #fef2f2; border-radius: 8px; padding: 16px; margin-bottom: 16px; border-left: 4px solid #f87171;">
-              <h2 style="margin: 0 0 10px 0; color: #991b1b; font-size: 14px; font-weight: 600;">⚠️ Entry Notes</h2>
+              <h2 style="margin: 0 0 10px 0; color: #991b1b; font-size: 14px; font-weight: 600;">Entry Notes</h2>
               <p style="margin: 0; color: #374151; line-height: 1.5; font-size: 14px;">${entryNotes}</p>
             </div>
             ` : ''}

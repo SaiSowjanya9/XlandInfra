@@ -356,7 +356,7 @@ router.post('/properties', requireFPScope, async (req, res) => {
       contactPerson, contactPhone, contactEmail, zoneId, divisionId
     } = req.body;
 
-    const propertyId = `FP${req.fpId}-PROP-${Date.now()}`;
+    const propertyId = `PROP-${Date.now()}`;
     
     // Get actual user name from database (check both users and fp_employees tables)
     let creatorName = req.user?.username || req.user?.email || 'System';
@@ -856,7 +856,7 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       });
     }
 
-    const workOrderId = `FP${req.fpId}-WO-${Date.now()}`;
+    const workOrderId = `WO-${Date.now()}`;
     const title = `Service Request - ${property[0].name || 'Property'}`;
 
     // Get category and subcategory names - use request body values or fetch from DB
@@ -1228,10 +1228,10 @@ router.post('/customers', requireFPScope, async (req, res) => {
     // Check if this is a property form submission (has zone/communityName)
     if (zone && communityName) {
       // Generate IDs with correct prefix based on entry type
-      const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'VLA', PLOT: 'PLT', FLAT: 'FLT' };
+      const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'V', PLOT: 'PL', FLAT: 'FL' };
       const prefix = prefixMap[entryType] || 'PROP';
-      const propertyIdGen = `${prefix}-Y001-${Date.now()}`;
-      const clientId = `FP${req.fpId}-CLT-${Date.now()}`;
+      const propertyIdGen = `${prefix}-${Date.now()}`;
+      const clientId = `CLT-${Date.now()}`;
       
       // Get contact info
       const contact = associationContacts?.[0] || {};
@@ -1332,7 +1332,7 @@ router.post('/customers', requireFPScope, async (req, res) => {
       });
     } else {
       // Simple customer creation (backward compatibility)
-      const clientId = `FP${req.fpId}-CLT-${Date.now()}`;
+      const clientId = `CLT-${Date.now()}`;
 
       const [result] = await pool.execute(
         `INSERT INTO clients (
@@ -1720,7 +1720,7 @@ router.post('/vendors', requireFPScope, async (req, res) => {
       gstNumber, panNumber, licenseNumber
     } = req.body;
 
-    const vendorId = `FP${req.fpId}-VND-${Date.now()}`;
+    const vendorId = `VND-${Date.now()}`;
     const username = ownerEmail ? ownerEmail.split('@')[0] + '_' + Date.now() : `vendor_${Date.now()}`;
     const tempPassword = await bcrypt.hash('temp123', 10);
 
@@ -2099,13 +2099,13 @@ router.post('/employees', requireFPScope, async (req, res) => {
     const firstName = nameParts[0];
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    // Generate sequential employee code (001, 002, 003...)
+    // Generate sequential employee code (EMP-001, EMP-002, EMP-003...)
     const [maxEmpCode] = await pool.execute(
       `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ?`,
       [req.fpId]
     );
     const nextSeq = (maxEmpCode[0].count || 0) + 1;
-    const employeeCode = String(nextSeq).padStart(3, '0');
+    const employeeCode = `EMP-${String(nextSeq).padStart(3, '0')}`;
     
     const userId = await generateUserId(role || 'executive');  // Global sequential ID
     const tempPassword = generateTempPassword();

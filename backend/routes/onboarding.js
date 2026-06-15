@@ -23,12 +23,10 @@ const generateCustomerTempPassword = () => {
 // Generate secure activation token
 const generateActivationToken = () => crypto.randomBytes(32).toString('hex');
 
-// Generate unique property ID: PREFIX-XXXX-YYYYMMDD
+// Generate unique property ID: PREFIX-TIMESTAMP
 const generatePropertyId = (entryType) => {
-  const prefix = { GC: 'GC', APT: 'APT', VILLA: 'VLA', PLOT: 'PLT', FLAT: 'FLT' }[entryType] || 'PROP';
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  return `${prefix}-${random}-${date}`;
+  const prefix = { GC: 'GC', APT: 'APT', VILLA: 'V', PLOT: 'PL', FLAT: 'FL' }[entryType] || 'PROP';
+  return `${prefix}-${Date.now()}`;
 };
 
 // ============================================
