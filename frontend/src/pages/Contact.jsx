@@ -17,8 +17,8 @@ const Contact = () => {
     {
       icon: MapPin,
       title: 'Address',
-      details: '123 Main Street',
-      subtext: 'City, State 12345',
+      details: '7-333/A/1, NRI Hospital Road',
+      subtext: 'Mangalagiri, Guntur, 522503',
     },
     {
       icon: Clock,

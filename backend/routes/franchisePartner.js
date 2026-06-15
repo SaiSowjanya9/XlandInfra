@@ -281,8 +281,8 @@ router.get('/properties', requireFPScope, async (req, res) => {
     // Fetch from properties table with creator name
     const [regularProperties] = await pool.execute(
       `SELECT p.*,
-        p.zone_id as zone_name,
-        p.division, p.division as division_name,
+        COALESCE(z.name, zn.name, p.zone_id) as zone_name,
+        COALESCE(fd.name, p.division) as division, COALESCE(fd.name, p.division) as division_name,
         p.area_name as area,
         COALESCE(p.number_of_units, p.number_of_blocks, 1) as units,
         p.block_names,
@@ -298,6 +298,9 @@ router.get('/properties', requireFPScope, async (req, res) => {
         ) as created_by_name,
         'properties' as source_table
        FROM properties p
+       LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id
+       LEFT JOIN zones zn ON p.zone_id = zn.name
+       LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS UNSIGNED) = fpe.id
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted')
@@ -799,7 +802,7 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
 
     if (status) {
       if (status === 'pending') {
-        query += ` AND wo.status IN ('pending', 'assigned', 'in_progress')`;
+        query += ` AND wo.status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')`;
       } else if (status === 'completed') {
         query += ` AND wo.status IN ('completed', 'closed')`;
       } else {

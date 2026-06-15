@@ -1457,7 +1457,51 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
           <!-- Content -->
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
             
-            <!-- Work Order Details - First -->
+            <!-- Customer Info - First -->
+            <div style="background: #f8f9fc; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #3b82f6;">
+              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Customer Details</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b; width: 120px;">Name:</td>
+                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold; font-size: 16px;">${customerName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Email:</td>
+                  <td style="padding: 8px 0; color: #1e293b;"><a href="mailto:${customerEmail}" style="color: #3b82f6;">${customerEmail || '-'}</a></td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Phone:</td>
+                  <td style="padding: 8px 0; color: #1e293b;"><a href="tel:${customerPhone}" style="color: #3b82f6; font-weight: bold;">${customerPhone || '-'}</a></td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Property Info - Second -->
+            <div style="background: #f8faf8; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #6b7280;">
+              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Property Details</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b; width: 120px;">Name:</td>
+                  <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${propertyName || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Type:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${propertyType || '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">ID:</td>
+                  <td style="padding: 8px 0; color: #64748b; font-family: monospace;">${propertyId || '-'}</td>
+                </tr>
+                ${fullAddress ? `
+                <tr>
+                  <td style="padding: 8px 0; color: #64748b;">Address:</td>
+                  <td style="padding: 8px 0; color: #1e293b;">${fullAddress}</td>
+                </tr>
+                ` : ''}
+              </table>
+            </div>
+            
+            <!-- Work Order Details - Third -->
             <div style="background: #fafafa; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #c9a227;">
               <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Work Order Details</h2>
               <table style="width: 100%; border-collapse: collapse;">
@@ -1484,50 +1528,6 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
                       ${(priority || 'MEDIUM').toUpperCase()}
                     </span>
                   </td>
-                </tr>
-              </table>
-            </div>
-
-            <!-- Property Info -->
-            <div style="background: #f8faf8; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #6b7280;">
-              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Property</h2>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b; width: 120px;">Name:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${propertyName || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Type:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${propertyType || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">ID:</td>
-                  <td style="padding: 8px 0; color: #64748b; font-family: monospace;">${propertyId || '-'}</td>
-                </tr>
-                ${fullAddress ? `
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Address:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${fullAddress}</td>
-                </tr>
-                ` : ''}
-              </table>
-            </div>
-            
-            <!-- Customer Info -->
-            <div style="background: #f8f9fc; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #6b7280;">
-              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Customer</h2>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b; width: 120px;">Name:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold; font-size: 16px;">${customerName || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Email:</td>
-                  <td style="padding: 8px 0; color: #1e293b;"><a href="mailto:${customerEmail}" style="color: #3b82f6;">${customerEmail || '-'}</a></td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Phone:</td>
-                  <td style="padding: 8px 0; color: #1e293b;"><a href="tel:${customerPhone}" style="color: #3b82f6; font-weight: bold;">${customerPhone || '-'}</a></td>
                 </tr>
               </table>
             </div>
