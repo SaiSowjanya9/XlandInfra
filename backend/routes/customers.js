@@ -496,19 +496,21 @@ router.post('/login', async (req, res) => {
     }
 
     // Find customer - fetch property details from onboarded_properties
+    // Try joining by both id (numeric) and property_id (string) in case either was stored
     const [customers] = await pool.execute(
       `SELECT ca.*, 
-              op.community_name as op_property_name,
-              op.property_id as op_property_id,
-              op.zone as op_zone, 
-              op.division as op_division, 
-              op.entry_type,
-              op.address as op_address, 
-              op.city as op_city, 
-              op.state as op_state,
-              op.property_type as op_property_type
+              COALESCE(op1.community_name, op2.community_name) as op_property_name,
+              COALESCE(op1.property_id, op2.property_id) as op_property_id,
+              COALESCE(op1.zone, op2.zone) as op_zone, 
+              COALESCE(op1.division, op2.division) as op_division, 
+              COALESCE(op1.entry_type, op2.entry_type) as entry_type,
+              COALESCE(op1.address, op2.address) as op_address, 
+              COALESCE(op1.city, op2.city) as op_city, 
+              COALESCE(op1.state, op2.state) as op_state,
+              COALESCE(op1.property_type, op2.property_type) as op_property_type
        FROM customer_accounts ca
-       LEFT JOIN onboarded_properties op ON ca.property_id = op.id
+       LEFT JOIN onboarded_properties op1 ON CAST(ca.property_id AS UNSIGNED) = op1.id
+       LEFT JOIN onboarded_properties op2 ON ca.property_id = op2.property_id
        WHERE ca.email = ? AND ca.is_active = 1`,
       [email.toLowerCase()]
     );
@@ -602,9 +604,8 @@ router.post('/login', async (req, res) => {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
-    // Determine the actual property code - never return database ID
-    const actualPropertyCode = customer.op_property_id || customer.property_code || 
-      (customer.property_id ? `PROP-${customer.property_id}` : null);
+    // Determine the actual property code - only use real property codes
+    const actualPropertyCode = customer.op_property_id || customer.property_code || null;
 
     res.json({
       success: true,
@@ -1000,9 +1001,8 @@ router.get('/profile', async (req, res) => {
 
     const customer = customers[0];
 
-    // Determine actual property code - never return raw database ID
-    const actualPropCode = customer.actual_property_id || customer.property_code || 
-      (customer.property_id ? `PROP-${customer.property_id}` : null);
+    // Determine actual property code - only use real property codes
+    const actualPropCode = customer.actual_property_id || customer.property_code || null;
 
     res.json({
       success: true,
@@ -1180,9 +1180,8 @@ router.get('/dashboard', async (req, res) => {
       [customerId]
     );
 
-    // Determine actual property code - never return raw database ID
-    const dashPropCode = customer[0].actual_property_id || customer[0].property_code || 
-      (customer[0].property_id ? `PROP-${customer[0].property_id}` : null);
+    // Determine actual property code - only use real property codes
+    const dashPropCode = customer[0].actual_property_id || customer[0].property_code || null;
 
     res.json({
       success: true,

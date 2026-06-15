@@ -454,16 +454,44 @@ const generatePDF = (data, type, filename) => {
 
     // ===== PRICE SUMMARY BOX =====
     const subtotal = parseFloat(data.subtotal) || 0;
-    const discountPercent = parseFloat(data.discountPercent || data.discount_percent || data.discount) || 0;
-    const discountAmount = parseFloat(data.discountAmount || data.discount_amount) || (subtotal * discountPercent / 100);
-    const gstPercent = parseFloat(data.gstPercent || data.gst_percent || data.gst) || 0;
-    const gstAmount = parseFloat(data.gstAmount || data.gst_amount) || ((subtotal - discountAmount) * gstPercent / 100);
-    const total = parseFloat(data.totalPrice || data.total_amount) || (subtotal - discountAmount + gstAmount);
+    const total = parseFloat(data.totalPrice || data.total_amount) || 0;
+    
+    // Get discount values - try explicit values first, then calculate
+    let discountPercent = parseFloat(data.discountPercent || data.discount_percent || data.discount) || 0;
+    let discountAmount = parseFloat(data.discountAmount || data.discount_amount) || 0;
+    
+    // Get GST values
+    let gstPercent = parseFloat(data.gstPercent || data.gst_percent || data.gst) || 0;
+    let gstAmount = parseFloat(data.gstAmount || data.gst_amount) || 0;
+    
+    // If we have discount percent but no amount, calculate it
+    if (discountAmount === 0 && discountPercent > 0 && subtotal > 0) {
+      discountAmount = (subtotal * discountPercent) / 100;
+    }
+    
+    // If we have GST percent but no amount, calculate it
+    if (gstAmount === 0 && gstPercent > 0 && subtotal > 0) {
+      gstAmount = ((subtotal - discountAmount) * gstPercent) / 100;
+    }
+    
+    // If total differs from subtotal but we don't have discount/GST info, try to infer
+    if (subtotal > 0 && total > 0 && total !== subtotal && discountAmount === 0 && gstAmount === 0) {
+      const diff = subtotal - total;
+      if (diff > 0) {
+        // Total is less than subtotal - this is a discount
+        discountAmount = diff;
+        discountPercent = Math.round((diff / subtotal) * 100);
+      } else if (diff < 0) {
+        // Total is more than subtotal - this is GST
+        gstAmount = Math.abs(diff);
+        gstPercent = Math.round((Math.abs(diff) / subtotal) * 100);
+      }
+    }
     
     const priceBoxW = 85;
     const priceBoxX = pageWidth - margin - priceBoxW;
     const hasDiscount = discountAmount > 0;
-    const hasGst = gstAmount > 0 || gstPercent > 0;
+    const hasGst = gstAmount > 0;
     const priceBoxH = 12 + (hasDiscount ? 6 : 0) + (hasGst ? 6 : 0) + 8; // Dynamic height based on content
 
     if (y + priceBoxH + 25 > pageHeight) {
