@@ -523,13 +523,19 @@ router.get('/work-orders', requireExecutiveScope, async (req, res) => {
     // FP employees see FP work orders, standalone executives see their created work orders
     let query = `
       SELECT wo.*, 
-             COALESCE(p.name, wo.property_name) as property_name, 
+             COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+             COALESCE(p.property_id, op.property_id) as actual_property_id,
+             COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
+             COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division, op.division) as division,
+             COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+             op.total_units, op.blocks as total_blocks,
              COALESCE(c.name, wo.category_name) as category_name, 
              v.company_name as vendor_name,
              COALESCE(cl.name, wo.customer_name) as client_name,
              wo.customer_name, wo.customer_email, wo.customer_phone
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       LEFT JOIN clients cl ON wo.client_id = cl.id
@@ -564,13 +570,19 @@ router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
     const query = `SELECT wo.*, 
-             COALESCE(p.name, wo.property_name) as property_name, 
+             COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+             COALESCE(p.property_id, op.property_id) as actual_property_id,
+             COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
+             COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division, op.division) as division,
+             COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+             op.total_units, op.blocks as total_blocks,
              COALESCE(c.name, wo.category_name) as category_name, 
              v.company_name as vendor_name,
              COALESCE(cl.name, wo.customer_name) as client_name,
              wo.customer_name, wo.customer_email, wo.customer_phone
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
+       LEFT JOIN onboarded_properties op ON wo.property_id = op.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
@@ -599,13 +611,19 @@ router.get('/work-orders/completed', requireExecutiveScope, async (req, res) => 
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
     const query = `SELECT wo.*, 
-             COALESCE(p.name, wo.property_name) as property_name, 
+             COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+             COALESCE(p.property_id, op.property_id) as actual_property_id,
+             COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
+             COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division, op.division) as division,
+             COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+             op.total_units, op.blocks as total_blocks,
              COALESCE(c.name, wo.category_name) as category_name, 
              v.company_name as vendor_name,
              COALESCE(cl.name, wo.customer_name) as client_name,
              wo.customer_name, wo.customer_email, wo.customer_phone
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
+       LEFT JOIN onboarded_properties op ON wo.property_id = op.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        LEFT JOIN clients cl ON wo.client_id = cl.id
