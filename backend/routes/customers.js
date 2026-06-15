@@ -426,12 +426,16 @@ router.post('/set-password', async (req, res) => {
       [newPasswordHash, customer.id]
     );
 
-    // Log activity
-    await conn.execute(
-      `INSERT INTO customer_activity_log (customer_id, action, details)
-       VALUES (?, 'account_activated', ?)`,
-      [customer.id, JSON.stringify({ method: 'email_activation' })]
-    );
+    // Log activity (non-critical)
+    try {
+      await conn.execute(
+        `INSERT INTO customer_activity_log (customer_id, action, details)
+         VALUES (?, 'account_activated', ?)`,
+        [customer.id, JSON.stringify({ method: 'email_activation' })]
+      );
+    } catch (logErr) {
+      console.log('Activity log insert failed:', logErr.message);
+    }
 
     await conn.commit();
 
@@ -571,12 +575,16 @@ router.post('/login', async (req, res) => {
       [customer.id]
     );
 
-    // Log activity
-    await pool.execute(
-      `INSERT INTO customer_activity_log (customer_id, action, ip_address)
-       VALUES (?, 'login', ?)`,
-      [customer.id, req.ip]
-    );
+    // Log activity (non-critical - don't fail login if this fails)
+    try {
+      await pool.execute(
+        `INSERT INTO customer_activity_log (customer_id, action, ip_address)
+         VALUES (?, 'login', ?)`,
+        [customer.id, req.ip]
+      );
+    } catch (logErr) {
+      console.log('Activity log insert failed (table may not exist):', logErr.message);
+    }
 
     // Generate JWT token
     const token = jwt.sign(
@@ -732,12 +740,16 @@ router.post('/forgot-password', async (req, res) => {
       expiryHours: PASSWORD_RESET_EXPIRY_HOURS
     });
 
-    // Log activity
-    await pool.execute(
-      `INSERT INTO customer_activity_log (customer_id, action, details, ip_address)
-       VALUES (?, 'password_reset_requested', ?, ?)`,
-      [customer.id, JSON.stringify({ method: 'email' }), req.ip]
-    );
+    // Log activity (non-critical)
+    try {
+      await pool.execute(
+        `INSERT INTO customer_activity_log (customer_id, action, details, ip_address)
+         VALUES (?, 'password_reset_requested', ?, ?)`,
+        [customer.id, JSON.stringify({ method: 'email' }), req.ip]
+      );
+    } catch (logErr) {
+      console.log('Activity log insert failed:', logErr.message);
+    }
 
     res.json({
       success: true,
