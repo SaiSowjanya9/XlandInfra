@@ -593,28 +593,28 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 
                 return (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full min-w-[700px]">
                       {/* Table Header */}
                       <thead className="bg-slate-50 border-b border-gray-200">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-[25%]">
                             Add-on Name
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-[18%]">
                             Property Type
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-[18%]">
                             Frequency
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                            No.of visits
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-[10%]">
+                            Visits
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider w-[15%]">
                             Total Rate
                           </th>
                           {/* Actions column - Hidden for Operations Manager */}
                           {!isOpsManager && (
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-[14%]">
                               Actions
                             </th>
                           )}
@@ -624,22 +624,22 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                       <tbody className="divide-y divide-gray-100">
                         {filteredAddons.map((addon) => (
                           <tr key={addon.addonId} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4">
+                            <td className="px-4 py-4">
                               <span className="font-medium text-gray-900">
                                 {addon.services?.[0]?.name || addon.addonId}
                               </span>
                             </td>
                             <td className="px-4 py-4">
-                              <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">
+                              <span className="inline-block px-3 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-md border border-slate-200 whitespace-nowrap">
                                 {PROPERTY_TYPE_OPTIONS.find(t => t.id === normalizePropertyType(addon.propertyType || addon.property_type))?.label || addon.propertyType || addon.property_type || '-'}
                               </span>
                             </td>
-                            <td className="px-4 py-4">
-                              <span className="px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+                            <td className="px-4 py-4 text-center">
+                              <span className="inline-block px-3 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-md border border-blue-200 whitespace-nowrap">
                                 {addon.services?.[0]?.frequencyType || 'Monthly'}
                               </span>
                             </td>
-                            <td className="px-4 py-4 text-sm text-gray-600">
+                            <td className="px-4 py-4 text-center text-sm text-gray-600">
                               {addon.services?.[0]?.frequency || 1}x
                             </td>
                             <td className="px-4 py-4 text-right">

@@ -3213,13 +3213,20 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         : req.user?.name || creatorName;
     }
     
-    // Calculate amounts - use ?? to allow 0 values (|| would default 0 to fallback)
-    const finalSubtotal = parseFloat(subtotal) || 0;
-    const finalGstPercent = gst_percent !== undefined && gst_percent !== null && gst_percent !== '' ? parseFloat(gst_percent) : 0;
-    const finalGstAmount = gst_amount !== undefined && gst_amount !== null ? parseFloat(gst_amount) : (finalSubtotal * finalGstPercent / 100);
-    const finalDiscountPercent = parseFloat(discount_percent) || 0;
-    const finalDiscountAmount = parseFloat(discount_amount) || (finalSubtotal * finalDiscountPercent / 100);
-    const finalTotal = parseFloat(total_amount) || (finalSubtotal - finalDiscountAmount + finalGstAmount);
+    // Helper to safely parse numbers (handles NaN, null, undefined, empty string)
+    const safeNum = (val, def = 0) => {
+      if (val === undefined || val === null || val === '') return def;
+      const num = parseFloat(val);
+      return isNaN(num) ? def : num;
+    };
+    
+    // Calculate amounts - use safeNum to handle all edge cases
+    const finalSubtotal = safeNum(subtotal, 0);
+    const finalGstPercent = safeNum(gst_percent, 0);
+    const finalGstAmount = safeNum(gst_amount, finalSubtotal * finalGstPercent / 100);
+    const finalDiscountPercent = safeNum(discount_percent, 0);
+    const finalDiscountAmount = safeNum(discount_amount, finalSubtotal * finalDiscountPercent / 100);
+    const finalTotal = safeNum(total_amount, finalSubtotal - finalDiscountAmount + finalGstAmount);
 
     // Stringify addons for storage
     console.log('Received addons:', addons);
@@ -3269,9 +3276,9 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         estimateId, req.fpId, property_id || null, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
         property_name || '', property_code || '', property_type || '', zone || '', division || '', city || '', address || '',
-        parseInt(number_of_blocks) || 1, unitsPerBlockJson, blockNamesJson, parseInt(total_units) || 0,
+        safeNum(number_of_blocks, 1), unitsPerBlockJson, blockNamesJson, safeNum(total_units, 0),
         tower_name || '', block_number || '', villa_plot_number || '',
-        package_id || null, package_name || '', parseFloat(package_price) || 0, amc_package_description || '', packageServicesJson,
+        package_id || null, package_name || '', safeNum(package_price, 0), amc_package_description || '', packageServicesJson,
         finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,
         addonsJson, description || '', 
         creatorId, creatorName, creatorRole

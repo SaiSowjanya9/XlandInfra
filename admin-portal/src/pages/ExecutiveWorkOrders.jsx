@@ -19,6 +19,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [propertySearch, setPropertySearch] = useState('');
+  const [selectedProperty, setSelectedProperty] = useState(null);
   const [attachments, setAttachments] = useState([]);
   const [formData, setFormData] = useState({
     propertyId: '',
@@ -162,8 +163,9 @@ const ExecutiveWorkOrders = ({ user }) => {
     )
   );
 
-  // Handle property selection - auto-populate customer details
+  // Handle property selection - auto-populate customer details and store property
   const handlePropertySelect = (property) => {
+    setSelectedProperty(property);
     setFormData({ 
       ...formData, 
       propertyId: property.id,
@@ -407,7 +409,7 @@ const ExecutiveWorkOrders = ({ user }) => {
                 <input
                   type="text"
                   value={propertySearch}
-                  onChange={(e) => { setPropertySearch(e.target.value); setFormData({ ...formData, propertyId: '' }); }}
+                  onChange={(e) => { setPropertySearch(e.target.value); setFormData({ ...formData, propertyId: '' }); setSelectedProperty(null); }}
                   placeholder="Search by Property ID or Community Name..."
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                 />
@@ -427,6 +429,44 @@ const ExecutiveWorkOrders = ({ user }) => {
                   </div>
                 )}
               </div>
+
+              {/* Property Details - Show after selection */}
+              {selectedProperty && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Property Name</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.name || selectedProperty.community_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Property Type</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Zone</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.zone_name || selectedProperty.zone || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Division</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.division || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">City</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.city || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.total_units || selectedProperty.units || '1'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500 mb-1">Address</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.address || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Customer Details Section */}
