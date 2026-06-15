@@ -524,7 +524,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 <p className="text-sm text-gray-500">
                   {filterPropertyType === 'all' 
                     ? `${addons.length} add-on(s) available` 
-                    : `${addons.filter(a => normalizePropertyType(a.propertyType) === filterPropertyType).length} add-on(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
+                    : `${addons.filter(a => normalizePropertyType(a.propertyType || a.property_type) === filterPropertyType).length} add-on(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
                 </p>
               </div>
             </div>
@@ -575,7 +575,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               {(() => {
                 const filteredAddons = filterPropertyType === 'all' 
                   ? addons 
-                  : addons.filter(a => normalizePropertyType(a.propertyType) === filterPropertyType);
+                  : addons.filter(a => normalizePropertyType(a.propertyType || a.property_type) === filterPropertyType);
                 
                 if (filteredAddons.length === 0) {
                   return (
@@ -631,7 +631,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             </td>
                             <td className="px-4 py-4">
                               <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200">
-                                {PROPERTY_TYPE_OPTIONS.find(t => t.id === addon.propertyType)?.label || addon.propertyType || '-'}
+                                {PROPERTY_TYPE_OPTIONS.find(t => t.id === normalizePropertyType(addon.propertyType || addon.property_type))?.label || addon.propertyType || addon.property_type || '-'}
                               </span>
                             </td>
                             <td className="px-4 py-4">
