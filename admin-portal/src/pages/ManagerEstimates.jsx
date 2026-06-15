@@ -161,8 +161,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   // CREATE ESTIMATE - State for new form
   const [selectedAmcPackage, setSelectedAmcPackage] = useState('');
   const [selectedAddons, setSelectedAddons] = useState([]);
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [gstPercent, setGstPercent] = useState(0);
+  const [discountPercent, setDiscountPercent] = useState('');
+  const [gstPercent, setGstPercent] = useState('');
   
   // Direct Estimate form state
   const [directForm, setDirectForm] = useState({
@@ -307,8 +307,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     setSelectedProperty(null);
     setSelectedAmcPackage('');
     setSelectedAddons([]);
-    setDiscountPercent(0);
-    setGstPercent(0);
+    setDiscountPercent('');
+    setGstPercent('');
     setDirectForm({
       customerName: '', phone: '', email: '',
       propertyType: '', propertyName: '', zone: '', city: '', address: '',
@@ -358,9 +358,10 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 <table className="w-full text-sm bg-white">
                   <thead>
                     <tr className="border-y border-blue-100">
-                      <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th>
-                      <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th>
-                      <th className="px-5 py-2.5 text-right text-xs font-semibold text-blue-600 uppercase">No. of Visits</th>
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[12%]">Service</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[53%]">Description</th>
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[20%]">Frequency</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[15%]">Visits</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -368,12 +369,13 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                       const freqType = svc.frequencyType || svc.frequency_type || 'Monthly';
                       return (
                         <tr key={idx}>
-                          <td className="px-5 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td>
-                          <td className="px-5 py-2.5 text-gray-600">{freqType}</td>
-                          <td className="px-5 py-2.5 text-right text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td>
+                          <td className="px-3 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td>
+                          <td className={`px-3 py-2.5 text-gray-600 ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</td>
+                          <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
+                          <td className="px-3 py-2.5 text-center text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td>
                         </tr>
                       );
-                    }) : <tr><td colSpan={3} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}
+                    }) : <tr><td colSpan={4} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}
                   </tbody>
                 </table>
                 <div className="px-5 py-3 bg-blue-50 border-t border-blue-100">
@@ -418,10 +420,11 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-blue-100 bg-white">
-                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th>
-                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th>
-                    <th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th>
-                    <th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">Action</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[10%]">Service</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[48%]">Description</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[18%]">Frequency</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[14%]">Visits</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[10%]">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
@@ -431,8 +434,9 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                     const freqType = addon.frequency_type || addon.frequencyType || addon.services?.[0]?.frequencyType || 'Monthly';
                     return (
                       <tr key={idx}>
-                        <td className="px-5 py-2.5 text-gray-800">{getAddonName(addon)}</td>
-                        <td className="px-5 py-2.5 text-gray-600">{freqType}</td>
+                        <td className="px-3 py-2.5 text-gray-800">{getAddonName(addon)}</td>
+                        <td className={`px-3 py-2.5 text-gray-600 ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td>
+                        <td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td>
                         <td className="px-5 py-2.5 text-center text-gray-600">{addon.frequency_count || addon.frequencyCount || getFrequencyVisits(freqType)}</td>
                         <td className="px-5 py-2.5 text-center">
                           <button onClick={() => setSelectedAddons(selectedAddons.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
@@ -626,14 +630,53 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                   </div>
 
-                  {/* Unit Details - GC specific */}
+                  {/* Unit Details - Property Type Specific */}
                   <div className="bg-slate-50 rounded-lg p-4 mt-4">
                     <div className="flex items-center gap-2 mb-3">
                       <Building2 className="w-4 h-4 text-slate-600" />
                       <span className="text-sm font-medium text-slate-700">Unit Details</span>
-                      <span className="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded">{selectedProperty.property_type?.substring(0,2).toUpperCase() || 'GC'}</span>
+                      <span className="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded">{selectedProperty.property_type?.toUpperCase() || 'GC'}</span>
                     </div>
                     {(() => {
+                      const propType = (selectedProperty.property_type || '').toUpperCase();
+                      
+                      // FLAT - Show Flat Number
+                      if (propType === 'FLAT' || propType === 'FL' || propType === 'FLATS') {
+                        return (
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Flat Number</label>
+                              <input type="text" value={selectedProperty.flat_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      // VILLA - Show Villa Number
+                      if (propType === 'VILLA' || propType === 'VL' || propType === 'VILLAS') {
+                        return (
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Villa Number</label>
+                              <input type="text" value={selectedProperty.villa_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      // PLOT - Show Plot Number
+                      if (propType === 'PLOT' || propType === 'PL' || propType === 'PLOTS') {
+                        return (
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Plot Number</label>
+                              <input type="text" value={selectedProperty.plot_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      // GC/APT - Show Block Details
                       let blockNames = selectedProperty.block_names || selectedProperty.blockNames;
                       let unitsPerBlock = selectedProperty.units_per_block || selectedProperty.unitsPerBlock;
                       if (typeof blockNames === 'string') try { blockNames = JSON.parse(blockNames); } catch(e) { blockNames = {}; }
@@ -658,7 +701,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
-                              <input type="text" value={blockNames?.[1] || blockNames?.['1'] || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                              <input type="text" value={blockNames?.[1] || blockNames?.['1'] || selectedProperty.block_name || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
