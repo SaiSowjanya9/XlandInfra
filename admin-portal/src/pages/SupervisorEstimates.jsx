@@ -83,8 +83,8 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [selectedAmcPackage, setSelectedAmcPackage] = useState('');
   const [selectedAddons, setSelectedAddons] = useState([]);
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [gstPercent, setGstPercent] = useState(0);
+  const [discountPercent, setDiscountPercent] = useState('');
+  const [gstPercent, setGstPercent] = useState('');
   const getAddonId = (addon) => (addon.id ?? addon.addonId)?.toString();
   const getAddonName = (addon) => addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name || 'Add-on Service';
   const getAddonPrice = (addon) => parseFloat(addon.price ?? addon.totalPrice ?? addon.services?.[0]?.price) || 0;
@@ -609,13 +609,52 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                             </div>
                           </div>
 
-                          {/* Unit Details */}
+                          {/* Unit Details - Property Type Specific */}
                           <div className="bg-slate-50 rounded-lg p-4 mt-4">
                             <div className="flex items-center gap-2 mb-3">
                               <span className="text-sm font-medium text-slate-700">Unit Details</span>
-                              <span className="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded">{selectedProperty.property_type?.substring(0,2).toUpperCase() || 'GC'}</span>
+                              <span className="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded">{selectedProperty.property_type?.toUpperCase() || 'GC'}</span>
                             </div>
                             {(() => {
+                              const propType = (selectedProperty.property_type || '').toUpperCase();
+                              
+                              // FLAT - Show Flat Number
+                              if (propType === 'FLAT' || propType === 'FL' || propType === 'FLATS') {
+                                return (
+                                  <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                      <label className="block text-xs font-medium text-slate-500 mb-1">Flat Number</label>
+                                      <input type="text" value={selectedProperty.flat_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              
+                              // VILLA - Show Villa Number
+                              if (propType === 'VILLA' || propType === 'VL' || propType === 'VILLAS') {
+                                return (
+                                  <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                      <label className="block text-xs font-medium text-slate-500 mb-1">Villa Number</label>
+                                      <input type="text" value={selectedProperty.villa_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              
+                              // PLOT - Show Plot Number
+                              if (propType === 'PLOT' || propType === 'PL' || propType === 'PLOTS') {
+                                return (
+                                  <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                      <label className="block text-xs font-medium text-slate-500 mb-1">Plot Number</label>
+                                      <input type="text" value={selectedProperty.plot_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              
+                              // GC/APT - Show Block Details
                               let blockNames = selectedProperty.block_names || selectedProperty.blockNames;
                               let unitsPerBlock = selectedProperty.units_per_block || selectedProperty.unitsPerBlock;
                               if (typeof blockNames === 'string') try { blockNames = JSON.parse(blockNames); } catch(e) { blockNames = {}; }
@@ -640,7 +679,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                                   <div className="grid grid-cols-2 gap-4">
                                     <div>
                                       <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
-                                      <input type="text" value={blockNames?.[1] || blockNames?.['1'] || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                      <input type="text" value={blockNames?.[1] || blockNames?.['1'] || selectedProperty.block_name || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                                     </div>
                                     <div>
                                       <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
@@ -684,7 +723,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30">
                             <div className="px-5 py-3 flex items-center gap-3"><Package className="w-5 h-5 text-blue-600" /><span className="font-semibold text-gray-900">{pkg.name}</span><span className="px-2 py-0.5 bg-slate-700 text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span></div>
-                            <table className="w-full text-sm bg-white"><thead><tr className="border-y border-blue-100"><th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th><th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th><th className="px-5 py-2.5 text-right text-xs font-semibold text-blue-600 uppercase">No. of Visits</th></tr></thead><tbody className="divide-y divide-gray-100">{services.length > 0 ? services.map((svc, idx) => { const freqType = svc.frequencyType || svc.frequency_type || 'Monthly'; return (<tr key={idx}><td className="px-5 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td><td className="px-5 py-2.5 text-gray-600">{freqType}</td><td className="px-5 py-2.5 text-right text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td></tr>); }) : <tr><td colSpan={3} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}</tbody></table>
+                            <table className="w-full text-sm bg-white"><thead><tr className="border-y border-blue-100"><th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[12%]">Service</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[53%]">Description</th><th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[20%]">Frequency</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[15%]">Visits</th></tr></thead><tbody className="divide-y divide-gray-100">{services.length > 0 ? services.map((svc, idx) => { const freqType = svc.frequencyType || svc.frequency_type || 'Monthly'; return (<tr key={idx}><td className="px-3 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td><td className={`px-3 py-2.5 text-gray-600 ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</td><td className="px-3 py-2.5 text-gray-600">{freqType}</td><td className="px-3 py-2.5 text-center text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td></tr>); }) : <tr><td colSpan={4} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}</tbody></table>
                             <div className="px-5 py-3 bg-blue-50 border-t border-blue-100"><div className="flex justify-between items-center"><span className="text-sm font-semibold text-blue-700">Total Package Price</span><span className="text-lg font-bold text-gray-900">{formatCurrency(getPackagePrice(pkg))}</span></div><div className="text-xs text-blue-600 mt-1">Service Period: <span className="capitalize">{getPackageBillingDuration(pkg)}</span></div></div>
                           </div>
                         );
@@ -705,7 +744,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                       {selectedAddons.length > 0 && (
                         <div className="border border-blue-200 rounded-xl overflow-hidden">
                           <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200"><span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span></div>
-                          <table className="w-full text-sm"><thead><tr className="border-b border-blue-100 bg-white"><th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Service</th><th className="px-5 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase">Frequency</th><th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">No. of Visits</th><th className="px-5 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase">Action</th></tr></thead><tbody className="divide-y divide-gray-100 bg-white">{selectedAddons.map((addonId, idx) => { const addon = addons.find(a => getAddonId(a) === addonId); if (!addon) return null; const freqType = addon.frequency_type || addon.frequencyType || addon.services?.[0]?.frequencyType || 'Monthly'; return (<tr key={idx}><td className="px-5 py-2.5 text-gray-800">{getAddonName(addon)}</td><td className="px-5 py-2.5 text-gray-600">{freqType}</td><td className="px-5 py-2.5 text-center text-gray-600">{addon.frequency_count || addon.frequencyCount || getFrequencyVisits(freqType)}</td><td className="px-5 py-2.5 text-center"><button onClick={() => setSelectedAddons(selectedAddons.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></td></tr>); })}</tbody><tfoot className="bg-blue-50 border-t border-blue-200"><tr><td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td><td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0))}</td></tr></tfoot></table>
+                          <table className="w-full text-sm"><thead><tr className="border-b border-blue-100 bg-white"><th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[10%]">Service</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[48%]">Description</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[18%]">Frequency</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[14%]">Visits</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[10%]">Action</th></tr></thead><tbody className="divide-y divide-gray-100 bg-white">{selectedAddons.map((addonId, idx) => { const addon = addons.find(a => getAddonId(a) === addonId); if (!addon) return null; const freqType = addon.frequency_type || addon.frequencyType || addon.services?.[0]?.frequencyType || 'Monthly'; return (<tr key={idx}><td className="px-3 py-2.5 text-gray-800">{getAddonName(addon)}</td><td className={`px-3 py-2.5 text-gray-600 ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td><td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td><td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_count || addon.frequencyCount || getFrequencyVisits(freqType)}</td><td className="px-3 py-2.5 text-center"><button onClick={() => setSelectedAddons(selectedAddons.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></td></tr>); })}</tbody><tfoot className="bg-blue-50 border-t border-blue-200"><tr><td colSpan={4} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td><td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0))}</td></tr></tfoot></table>
                         </div>
                       )}
                     </div>

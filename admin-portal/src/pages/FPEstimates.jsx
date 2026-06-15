@@ -237,7 +237,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // Estimate form state
   const [estimateForm, setEstimateForm] = useState({
     customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '',
-    selectedPackage: '', selectedAddons: [], discount: 0, gst: 0, description: '',
+    selectedPackage: '', selectedAddons: [], discount: '', gst: '', description: '',
     numberOfBlocks: '', blockNumber: '', blockName: '', numberOfUnits: '',
     villaNumber: '', flatNumber: '', plotNumber: ''
   });
@@ -541,7 +541,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         setEstimateType(null);
         setSelectedProperty(null);
         setPropertyIdInput('');
-        setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: 0, gst: 0, description: '', numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0 });
+        setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: '', gst: '', description: '', numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0 });
         loadData();
         setActiveTab('list');
       } else {
@@ -669,15 +669,53 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                   </div>
 
-                  {/* Unit Details */}
+                  {/* Unit Details - Property Type Specific */}
                   <div className="bg-slate-50 rounded-lg p-4 mt-4">
                     <div className="flex items-center gap-2 mb-3">
                       <Building2 className="w-4 h-4 text-slate-600" />
                       <span className="text-sm font-medium text-slate-700">Unit Details</span>
-                      <span className="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded">{selectedProperty.property_type?.substring(0,2).toUpperCase() || 'GC'}</span>
+                      <span className="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded">{selectedProperty.property_type?.toUpperCase() || 'GC'}</span>
                     </div>
                     {(() => {
-                      // Parse block_names and units_per_block
+                      const propType = (selectedProperty.property_type || '').toUpperCase();
+                      
+                      // FLAT - Show Flat Number
+                      if (propType === 'FLAT' || propType === 'FL' || propType === 'FLATS') {
+                        return (
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Flat Number</label>
+                              <input type="text" value={selectedProperty.flat_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      // VILLA - Show Villa Number
+                      if (propType === 'VILLA' || propType === 'VL' || propType === 'VILLAS') {
+                        return (
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Villa Number</label>
+                              <input type="text" value={selectedProperty.villa_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      // PLOT - Show Plot Number
+                      if (propType === 'PLOT' || propType === 'PL' || propType === 'PLOTS') {
+                        return (
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Plot Number</label>
+                              <input type="text" value={selectedProperty.plot_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      // GC/APT - Show Block Details
                       let blockNames = selectedProperty.block_names || selectedProperty.blockNames;
                       let unitsPerBlock = selectedProperty.units_per_block || selectedProperty.unitsPerBlock;
                       if (typeof blockNames === 'string') try { blockNames = JSON.parse(blockNames); } catch(e) { blockNames = {}; }
@@ -685,7 +723,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       const numBlocks = selectedProperty.number_of_blocks || selectedProperty.numberOfBlocks || Object.keys(blockNames || {}).length || 1;
                       
                       if (numBlocks > 1 || Object.keys(blockNames || {}).length > 0) {
-                        // Multiple blocks - show all
                         return (
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
@@ -699,7 +736,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </div>
                         );
                       } else {
-                        // Single block or fallback
                         return (
                           <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -2582,7 +2618,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const renderArchived = () => (
     <div className="space-y-4">
       {archivedEstimates.length > 0 && !isFPManager && <div className="flex justify-end"><button onClick={() => setShowDeleteAllConfirm(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"><Trash2 className="w-4 h-4" />Delete All ({archivedEstimates.length})</button></div>}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <tr key={e.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-mono text-xs">{e.estimate_id}</td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3">{e.client_name}</td><td className="px-4 py-3 text-gray-500">{e.archived_at ? new Date(e.archived_at).toLocaleDateString() : '-'}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded"><Eye className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <tr key={e.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-mono text-xs">{e.estimate_id}</td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3">{e.client_name}</td><td className="px-4 py-3 text-gray-500">{e.archived_at ? new Date(e.archived_at).toLocaleDateString() : '-'}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => setViewEstimate(e)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="View"><Eye className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
       {deleteConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Permanently?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></div></div>}
       {showDeleteAllConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-red-600 mb-2">⚠️ Delete All Archived?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete <strong>all {archivedEstimates.length} archived estimates</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setShowDeleteAllConfirm(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={handleDeleteAllArchived} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete All</button></div></div></div>}
     </div>
