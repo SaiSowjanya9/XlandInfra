@@ -641,14 +641,16 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
 router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => {
   try {
     const coordinatorId = req.coordinatorId;
-    const franchisePartnerId = req.franchisePartnerId;
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
     const isFPCoordinator = !!franchisePartnerId;
     const creatorEmail = getCreatorIdentifier(req);
     const employeeId = getEmployeeIdForZoneLookup(req);
 
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId);
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo', coordinatorId, 'coordinator_id');
+    
+    console.log('[Coordinator Pending WO] coordId:', coordinatorId, 'fpId:', franchisePartnerId, 'zones:', assignedZones, 'creator:', creatorEmail);
 
     let query, params;
     
@@ -706,14 +708,14 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
 router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) => {
   try {
     const coordinatorId = req.coordinatorId;
-    const franchisePartnerId = req.franchisePartnerId;
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
     const isFPCoordinator = !!franchisePartnerId;
     const creatorEmail = getCreatorIdentifier(req);
     const employeeId = getEmployeeIdForZoneLookup(req);
 
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId);
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo', coordinatorId, 'coordinator_id');
 
     let query, params;
     

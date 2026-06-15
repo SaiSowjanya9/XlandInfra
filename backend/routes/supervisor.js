@@ -639,7 +639,7 @@ router.get('/work-orders', requireSupervisorScope, async (req, res) => {
 
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId);
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo', supervisorId, 'supervisor_id');
 
     // FP employees see FP work orders, standalone supervisors see their created work orders
     let query = `
@@ -684,7 +684,7 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
 
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId);
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo', supervisorId, 'supervisor_id');
 
     const query = `SELECT wo.*, 
         COALESCE(p.name, wo.property_name, op.community_name) as property_name,
@@ -721,7 +721,7 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
 
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId);
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo', supervisorId, 'supervisor_id');
 
     const query = `SELECT wo.*, 
         COALESCE(p.name, wo.property_name, op.community_name) as property_name,
