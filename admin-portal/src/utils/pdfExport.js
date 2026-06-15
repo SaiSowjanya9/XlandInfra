@@ -453,26 +453,69 @@ const generatePDF = (data, type, filename) => {
     }
 
     // ===== PRICE SUMMARY BOX =====
-    const total = parseFloat(data.totalPrice) || parseFloat(data.subtotal) || 0;
-    const totalBoxW = 75;
-    const totalBoxH = 12;
-    const totalBoxX = pageWidth - margin - totalBoxW;
+    const subtotal = parseFloat(data.subtotal) || 0;
+    const discountPercent = parseFloat(data.discountPercent || data.discount_percent || data.discount) || 0;
+    const discountAmount = parseFloat(data.discountAmount || data.discount_amount) || (subtotal * discountPercent / 100);
+    const gstPercent = parseFloat(data.gstPercent || data.gst_percent || data.gst) || 0;
+    const gstAmount = parseFloat(data.gstAmount || data.gst_amount) || ((subtotal - discountAmount) * gstPercent / 100);
+    const total = parseFloat(data.totalPrice || data.total_amount) || (subtotal - discountAmount + gstAmount);
+    
+    const priceBoxW = 85;
+    const priceBoxX = pageWidth - margin - priceBoxW;
+    const hasDiscount = discountAmount > 0;
+    const hasGst = gstAmount > 0 || gstPercent > 0;
+    const priceBoxH = 12 + (hasDiscount ? 6 : 0) + (hasGst ? 6 : 0) + 8; // Dynamic height based on content
 
-    if (y + totalBoxH + 25 > pageHeight) {
+    if (y + priceBoxH + 25 > pageHeight) {
       doc.addPage();
       y = 20;
     }
 
+    // Price Summary Card
+    doc.setFillColor(...cardBg);
+    doc.setDrawColor(...borderLight);
+    doc.roundedRect(priceBoxX, y, priceBoxW, priceBoxH, 2, 2, 'FD');
+    
+    let py = y + 5;
+    
+    // Subtotal row
+    doc.setTextColor(...mediumText);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Subtotal', priceBoxX + 4, py);
+    doc.setTextColor(...darkText);
+    doc.text(formatCurrency(subtotal), priceBoxX + priceBoxW - 4, py, { align: 'right' });
+    py += 6;
+    
+    // Discount row (if applicable)
+    if (hasDiscount) {
+      doc.setTextColor([34, 197, 94]); // Green for discount
+      doc.text(`Discount (${discountPercent}%)`, priceBoxX + 4, py);
+      doc.text('-' + formatCurrency(discountAmount), priceBoxX + priceBoxW - 4, py, { align: 'right' });
+      py += 6;
+    }
+    
+    // GST row (if applicable)
+    if (hasGst) {
+      doc.setTextColor(...mediumText);
+      doc.text(`GST (${gstPercent}%)`, priceBoxX + 4, py);
+      doc.setTextColor(...darkText);
+      doc.text(formatCurrency(gstAmount), priceBoxX + priceBoxW - 4, py, { align: 'right' });
+      py += 6;
+    }
+    
+    // Total row with dark background
+    py += 2;
     doc.setFillColor(...navy);
-    doc.roundedRect(totalBoxX, y, totalBoxW, totalBoxH, 2, 2, 'F');
+    doc.roundedRect(priceBoxX + 2, py - 3, priceBoxW - 4, 10, 1.5, 1.5, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL', totalBoxX + 5, y + 8);
-    doc.setFontSize(10);
-    doc.text(formatCurrency(total), totalBoxX + totalBoxW - 5, y + 8, { align: 'right' });
+    doc.text('TOTAL', priceBoxX + 6, py + 3);
+    doc.setFontSize(9);
+    doc.text(formatCurrency(total), priceBoxX + priceBoxW - 6, py + 3, { align: 'right' });
 
-    y += totalBoxH + 8;
+    y += priceBoxH + 8;
 
     // ===== NOTES/DESCRIPTION (After Price Summary) =====
     if (data.description && data.description.trim()) {

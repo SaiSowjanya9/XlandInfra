@@ -356,7 +356,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       billingDuration: 'Yearly',
       subtotal: parseFloat(estimate.subtotal) || 0,
       totalPrice: parseFloat(estimate.total_amount) || 0,
-      discount: parseFloat(estimate.discount_percent) || 0,
+      discountPercent: parseFloat(estimate.discount_percent) || 0,
+      discountAmount: parseFloat(estimate.discount_amount) || 0,
+      gstPercent: parseFloat(estimate.gst_percent) || 0,
+      gstAmount: parseFloat(estimate.gst_amount) || 0,
       description: estimate.description || '',
       // Include package services with descriptions
       packageServices: packageServices.map(s => ({
