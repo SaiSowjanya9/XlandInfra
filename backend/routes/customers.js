@@ -263,6 +263,20 @@ router.get('/activate/:token', async (req, res) => {
 router.post('/set-password', async (req, res) => {
   const conn = await pool.getConnection();
   try {
+    // Ensure customer_activity_log table exists
+    try {
+      await conn.execute(`
+        CREATE TABLE IF NOT EXISTS customer_activity_log (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          customer_id INT NOT NULL,
+          action VARCHAR(100) NOT NULL,
+          details JSON,
+          ip_address VARCHAR(45),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (e) { /* ignore */ }
+    
     await conn.beginTransaction();
 
     const { token, email, tempPassword, newPassword } = req.body;
@@ -397,6 +411,20 @@ router.post('/set-password', async (req, res) => {
 // ============================================
 router.post('/login', async (req, res) => {
   try {
+    // Ensure customer_activity_log table exists
+    try {
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS customer_activity_log (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          customer_id INT NOT NULL,
+          action VARCHAR(100) NOT NULL,
+          details JSON,
+          ip_address VARCHAR(45),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (e) { /* ignore */ }
+    
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -544,6 +572,35 @@ router.post('/login', async (req, res) => {
 // ============================================
 router.post('/forgot-password', async (req, res) => {
   try {
+    // Ensure required columns exist
+    const columnsToAdd = [
+      { name: 'reset_token', def: 'VARCHAR(255) NULL' },
+      { name: 'reset_token_expires', def: 'DATETIME NULL' },
+      { name: 'reset_temp_password_hash', def: 'VARCHAR(255) NULL' }
+    ];
+    for (const col of columnsToAdd) {
+      try {
+        const [cols] = await pool.execute(`SHOW COLUMNS FROM customer_accounts LIKE ?`, [col.name]);
+        if (cols.length === 0) {
+          await pool.execute(`ALTER TABLE customer_accounts ADD COLUMN ${col.name} ${col.def}`);
+        }
+      } catch (e) { /* ignore */ }
+    }
+    
+    // Ensure customer_activity_log table exists
+    try {
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS customer_activity_log (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          customer_id INT NOT NULL,
+          action VARCHAR(100) NOT NULL,
+          details JSON,
+          ip_address VARCHAR(45),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (e) { /* ignore */ }
+    
     const { email } = req.body;
 
     if (!email) {
