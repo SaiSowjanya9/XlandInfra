@@ -1366,7 +1366,7 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
          LEFT JOIN franchise_partners fp ON op.franchise_partner_id = fp.id
          LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username OR CAST(op.created_by AS CHAR) = CAST(fpe.id AS CHAR)
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.username OR CAST(op.created_by AS CHAR) = CAST(u.id AS CHAR) OR op.created_by = u.user_id
-         WHERE op.status = 'active'
+         WHERE (op.status IS NULL OR op.status = 'active' OR op.status != 'deleted')
          ORDER BY op.created_at DESC`
       );
       onboardedProps = rows;
