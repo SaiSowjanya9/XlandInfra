@@ -1,4 +1,5 @@
 const PDFDocument = require('pdfkit');
+const { XLAND_LOGO } = require('../utils/logoBase64');
 
 // Generate estimate PDF and return as buffer
 const generateEstimatePDF = async (estimate) => {
@@ -28,12 +29,19 @@ const generateEstimatePDF = async (estimate) => {
       // Header - Black background with gold accent
       doc.rect(0, 0, 612, 50).fill(black);
       
-      // Gold logo square
-      doc.rect(50, 12, 26, 26).fill(gold);
-      doc.fontSize(14).fillColor(black).text('XI', 56, 20);
+      // Company Logo - use actual logo image
+      try {
+        const logoBase64 = XLAND_LOGO.replace(/^data:image\/\w+;base64,/, '');
+        const logoBuffer = Buffer.from(logoBase64, 'base64');
+        doc.image(logoBuffer, 50, 8, { width: 35, height: 35 });
+      } catch (logoErr) {
+        // Fallback to gold square with XI if logo fails
+        doc.rect(50, 12, 26, 26).fill(gold);
+        doc.fontSize(14).fillColor(black).text('XI', 56, 20);
+      }
       
       // Company name
-      doc.fontSize(18).fillColor('#ffffff').text('XLAND INFRA', 85, 20);
+      doc.fontSize(18).fillColor('#ffffff').text('XLAND INFRA', 90, 20);
       
       // ESTIMATE badge
       doc.rect(470, 15, 80, 22).fill(gold);
