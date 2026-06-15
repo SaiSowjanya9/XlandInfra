@@ -200,8 +200,8 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       `, [fpId]).then(([[r]]) => ({ total: r.total || 0, pending: r.pending || 0, completed: r.completed || 0 }))
         .catch(() => ({ total: 0, pending: 0, completed: 0 })),
       
-      // Estimates count
-      safeCount('SELECT COUNT(*) as count FROM fp_estimates WHERE franchise_partner_id = ?', [fpId]),
+      // Estimates count (only non-archived)
+      safeCount('SELECT COUNT(*) as count FROM fp_estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL)', [fpId]),
       
       // Employee stats - combined query
       pool.execute(`
@@ -309,7 +309,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
     let onboardedProperties = [];
     try {
       const [rows] = await pool.execute(
-        `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
+        `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                 op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 NULL as contact_person, NULL as contact_phone, NULL as email,

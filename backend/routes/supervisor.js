@@ -292,10 +292,10 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
       [franchisePartnerId, creatorEmail, req.user?.username || '', supervisorId]
     );
 
-    // Estimates - by FP (fp_estimates doesn't have created_by column)
+    // Estimates - by FP (non-archived only)
     const [estimatesCount] = await pool.query(
       `SELECT COUNT(*) as count FROM fp_estimates 
-       WHERE franchise_partner_id = ?`,
+       WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL)`,
       [franchisePartnerId]
     );
 
@@ -404,7 +404,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
       const scopeColumn = franchisePartnerId ? 'franchise_partner_id' : 'supervisor_id';
       const scopeId = franchisePartnerId || supervisorId;
       const [rows] = await pool.execute(
-        `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
+        `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                 op.zone as zone_name, op.area_name as area, op.division, COALESCE(op.total_units, 1) as units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 NULL as contact_person, NULL as contact_phone, NULL as email,

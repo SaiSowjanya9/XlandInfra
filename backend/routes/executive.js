@@ -254,10 +254,10 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
       [franchisePartnerId, creatorEmail, req.user?.username || '', executiveId]
     );
 
-    // Estimates - by FP (fp_estimates doesn't have created_by column)
+    // Estimates - by FP (non-archived only)
     const [estimatesCount] = await pool.query(
       `SELECT COUNT(*) as count FROM fp_estimates 
-       WHERE franchise_partner_id = ?`,
+       WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL)`,
       [franchisePartnerId]
     );
 

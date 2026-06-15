@@ -234,10 +234,11 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         completed: r.completed || 0 
       })).catch(() => ({ total: 0, pending: 0, completed: 0 })),
       
-      // Estimates count (own created)
+      // Estimates count (own created, non-archived only)
       pool.execute(
         `SELECT COUNT(*) as count FROM fp_estimates 
-         WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR manager_id = ?)`,
+         WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR manager_id = ?)
+         AND (is_archived = 0 OR is_archived IS NULL)`,
         [franchisePartnerId, creatorEmail, req.user?.username || '', managerId]
       ).then(([r]) => r[0].count).catch(() => 0),
       
@@ -330,7 +331,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     if (franchisePartnerId) {
       try {
         const onbZoneFilter = buildOnboardedPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'op');
-        let onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
+        let onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                   op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
                   op.total_units, op.number_of_blocks, op.block_names, op.units_per_block, op.number_of_units,
                   op.address, op.city, op.state, op.postal_code as zip_code,

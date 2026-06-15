@@ -333,7 +333,7 @@ router.get('/properties', authenticate, dataEntryRoles, async (req, res) => {
     let onboardedProperties = [];
     try {
       const [rows] = await pool.execute(
-        `SELECT op.id, op.property_id, op.community_name as name, op.property_type as type,
+        `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                 op.zone as zone, op.division, op.total_units, 0 as occupied_units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 NULL as contact_person, NULL as contact_phone, NULL as email,
@@ -1024,8 +1024,8 @@ router.get('/dashboard/stats', async (req, res) => {
       `).then(([[r]]) => ({ total: r.total || 0, pending: r.pending || 0, completed: r.completed || 0 }))
         .catch(() => ({ total: 0, pending: 0, completed: 0 })),
       
-      // Estimates count
-      pool.execute(`SELECT COUNT(*) as count FROM estimates`)
+      // Estimates count (non-archived only)
+      pool.execute(`SELECT COUNT(*) as count FROM estimates WHERE (is_archived = 0 OR is_archived IS NULL)`)
         .then(([[r]]) => r.count)
         .catch(() => 0),
       
@@ -1253,8 +1253,8 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
         pending: Number(r.pending) || 0, 
         completed: Number(r.completed) || 0 
       })).catch(() => ({ total: 0, pending: 0, completed: 0 })),
-      // Estimates (from fp_estimates table)
-      safeCount('SELECT COUNT(*) as count FROM fp_estimates'),
+      // Estimates (from fp_estimates table, non-archived only)
+      safeCount('SELECT COUNT(*) as count FROM fp_estimates WHERE (is_archived = 0 OR is_archived IS NULL)'),
       // Recent work orders
       pool.execute(
         `SELECT wo.id, wo.work_order_id, wo.title, wo.status, wo.priority, wo.created_at,
@@ -1870,9 +1870,9 @@ router.get('/fp-view/:fpId/dashboard', authenticate, adminOnly, async (req, res)
       FROM work_orders WHERE franchise_partner_id = ?
     `, [fpIdNum]);
     
-    // Estimates count (from estimates table, not fp_estimates)
+    // Estimates count (from estimates table, non-archived only)
     const [[estimateCount]] = await pool.execute(
-      `SELECT COUNT(*) as count FROM estimates WHERE franchise_partner_id = ?`,
+      `SELECT COUNT(*) as count FROM estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL)`,
       [fpIdNum]
     );
     
