@@ -1147,7 +1147,6 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="font-semibold text-indigo-900">{viewEstimate.package_name}</p>
                           <p className="text-xs text-indigo-600">Yearly Billing</p>
                         </div>
                         <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.package_price || 0).toLocaleString()}</p>
