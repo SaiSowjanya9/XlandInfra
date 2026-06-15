@@ -878,7 +878,8 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
             firstName: contactName,
             tempPassword,
             activationLink,
-            propertyName: communityName
+            propertyName: communityName,
+            propertyId: propertyIdGen
           });
           emailSent = emailResult.success;
         } else if (!existing[0].is_activated) {
@@ -896,7 +897,8 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
             firstName: contactName,
             tempPassword,
             activationLink,
-            propertyName: communityName
+            propertyName: communityName,
+            propertyId: propertyIdGen
           });
           emailSent = emailResult.success;
         }
@@ -941,7 +943,7 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
           console.log('📧 Sending activation email (supervisor simple create) to:', email.toLowerCase());
           try {
             const emailResult = await sendCustomerActivationEmail({
-              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA'
+              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA', propertyId: propertyId || clientId
             });
             emailSent = emailResult.success;
           } catch (emailError) {
@@ -955,7 +957,7 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
           const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
           try {
             const emailResult = await sendCustomerActivationEmail({
-              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA'
+              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA', propertyId: propertyId || clientId
             });
             emailSent = emailResult.success;
           } catch (emailError) {
