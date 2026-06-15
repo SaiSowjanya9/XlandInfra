@@ -866,11 +866,29 @@ const sendEstimateEmail = async (estimate, actionToken) => {
               </table>
             </div>
             
+            <!-- Price Summary -->
+            <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb;">
+              <h3 style="margin: 0 0 15px 0; color: #374151; font-size: 14px; font-weight: 600;">Price Summary</h3>
+              <table style="width: 100%;">
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal:</td>
+                  <td style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">₹ ${Number(subtotal || 0).toLocaleString()}</td>
+                </tr>
+                ${discount > 0 ? `<tr>
+                  <td style="padding: 8px 0; color: #059669; font-size: 14px;">Discount (${discount}%):</td>
+                  <td style="padding: 8px 0; text-align: right; color: #059669; font-weight: 500;">- ₹ ${Number(estimate.discountAmount || 0).toLocaleString()}</td>
+                </tr>` : ''}
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">GST (${estimate.gstPercent || 0}%):</td>
+                  <td style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">₹ ${Number(tax || 0).toLocaleString()}</td>
+                </tr>
+              </table>
+            </div>
+            
             <!-- Total Amount -->
             <div style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); border-radius: 8px; padding: 20px; margin-bottom: 25px; text-align: center;">
               <p style="color: #e0e7ff; margin: 0 0 5px 0; font-size: 14px;">Total Estimate Amount</p>
               <p style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">₹ ${Number(total || 0).toLocaleString()}</p>
-              <p style="color: #c7d2fe; margin: 8px 0 0 0; font-size: 12px;">(Inclusive of GST)</p>
             </div>
             
             <!-- PDF Notice -->
@@ -1424,7 +1442,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
     to: recipients.join(', '),
-    subject: `🔔 Work Order Created - ${orderNumber || orderId} | ${propertyName || 'Service Request'}`,
+    subject: `Work Order Created - ${orderNumber || orderId} | ${propertyName || 'Service Request'}`,
     html: `
       <!DOCTYPE html>
       <html>

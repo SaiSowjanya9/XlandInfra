@@ -637,9 +637,17 @@ router.get('/work-orders', requireSupervisorScope, async (req, res) => {
 
     // FP employees see FP work orders, standalone supervisors see their created work orders
     let query = `
-      SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
+      SELECT wo.*, 
+        COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+        COALESCE(p.property_id, op.property_id) as actual_property_id,
+        COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
+        COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division, op.division) as division,
+        COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+        op.total_units, op.blocks as total_blocks,
+        c.name as category_name, v.company_name as vendor_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'}${zoneFilter.clause}
@@ -672,9 +680,17 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
     const assignedZones = await getAssignedZones(employeeId);
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
-    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
+    const query = `SELECT wo.*, 
+        COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+        COALESCE(p.property_id, op.property_id) as actual_property_id,
+        COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
+        COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division, op.division) as division,
+        COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+        op.total_units, op.blocks as total_blocks,
+        c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
+       LEFT JOIN onboarded_properties op ON wo.property_id = op.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
@@ -701,9 +717,17 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
     const assignedZones = await getAssignedZones(employeeId);
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
-    const query = `SELECT wo.*, p.name as property_name, c.name as category_name, v.company_name as vendor_name
+    const query = `SELECT wo.*, 
+        COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+        COALESCE(p.property_id, op.property_id) as actual_property_id,
+        COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
+        COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division, op.division) as division,
+        COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+        op.total_units, op.blocks as total_blocks,
+        c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
+       LEFT JOIN onboarded_properties op ON wo.property_id = op.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('completed', 'closed')${zoneFilter.clause}

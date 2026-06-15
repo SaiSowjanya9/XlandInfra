@@ -763,6 +763,18 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
     let query = `
       SELECT wo.*, 
         COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+        COALESCE(p.property_id, op.property_id) as actual_property_id,
+        COALESCE(p.property_id, op.property_id) as property_code,
+        COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
+        COALESCE(p.zone_id, op.zone, wo.zone) as zone,
+        COALESCE(p.division, op.division, wo.division) as division,
+        COALESCE(p.address, op.address) as property_address,
+        COALESCE(p.city, op.city) as property_city,
+        COALESCE(p.state, op.state) as property_state,
+        COALESCE(p.pincode, op.pincode) as property_pincode,
+        op.total_units,
+        op.blocks as total_blocks,
+        op.entry_type,
         COALESCE(c.name, wo.category_name) as category_name,
         wo.subcategory_name,
         v.company_name as vendor_name,
@@ -776,7 +788,7 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
         ) as created_by_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
-      LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username OR CAST(wo.created_by AS UNSIGNED) = fpe.id

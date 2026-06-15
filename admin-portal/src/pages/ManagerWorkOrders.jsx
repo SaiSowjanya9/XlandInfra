@@ -958,12 +958,12 @@ const ManagerWorkOrders = ({ user }) => {
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Property</p>
-                  <p className="font-medium text-gray-900">{selectedWorkOrder.property_name || '-'}</p>
-                </div>
-                <div>
                   <p className="text-sm text-gray-500">Category</p>
                   <p className="font-medium text-gray-900">{selectedWorkOrder.category_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Subcategory</p>
+                  <p className="font-medium text-gray-900">{selectedWorkOrder.subcategory_name || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Vendor</p>
@@ -973,10 +973,64 @@ const ManagerWorkOrders = ({ user }) => {
                   <p className="text-sm text-gray-500">Created</p>
                   <p className="font-medium text-gray-900">{formatDate(selectedWorkOrder.created_at)}</p>
                 </div>
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-500">Description</p>
-                  <p className="font-medium text-gray-900">{selectedWorkOrder.description || '-'}</p>
+              </div>
+
+              {/* Property Details Section */}
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <h4 className="text-sm font-semibold text-blue-800 mb-3">Property Details</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-gray-500">Property Name</p>
+                    <p className="font-medium text-gray-900">{selectedWorkOrder.property_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Property ID</p>
+                    <p className="font-medium text-gray-900 font-mono text-blue-600">{selectedWorkOrder.actual_property_id || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Property Type</p>
+                    <p className="font-medium text-gray-900 capitalize">{selectedWorkOrder.property_type?.replace(/_/g, ' ') || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Zone / Division</p>
+                    <p className="font-medium text-gray-900">{selectedWorkOrder.zone || 'N/A'} / {selectedWorkOrder.division || 'N/A'}</p>
+                  </div>
+                  {(selectedWorkOrder.property_type === 'gated_community' || selectedWorkOrder.property_type === 'apartment') && (
+                    <>
+                      <div>
+                        <p className="text-xs text-gray-500">Total Units</p>
+                        <p className="font-medium text-gray-900">{selectedWorkOrder.total_units || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Total Blocks</p>
+                        <p className="font-medium text-gray-900">{selectedWorkOrder.total_blocks || 'N/A'}</p>
+                      </div>
+                    </>
+                  )}
+                  {selectedWorkOrder.block && (
+                    <div>
+                      <p className="text-xs text-gray-500">Block</p>
+                      <p className="font-medium text-gray-900">{selectedWorkOrder.block}</p>
+                    </div>
+                  )}
+                  {selectedWorkOrder.flat_number && (
+                    <div>
+                      <p className="text-xs text-gray-500">Flat Number</p>
+                      <p className="font-medium text-gray-900">{selectedWorkOrder.flat_number}</p>
+                    </div>
+                  )}
+                  {selectedWorkOrder.property_address && (
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500">Address</p>
+                      <p className="font-medium text-gray-900">{selectedWorkOrder.property_address}{selectedWorkOrder.property_city ? `, ${selectedWorkOrder.property_city}` : ''}</p>
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">Description</p>
+                <p className="font-medium text-gray-900">{selectedWorkOrder.description || '-'}</p>
               </div>
 
               <div className="flex justify-end pt-4 border-t border-gray-100">
