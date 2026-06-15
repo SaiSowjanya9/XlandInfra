@@ -232,7 +232,7 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
     const [pendingWOCount] = await pool.query(
       `SELECT COUNT(*) as count FROM work_orders 
        WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR coordinator_id = ?)
-       AND status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`,
+       AND status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')`,
       [franchisePartnerId, creatorEmail, req.user?.username || '', coordinatorId]
     );
 
@@ -637,7 +637,7 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
          WHERE wo.franchise_partner_id = ?
-           AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
+           AND wo.status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
          ORDER BY wo.created_at DESC`;
       params = [franchisePartnerId, ...zoneFilter.params];
     } else {
@@ -649,7 +649,7 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
          WHERE (wo.coordinator_id = ? OR wo.created_by = ? OR wo.created_by = ?)
-           AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
+           AND wo.status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
          ORDER BY wo.created_at DESC`;
       params = [coordinatorId, coordinatorId, creatorEmail, ...zoneFilter.params];
     }

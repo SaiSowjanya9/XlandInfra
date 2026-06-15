@@ -1014,7 +1014,7 @@ router.get('/dashboard', async (req, res) => {
 
     // Get stats for this customer
     const [pendingCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE customer_id = ? AND status IN ('pending', 'requested', 'under_review', 'assigned', 'in_progress')`,
+      `SELECT COUNT(*) as count FROM work_orders WHERE customer_id = ? AND status IN ('pending', 'under_review', 'assigned', 'in_progress')`,
       [customerId]
     );
     const [completedCount] = await pool.execute(

@@ -331,7 +331,7 @@ router.get('/', async (req, res) => {
       // Filter by status
       if (status && status !== 'all') {
         if (status === 'pending') {
-          conditions.push(`wo.status IN ('pending', 'requested', 'assigned', 'in_progress')`);
+          conditions.push(`wo.status IN ('pending', 'assigned', 'in_progress')`);
         } else if (status === 'closed') {
           conditions.push(`wo.status IN ('completed', 'closed')`);
         } else {
@@ -353,7 +353,7 @@ router.get('/', async (req, res) => {
       const [[counts]] = await pool.query(`
         SELECT 
           COUNT(*) as total,
-          SUM(CASE WHEN status IN ('pending', 'assigned', 'in_progress', 'requested', 'under_review', 'accepted') THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status IN ('pending', 'assigned', 'in_progress', 'under_review', 'accepted') THEN 1 ELSE 0 END) as pending,
           SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned,
           SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
           SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed

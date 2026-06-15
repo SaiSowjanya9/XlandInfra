@@ -1097,7 +1097,7 @@ router.get('/dashboard/stats', async (req, res) => {
       pool.execute(`
         SELECT 
           COUNT(*) as total,
-          SUM(CASE WHEN status IN ('pending', 'open', 'in_progress', 'requested', 'under_review', 'assigned') THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status IN ('pending', 'open', 'in_progress', 'under_review', 'assigned') THEN 1 ELSE 0 END) as pending,
           SUM(CASE WHEN status IN ('completed', 'closed', 'verified') THEN 1 ELSE 0 END) as completed
         FROM work_orders
       `).then(([[r]]) => ({ total: r.total || 0, pending: r.pending || 0, completed: r.completed || 0 }))
@@ -1238,7 +1238,7 @@ router.get('/notifications', async (req, res) => {
     
     // Check for pending work orders
     try {
-      const [[pendingCount]] = await pool.execute(`SELECT COUNT(*) as count FROM work_orders WHERE status IN ('pending', 'open', 'assigned', 'in_progress', 'requested', 'under_review', 'accepted')`);
+      const [[pendingCount]] = await pool.execute(`SELECT COUNT(*) as count FROM work_orders WHERE status IN ('pending', 'open', 'assigned', 'in_progress', 'under_review', 'accepted')`);
       if (pendingCount.count > 0) {
         notifications.push({
           id: 'pending-wo',
@@ -1493,7 +1493,7 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
     `;
     
     if (status === 'pending') {
-      query += ` AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`;
+      query += ` AND wo.status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')`;
     } else if (status === 'completed') {
       query += ` AND wo.status IN ('completed', 'closed')`;
     }
@@ -2093,7 +2093,7 @@ router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, re
     const params = [fpIdNum];
     
     if (status === 'pending') {
-      query += ` AND wo.status IN ('pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress')`;
+      query += ` AND wo.status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')`;
     } else if (status === 'completed') {
       query += ` AND wo.status IN ('completed', 'closed')`;
     }
