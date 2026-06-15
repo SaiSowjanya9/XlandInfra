@@ -94,10 +94,12 @@ const WorkOrders = ({ admin }) => {
         } else {
           endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/properties`;
         }
+        console.log('[WorkOrders] Fetching properties from:', endpoint);
         const response = await fetch(endpoint, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await response.json();
+        console.log('[WorkOrders] Properties response:', result.success, 'count:', result.data?.length);
         if (result.success) setProperties(result.data || []);
       } catch (error) {
         console.error('Error fetching properties:', error);
@@ -106,13 +108,14 @@ const WorkOrders = ({ admin }) => {
     fetchProperties();
   }, [selectedFp, token]);
 
-  // Filter properties based on search
-  const filteredProperties = properties.filter(p =>
-    propertySearch && (
-      p.name?.toLowerCase().includes(propertySearch.toLowerCase()) ||
-      p.property_id?.toLowerCase().includes(propertySearch.toLowerCase())
-    )
-  );
+  // Filter properties based on search - also check propertyId (camelCase from onboarded)
+  const filteredProperties = properties.filter(p => {
+    if (!propertySearch) return false;
+    const searchLower = propertySearch.toLowerCase();
+    const propId = (p.property_id || p.propertyId || '').toLowerCase();
+    const propName = (p.name || p.communityName || '').toLowerCase();
+    return propId.includes(searchLower) || propName.includes(searchLower);
+  });
 
   // Handle property selection
   const handlePropertySelect = (property) => {
