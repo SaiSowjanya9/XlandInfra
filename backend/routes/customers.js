@@ -495,17 +495,18 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find customer - simple query first, property details are optional
+    // Find customer - fetch property details from onboarded_properties
     const [customers] = await pool.execute(
       `SELECT ca.*, 
-              op.community_name,
-              op.zone, 
-              op.division, 
+              op.community_name as op_property_name,
+              op.property_id as op_property_id,
+              op.zone as op_zone, 
+              op.division as op_division, 
               op.entry_type,
-              op.address, 
-              op.city, 
-              op.state, 
-              op.property_id as actual_property_id
+              op.address as op_address, 
+              op.city as op_city, 
+              op.state as op_state,
+              op.property_type as op_property_type
        FROM customer_accounts ca
        LEFT JOIN onboarded_properties op ON ca.property_id = op.id
        WHERE ca.email = ? AND ca.is_active = 1`,
@@ -613,14 +614,15 @@ router.post('/login', async (req, res) => {
           firstName: customer.first_name,
           lastName: customer.last_name,
           phone: customer.phone,
-          propertyId: customer.property_code || customer.actual_property_id || null,
-          propertyName: customer.property_name || customer.community_name,
-          propertyCode: customer.property_code || customer.actual_property_id || null,
-          zone: customer.zone,
-          division: customer.division,
-          address: customer.address,
-          city: customer.city,
-          state: customer.state
+          propertyId: customer.op_property_id || customer.property_code || null,
+          propertyName: customer.op_property_name || customer.property_name || null,
+          propertyCode: customer.op_property_id || customer.property_code || null,
+          propertyType: customer.op_property_type || null,
+          zone: customer.op_zone || customer.zone || null,
+          division: customer.op_division || customer.division || null,
+          address: customer.op_address || customer.address || null,
+          city: customer.op_city || customer.city || null,
+          state: customer.op_state || customer.state || null
         }
       }
     });

@@ -307,7 +307,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     let propQuery = `SELECT p.*, 
         p.zone_id as zone_name,
         COALESCE(p.area_name, p.city) as area,
-        p.division,
+        p.division, p.division as division_name,
         COALESCE(p.number_of_units, 1) as units,
         COALESCE(
           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
@@ -332,7 +332,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
       try {
         const onbZoneFilter = buildOnboardedPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'op');
         let onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                  op.zone as zone_name, op.area_name as area, op.division, op.total_units as units,
+                  op.zone as zone_name, op.area_name as area, op.division, op.division as division_name, op.total_units as units,
                   op.total_units, op.number_of_blocks, op.block_names, op.units_per_block, op.number_of_units,
                   op.address, op.city, op.state, op.postal_code as zip_code,
                   op.contact_person, op.contact_phone, op.contact_email as email,
@@ -368,7 +368,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
 // Create property - dual-tag with manager_id AND franchise_partner_id
 router.post('/properties', requireManagerScope, async (req, res) => {
   try {
-    const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
+    const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId, division } = req.body;
     
     const propertyId = `PROP-${Date.now()}`;
     const managerId = req.managerId;
@@ -398,10 +398,10 @@ router.post('/properties', requireManagerScope, async (req, res) => {
     
     const [result] = await pool.execute(
       `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
-        contact_person, contact_phone, contact_email, zone_id, manager_id, franchise_partner_id, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        contact_person, contact_phone, contact_email, zone_id, division, manager_id, franchise_partner_id, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [propertyId, name, propertyType || 'residential', address, city, state, zipCode, 
-       contactPerson, contactPhone, contactEmail, zoneId || null, managerId, franchisePartnerId, creatorName]
+       contactPerson, contactPhone, contactEmail, zoneId || null, division || null, managerId, franchisePartnerId, creatorName]
     );
 
     res.json({ success: true, message: 'Property created', data: { id: result.insertId, propertyId } });
