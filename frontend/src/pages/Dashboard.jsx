@@ -53,10 +53,10 @@ const Dashboard = ({ user }) => {
             <div>
               <p className="text-gold-400/80 text-sm">Your Property</p>
               <h2 className="text-xl font-bold text-white">{user.propertyName || 'XLAND INFRA'}</h2>
-              {(user.propertyId || user.propertyCode) && (
+              {(user.propertyCode || user.propertyId) && !/^\d+$/.test(user.propertyCode || user.propertyId) && (
                 <div className="flex items-center space-x-2 mt-1">
                   <Home className="w-4 h-4 text-gold-500/70" />
-                  <span className="text-dark-300">ID: {user.propertyId || user.propertyCode}</span>
+                  <span className="text-dark-300">ID: {user.propertyCode || user.propertyId}</span>
                 </div>
               )}
             </div>

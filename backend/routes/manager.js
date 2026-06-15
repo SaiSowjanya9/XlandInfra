@@ -307,7 +307,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     let propQuery = `SELECT p.*, 
         p.zone_id as zone_name,
         COALESCE(p.area_name, p.city) as area,
-        COALESCE(p.division, 'General') as division,
+        p.division,
         COALESCE(p.number_of_units, 1) as units,
         COALESCE(
           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
@@ -764,9 +764,9 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
         priority, permission_to_enter, has_pet, scheduled_date, status, manager_id, franchise_partner_id, created_by, created_at,
         property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?)`,
-      [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
+      [workOrderId, propertyId || null, categoryId || null, clientId || null, title || null, description || null,
        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null,
-       managerId, franchisePartnerId, req.user.id,
+       managerId || null, franchisePartnerId || null, req.user?.id || null,
        finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
        customerName || null, customerEmail || null, customerPhone || null]
     );
