@@ -810,7 +810,9 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
 
     // Check if this is a property form submission
     if (zone && communityName) {
-      const propertyIdGen = `SUP-${entryType || 'GC'}-${Date.now()}`;
+      const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'VLA', PLOT: 'PLT', FLAT: 'FLT' };
+      const prefix = prefixMap[entryType] || 'PROP';
+      const propertyIdGen = `${prefix}-SUP-${Date.now()}`;
       const clientId = `SUP-CLT-${Date.now()}`;
       
       const contact = associationContacts?.[0] || {};

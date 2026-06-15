@@ -1156,8 +1156,10 @@ router.post('/customers', requireFPScope, async (req, res) => {
 
     // Check if this is a property form submission (has zone/communityName)
     if (zone && communityName) {
-      // Generate IDs
-      const propertyIdGen = `GC-Y001-${Date.now()}`;
+      // Generate IDs with correct prefix based on entry type
+      const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'VLA', PLOT: 'PLT', FLAT: 'FLT' };
+      const prefix = prefixMap[entryType] || 'PROP';
+      const propertyIdGen = `${prefix}-Y001-${Date.now()}`;
       const clientId = `FP${req.fpId}-CLT-${Date.now()}`;
       
       // Get contact info
