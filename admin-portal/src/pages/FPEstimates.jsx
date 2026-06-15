@@ -812,7 +812,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={idx} className="align-top">
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{svc.service || svc.name || '-'}</td>
-                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</td>
+                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                               <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             </tr>
@@ -923,7 +923,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">GST (%)</span>
                       <div className="flex items-center gap-2">
-                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-amber-300 bg-amber-50 rounded text-sm text-center text-amber-700" />
+                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="w-16 px-2 py-1 border border-amber-300 bg-amber-50 rounded text-sm text-center text-amber-700" placeholder="0" />
                         <span className="text-gray-500">+ {formatCurrency(pricing.gstAmt)}</span>
                       </div>
                     </div>
@@ -1154,7 +1154,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={idx} className="align-top">
                               <td className="px-3 py-2.5 text-gray-800 font-medium">{svc.service || svc.name || '-'}</td>
-                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</td>
+                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</td>
                               <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
                               <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             </tr>
@@ -1266,7 +1266,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">GST (%)</span>
                       <div className="flex items-center gap-2">
-                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-amber-300 bg-amber-50 rounded text-sm text-center text-amber-700" />
+                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="w-16 px-2 py-1 border border-amber-300 bg-amber-50 rounded text-sm text-center text-amber-700" placeholder="0" />
                         <span className="text-gray-500">+ {formatCurrency(pricing.gstAmt)}</span>
                       </div>
                     </div>
@@ -2809,7 +2809,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                 <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
                               </div>
                               <div className="col-span-5">
-                                <p className={`text-xs text-gray-500 break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</p>
+                                <p className={`text-xs text-gray-500 break-words whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
@@ -2974,7 +2974,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <p className="font-medium text-amber-900 text-sm">{svc.name || svc.service || 'Service'}</p>
                         </div>
                         <div className="col-span-5">
-                          <p className={`text-xs text-amber-700 break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</p>
+                          <p className={`text-xs text-amber-700 break-words whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</p>
                         </div>
                         <div className="col-span-2 text-center">
                           <p className="text-sm font-medium text-amber-700">{svc.frequency_type || svc.frequencyType || 'Monthly'}</p>

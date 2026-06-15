@@ -350,7 +350,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
                 <table className="w-full text-sm bg-white">
                   <thead><tr className="border-y border-blue-100"><th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[12%]">Service</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[53%]">Description</th><th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[20%]">Frequency</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[15%]">Visits</th></tr></thead>
-                  <tbody className="divide-y divide-gray-100">{services.length > 0 ? services.map((svc, idx) => { const freqType = svc.frequencyType || svc.frequency_type || 'Monthly'; return (<tr key={idx}><td className="px-3 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td><td className={`px-3 py-2.5 text-gray-600 ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</td><td className="px-3 py-2.5 text-gray-600">{freqType}</td><td className="px-3 py-2.5 text-center text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td></tr>); }) : <tr><td colSpan={4} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}</tbody>
+                  <tbody className="divide-y divide-gray-100">{services.length > 0 ? services.map((svc, idx) => { const freqType = svc.frequencyType || svc.frequency_type || 'Monthly'; const hasDesc = svc.description && svc.description.trim() && svc.description.trim() !== '-'; return (<tr key={idx}><td className="px-3 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td><td className={`px-3 py-2.5 text-gray-600 ${!hasDesc ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</td><td className="px-3 py-2.5 text-gray-600">{freqType}</td><td className="px-3 py-2.5 text-center text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td></tr>); }) : <tr><td colSpan={4} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}</tbody>
                 </table>
                 <div className="px-5 py-3 bg-blue-50 border-t border-blue-100"><div className="flex justify-between items-center"><span className="text-sm font-semibold text-blue-700">Total Package Price</span><span className="text-lg font-bold text-gray-900">{formatCurrency(getPackagePrice(pkg))}</span></div><div className="text-xs text-blue-600 mt-1">Service Period: <span className="capitalize">{getPackageBillingDuration(pkg)}</span></div></div>
               </div>
@@ -414,7 +414,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
             <div className="flex items-center justify-between">
               <span className="text-gray-600">GST (%)</span>
               <div className="flex items-center gap-2">
-                <input type="number" min="0" max="100" value={gstPercent} onChange={(e) => setGstPercent(parseFloat(e.target.value) || 0)} className="w-16 px-2 py-1 border border-blue-300 rounded text-center" />
+                <input type="number" min="0" max="100" value={gstPercent} onChange={(e) => setGstPercent(e.target.value === '' ? '' : parseFloat(e.target.value))} className="w-16 px-2 py-1 border border-blue-300 rounded text-center" placeholder="0" />
                 <span className="text-gray-500">+ {formatCurrency(priceSummary.gstAmount)}</span>
               </div>
             </div>
@@ -1505,7 +1505,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                                 <p className="font-medium text-gray-800 text-sm">{svc.name || svc.service}</p>
                               </div>
                               <div className="col-span-5">
-                                <p className={`text-xs text-gray-500 break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</p>
+                                <p className={`text-xs text-gray-500 break-words whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
                                 <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
@@ -1667,7 +1667,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                           <p className="font-medium text-blue-900 text-sm">{svc.name || svc.service || 'Service'}</p>
                         </div>
                         <div className="col-span-5">
-                          <p className={`text-xs text-blue-700 break-words whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</p>
+                          <p className={`text-xs text-blue-700 break-words whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</p>
                         </div>
                         <div className="col-span-2 text-center">
                           <p className="text-sm font-medium text-blue-700">{svc.frequency_type || svc.frequencyType || 'Monthly'}</p>
