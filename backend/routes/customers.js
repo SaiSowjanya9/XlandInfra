@@ -35,6 +35,63 @@ const generateActivationToken = () => {
   return crypto.randomBytes(32).toString('hex');
 };
 
+// Initialize database tables and columns
+const initializeDatabase = async () => {
+  try {
+    // Create customer_accounts table if not exists
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS customer_accounts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        customer_id VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255),
+        temp_password_hash VARCHAR(255),
+        first_name VARCHAR(100),
+        last_name VARCHAR(100),
+        phone VARCHAR(20),
+        country_code VARCHAR(10) DEFAULT '+91',
+        property_id INT,
+        property_contact_id INT,
+        property_name VARCHAR(255),
+        property_code VARCHAR(50),
+        activation_token VARCHAR(255),
+        activation_expires DATETIME,
+        is_activated BOOLEAN DEFAULT FALSE,
+        activated_at DATETIME,
+        is_active BOOLEAN DEFAULT TRUE,
+        login_attempts INT DEFAULT 0,
+        locked_until DATETIME,
+        last_login DATETIME,
+        reset_token VARCHAR(255),
+        reset_token_expires DATETIME,
+        reset_temp_password_hash VARCHAR(255),
+        created_by VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Create customer_activity_log table if not exists
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS customer_activity_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        customer_id INT NOT NULL,
+        action VARCHAR(100) NOT NULL,
+        details JSON,
+        ip_address VARCHAR(45),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    console.log('✅ Customer database tables initialized');
+  } catch (e) {
+    console.log('Database init note:', e.message);
+  }
+};
+
+// Run initialization on module load
+initializeDatabase();
+
 // ============================================
 // POST /api/customers/create - Create customer account (called by admin)
 // ============================================
@@ -261,22 +318,22 @@ router.get('/activate/:token', async (req, res) => {
 // POST /api/customers/set-password - Set password after activation
 // ============================================
 router.post('/set-password', async (req, res) => {
+  // Ensure customer_activity_log table exists BEFORE getting connection
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS customer_activity_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        customer_id INT NOT NULL,
+        action VARCHAR(100) NOT NULL,
+        details JSON,
+        ip_address VARCHAR(45),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  } catch (e) { /* ignore */ }
+  
   const conn = await pool.getConnection();
   try {
-    // Ensure customer_activity_log table exists
-    try {
-      await conn.execute(`
-        CREATE TABLE IF NOT EXISTS customer_activity_log (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          customer_id INT NOT NULL,
-          action VARCHAR(100) NOT NULL,
-          details JSON,
-          ip_address VARCHAR(45),
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-    } catch (e) { /* ignore */ }
-    
     await conn.beginTransaction();
 
     const { token, email, tempPassword, newPassword } = req.body;
