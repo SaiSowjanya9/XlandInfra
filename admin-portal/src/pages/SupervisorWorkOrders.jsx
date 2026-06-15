@@ -94,7 +94,7 @@ const SupervisorWorkOrders = ({ user }) => {
     setFormData({ 
       ...formData, 
       propertyId: property.id, 
-      propertySearch: (property.property_id || '') + ' - ' + (property.name || ''),
+      propertySearch: property.property_id || '',
       customerName: property.contact_person || property.contactPerson || property.owner_name || '',
       customerEmail: property.contact_email || property.contactEmail || property.email || '',
       customerPhone: property.contact_phone || property.contactPhone || property.phone || property.mobile || ''

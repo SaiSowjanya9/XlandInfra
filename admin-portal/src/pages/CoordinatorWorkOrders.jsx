@@ -549,7 +549,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                               customerEmail: p.contact_email || p.contactEmail || p.email || formData.customerEmail,
                               customerPhone: p.contact_phone || p.contactPhone || p.phone || p.mobile || formData.customerPhone
                             });
-                            setPropertySearch(`${p.property_id} - ${p.name}`);
+                            setPropertySearch(p.property_id || '');
                           }}
                           className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm"
                         >
