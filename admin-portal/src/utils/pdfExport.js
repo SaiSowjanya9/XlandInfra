@@ -523,7 +523,7 @@ const generatePDF = (data, type, filename) => {
     
     // Discount row (if applicable)
     if (hasDiscount) {
-      doc.setTextColor([34, 197, 94]); // Green for discount
+      doc.setTextColor(34, 197, 94); // Green for discount
       doc.text(`Discount (${discountPercent}%)`, priceBoxX + 4, py);
       doc.text('-' + formatCurrency(discountAmount), priceBoxX + priceBoxW - 4, py, { align: 'right' });
       py += 6;
