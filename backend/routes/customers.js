@@ -495,20 +495,19 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find customer - check both onboarded_properties and properties tables for property_id
+    // Find customer - simple query first, property details are optional
     const [customers] = await pool.execute(
       `SELECT ca.*, 
-              COALESCE(op.community_name, p.name) as community_name,
-              COALESCE(op.zone, p.zone) as zone, 
-              COALESCE(op.division, p.division) as division, 
+              op.community_name,
+              op.zone, 
+              op.division, 
               op.entry_type,
-              COALESCE(op.address, p.address) as address, 
-              COALESCE(op.city, p.city) as city, 
-              COALESCE(op.state, p.state) as state, 
-              COALESCE(op.property_id, p.property_id) as actual_property_id
+              op.address, 
+              op.city, 
+              op.state, 
+              op.property_id as actual_property_id
        FROM customer_accounts ca
        LEFT JOIN onboarded_properties op ON ca.property_id = op.id
-       LEFT JOIN properties p ON ca.property_id = p.id
        WHERE ca.email = ? AND ca.is_active = 1`,
       [email.toLowerCase()]
     );
@@ -567,13 +566,17 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Reset login attempts on successful login
-    await pool.execute(
-      `UPDATE customer_accounts 
-       SET login_attempts = 0, locked_until = NULL, last_login = NOW()
-       WHERE id = ?`,
-      [customer.id]
-    );
+    // Reset login attempts on successful login (non-critical)
+    try {
+      await pool.execute(
+        `UPDATE customer_accounts 
+         SET login_attempts = 0, locked_until = NULL, last_login = NOW()
+         WHERE id = ?`,
+        [customer.id]
+      );
+    } catch (updateErr) {
+      console.log('Login attempts reset failed:', updateErr.message);
+    }
 
     // Log activity (non-critical - don't fail login if this fails)
     try {
