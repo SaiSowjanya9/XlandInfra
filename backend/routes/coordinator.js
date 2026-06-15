@@ -412,7 +412,7 @@ router.post('/properties', requireCoordinatorScope, async (req, res) => {
     const franchisePartnerId = req.franchisePartnerId;
     const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
 
-    const propertyId = `PROP-COORD-${Date.now()}`;
+    const propertyId = `PROP-${Date.now()}`;
     
     // Get actual user name from database (check both users and fp_employees tables)
     let creatorName = req.user?.username || req.user?.email || 'System';
@@ -719,14 +719,40 @@ router.post('/work-orders', requireCoordinatorScope, async (req, res) => {
     const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate,
             propertyName, categoryName, subcategoryName, customerName, customerEmail, customerPhone } = req.body;
 
-    const workOrderId = `WO-COORD-${Date.now()}`;
+    const workOrderId = `WO-${Date.now()}`;
+
+    // Fetch property details if not provided
+    let finalPropertyName = propertyName;
+    let finalPropertyType = null;
+    if (propertyId && !propertyName) {
+      const [props] = await pool.query(
+        `SELECT name, property_type FROM properties WHERE id = ? 
+         UNION SELECT community_name as name, property_type FROM onboarded_properties WHERE id = ?`,
+        [propertyId, propertyId]
+      );
+      if (props.length > 0) {
+        finalPropertyName = props[0].name;
+        finalPropertyType = props[0].property_type;
+      }
+    }
+
+    // Fetch category details if not provided
+    let finalCategoryName = categoryName;
+    let finalSubcategoryName = subcategoryName;
+    if (categoryId && !categoryName) {
+      const [cats] = await pool.query('SELECT name FROM categories WHERE id = ?', [categoryId]);
+      if (cats.length > 0) finalCategoryName = cats[0].name;
+    }
 
     const [result] = await pool.query(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
-        priority, permission_to_enter, has_pet, scheduled_date, coordinator_id, franchise_partner_id, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        priority, permission_to_enter, has_pet, scheduled_date, coordinator_id, franchise_partner_id, status,
+        property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`,
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
-        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, coordinatorId, franchisePartnerId]
+        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, coordinatorId, franchisePartnerId,
+        finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
+        customerName || null, customerEmail || null, customerPhone || null]
     );
 
     // Send email notification for new work order
@@ -734,19 +760,19 @@ router.post('/work-orders', requireCoordinatorScope, async (req, res) => {
     sendWorkOrderCreatedNotification({
       orderId: result.insertId,
       orderNumber: workOrderId,
-      title,
-      propertyName,
+      title: title || `Service Request - ${finalCategoryName || 'General'}`,
+      propertyName: finalPropertyName,
       propertyId,
+      propertyType: finalPropertyType,
       customerName,
       customerEmail,
       customerPhone,
-      categoryName,
-      subcategoryName,
+      categoryName: finalCategoryName,
+      subcategoryName: finalSubcategoryName,
       priority,
       description,
       createdBy: req.user?.username || req.user?.email || 'Coordinator',
-      createdByRole: 'Coordinator',
-      createdFromPortal: 'Coordinator Portal'
+      createdByRole: 'Coordinator'
     }).catch(err => console.error('Email notification error:', err));
 
     res.json({
@@ -906,8 +932,10 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
 
     // Check if this is a property form submission
     if (zone && communityName) {
-      const propertyIdGen = `COORD-${entryType || 'GC'}-${Date.now()}`;
-      const clientId = `COORD-CLT-${Date.now()}`;
+      const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'V', PLOT: 'PL', FLAT: 'FL' };
+      const prefix = prefixMap[entryType] || 'PROP';
+      const propertyIdGen = `${prefix}-${Date.now()}`;
+      const clientId = `CLT-${Date.now()}`;
       
       const contact = associationContacts?.[0] || {};
       const contactName = contact.name || '';
@@ -1013,7 +1041,7 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
         data: { propertyId: propertyIdGen, clientId, customerId: customerResult?.insertId || null, emailSent }
       });
     } else {
-      const clientId = `CLT-COORD-${Date.now()}`;
+      const clientId = `CLT-${Date.now()}`;
       const [result] = await pool.query(
         `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
           zip_code, client_type, company_name, property_id, gst_number, coordinator_id, franchise_partner_id, created_by)
@@ -1249,7 +1277,7 @@ router.post('/vendors', requireCoordinatorScope, async (req, res) => {
       gstNumber, panNumber, licenseNumber
     } = req.body;
 
-    const vendorId = `COORD-${serviceType?.substring(0, 3).toUpperCase() || 'VND'}-${Date.now()}`;
+    const vendorId = `VND-${Date.now()}`;
 
     // Get employee ID for proper creator tracking
     const employeeId = req.user?.id || coordinatorId;
@@ -1483,7 +1511,7 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
       description
     } = req.body;
 
-    const estimateId = `EST-COORD-${Date.now()}`;
+    const estimateId = `EST-${Date.now()}`;
     
     // property_id column is INT, so use null for string codes
     const numericPropertyId = parseInt(property_id);

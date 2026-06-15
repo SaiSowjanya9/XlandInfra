@@ -402,7 +402,7 @@ router.post('/properties', requireExecutiveScope, async (req, res) => {
     const franchisePartnerId = req.franchisePartnerId;
     const { name, propertyType, address, city, state, zipCode, contactPerson, contactPhone, contactEmail, zoneId } = req.body;
 
-    const propertyId = `PROP-EXEC-${Date.now()}`;
+    const propertyId = `PROP-${Date.now()}`;
     
     // Get creator identifier - MUST match what getCreatorIdentifier returns (username/email)
     // This is used for zone filtering to show "own created data"
@@ -629,14 +629,40 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
     const { propertyId, categoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate,
             propertyName, categoryName, subcategoryName, customerName, customerEmail, customerPhone } = req.body;
 
-    const workOrderId = `WO-EXEC-${Date.now()}`;
+    const workOrderId = `WO-${Date.now()}`;
+
+    // Fetch property details if not provided
+    let finalPropertyName = propertyName;
+    let finalPropertyType = null;
+    if (propertyId && !propertyName) {
+      const [props] = await pool.query(
+        `SELECT name, property_type FROM properties WHERE id = ? 
+         UNION SELECT community_name as name, property_type FROM onboarded_properties WHERE id = ?`,
+        [propertyId, propertyId]
+      );
+      if (props.length > 0) {
+        finalPropertyName = props[0].name;
+        finalPropertyType = props[0].property_type;
+      }
+    }
+
+    // Fetch category details if not provided
+    let finalCategoryName = categoryName;
+    let finalSubcategoryName = subcategoryName;
+    if (categoryId && !categoryName) {
+      const [cats] = await pool.query('SELECT name FROM categories WHERE id = ?', [categoryId]);
+      if (cats.length > 0) finalCategoryName = cats[0].name;
+    }
 
     const [result] = await pool.query(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
-        priority, permission_to_enter, has_pet, scheduled_date, executive_id, franchise_partner_id, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        priority, permission_to_enter, has_pet, scheduled_date, executive_id, franchise_partner_id, status,
+        property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`,
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
-        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, executiveId, franchisePartnerId]
+        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, executiveId, franchisePartnerId,
+        finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
+        customerName || null, customerEmail || null, customerPhone || null]
     );
 
     // Send email notification for new work order
@@ -644,19 +670,19 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
     sendWorkOrderCreatedNotification({
       orderId: result.insertId,
       orderNumber: workOrderId,
-      title,
-      propertyName,
+      title: title || `Service Request - ${finalCategoryName || 'General'}`,
+      propertyName: finalPropertyName,
       propertyId,
+      propertyType: finalPropertyType,
       customerName,
       customerEmail,
       customerPhone,
-      categoryName,
-      subcategoryName,
+      categoryName: finalCategoryName,
+      subcategoryName: finalSubcategoryName,
       priority,
       description,
       createdBy: req.user?.username || req.user?.email || 'Executive',
-      createdByRole: 'Executive',
-      createdFromPortal: 'Executive Portal'
+      createdByRole: 'Executive'
     }).catch(err => console.error('Email notification error:', err));
 
     res.json({
@@ -843,10 +869,10 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
     if (zone && communityName) {
       console.log('📋 [Executive] Property form - community:', communityName, 'zone:', zone);
       
-      const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'VLA', PLOT: 'PLT', FLAT: 'FLT' };
+      const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'V', PLOT: 'PL', FLAT: 'FL' };
       const prefix = prefixMap[entryType] || 'PROP';
-      const propertyIdGen = `${prefix}-EXEC-${Date.now()}`;
-      const clientId = `EXEC-CLT-${Date.now()}`;
+      const propertyIdGen = `${prefix}-${Date.now()}`;
+      const clientId = `CLT-${Date.now()}`;
       
       const contact = associationContacts?.[0] || {};
       const contactName = contact.name || '';
@@ -907,7 +933,7 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
       // Simple customer form
       console.log('� [Executive] Simple customer form - name:', name, 'email:', email);
       
-      const clientId = `CLT-EXEC-${Date.now()}`;
+      const clientId = `CLT-${Date.now()}`;
       const [result] = await pool.query(
         `INSERT INTO clients (client_id, name, email, phone, alternate_phone, address, city, state, 
           zip_code, client_type, company_name, property_id, gst_number, executive_id, franchise_partner_id, created_by)
@@ -1071,7 +1097,7 @@ router.post('/vendors', requireExecutiveScope, async (req, res) => {
     const franchisePartnerId = req.franchisePartnerId;
     const { companyName, contactPerson, email, phone, alternatePhone, address, city, state, zipCode, gstNumber, panNumber } = req.body;
 
-    const vendorId = `VND-EXEC-${Date.now()}`;
+    const vendorId = `VND-${Date.now()}`;
 
     const [result] = await pool.query(
       `INSERT INTO onboarded_vendors (vendor_id, company_name, contact_person, owner_name, email, owner_email, 
@@ -1349,7 +1375,7 @@ router.post('/estimates', requireExecutiveScope, async (req, res) => {
       description
     } = req.body;
 
-    const estimateId = `EST-EXEC-${Date.now()}`;
+    const estimateId = `EST-${Date.now()}`;
     
     // property_id column is INT, so pass null and use property_code for string ID
     const numericPropertyId = parseInt(property_id);
