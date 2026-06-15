@@ -58,6 +58,32 @@ const ManagerProperties = ({ user }) => {
     { id: 'plot', label: 'Plots', icon: MapPin },
     { id: 'flat', label: 'Flats', icon: Building }
   ];
+
+  // Normalize property type for consistent filtering (handles both uppercase and lowercase)
+  const normalizePropertyType = (type) => {
+    if (!type) return '';
+    const lower = type.toLowerCase().replace(/[_\s-]/g, '');
+    if (lower === 'gc' || lower.includes('gated')) return 'gated_community';
+    if (lower === 'apt' || lower.includes('apartment')) return 'apartment';
+    if (lower === 'villa' || lower === 'villas') return 'villa';
+    if (lower === 'flat' || lower === 'flats') return 'flat';
+    if (lower === 'plot' || lower === 'plots') return 'plot';
+    return type.toLowerCase();
+  };
+
+  // Get type badge color
+  const getTypeBadgeColor = (type) => {
+    const normalized = normalizePropertyType(type);
+    const colors = {
+      'apartment': 'bg-blue-100 text-blue-700',
+      'gated_community': 'bg-teal-100 text-teal-700',
+      'villa': 'bg-amber-100 text-amber-700',
+      'plot': 'bg-purple-100 text-purple-700',
+      'flat': 'bg-pink-100 text-pink-700'
+    };
+    return colors[normalized] || 'bg-gray-100 text-gray-700';
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     propertyType: 'residential',
@@ -258,8 +284,8 @@ const ManagerProperties = ({ user }) => {
       p.zone_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.address?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Tab filter (property type)
-    const matchesTab = activeTab === 'all' || p.property_type === activeTab;
+    // Tab filter (property type) - normalize for consistent matching
+    const matchesTab = activeTab === 'all' || normalizePropertyType(p.property_type) === activeTab;
     
     // Zone filter
     const matchesZone = zoneFilter === 'all' || p.zone_id?.toString() === zoneFilter;
@@ -273,7 +299,7 @@ const ManagerProperties = ({ user }) => {
   // Get counts for each tab
   const getTabCount = (tabId) => {
     if (tabId === 'all') return properties.length;
-    return properties.filter(p => p.property_type === tabId).length;
+    return properties.filter(p => normalizePropertyType(p.property_type) === tabId).length;
   };
 
   // Category Selection Screen
@@ -465,8 +491,8 @@ const ManagerProperties = ({ user }) => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium capitalize">
-                        {property.property_type}
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${getTypeBadgeColor(property.property_type)}`}>
+                        {property.property_type?.replace(/_/g, ' ')}
                       </span>
                     </td>
                     <td className="py-4 px-4">
@@ -735,8 +761,8 @@ const ManagerProperties = ({ user }) => {
                   <p className="text-gray-900">{viewingProperty.zip_code || '-'}</p>
                 </div>
 
-                {/* Block Details - Show for GC and Apartment */}
-                {(viewingProperty.property_type === 'gated_community' || viewingProperty.property_type === 'apartment' || viewingProperty.block_names || viewingProperty.units_per_block || viewingProperty.number_of_blocks) && (
+                {/* Gated Community Block Details */}
+                {viewingProperty.property_type === 'gated_community' && (
                   <div className="md:col-span-2 mt-4 p-4 bg-blue-50 rounded-lg">
                     <h4 className="text-sm font-semibold text-blue-800 mb-3">Block Details</h4>
                     <div className="mb-3">
@@ -763,6 +789,62 @@ const ManagerProperties = ({ user }) => {
                         return null;
                       } catch { return null; }
                     })()}
+                  </div>
+                )}
+
+                {/* Apartment Details */}
+                {viewingProperty.property_type === 'apartment' && (
+                  <div className="md:col-span-2 mt-4 p-4 bg-green-50 rounded-lg">
+                    <h4 className="text-sm font-semibold text-green-800 mb-3">Apartment Details</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Block Information</p>
+                        <p className="text-gray-900">{viewingProperty.block_na ? 'N/A' : (viewingProperty.block_info || '-')}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Number of Units</p>
+                        <p className="text-gray-900">{viewingProperty.number_of_units || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Villa Details */}
+                {viewingProperty.property_type === 'villa' && (
+                  <div className="md:col-span-2 mt-4 p-4 bg-purple-50 rounded-lg">
+                    <h4 className="text-sm font-semibold text-purple-800 mb-3">Villa Details</h4>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Villa Number</p>
+                      <p className="text-gray-900">{viewingProperty.villa_plot_number || '-'}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Flat Details */}
+                {viewingProperty.property_type === 'flat' && (
+                  <div className="md:col-span-2 mt-4 p-4 bg-orange-50 rounded-lg">
+                    <h4 className="text-sm font-semibold text-orange-800 mb-3">Flat Details</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Flat Number</p>
+                        <p className="text-gray-900">{viewingProperty.villa_plot_number || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Block Information</p>
+                        <p className="text-gray-900">{viewingProperty.flat_block_na ? 'N/A' : (viewingProperty.flat_block_info || '-')}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Plot Details */}
+                {viewingProperty.property_type === 'plot' && (
+                  <div className="md:col-span-2 mt-4 p-4 bg-amber-50 rounded-lg">
+                    <h4 className="text-sm font-semibold text-amber-800 mb-3">Plot Details</h4>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Plot Number</p>
+                      <p className="text-gray-900">{viewingProperty.plot_na ? 'N/A' : (viewingProperty.villa_plot_number || '-')}</p>
+                    </div>
                   </div>
                 )}
 

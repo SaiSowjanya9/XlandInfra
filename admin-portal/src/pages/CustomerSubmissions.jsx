@@ -1087,8 +1087,8 @@ const CustomerSubmissions = () => {
                 </div>
               </div>
 
-              {/* Blocks (GC and APT) */}
-              {(viewProperty.entryType === 'GC' || viewProperty.entryType === 'APT') && (
+              {/* Gated Community Block Details */}
+              {viewProperty.entryType === 'GC' && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Block Details</h3>
                   <div className="mb-3">
@@ -1114,17 +1114,58 @@ const CustomerSubmissions = () => {
                 </div>
               )}
 
-              {/* Villa/Plot/Flat Number */}
-              {(viewProperty.entryType === 'VILLA' || viewProperty.entryType === 'PLOT' || viewProperty.entryType === 'FLAT') && (
+              {/* Apartment Details */}
+              {viewProperty.entryType === 'APT' && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">
-                    {viewProperty.entryType === 'VILLA' ? 'Villa Details' : viewProperty.entryType === 'PLOT' ? 'Plot Details' : 'Flat Details'}
-                  </h3>
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Apartment Details</h3>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Block Information</label>
+                      <p className="text-sm text-gray-900">{viewProperty.blockNA ? 'N/A' : (viewProperty.blockInfo || '-')}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Number of Units</label>
+                      <p className="text-sm text-gray-900">{viewProperty.numberOfUnits || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Villa Details */}
+              {viewProperty.entryType === 'VILLA' && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Villa Details</h3>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      {viewProperty.entryType === 'VILLA' ? 'Villa Number' : viewProperty.entryType === 'PLOT' ? 'Plot Number' : 'Flat Number'}
-                    </label>
+                    <label className="block text-xs text-gray-500 mb-1">Villa Number</label>
                     <p className="text-sm text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Flat Details */}
+              {viewProperty.entryType === 'FLAT' && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Flat Details</h3>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Flat Number</label>
+                      <p className="text-sm text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Block Information</label>
+                      <p className="text-sm text-gray-900">{viewProperty.flatBlockNA ? 'N/A' : (viewProperty.flatBlockInfo || '-')}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Plot Details */}
+              {viewProperty.entryType === 'PLOT' && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Plot Details</h3>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Plot Number</label>
+                    <p className="text-sm text-gray-900">{viewProperty.plotNA ? 'N/A' : (viewProperty.villaPlotNumber || '-')}</p>
                   </div>
                 </div>
               )}
