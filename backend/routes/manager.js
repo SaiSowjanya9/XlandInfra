@@ -802,7 +802,9 @@ router.post('/customers', requireManagerScope, async (req, res) => {
     // Check if this is a property form submission (has zone/communityName)
     if (zone && communityName) {
       // Generate IDs
-      const propertyIdGen = `MGR-${entryType || 'GC'}-${Date.now()}`;
+      const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'VLA', PLOT: 'PLT', FLAT: 'FLT' };
+      const prefix = prefixMap[entryType] || 'PROP';
+      const propertyIdGen = `${prefix}-MGR-${Date.now()}`;
       const clientId = `MGR-CLT-${Date.now()}`;
       
       // Get contact info

@@ -114,13 +114,12 @@ const WorkOrders = ({ admin }) => {
   }, [selectedFp, token, activeTab]);
 
   // Filter properties based on search - also check propertyId (camelCase from onboarded)
-  const filteredProperties = properties.filter(p => {
-    if (!propertySearch) return false;
+  const filteredProperties = propertySearch && !formData.propertyId ? properties.filter(p => {
     const searchLower = propertySearch.toLowerCase();
     const propId = (p.property_id || p.propertyId || '').toLowerCase();
     const propName = (p.name || p.communityName || '').toLowerCase();
     return propId.includes(searchLower) || propName.includes(searchLower);
-  });
+  }) : [];
 
   // Handle property selection
   const handlePropertySelect = (property) => {

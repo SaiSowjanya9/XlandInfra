@@ -792,7 +792,9 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
     if (zone && communityName) {
       console.log('📋 [Executive] Property form - community:', communityName, 'zone:', zone);
       
-      const propertyIdGen = `EXEC-${entryType || 'GC'}-${Date.now()}`;
+      const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'VLA', PLOT: 'PLT', FLAT: 'FLT' };
+      const prefix = prefixMap[entryType] || 'PROP';
+      const propertyIdGen = `${prefix}-EXEC-${Date.now()}`;
       const clientId = `EXEC-CLT-${Date.now()}`;
       
       const contact = associationContacts?.[0] || {};

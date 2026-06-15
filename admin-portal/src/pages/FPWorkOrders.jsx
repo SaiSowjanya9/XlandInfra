@@ -377,11 +377,11 @@ const FPWorkOrders = ({ user }) => {
     setSubcategories([]);
   };
 
-  // Filter properties based on search
-  const filteredPropertyOptions = properties.filter(p => 
+  // Filter properties based on search - only filter if search term exists and no property selected
+  const filteredPropertyOptions = propertySearch && !formData.propertyId ? properties.filter(p => 
     p.name?.toLowerCase().includes(propertySearch.toLowerCase()) ||
     p.property_id?.toLowerCase().includes(propertySearch.toLowerCase())
-  );
+  ) : [];
 
   const getStatusColor = (status) => {
     const colors = {
@@ -688,7 +688,13 @@ const FPWorkOrders = ({ user }) => {
                   type="text"
                   placeholder="Search by Property ID or Community Name..."
                   value={propertySearch}
-                  onChange={(e) => setPropertySearch(e.target.value)}
+                  onChange={(e) => {
+                    setPropertySearch(e.target.value);
+                    // Clear selection when user types to search again
+                    if (formData.propertyId) {
+                      setFormData(prev => ({ ...prev, propertyId: '', customerName: '', customerEmail: '', customerPhone: '' }));
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
                 />
                 {propertySearch && filteredPropertyOptions.length > 0 && (
