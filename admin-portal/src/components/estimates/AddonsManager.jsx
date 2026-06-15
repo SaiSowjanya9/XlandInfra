@@ -26,6 +26,18 @@ const normalizePropertyType = (type) => {
   return upper;
 };
 
+// Abbreviate long frequency types for better display in badges
+const abbreviateFrequency = (freq) => {
+  if (!freq) return 'Monthly';
+  const map = {
+    'Every 2 Months': 'Bi-Monthly',
+    'Every 3 Months': 'Quarterly',
+    'Half-Yearly': 'Half-Yr',
+    'Half-yearly': 'Half-Yr',
+  };
+  return map[freq] || freq;
+};
+
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
@@ -473,7 +485,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                               {addon.services?.[0]?.name || addon.addonId}
                             </p>
                             <p className="text-sm text-gray-500">
-                              {addon.services?.[0]?.frequencyType || 'Monthly'} - {addon.services?.[0]?.frequency || 1} visits
+                              {abbreviateFrequency(addon.services?.[0]?.frequencyType)} - {addon.services?.[0]?.frequency || 1} visits
                             </p>
                           </div>
                         </div>
@@ -636,7 +648,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             </td>
                             <td className="px-4 py-4 text-center">
                               <span className="inline-block px-3 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-md border border-blue-200 whitespace-nowrap">
-                                {addon.services?.[0]?.frequencyType || 'Monthly'}
+                                {abbreviateFrequency(addon.services?.[0]?.frequencyType)}
                               </span>
                             </td>
                             <td className="px-4 py-4 text-center text-sm text-gray-600">
