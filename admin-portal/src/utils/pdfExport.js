@@ -401,8 +401,8 @@ const generatePDF = (data, type, filename) => {
       bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 8 },
       columnStyles: {
         0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 28, halign: 'left' },
-        2: { cellWidth: 'auto', halign: 'left', overflow: 'linebreak', cellWidth: 70 },
+        1: { cellWidth: 26, halign: 'left' },
+        2: { cellWidth: 75, halign: 'left' },
         3: { cellWidth: 22, halign: 'center' },
         4: { cellWidth: 12, halign: 'center' }
       },
@@ -443,8 +443,8 @@ const generatePDF = (data, type, filename) => {
         bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 8 },
         columnStyles: {
           0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 28, halign: 'left' },
-          2: { cellWidth: 'auto', halign: 'left', overflow: 'linebreak', cellWidth: 70 },
+          1: { cellWidth: 26, halign: 'left' },
+          2: { cellWidth: 75, halign: 'left' },
           3: { cellWidth: 22, halign: 'center' },
           4: { cellWidth: 12, halign: 'center' }
         },
