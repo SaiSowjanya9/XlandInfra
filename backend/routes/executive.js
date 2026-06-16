@@ -318,7 +318,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
       const [rows] = await pool.query(
         `SELECT p.id, p.property_id, p.name, p.property_type,
                 COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area, 
-                COALESCE(fd.name, p.division) as division, COALESCE(fd.name, p.division) as division_name, p.number_of_units as units,
+                COALESCE(fd.name, p.division, p.division_id) as division, COALESCE(fd.name, p.division, p.division_id) as division_name, p.number_of_units as units,
                 p.address, p.city, p.state, p.zip_code,
                 p.contact_person, p.contact_phone, p.contact_email,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
@@ -341,7 +341,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
       const [rows] = await pool.query(
         `SELECT p.id, p.property_id, p.name, p.property_type,
                 COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area,
-                COALESCE(fd.name, p.division) as division, COALESCE(fd.name, p.division) as division_name, p.number_of_units as units,
+                COALESCE(fd.name, p.division, p.division_id) as division, COALESCE(fd.name, p.division, p.division_id) as division_name, p.number_of_units as units,
                 p.address, p.city, p.state, p.zip_code,
                 p.contact_person, p.contact_phone, p.contact_email,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
