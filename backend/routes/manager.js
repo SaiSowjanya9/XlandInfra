@@ -615,7 +615,7 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
     // FP employees see FP work orders, standalone managers see their created work orders
     let query = `SELECT wo.*, 
                         COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-                        COALESCE(p.property_id, op.property_id) as actual_property_id,
+                        COALESCE(p.property_id, op.property_id) as property_code,
                         COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
                         COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
                         COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
@@ -667,7 +667,7 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
     
     const query = `SELECT wo.*, 
               COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-              COALESCE(p.property_id, op.property_id) as actual_property_id,
+              COALESCE(p.property_id, op.property_id) as property_code,
               COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
               COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
               COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
@@ -703,7 +703,7 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
     
     const query = `SELECT wo.*, 
               COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-              COALESCE(p.property_id, op.property_id) as actual_property_id,
+              COALESCE(p.property_id, op.property_id) as property_code,
               COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
               COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
               COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
