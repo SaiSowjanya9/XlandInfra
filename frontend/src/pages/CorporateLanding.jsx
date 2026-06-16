@@ -587,11 +587,8 @@ function CorporateLanding() {
           <div className="max-w-3xl">
             
             {/* ===== PHASE 1: INTRO CONTENT ===== */}
-            <div className={`transition-all duration-[1200ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
-              heroPhase === 'intro'
-                ? 'opacity-100' 
-                : 'opacity-0 pointer-events-none absolute'
-            }`}>
+            {heroPhase === 'intro' && (
+            <div className="animate-fadeIn">
               {/* Eyebrow Text */}
               <div className="flex items-center gap-3 mb-6 opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.2s_forwards]">
                 <div className="h-px w-10 bg-gradient-to-r from-gold-400/80 to-transparent"></div>
@@ -636,13 +633,11 @@ function CorporateLanding() {
                 </button>
               </div>
             </div>
+            )}
 
             {/* ===== PHASE 2: ROTATING SERVICES CONTENT ===== */}
-            <div className={`transition-all duration-[1200ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
-              heroPhase === 'services'
-                ? 'opacity-100' 
-                : 'opacity-0 pointer-events-none absolute'
-            }`}>
+            {heroPhase === 'services' && (
+            <div className="animate-fadeIn">
               {/* Active Service Icon */}
               <div className="w-14 h-14 mb-6 bg-gradient-to-br from-gold-400/20 to-gold-600/20 border border-gold-500/30 rounded-xl flex items-center justify-center shadow-[0_0_30px_rgba(216,178,92,0.2)]">
                 {heroServices[activeHeroService] && (() => {
@@ -706,6 +701,7 @@ function CorporateLanding() {
                 </button>
               </div>
             </div>
+            )}
 
           </div>
         </div>
