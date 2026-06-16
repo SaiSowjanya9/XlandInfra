@@ -652,7 +652,7 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
 
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId);
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo', coordinatorId, 'coordinator_id');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
     
     console.log('[Coordinator Pending WO] coordId:', coordinatorId, 'fpId:', franchisePartnerId, 'zones:', assignedZones, 'creator:', creatorEmail);
 
@@ -719,7 +719,7 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
 
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId);
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo', coordinatorId, 'coordinator_id');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
     let query, params;
     
@@ -817,13 +817,13 @@ router.post('/work-orders', requireCoordinatorScope, async (req, res) => {
 
     const [result] = await pool.query(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
-        priority, permission_to_enter, has_pet, scheduled_date, coordinator_id, franchise_partner_id, status,
+        priority, permission_to_enter, has_pet, scheduled_date, franchise_partner_id, status,
         property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone, zone, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
-        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, coordinatorId, franchisePartnerId,
+        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, franchisePartnerId,
         finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
-        customerName || null, customerEmail || null, customerPhone || null, propertyZone, createdBy]
+        customerName || null, customerEmail || null, customerPhone || null, propertyZone, `coordinator-${coordinatorId}`]
     );
 
     // Send email notification for new work order
