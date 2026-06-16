@@ -81,6 +81,7 @@ const generatePDF = (data, type, filename) => {
     const mediumText = [75, 85, 99];         // Gray-600
     const lightText = [107, 114, 128];       // Gray-500
     const cardBg = [249, 250, 251];          // Gray-50
+    const cardBgBlue = [239, 246, 255];      // Light blue (blue-50)
     const borderLight = [229, 231, 235];     // Gray-200
     const gold = [180, 144, 52];             // Professional gold
 
@@ -119,12 +120,12 @@ const generatePDF = (data, type, filename) => {
     // Center text vertically: badgeY + badgeHeight/2 + 1 (slight offset for baseline)
     doc.text(docType, badgeX + badgeWidth/2, badgeY + badgeHeight/2 + 1, { align: 'center' });
 
-    y = headerHeight + 6;
+    y = headerHeight + 8;
 
     // ===== DOCUMENT INFO ROW =====
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...mediumText);
+    doc.setTextColor(...navy);
     doc.text('ID:', margin, y);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...darkText);
@@ -157,40 +158,29 @@ const generatePDF = (data, type, filename) => {
     }
     
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...mediumText);
-    doc.text('Date:', pageWidth - margin - 35, y);
+    doc.setTextColor(...navy);
+    doc.text('Date:', pageWidth - margin - 38, y);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...darkText);
-    doc.text(formatDate(data.createdAt), pageWidth - margin - 23, y);
-    y += 6;
+    doc.text(formatDate(data.createdAt), pageWidth - margin - 25, y);
+    y += 8;
 
-    // ===== PACKAGE NAME BAR =====
-    if (data.packageName) {
-      doc.setFillColor(...cardBg);
-      doc.setDrawColor(...borderLight);
-      doc.roundedRect(margin, y, pageWidth - margin * 2, 9, 1.5, 1.5, 'FD');
-      
-      doc.setTextColor(...navy);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text(data.packageName, margin + 4, y + 6);
-      
-      if (data.billingDuration) {
-        doc.setTextColor(...lightText);
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Billing: ${data.billingDuration}`, pageWidth - margin - 3, y + 6, { align: 'right' });
-      }
-      y += 13;
-    }
-
-    // ===== PACKAGE PRICE =====
+    // ===== PACKAGE PRICE BAR =====
     if (data.packagePrice || data.package_price) {
+      doc.setFillColor(...cardBgBlue);
+      doc.setDrawColor(...borderLight);
+      doc.roundedRect(margin, y, pageWidth - margin * 2, 12, 2, 2, 'FD');
+      
       doc.setTextColor(...navy);
-      doc.setFontSize(9);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text('Package Price: ' + formatCurrency(data.packagePrice || data.package_price), margin, y);
-      y += 6;
+      doc.text('Package Price: ' + formatCurrency(data.packagePrice || data.package_price), margin + 6, y + 8);
+      
+      doc.setTextColor(...slate);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Yearly Billing', pageWidth - margin - 6, y + 8, { align: 'right' });
+      y += 16;
     }
 
     // ===== SIDE-BY-SIDE CARDS: Property + Customer =====
@@ -208,42 +198,40 @@ const generatePDF = (data, type, filename) => {
       const cardHeight = (isGC || isApt) ? 44 : ((isVilla || isFlat || isPlot) ? 38 : 32);
       
       // Property Details Card
-      doc.setFillColor(...cardBg);
+      doc.setFillColor(...cardBgBlue);
       doc.setDrawColor(...borderLight);
       doc.roundedRect(margin, y, cardWidth, cardHeight, 2, 2, 'FD');
       
-      doc.setTextColor(...slate);
-      doc.setFontSize(8);
+      doc.setTextColor(...navy);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Property Details', margin + 4, y + 5);
+      doc.text('Property Details', margin + 6, y + 6);
       
-      let py = y + 10;
-      doc.setFontSize(7);
+      let py = y + 12;
+      doc.setFontSize(8);
       
       // Row 1: Property ID | Property Type
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Property ID', margin + 4, py);
-      doc.text('Type', margin + cardWidth/2 + 2, py);
-      py += 4;
+      doc.text('Name', margin + 6, py);
+      doc.text('Type', margin + cardWidth/2 + 4, py);
+      py += 5;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
-      const propId = String(data.propertyId || '-');
-      doc.text(propId.length > 18 ? propId.substring(0, 18) + '...' : propId, margin + 4, py);
+      const propName = String(data.propertyName || data.communityName || '-');
+      doc.text(propName.length > 16 ? propName.substring(0, 16) + '...' : propName, margin + 6, py);
       const typeLabel = isGC ? 'Gated Community' : isApt ? 'Apartment' : isVilla ? 'Villa' : isFlat ? 'Flat' : isPlot ? 'Plot' : String(data.propertyType || '-');
-      doc.text(typeLabel, margin + cardWidth/2 + 2, py);
-      py += 6;
+      doc.text(typeLabel, margin + cardWidth/2 + 4, py);
+      py += 7;
       
-      // Row 2: Zone | Division
+      // Row 2: Zone
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Zone', margin + 4, py);
-      doc.text('Division', margin + cardWidth/2 + 2, py);
-      py += 4;
+      doc.text('Zone', margin + 6, py);
+      py += 5;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
-      doc.text(String(data.zone || '-'), margin + 4, py);
-      doc.text(String(data.division || data.divisionName || '-'), margin + cardWidth/2 + 2, py);
+      doc.text(String(data.zone || '-'), margin + 6, py);
       
       // Property-type specific fields
       if (isGC) {
@@ -307,41 +295,54 @@ const generatePDF = (data, type, filename) => {
       
       // Customer Details Card
       const cx = margin + cardWidth + gap;
-      doc.setFillColor(...cardBg);
+      doc.setFillColor(...cardBgBlue);
       doc.setDrawColor(...borderLight);
       doc.roundedRect(cx, y, cardWidth, cardHeight, 2, 2, 'FD');
       
-      doc.setTextColor(...slate);
-      doc.setFontSize(8);
+      doc.setTextColor(...navy);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Customer Details', cx + 4, y + 5);
+      doc.text('Customer Details', cx + 6, y + 6);
       
-      let cy = y + 10;
-      doc.setFontSize(7);
+      let cy = y + 12;
+      doc.setFontSize(8);
       
-      // Row 1: Name | Phone
+      // Row 1: Name
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Name', cx + 4, cy);
-      doc.text('Phone', cx + cardWidth/2 + 2, cy);
-      cy += 4;
+      doc.text('Name', cx + 6, cy);
+      doc.text('Phone', cx + cardWidth/2 + 4, cy);
+      cy += 5;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
-      doc.text(String(data.customerName || '-'), cx + 4, cy);
-      doc.text(String(data.customerPhone || '-'), cx + cardWidth/2 + 2, cy);
-      cy += 6;
+      const custName = String(data.customerName || '-');
+      doc.text(custName.length > 14 ? custName.substring(0, 14) + '...' : custName, cx + 6, cy);
+      doc.text(String(data.customerPhone || '-'), cx + cardWidth/2 + 4, cy);
+      cy += 7;
       
       // Row 2: Email
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
-      doc.text('Email', cx + 4, cy);
-      cy += 4;
+      doc.text('Email', cx + 6, cy);
+      cy += 5;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
       const email = String(data.customerEmail || '-');
-      doc.text(email.length > 28 ? email.substring(0, 28) + '...' : email, cx + 4, cy);
+      doc.text(email.length > 30 ? email.substring(0, 30) + '...' : email, cx + 6, cy);
+      cy += 7;
       
-      y += cardHeight + 6;
+      // Row 3: City (if available)
+      if (data.city) {
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...lightText);
+        doc.text('City', cx + 6, cy);
+        cy += 5;
+        doc.setTextColor(...darkText);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(data.city || '-'), cx + 6, cy);
+      }
+      
+      y += cardHeight + 8;
     }
 
     // ===== AMC PACKAGE DESCRIPTION =====
@@ -368,10 +369,10 @@ const generatePDF = (data, type, filename) => {
 
     // ===== SERVICES TABLE =====
     doc.setTextColor(...navy);
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('SERVICES INCLUDED', margin, y);
-    y += 5;
+    y += 6;
 
     const services = data.services || data.packageServices || [];
     const tableBody = services.length > 0 
@@ -395,28 +396,28 @@ const generatePDF = (data, type, filename) => {
       head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
       body: tableBody,
       margin: { left: margin, right: margin },
-      styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center' },
+      styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak' },
       headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
       bodyStyles: { textColor: darkText, lineColor: [100, 100, 100] },
       columnStyles: {
         0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 35, halign: 'left' },
-        2: { cellWidth: 'auto', halign: 'center' },
+        1: { cellWidth: 30, halign: 'left' },
+        2: { cellWidth: 'auto', halign: 'left', overflow: 'linebreak' },
         3: { cellWidth: 22, halign: 'center' },
-        4: { cellWidth: 15, halign: 'center' }
+        4: { cellWidth: 12, halign: 'center' }
       },
       alternateRowStyles: { fillColor: [252, 252, 253] }
     });
 
-    y = doc.lastAutoTable.finalY + 6;
+    y = doc.lastAutoTable.finalY + 8;
 
     // ===== ADD-ONS TABLE =====
     if (data.addons && data.addons.length > 0) {
       doc.setTextColor(...navy);
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('ADD-ON SERVICES', margin, y);
-      y += 5;
+      doc.text('ADD-ONS', margin, y);
+      y += 6;
 
       const addonsBody = data.addons.map((a, idx) => {
         const freqCount = a.frequencyCount || a.frequency_count || a.visits || 1;
@@ -437,20 +438,20 @@ const generatePDF = (data, type, filename) => {
         head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
         body: addonsBody,
         margin: { left: margin, right: margin },
-        styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center' },
+        styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak' },
         headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
         bodyStyles: { textColor: darkText, lineColor: [100, 100, 100] },
         columnStyles: {
           0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 35, halign: 'left' },
-          2: { cellWidth: 'auto', halign: 'center' },
+          1: { cellWidth: 30, halign: 'left' },
+          2: { cellWidth: 'auto', halign: 'left', overflow: 'linebreak' },
           3: { cellWidth: 22, halign: 'center' },
-          4: { cellWidth: 15, halign: 'center' }
+          4: { cellWidth: 12, halign: 'center' }
         },
         alternateRowStyles: { fillColor: [252, 252, 253] }
       });
 
-      y = doc.lastAutoTable.finalY + 6;
+      y = doc.lastAutoTable.finalY + 8;
     }
 
     // ===== PRICE SUMMARY BOX =====
@@ -489,11 +490,17 @@ const generatePDF = (data, type, filename) => {
       }
     }
     
+    // Price Summary Title
+    doc.setTextColor(...navy);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PRICE SUMMARY', pageWidth - margin - 85, y);
+    y += 6;
+    
     const priceBoxW = 85;
     const priceBoxX = pageWidth - margin - priceBoxW;
-    const hasDiscount = discountAmount > 0; // Only show discount if > 0
-    // Always show GST row (even if 0)
-    const priceBoxH = 12 + (hasDiscount ? 6 : 0) + 6 + 8; // Subtotal + Discount(if any) + GST(always) + Total
+    const hasDiscount = discountAmount > 0;
+    const priceBoxH = 14 + (hasDiscount ? 7 : 0) + 7 + 12;
 
     if (y + priceBoxH + 25 > pageHeight) {
       doc.addPage();
@@ -505,45 +512,49 @@ const generatePDF = (data, type, filename) => {
     doc.setDrawColor(...borderLight);
     doc.roundedRect(priceBoxX, y, priceBoxW, priceBoxH, 2, 2, 'FD');
     
-    let py = y + 5;
+    let py = y + 6;
     
     // Subtotal row
     doc.setTextColor(...mediumText);
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text('Subtotal', priceBoxX + 4, py);
+    doc.text('Subtotal:', priceBoxX + 6, py);
     doc.setTextColor(...darkText);
-    doc.text(formatCurrency(subtotal), priceBoxX + priceBoxW - 4, py, { align: 'right' });
-    py += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.text(formatCurrency(subtotal), priceBoxX + priceBoxW - 6, py, { align: 'right' });
+    py += 7;
     
     // Discount row (if applicable)
     if (hasDiscount) {
-      doc.setTextColor(...mediumText); // Same gray as other labels
-      doc.text(`Discount (${discountPercent}%)`, priceBoxX + 4, py);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...mediumText);
+      doc.text(`Discount (${discountPercent}%):`, priceBoxX + 6, py);
       doc.setTextColor(...darkText);
-      doc.text('-' + formatCurrency(discountAmount), priceBoxX + priceBoxW - 4, py, { align: 'right' });
-      py += 6;
+      doc.setFont('helvetica', 'bold');
+      doc.text('-' + formatCurrency(discountAmount), priceBoxX + priceBoxW - 6, py, { align: 'right' });
+      py += 7;
     }
     
-    // GST row (always show, even if 0)
+    // GST row
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(...mediumText);
-    doc.text(`GST (${gstPercent}%)`, priceBoxX + 4, py);
+    doc.text(`GST (${gstPercent}%):`, priceBoxX + 6, py);
     doc.setTextColor(...darkText);
-    doc.text(formatCurrency(gstAmount), priceBoxX + priceBoxW - 4, py, { align: 'right' });
-    py += 6;
-    
-    // Total row with dark background
-    py += 2;
-    doc.setFillColor(...navy);
-    doc.roundedRect(priceBoxX + 2, py - 3, priceBoxW - 4, 10, 1.5, 1.5, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL', priceBoxX + 6, py + 3);
+    doc.text(formatCurrency(gstAmount), priceBoxX + priceBoxW - 6, py, { align: 'right' });
+    py += 8;
+    
+    // Total row with navy background
+    doc.setFillColor(...navy);
+    doc.roundedRect(priceBoxX + 3, py - 2, priceBoxW - 6, 11, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(9);
-    doc.text(formatCurrency(total), priceBoxX + priceBoxW - 6, py + 3, { align: 'right' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL:', priceBoxX + 8, py + 5);
+    doc.setFontSize(10);
+    doc.text(formatCurrency(total), priceBoxX + priceBoxW - 8, py + 5, { align: 'right' });
 
-    y += priceBoxH + 8;
+    y += priceBoxH + 10;
 
     // ===== NOTES/DESCRIPTION (After Price Summary) =====
     if (data.description && data.description.trim()) {

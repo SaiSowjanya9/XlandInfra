@@ -308,6 +308,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
         COALESCE(z.name, zn.name, p.zone_id) as zone_name,
         COALESCE(p.area_name, p.city) as area,
         COALESCE(fd.name, p.division) as division_name,
+        COALESCE(fd.name, p.division, p.division_id) as division,
         COALESCE(p.number_of_units, 1) as units,
         COALESCE(
           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
@@ -761,21 +762,21 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
       }
     }
 
-    // Fetch category and subcategory details
+    // Fetch category and subcategory details from config
     let finalCategoryName = categoryName;
     let finalSubcategoryName = subcategoryName;
     if (categoryId) {
-      const [cats] = await pool.execute('SELECT name, subcategories FROM categories WHERE id = ?', [categoryId]);
-      if (cats.length > 0) {
-        if (!finalCategoryName) finalCategoryName = cats[0].name;
-        if (!finalSubcategoryName && subcategoryId && cats[0].subcategories) {
-          try {
-            const subcats = typeof cats[0].subcategories === 'string' ? JSON.parse(cats[0].subcategories) : cats[0].subcategories;
-            const subcat = subcats?.find(s => s.id === parseInt(subcategoryId) || s.id === subcategoryId);
+      try {
+        const categoriesConfig = require('../config/categories');
+        const category = categoriesConfig.find(c => c.id === parseInt(categoryId) || c.id === categoryId);
+        if (category) {
+          if (!finalCategoryName) finalCategoryName = category.name;
+          if (!finalSubcategoryName && subcategoryId && category.subcategories) {
+            const subcat = category.subcategories.find(s => s.id === parseInt(subcategoryId) || s.id === subcategoryId);
             if (subcat) finalSubcategoryName = subcat.name;
-          } catch (e) { /* ignore parse errors */ }
+          }
         }
-      }
+      } catch (e) { console.log('Category lookup error:', e.message); }
     }
     
     // Get creator identifier for zone-centric filtering
