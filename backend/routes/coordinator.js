@@ -307,10 +307,12 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     
     if (isFPCoordinator) {
       // FP Coordinators see: zone-centric properties + their own created properties
-      propQuery = `SELECT p.*, 
+      propQuery = `SELECT p.id, p.property_id, p.name, p.property_type, p.address, p.city, p.state, p.zip_code,
+          p.contact_person, p.contact_phone, p.contact_email as email, p.created_at,
+          p.number_of_units, p.number_of_blocks, p.total_units, p.block_names, p.units_per_block,
           COALESCE(z.name, zn.name, p.zone_id) as zone_name,
           COALESCE(p.area_name, p.city) as area,
-          COALESCE(fd.name, p.division) as division, COALESCE(fd.name, p.division) as division_name,
+          COALESCE(fd.name, p.division, p.division_id) as division, COALESCE(fd.name, p.division, p.division_id) as division_name,
           1 as units,
           COALESCE(p.status, 'active') as status,
           COALESCE(
@@ -330,10 +332,12 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
       propParams = [franchisePartnerId, ...zoneFilter.params];
     } else {
       // Standalone coordinator - check coordinator_id OR created_by matches
-      propQuery = `SELECT p.*, 
+      propQuery = `SELECT p.id, p.property_id, p.name, p.property_type, p.address, p.city, p.state, p.zip_code,
+          p.contact_person, p.contact_phone, p.contact_email as email, p.created_at,
+          p.number_of_units, p.number_of_blocks, p.total_units, p.block_names, p.units_per_block,
           COALESCE(z.name, zn.name, p.zone_id) as zone_name,
           COALESCE(p.area_name, p.city) as area,
-          COALESCE(fd.name, p.division) as division, COALESCE(fd.name, p.division) as division_name,
+          COALESCE(fd.name, p.division, p.division_id) as division, COALESCE(fd.name, p.division, p.division_id) as division_name,
           1 as units,
           COALESCE(p.status, 'active') as status,
           COALESCE(
