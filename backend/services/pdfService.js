@@ -170,8 +170,14 @@ const generateEstimatePDF = async (estimate) => {
       // Add-ons Table (if any)
       const addonList = addons || [];
       if (addonList.length > 0) {
-        // Check if Add-ons header needs new page
-        if (y + 50 > pageHeight) {
+        // Calculate first row height to ensure header + at least one row fit together
+        const firstAddonDesc = addonList[0]?.description || '-';
+        const firstRowLines = Math.ceil(firstAddonDesc.length / 40);
+        const firstRowHeight = Math.max(22, firstRowLines * 11);
+        const headerHeight = 35; // Title (15) + Table header (20)
+        
+        // Check if header + first row need new page (keep them together)
+        if (y + headerHeight + firstRowHeight > pageHeight) {
           doc.addPage();
           y = 50;
         }
@@ -195,8 +201,8 @@ const generateEstimatePDF = async (estimate) => {
           const descLines = Math.ceil(addonDesc.length / 40);
           const rowHeight = Math.max(22, descLines * 11);
           
-          // Check if we need a new page
-          if (y + rowHeight > pageHeight) {
+          // Check if we need a new page (skip check for first row - already handled above)
+          if (idx > 0 && y + rowHeight > pageHeight) {
             doc.addPage();
             y = 50;
           }
