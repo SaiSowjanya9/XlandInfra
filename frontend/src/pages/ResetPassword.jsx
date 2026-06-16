@@ -216,7 +216,7 @@ const ResetPassword = () => {
                   type={showPasswords.temp ? 'text' : 'password'}
                   value={formData.tempPassword}
                   onChange={(e) => setFormData({ ...formData, tempPassword: e.target.value })}
-                  className="input-field pl-10 pr-10"
+                  className="input-field !pl-11 pr-10"
                   placeholder="Enter temporary password"
                   required
                 />
@@ -238,7 +238,7 @@ const ResetPassword = () => {
                   type={showPasswords.new ? 'text' : 'password'}
                   value={formData.newPassword}
                   onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-                  className="input-field pl-10 pr-10"
+                  className="input-field !pl-11 pr-10"
                   placeholder="Enter new password (min. 8 characters)"
                   required
                   minLength={8}
@@ -261,7 +261,7 @@ const ResetPassword = () => {
                   type={showPasswords.confirm ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="input-field pl-10 pr-10"
+                  className="input-field !pl-11 pr-10"
                   placeholder="Confirm new password"
                   required
                   minLength={8}
