@@ -365,12 +365,10 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
     console.log('[Supervisor Properties] supervisorId:', supervisorId, 'franchisePartnerId:', franchisePartnerId, 'assignedZones:', assignedZones, 'creatorEmail:', creatorEmail);
 
     // Get own, assigned, and FP properties with creator name (zone-centric + own created)
-    const query = `SELECT p.id, p.property_id, p.name, p.property_type, p.address, p.city, p.state, p.zip_code,
-              p.contact_person, p.contact_phone, p.contact_email as email, p.status, p.created_at,
-              p.number_of_units, p.number_of_blocks, p.total_units, p.block_names, p.units_per_block,
+    const query = `SELECT p.*, 
               COALESCE(z.name, zn.name, p.zone_id) as zone_name, 
               COALESCE(p.area_name, p.city) as area,
-              COALESCE(fd.name, p.division) as division, COALESCE(fd.name, p.division) as division_name,
+              COALESCE(fd.name, p.division) as division_name,
               COALESCE(p.number_of_units, 1) as units,
               COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'own' as access_type, TRUE as can_modify, TRUE as can_delete,
@@ -384,12 +382,10 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
        WHERE (p.supervisor_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''}) AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
        UNION
-       SELECT p.id, p.property_id, p.name, p.property_type, p.address, p.city, p.state, p.zip_code,
-              p.contact_person, p.contact_phone, p.contact_email as email, p.status, p.created_at,
-              p.number_of_units, p.number_of_blocks, p.total_units, p.block_names, p.units_per_block,
+       SELECT p.*,
               COALESCE(z.name, zn.name, p.zone_id) as zone_name,
               COALESCE(p.area_name, p.city) as area,
-              COALESCE(fd.name, p.division) as division, COALESCE(fd.name, p.division) as division_name,
+              COALESCE(fd.name, p.division) as division_name,
               COALESCE(p.number_of_units, 1) as units,
               COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
               'assigned' as access_type, sap.can_modify, sap.can_delete,

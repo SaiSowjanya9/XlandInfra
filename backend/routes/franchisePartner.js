@@ -280,20 +280,11 @@ router.get('/properties', requireFPScope, async (req, res) => {
   try {
     // Fetch from properties table with creator name
     const [regularProperties] = await pool.execute(
-      `SELECT p.id, p.property_id, p.name, p.property_type, p.address, p.city, p.state, p.zip_code,
-        p.contact_person, p.contact_phone, p.contact_email as email, p.status, p.created_at,
-        p.number_of_units, p.number_of_blocks, p.total_units,
+      `SELECT p.*,
         COALESCE(z.name, zn.name, p.zone_id) as zone_name,
-        COALESCE(fd.name, p.division) as division, 
         COALESCE(fd.name, p.division) as division_name,
         p.area_name as area,
         COALESCE(p.number_of_units, p.number_of_blocks, 1) as units,
-        p.block_names,
-        p.units_per_block,
-        p.villa_plot_number,
-        p.landmark,
-        p.latitude,
-        p.longitude,
         COALESCE(
           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
           CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
