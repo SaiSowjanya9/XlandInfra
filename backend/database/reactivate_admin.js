@@ -4,9 +4,10 @@
  */
 
 const mysql = require('mysql2/promise');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-const PASSWORD_HASH = '$2a$10$mNm4vcgibG.g/KcN2eX3guJpXv6fjTNO7.aYkkRwRBW6TiF/j920u';
+const ADMIN_PASSWORD = 'Xsunrise@69';
 
 async function reactivateAdmin() {
   let connection;
@@ -24,10 +25,15 @@ async function reactivateAdmin() {
     
     console.log('✓ Connected to database\n');
 
+    // Generate password hash
+    console.log('Generating password hash...');
+    const PASSWORD_HASH = await bcrypt.hash(ADMIN_PASSWORD, 10);
+    console.log('✓ Password hash generated\n');
+
     // ========== FIX USERS TABLE (Employee Portal) ==========
     console.log('--- Fixing USERS table (Employee Portal) ---');
     const [usersResult] = await connection.execute(
-      `UPDATE users SET is_active = TRUE WHERE username = 'XL_admin' OR email = 'xlandinfra@gmail.com'`
+      `UPDATE users SET is_active = TRUE WHERE username = 'XL_admin' OR email = 'admin.xlandinfra@gmail.com'`
     );
 
     if (usersResult.affectedRows > 0) {
@@ -36,7 +42,7 @@ async function reactivateAdmin() {
       console.log('User not found in users table, creating...');
       await connection.execute(`
         INSERT INTO users (user_id, username, email, password_hash, first_name, last_name, phone, role, is_active, is_super_admin)
-        VALUES ('XAD001', 'XL_admin', 'xlandinfra@gmail.com', ?, 'Super', 'Admin', '+91 9999999901', 'admin', TRUE, TRUE)
+        VALUES ('XAD001', 'XL_admin', 'admin.xlandinfra@gmail.com', ?, 'Super', 'Admin', '+91 9999999901', 'admin', TRUE, TRUE)
       `, [PASSWORD_HASH]);
       console.log('✅ XL_admin CREATED in users table!');
     }
@@ -44,7 +50,7 @@ async function reactivateAdmin() {
     // ========== FIX ADMIN_USERS TABLE (Admin Portal) ==========
     console.log('\n--- Fixing ADMIN_USERS table (Admin Portal) ---');
     const [adminResult] = await connection.execute(
-      `UPDATE admin_users SET is_active = TRUE WHERE username = 'XL_admin' OR email = 'xlandinfra@gmail.com'`
+      `UPDATE admin_users SET is_active = TRUE WHERE username = 'XL_admin' OR email = 'admin.xlandinfra@gmail.com'`
     );
 
     if (adminResult.affectedRows > 0) {
@@ -53,7 +59,7 @@ async function reactivateAdmin() {
       console.log('User not found in admin_users table, creating...');
       await connection.execute(`
         INSERT INTO admin_users (username, email, password_hash, first_name, last_name, role, is_active)
-        VALUES ('XL_admin', 'xlandinfra@gmail.com', ?, 'Super', 'Admin', 'admin', TRUE)
+        VALUES ('XL_admin', 'admin.xlandinfra@gmail.com', ?, 'Super', 'Admin', 'admin', TRUE)
       `, [PASSWORD_HASH]);
       console.log('✅ XL_admin CREATED in admin_users table!');
     }
@@ -61,14 +67,14 @@ async function reactivateAdmin() {
     // Verify
     const [users] = await connection.execute(
       'SELECT id, username, email, is_active, role FROM users WHERE username = ? OR email = ?',
-      ['XL_admin', 'xlandinfra@gmail.com']
+      ['XL_admin', 'admin.xlandinfra@gmail.com']
     );
     console.log('\n=== Users Table ===');
     console.table(users);
 
     const [admins] = await connection.execute(
       'SELECT id, username, email, is_active, role FROM admin_users WHERE username = ? OR email = ?',
-      ['XL_admin', 'xlandinfra@gmail.com']
+      ['XL_admin', 'admin.xlandinfra@gmail.com']
     );
     console.log('\n=== Admin_Users Table ===');
     console.table(admins);
@@ -77,7 +83,7 @@ async function reactivateAdmin() {
     console.log('  LOGIN CREDENTIALS');
     console.log('========================================');
     console.log('  Username: XL_admin');
-    console.log('  Password: Password$123');
+    console.log('  Password: Xsunrise@69');
     console.log('========================================\n');
 
   } catch (error) {

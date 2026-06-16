@@ -1,7 +1,7 @@
 /**
  * Seed Employee Users Script
  * Creates default users for all employee roles
- * Production Admin: XL_admin / Password$123
+ * Production Admin: XL_admin / Xsunrise@69
  * Other users: Password@123
  */
 
@@ -9,10 +9,10 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../config/database');
 
 const DEFAULT_PASSWORD = 'Password@123';
-const ADMIN_PASSWORD = 'Password$123';  // Production admin password
+const ADMIN_PASSWORD = 'Xsunrise@69';  // Production admin password
 
 const users = [
-  { username: 'XL_admin', email: 'xlandinfra@gmail.com', firstName: 'Super', lastName: 'Admin', phone: '+91 9999999901', role: 'admin', isMainAdmin: true },
+  { username: 'XL_admin', email: 'admin.xlandinfra@gmail.com', firstName: 'Super', lastName: 'Admin', phone: '+91 9999999901', role: 'admin', isMainAdmin: true },
   { username: 'ops_manager', email: 'ops@pmportal.com', firstName: 'Operations', lastName: 'Manager', phone: '+91 9999999907', role: 'operations_manager' },
   { username: 'manager_admin', email: 'manager@pmportal.com', firstName: 'Operations', lastName: 'Manager', phone: '+91 9999999902', role: 'manager' },
   { username: 'coordinator_admin', email: 'coordinator@pmportal.com', firstName: 'Field', lastName: 'Coordinator', phone: '+91 9999999903', role: 'coordinator' },
@@ -69,7 +69,7 @@ async function seedUsers() {
     console.table(rows);
 
     console.log('\n✓ Seed completed!');
-    console.log('  - Main Admin (XL_admin): Password$123');
+    console.log('  - Main Admin (XL_admin): Xsunrise@69');
     console.log('  - Other users: Password@123');
     process.exit(0);
   } catch (error) {

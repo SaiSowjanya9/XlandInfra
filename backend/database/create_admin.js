@@ -4,14 +4,15 @@
  */
 
 const mysql = require('mysql2/promise');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
+
+const ADMIN_PASSWORD = 'Xsunrise@69';
 
 const ADMIN_USER = {
   user_id: 'XAD001',
   username: 'XL_admin',
-  email: 'xlandinfra@gmail.com',
-  // Password: Password$123 (pre-hashed with bcrypt)
-  password_hash: '$2a$10$mNm4vcgibG.g/KcN2eX3guJpXv6fjTNO7.aYkkRwRBW6TiF/j920u',
+  email: 'admin.xlandinfra@gmail.com',
   first_name: 'Super',
   last_name: 'Admin',
   phone: '+91 9999999901',
@@ -36,6 +37,11 @@ async function createAdmin() {
     
     console.log('✓ Connected to database\n');
 
+    // Generate password hash
+    console.log('Generating password hash...');
+    const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+    console.log('✓ Password hash generated\n');
+
     // Check if user already exists
     const [existing] = await connection.execute(
       'SELECT id, username, email FROM users WHERE username = ? OR email = ?',
@@ -46,7 +52,7 @@ async function createAdmin() {
       console.log('User already exists, updating password and user_id...');
       await connection.execute(
         'UPDATE users SET password_hash = ?, user_id = ?, is_active = TRUE, is_super_admin = TRUE WHERE username = ? OR email = ?',
-        [ADMIN_USER.password_hash, ADMIN_USER.user_id, ADMIN_USER.username, ADMIN_USER.email]
+        [passwordHash, ADMIN_USER.user_id, ADMIN_USER.username, ADMIN_USER.email]
       );
       console.log('✓ Admin user password and user_id updated!');
     } else {
@@ -58,7 +64,7 @@ async function createAdmin() {
         ADMIN_USER.user_id,
         ADMIN_USER.username,
         ADMIN_USER.email,
-        ADMIN_USER.password_hash,
+        passwordHash,
         ADMIN_USER.first_name,
         ADMIN_USER.last_name,
         ADMIN_USER.phone,
@@ -79,7 +85,7 @@ async function createAdmin() {
     console.log('  PRODUCTION ADMIN LOGIN CREDENTIALS');
     console.log('========================================');
     console.log('  Username: XL_admin');
-    console.log('  Password: Password$123');
+    console.log('  Password: Xsunrise@69');
     console.log('========================================\n');
 
   } catch (error) {
