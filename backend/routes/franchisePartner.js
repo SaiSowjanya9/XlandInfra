@@ -3490,15 +3490,20 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         if (packageServices.length === 0 && (estimate.package_id || estimate.package_name)) {
           let pkgRows = [];
           if (estimate.package_id) {
-            [pkgRows] = await pool.execute('SELECT services FROM amc_packages WHERE id = ?', [estimate.package_id]);
+            [pkgRows] = await pool.execute('SELECT services, service_rows FROM amc_packages WHERE id = ?', [estimate.package_id]);
           }
-          // Fallback to search by name if ID didn't work
+          // Fallback to search by package_name if ID didn't work
           if (pkgRows.length === 0 && estimate.package_name) {
-            [pkgRows] = await pool.execute('SELECT services FROM amc_packages WHERE name = ? AND franchise_partner_id = ?', [estimate.package_name, req.fpId]);
+            [pkgRows] = await pool.execute('SELECT services, service_rows FROM amc_packages WHERE package_name = ?', [estimate.package_name]);
           }
-          if (pkgRows.length > 0 && pkgRows[0].services) {
-            const svcData = typeof pkgRows[0].services === 'string' ? JSON.parse(pkgRows[0].services) : pkgRows[0].services;
-            packageServices = svcData?.serviceRows || svcData?.services || (Array.isArray(svcData) ? svcData : []);
+          if (pkgRows.length > 0) {
+            // Prefer service_rows (structured data) over services
+            if (pkgRows[0].service_rows) {
+              packageServices = typeof pkgRows[0].service_rows === 'string' ? JSON.parse(pkgRows[0].service_rows) : pkgRows[0].service_rows;
+            } else if (pkgRows[0].services) {
+              const svcData = typeof pkgRows[0].services === 'string' ? JSON.parse(pkgRows[0].services) : pkgRows[0].services;
+              packageServices = svcData?.serviceRows || svcData?.services || (Array.isArray(svcData) ? svcData : []);
+            }
             console.log('Fetched package services from AMC package:', packageServices.length, 'services');
           }
         }
