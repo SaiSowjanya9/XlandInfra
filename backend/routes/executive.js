@@ -316,13 +316,11 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
     if (franchisePartnerId) {
       // FP Executive - get zone-centric properties + own created
       const [rows] = await pool.query(
-        `SELECT p.id, p.property_id, p.name, p.property_type,
+        `SELECT p.*,
                 COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area, 
-                COALESCE(fd.name, p.division) as division, COALESCE(fd.name, p.division) as division_name, p.number_of_units as units,
-                p.address, p.city, p.state, p.zip_code,
-                p.contact_person, p.contact_phone, p.contact_email,
+                COALESCE(fd.name, p.division) as division_name, p.number_of_units as units,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
-                p.created_at, p.status, TRUE as is_active,
+                TRUE as is_active,
                 'fp' as access_type, FALSE as can_modify, FALSE as can_delete,
                 FALSE as can_assign_vendor, FALSE as can_assign_employee,
                 'properties' as source_table
@@ -339,13 +337,11 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
     } else {
       // Regular Executive - get own and assigned properties
       const [rows] = await pool.query(
-        `SELECT p.id, p.property_id, p.name, p.property_type,
+        `SELECT p.*,
                 COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area,
-                COALESCE(fd.name, p.division) as division, COALESCE(fd.name, p.division) as division_name, p.number_of_units as units,
-                p.address, p.city, p.state, p.zip_code,
-                p.contact_person, p.contact_phone, p.contact_email,
+                COALESCE(fd.name, p.division) as division_name, p.number_of_units as units,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
-                p.created_at, p.status, TRUE as is_active,
+                TRUE as is_active,
                 'own' as access_type, TRUE as can_modify, FALSE as can_delete,
                 FALSE as can_assign_vendor, FALSE as can_assign_employee,
                 'properties' as source_table

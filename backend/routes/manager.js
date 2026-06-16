@@ -304,12 +304,10 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     const zoneFilter = buildPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'p');
     
     // Fetch from properties table with creator name - filter by FP for FP employees
-    let propQuery = `SELECT p.id, p.property_id, p.name, p.property_type, p.address, p.city, p.state, p.zip_code,
-        p.contact_person, p.contact_phone, p.contact_email as email, p.status, p.created_at,
-        p.number_of_units, p.number_of_blocks, p.total_units, p.block_names, p.units_per_block,
+    let propQuery = `SELECT p.*,
         COALESCE(z.name, zn.name, p.zone_id) as zone_name,
         COALESCE(p.area_name, p.city) as area,
-        COALESCE(fd.name, p.division) as division, COALESCE(fd.name, p.division) as division_name,
+        COALESCE(fd.name, p.division) as division_name,
         COALESCE(p.number_of_units, 1) as units,
         COALESCE(
           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
