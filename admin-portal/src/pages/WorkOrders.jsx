@@ -682,17 +682,18 @@ const WorkOrders = ({ admin }) => {
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Category</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Status</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Created</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Created By</th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-600 whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan="6" className="text-center py-12 text-gray-500">
+                <tr><td colSpan="7" className="text-center py-12 text-gray-500">
                   <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-gray-400" />
                   Loading work orders...
                 </td></tr>
               ) : filteredOrders.length === 0 ? (
-                <tr><td colSpan="6" className="text-center py-12 text-gray-500">
+                <tr><td colSpan="7" className="text-center py-12 text-gray-500">
                   <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                   <p className="font-medium">No {activeTab} work orders found</p>
                   <p className="text-sm text-gray-400 mt-1">Work orders will appear here when created</p>
@@ -735,6 +736,19 @@ const WorkOrders = ({ admin }) => {
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">
                       {new Date(wo.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {wo.source === 'customer' ? (wo.customer_name || 'Customer') : (wo.created_by || wo.source || 'System')}
+                        </p>
+                        {wo.source === 'customer' && wo.property_code && (
+                          <p className="text-xs text-gray-500">{wo.property_code}</p>
+                        )}
+                        {wo.source !== 'customer' && wo.source && (
+                          <p className="text-xs text-gray-400 capitalize">{wo.source}</p>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-4 text-center">
                       <div className="flex items-center justify-center gap-1">
