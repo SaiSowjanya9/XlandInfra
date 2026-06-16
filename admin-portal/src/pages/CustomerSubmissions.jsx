@@ -948,7 +948,7 @@ const CustomerSubmissions = () => {
                         {property.area || '-'}
                       </td>
                       <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden lg:table-cell">
-                        {property.division || '-'}
+                        {property.division_name || property.division || '-'}
                       </td>
                       <td className="px-3 py-3 text-gray-700 whitespace-nowrap max-w-[150px] truncate hidden xl:table-cell" title={property.address}>
                         {property.address || '-'}
@@ -1070,7 +1070,7 @@ const CustomerSubmissions = () => {
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Division</label>
-                    <p className="text-sm text-gray-900">{viewProperty.division || '-'}</p>
+                    <p className="text-sm text-gray-900">{viewProperty.division_name || viewProperty.division || '-'}</p>
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Property Type</label>
@@ -1540,7 +1540,7 @@ const CustomerSubmissions = () => {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Division</p>
-                      <p className="font-medium text-gray-900">{viewAMCDetails.property.division || '-'}</p>
+                      <p className="font-medium text-gray-900">{viewAMCDetails.property.division_name || viewAMCDetails.property.division || '-'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Total Units</p>
