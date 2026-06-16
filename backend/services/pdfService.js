@@ -52,18 +52,12 @@ const generateEstimatePDF = async (estimate) => {
       doc.text(`Date: ${createdAt ? new Date(createdAt).toLocaleDateString() : new Date().toLocaleDateString()}`, 400, y);
       y += 25;
 
-      // Package Name Bar
-      if (packageName) {
+      // Package Price Bar (NO package name - per requirement)
+      if (packagePrice) {
         doc.rect(50, y, 500, 25).fill(lightGray).stroke('#e0e0e0');
-        doc.fontSize(12).fillColor(navy).text(packageName, 60, y + 7);
+        doc.fontSize(10).fillColor(navy).text(`Package Price: Rs. ${Number(packagePrice).toLocaleString()}`, 60, y + 8);
         doc.fontSize(9).fillColor('#888888').text('Yearly Billing', 450, y + 8);
         y += 35;
-        
-        // Package Price
-        if (packagePrice) {
-          doc.fontSize(10).fillColor(navy).text(`Package Price: Rs. ${Number(packagePrice).toLocaleString()}`, 50, y);
-          y += 20;
-        }
       }
 
       // Property & Customer Details (side by side)

@@ -3486,12 +3486,20 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         if (estimate.package_services) {
           packageServices = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
         }
-        // If no package_services stored, fetch from AMC package
-        if (packageServices.length === 0 && estimate.package_id) {
-          const [pkgRows] = await pool.execute('SELECT services FROM amc_packages WHERE id = ?', [estimate.package_id]);
+        // If no package_services stored, fetch from AMC package by ID or name
+        if (packageServices.length === 0 && (estimate.package_id || estimate.package_name)) {
+          let pkgRows = [];
+          if (estimate.package_id) {
+            [pkgRows] = await pool.execute('SELECT services FROM amc_packages WHERE id = ?', [estimate.package_id]);
+          }
+          // Fallback to search by name if ID didn't work
+          if (pkgRows.length === 0 && estimate.package_name) {
+            [pkgRows] = await pool.execute('SELECT services FROM amc_packages WHERE name = ? AND franchise_partner_id = ?', [estimate.package_name, req.fpId]);
+          }
           if (pkgRows.length > 0 && pkgRows[0].services) {
             const svcData = typeof pkgRows[0].services === 'string' ? JSON.parse(pkgRows[0].services) : pkgRows[0].services;
             packageServices = svcData?.serviceRows || svcData?.services || (Array.isArray(svcData) ? svcData : []);
+            console.log('Fetched package services from AMC package:', packageServices.length, 'services');
           }
         }
       } catch (e) { console.log('Package services parse error:', e); }
@@ -3523,8 +3531,8 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         packagePrice: parseFloat(estimate.package_price) || 0,
         amcPackageDescription: estimate.amc_package_description || '',
         description: estimate.description || '',
-        // Services with descriptions
-        services: packageServices.length > 0 ? packageServices : (estimate.package_name ? [{ name: estimate.package_name, price: estimate.package_price }] : []),
+        // Services with descriptions (no fallback to package name)
+        services: packageServices,
         addons: addons,
         subtotal: parseFloat(estimate.subtotal) || 0,
         discount: parseFloat(estimate.discount_percent) || 0,
