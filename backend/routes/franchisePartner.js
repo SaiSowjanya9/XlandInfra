@@ -774,7 +774,7 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
         COALESCE(p.state, op.state) as property_state,
         COALESCE(p.zip_code, op.postal_code) as property_pincode,
         op.total_units,
-        op.blocks as total_blocks,
+        op.number_of_blocks as total_blocks,
         op.entry_type,
         COALESCE(c.name, wo.category_name) as category_name,
         wo.subcategory_name,
