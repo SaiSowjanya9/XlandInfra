@@ -309,7 +309,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
         p.number_of_units, p.number_of_blocks, p.total_units, p.block_names, p.units_per_block,
         COALESCE(z.name, zn.name, p.zone_id) as zone_name,
         COALESCE(p.area_name, p.city) as area,
-        COALESCE(fd.name, p.division, p.division_id) as division, COALESCE(fd.name, p.division, p.division_id) as division_name,
+        COALESCE(fd.name, p.division) as division, COALESCE(fd.name, p.division) as division_name,
         COALESCE(p.number_of_units, 1) as units,
         COALESCE(
           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
