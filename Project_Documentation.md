@@ -1,7 +1,7 @@
 # Customer Portal - Project Documentation
 
-> **Last Updated:** June 5, 2026 at 3:50 PM (UTC-05:00)
-> **Version:** 3.0.0
+> **Last Updated:** June 16, 2026 at 11:30 AM (UTC-05:00)
+> **Version:** 3.2.0
 > **Status:** In Development
 
 ---
@@ -1323,6 +1323,168 @@ npm run dev
 ---
 
 ## 14. Change Log
+
+### Version 3.2.0 (June 16, 2026)
+
+#### Work Order Email System Overhaul
+
+**1. Responsive Email Templates**
+- Fixed text wrapping for mobile/tablet devices with proper responsive design
+- Updated email template layout for better readability across all screen sizes
+- Removed redundant timestamps from email notifications
+
+**2. Zone-Centric Email Notifications**
+- Work order creation emails now sent to FP and zone-assigned employees
+- Completion notifications sent to both admin and customer
+- Employee email lookup based on zone assignments
+
+**3. Created By Tracking in Admin**
+- Admin work orders show creator name and property ID for customer submissions
+- Status dropdown visibility fixed in Admin portal
+- Removed status dropdown from Manager portal (employees have View only)
+
+---
+
+#### PDF Export Major Improvements
+
+**1. Page Break Handling**
+- Fixed PDF table rows splitting across pages
+- Added proper height constraints for all sections
+- Keep Add-ons header with at least first row on same page
+
+**2. Enhanced Fields & Layout**
+- Added Tower/Block fields to PDF exports
+- Property Details uses same blue color as Customer Details
+- Description column width adjusted to 75mm for full text display
+- Dynamic row height for full descriptions (removed 35-char truncation)
+
+**3. Discount/GST Display**
+- Always show GST in price summary
+- Show discount only when value > 0
+- Changed discount color from green to gray
+
+**4. Status Badge & Notes**
+- Added estimate status badge to PDF exports
+- Notes section moved after Price Summary
+
+---
+
+#### FP Portal Links Feature
+
+**1. Portal Link Management**
+- Track FP portal URLs (Customer Portal, Vendor Portal, Website)
+- Done status tracking with visual indicators
+- Aggregated view for Admin to see all FP portal links
+- Database migration: Added `fp_portal_links` table
+
+---
+
+#### FP Shared Resources
+
+**1. Admin Integration**
+- View FP-specific resources when creating estimates for specific FP
+- FP selector dropdown in Create Estimate tab
+- Aggregated FP Shared Resources for Admin All FPs view
+- Ops Manager access to FP Shared Resources
+
+---
+
+#### Division Field Fixes
+
+**1. Database Joins**
+- Division field correctly joins with `fp_divisions` table
+- Uses `division_name` alias with fallback across all portals
+- Fixed Property Management tables for all user portals
+
+---
+
+#### Zone Filtering Enhancements
+
+**1. Zone Helper Improvements**
+- Subquery to convert zone names to zone IDs for properties table
+- Fixed data restriction when no zones assigned
+- Employee ID check added to zone filter for all employee portals
+
+**2. Work Order Visibility**
+- Work orders visible to zone-assigned employees
+- Config categories used instead of DB query (fixes 'Unknown column' errors)
+
+---
+
+#### Frequency/Visits Column Separation
+
+**1. All View Modals**
+- Frequency shows type only (e.g., "Monthly")
+- Visits shows count only (e.g., "12")
+- Never combine as "12x Monthly" - always separate columns
+
+**2. PDF & Email**
+- Strip "Nx " prefix from Frequency column
+- Email format: "{frequencyType} - {count} visits"
+
+---
+
+#### AMC Package & Add-on Descriptions
+
+**1. Description Enrichment**
+- All employee routes parse `addons_data` JSON
+- Enrich with descriptions from `fp_addons` table
+- Package services fetched from AMC package if not stored in estimate
+
+---
+
+#### Customer Portal Improvements
+
+**1. Login Fixes**
+- Added JOIN with properties table for complete property details
+- Property lookup by both `id` and `property_id` columns
+
+**2. Password Reset UI**
+- Fixed icon overlap with placeholder text in ForgotPassword/ResetPassword pages
+
+---
+
+#### UI/UX Improvements
+
+- Hero banner smooth crossfade transitions
+- Corporate Landing page added
+- Employee Zone Management UI updated
+- Removed Business Documents section from vendor forms
+- Updated favicon to optimized company logo (29KB)
+- IST timezone in emails
+
+---
+
+### Version 3.1.0 (June 10, 2026)
+
+#### Estimate Descriptions Enhancement
+
+**1. Full Description Support**
+- AMC package descriptions stored and displayed
+- Service descriptions from AMC packages
+- Add-on descriptions from fp_addons table
+
+**2. PDF & Email**
+- PDF exports include full descriptions
+- Email notifications with PDF attachment
+- Simplified estimate email with customer/property details
+
+---
+
+### Version 3.0.1 (June 8, 2026)
+
+#### PDF Export Enhancements
+
+**1. Add-ons Table Update**
+- Add-ons table matches services table format
+- Columns: #, Add-on Service, Frequency, No. of Visits
+
+**2. Header Design**
+- Clean white header with XLand Infra gold logo
+- Company tagline "Property Management Solutions"
+- Document badge with dark slate background
+
+---
 
 ### Version 3.0.0 (June 5, 2026)
 

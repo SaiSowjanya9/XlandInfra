@@ -2,7 +2,7 @@
 
 A comprehensive full-stack web application for property management, work orders, vendor management, and AMC (Annual Maintenance Contract) packages, built with React, Node.js, and MySQL.
 
-> **Last Updated:** June 8, 2026
+> **Last Updated:** June 16, 2026
 
 ## Features
 
@@ -248,7 +248,72 @@ The application is fully responsive and works on:
 - Tablets
 - Mobile phones
 
-## Recent Updates (June 8, 2026)
+## Recent Updates (June 16, 2026)
+
+### Work Order Email Notifications
+- **Responsive Email Templates**: Fixed text wrapping for mobile/tablet devices
+- **Zone-Centric Notifications**: Work order emails now sent to FP and zone-assigned employees
+- **Customer Notifications**: Automatic email to customer on work order completion
+- **Created By Tracking**: Admin work orders show creator name and property ID for customer submissions
+- **Timestamp Cleanup**: Removed redundant timestamps from email notifications
+
+### PDF Export Enhancements (June 2026)
+- **Page Break Handling**: Fixed tables splitting across pages with proper height constraints
+- **Tower/Block Fields**: Added Tower/Block information to PDF exports
+- **Description Full Text**: Removed 35-char truncation, dynamic row height for full descriptions
+- **Discount/GST Display**: Show GST always, discount only when > 0
+- **Property Details Styling**: Matching blue color scheme with Customer Details section
+- **Status Badge**: Added estimate status to PDF exports
+- **Notes Section**: Moved Description/Notes after Price Summary in all view modals and PDF
+- **XLAND INFRA Header**: Professional header with gold logo, black theme with gold accents
+
+### FP Portal Links Feature
+- **Portal Link Management**: Track FP portal URLs (Customer, Vendor, Website)
+- **Done Status Tracking**: Mark portal links as completed with visual indicators
+- **Aggregated View**: Admin can view all FP portal links in one place
+- **Database Migration**: Added `fp_portal_links` table with proper schema
+
+### FP Shared Resources
+- **Admin Integration**: View FP-specific resources when creating estimates for a specific FP
+- **Ops Manager Access**: FP Shared Resources section for Operations Managers
+- **All FPs View**: Aggregated FP resources visible in Admin All FPs view
+
+### Division Field Improvements
+- **Proper JOINs**: Division field now correctly joins with `fp_divisions` table
+- **Division Name Display**: Uses `division_name` alias with fallback across all portals
+- **Consistent Display**: Fixed division field in Property Management tables for all user portals
+
+### Zone Filtering Enhancements
+- **Subquery Conversion**: Use subquery to convert zone names to zone IDs for properties table
+- **Employee Visibility**: Work orders now visible to zone-assigned employees (coordinator/supervisor/executive/manager)
+- **Zone Helper Fixes**: Corrected data restriction when no zones assigned
+
+### Frequency/Visits Column Separation
+- **Separate Columns**: Frequency shows type only (e.g., "Monthly"), Visits shows count only (e.g., "12")
+- **All View Modals**: Consistent layout across FP, Manager, Coordinator, Supervisor, Executive portals
+- **PDF Exports**: Strip "Nx " prefix from Frequency column to avoid duplication
+- **Email Templates**: Format as "{frequencyType} - {count} visits"
+
+### AMC Package & Add-on Descriptions
+- **Description Enrichment**: All employee routes parse `addons_data` JSON and enrich with descriptions from `fp_addons` table
+- **Package Services Fallback**: Fetch service descriptions from AMC package if not stored in estimate
+- **Email PDF**: Services and add-ons show full descriptions with proper column layout
+
+### Customer Portal Improvements
+- **Login Fix**: Added JOIN with properties table for complete property details
+- **Property ID Display**: Uses double JOIN, removed "PROP-" fallback
+- **Password Reset**: Fixed icon overlap with placeholder text in ForgotPassword and ResetPassword pages
+
+### UI/UX Improvements
+- **Hero Banner**: Smooth crossfade transitions between intro and services phases
+- **Corporate Landing Page**: New page added for corporate clients
+- **Employee Zone Management**: Updated UI for better zone assignment workflow
+- **Vendor Forms**: Removed Business Documents section (GST, PAN, License)
+- **Favicon**: Updated to use optimized company logo (29KB)
+
+---
+
+## Previous Updates (June 8, 2026)
 
 ### PDF Export Enhancements
 - **Add-ons "No. of Visits" Column**: Add-ons table now matches services table with #, Add-on Service, Frequency, and No. of Visits columns
@@ -407,10 +472,14 @@ Implemented throughout Create Estimate and Create Work Order sections:
 
 ## Completed Features
 
-- ✅ **PDF Export**: Export estimates to PDF with branded header
-- ✅ **Email Integration**: Work order email notifications on creation and completion
+- ✅ **PDF Export**: Export estimates to PDF with branded header and status badges
+- ✅ **Email Integration**: Work order email notifications to customers, FP, and zone employees
 - ✅ **QR Code Tracking**: Real-time scan analytics with geo data
 - ✅ **Zone-Based Access**: Employees see data from assigned zones only
+- ✅ **FP Portal Links**: Track and manage FP portal URLs with completion status
+- ✅ **Division Management**: Proper division field display across all portals
+- ✅ **Responsive Emails**: Mobile-friendly email templates with proper text wrapping
+- ✅ **Password Reset**: Complete forgot/reset password flow with proper UI
 
 ## Future Features (Coming Soon)
 
