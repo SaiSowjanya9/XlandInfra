@@ -289,8 +289,8 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
   // If no zones assigned, only show own created data
   if (!zones || zones.length === 0) {
     return { 
-      clause: ` AND (${workOrderAlias}.created_by = ? OR ${workOrderAlias}.created_by LIKE ?)`, 
-      params: [createdBy, `%-${createdBy.split('-').pop() || createdBy}%`] 
+      clause: ` AND ${workOrderAlias}.created_by = ?`, 
+      params: [createdBy] 
     };
   }
   
