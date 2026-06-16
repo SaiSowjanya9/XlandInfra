@@ -811,7 +811,7 @@ router.post('/work-orders', requireSupervisorScope, async (req, res) => {
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
         priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, franchisePartnerId,
         finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
-        customerName || null, customerEmail || null, customerPhone || null, propertyZone, `supervisor-${supervisorId}`]
+        customerName || null, customerEmail || null, customerPhone || null, propertyZone, createdBy]
     );
 
     // Send email notification for new work order
