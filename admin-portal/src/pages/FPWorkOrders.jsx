@@ -1179,8 +1179,8 @@ const FPWorkOrders = ({ user }) => {
                             <p className="text-sm font-medium text-gray-900">
                               {wo.source === 'customer' ? (wo.customer_name || 'Customer') : (wo.created_by || wo.source || 'System')}
                             </p>
-                            {wo.source === 'customer' && wo.property_id && (
-                              <p className="text-xs text-gray-500">{wo.property_id}</p>
+                            {wo.source === 'customer' && (
+                              <p className="text-xs text-gray-500">{wo.property_code || wo.property_name}</p>
                             )}
                             {wo.source !== 'customer' && wo.source && (
                               <p className="text-xs text-gray-400 capitalize">{wo.source}</p>
