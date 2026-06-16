@@ -133,22 +133,22 @@ const generateEstimatePDF = async (estimate) => {
       doc.text('Visits', 480, y + 6);
       y += 20;
 
-      // Services rows - dynamic height for full descriptions
+      // Services rows
       const svcList = services || [];
       svcList.forEach((s, idx) => {
         const svcDesc = s.description || '-';
-        // Calculate row height based on description length (approx 50 chars per line at font 8)
-        const descLines = Math.ceil(svcDesc.length / 45);
-        const rowHeight = Math.max(22, descLines * 12 + 10);
+        // Calculate row height based on description length to show full text
+        const descLines = Math.ceil(svcDesc.length / 40);
+        const rowHeight = Math.max(22, descLines * 11);
         
         const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
         doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
         doc.fontSize(8).fillColor('#333333');
         doc.text(String(idx + 1), 55, y + 6);
         const svcName = s.name || s.service || 'Service';
-        doc.text(svcName.length > 25 ? svcName.substring(0, 25) + '...' : svcName, 75, y + 6);
-        // Full description with text wrapping
-        doc.text(svcDesc, 190, y + 6, { width: 200, align: 'left' });
+        doc.text(svcName.substring(0, 28), 75, y + 6);
+        // Full description with text wrapping - no truncation
+        doc.text(svcDesc, 190, y + 6, { width: 200, align: 'center' });
         const freqCount = s.frequencyCount || s.frequency_count || 1;
         let freqType = s.frequencyType || s.frequency_type || 'Monthly';
         // Remove "Nx " prefix if present (e.g., "12x Monthly" -> "Monthly")
@@ -178,18 +178,18 @@ const generateEstimatePDF = async (estimate) => {
 
         addonList.forEach((a, idx) => {
           const addonDesc = a.description || '-';
-          // Calculate row height based on description length
-          const descLines = Math.ceil(addonDesc.length / 45);
-          const rowHeight = Math.max(22, descLines * 12 + 10);
+          // Calculate row height based on description length to show full text
+          const descLines = Math.ceil(addonDesc.length / 40);
+          const rowHeight = Math.max(22, descLines * 11);
           
           const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
           doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
           doc.fontSize(8).fillColor('#333333');
           doc.text(String(idx + 1), 55, y + 6);
           const addonName = a.name || a.service_name || 'Add-on';
-          doc.text(addonName.length > 25 ? addonName.substring(0, 25) + '...' : addonName, 75, y + 6);
-          // Full description with text wrapping
-          doc.text(addonDesc, 190, y + 6, { width: 200, align: 'left' });
+          doc.text(addonName.substring(0, 28), 75, y + 6);
+          // Full description with text wrapping - no truncation
+          doc.text(addonDesc, 190, y + 6, { width: 200, align: 'center' });
           const freqCount = a.frequency_count || a.frequencyCount || 1;
           let freqType = a.frequency_type || a.frequencyType || 'Monthly';
           // Remove "Nx " prefix if present (e.g., "12x Monthly" -> "Monthly")
