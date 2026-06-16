@@ -40,6 +40,9 @@ const generateEstimatePDF = async (estimate) => {
         doc.fontSize(14).fillColor(black).text('XI', 56, 20);
       }
       
+      // Company name text
+      doc.fontSize(16).fillColor('#ffffff').text('XLAND INFRA', 90, 18);
+      
       // ESTIMATE badge
       doc.rect(470, 15, 80, 22).fill(gold);
       doc.fontSize(10).fillColor(black).text('ESTIMATE', 485, 22);
@@ -103,32 +106,34 @@ const generateEstimatePDF = async (estimate) => {
       doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y);
       y += 15;
       
-      // Table header
+      // Table header - separate Service and Description columns
       doc.rect(50, y, 500, 20).fill('#475569');
       doc.fontSize(8).fillColor('#ffffff');
       doc.text('#', 55, y + 6);
-      doc.text('Service Description', 80, y + 6);
-      doc.text('Frequency', 420, y + 6);
-      doc.text('Visits', 510, y + 6);
+      doc.text('Service', 75, y + 6);
+      doc.text('Description', 260, y + 6, { width: 130, align: 'center' }); // Center aligned
+      doc.text('Frequency', 400, y + 6);
+      doc.text('Visits', 480, y + 6);
       y += 20;
 
       // Services rows
       const svcList = services || [];
       svcList.forEach((s, idx) => {
         const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
-        doc.rect(50, y, 500, 18).fill(rowColor).stroke('#e0e0e0');
+        doc.rect(50, y, 500, 22).fill(rowColor).stroke('#e0e0e0');
         doc.fontSize(8).fillColor('#333333');
-        doc.text(String(idx + 1), 55, y + 5);
+        doc.text(String(idx + 1), 55, y + 6);
         const svcName = s.name || s.service || 'Service';
-        const svcDesc = s.description ? `${svcName} - ${s.description}` : svcName;
-        doc.text(svcDesc.substring(0, 55), 80, y + 5);
+        doc.text(svcName.substring(0, 28), 75, y + 6);
+        const svcDesc = s.description || '-';
+        doc.text(svcDesc.substring(0, 35), 190, y + 6, { width: 200, align: 'center' }); // Center aligned
         const freqCount = s.frequencyCount || s.frequency_count || 1;
         let freqType = s.frequencyType || s.frequency_type || 'Monthly';
         // Remove "Nx " prefix if present (e.g., "12x Monthly" -> "Monthly")
         freqType = freqType.replace(/^\d+x\s*/i, '');
-        doc.text(freqType, 420, y + 5);
-        doc.text(String(freqCount), 520, y + 5);
-        y += 18;
+        doc.text(freqType, 400, y + 6);
+        doc.text(String(freqCount), 490, y + 6);
+        y += 22;
       });
 
       y += 10;
@@ -139,29 +144,32 @@ const generateEstimatePDF = async (estimate) => {
         doc.fontSize(10).fillColor(navy).text('ADD-ONS', 50, y);
         y += 15;
         
+        // Add-ons header - separate Service and Description columns
         doc.rect(50, y, 500, 20).fill('#475569');
         doc.fontSize(8).fillColor('#ffffff');
         doc.text('#', 55, y + 6);
-        doc.text('Add-on Service', 80, y + 6);
-        doc.text('Frequency', 420, y + 6);
-        doc.text('Visits', 510, y + 6);
+        doc.text('Add-on Service', 75, y + 6);
+        doc.text('Description', 260, y + 6, { width: 130, align: 'center' }); // Center aligned
+        doc.text('Frequency', 400, y + 6);
+        doc.text('Visits', 480, y + 6);
         y += 20;
 
         addonList.forEach((a, idx) => {
           const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
-          doc.rect(50, y, 500, 18).fill(rowColor).stroke('#e0e0e0');
+          doc.rect(50, y, 500, 22).fill(rowColor).stroke('#e0e0e0');
           doc.fontSize(8).fillColor('#333333');
-          doc.text(String(idx + 1), 55, y + 5);
+          doc.text(String(idx + 1), 55, y + 6);
           const addonName = a.name || a.service_name || 'Add-on';
-          const addonDesc = a.description ? `${addonName} - ${a.description}` : addonName;
-          doc.text(addonDesc.substring(0, 55), 80, y + 5);
+          doc.text(addonName.substring(0, 28), 75, y + 6);
+          const addonDesc = a.description || '-';
+          doc.text(addonDesc.substring(0, 35), 190, y + 6, { width: 200, align: 'center' }); // Center aligned
           const freqCount = a.frequency_count || a.frequencyCount || 1;
           let freqType = a.frequency_type || a.frequencyType || 'Monthly';
           // Remove "Nx " prefix if present (e.g., "12x Monthly" -> "Monthly")
           freqType = freqType.replace(/^\d+x\s*/i, '');
-          doc.text(freqType, 380, y + 5);
-          doc.text(String(freqCount), 485, y + 5);
-          y += 18;
+          doc.text(freqType, 400, y + 6);
+          doc.text(String(freqCount), 490, y + 6);
+          y += 22;
         });
 
         y += 10;
