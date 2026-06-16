@@ -283,28 +283,22 @@ function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias 
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} propertyAlias - Property table alias
  * @param {string} workOrderAlias - Work order table alias
- * @param {number|null} employeeId - Employee ID for coordinator/supervisor/etc ID check
- * @param {string} employeeColumn - Column name for employee ID (e.g., 'coordinator_id', 'supervisor_id')
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
-function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p', workOrderAlias = 'wo', employeeId = null, employeeColumn = null) {
-  // Build employee ID condition if provided
-  const employeeCondition = (employeeId && employeeColumn) ? ` OR ${workOrderAlias}.${employeeColumn} = ?` : '';
-  const employeeParams = (employeeId && employeeColumn) ? [employeeId] : [];
-  
-  // If no zones assigned, only show own created data + employee's own work orders
+function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p', workOrderAlias = 'wo') {
+  // If no zones assigned, only show own created data
   if (!zones || zones.length === 0) {
     return { 
-      clause: ` AND (${workOrderAlias}.created_by = ?${employeeCondition})`, 
-      params: [createdBy, ...employeeParams] 
+      clause: ` AND (${workOrderAlias}.created_by = ? OR ${workOrderAlias}.created_by LIKE ?)`, 
+      params: [createdBy, `%-${createdBy.split('-').pop() || createdBy}%`] 
     };
   }
   
   const placeholders = zones.map(() => '?').join(',');
   // properties table uses zone_id column, work orders may have zone column
   return {
-    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${workOrderAlias}.zone IN (${placeholders}) OR ${workOrderAlias}.created_by = ?${employeeCondition})`,
-    params: [...zones, ...zones, createdBy, ...employeeParams]
+    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${workOrderAlias}.zone IN (${placeholders}) OR ${workOrderAlias}.created_by = ?)`,
+    params: [...zones, ...zones, createdBy]
   };
 }
 

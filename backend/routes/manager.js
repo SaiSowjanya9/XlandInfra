@@ -227,8 +227,8 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
           SUM(CASE WHEN status NOT IN ('completed', 'closed', 'cancelled') THEN 1 ELSE 0 END) as pending,
           SUM(CASE WHEN status IN ('completed', 'closed') THEN 1 ELSE 0 END) as completed
         FROM work_orders 
-        WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR manager_id = ?)
-      `, [franchisePartnerId, creatorEmail, req.user?.username || '', managerId]).then(([[r]]) => ({ 
+        WHERE franchise_partner_id = ? AND (created_by = ? OR created_by = ? OR created_by LIKE ?)
+      `, [franchisePartnerId, creatorEmail, req.user?.username || '', `manager-${managerId}`]).then(([[r]]) => ({ 
         total: r.total || 0, 
         pending: r.pending || 0, 
         completed: r.completed || 0 
@@ -251,10 +251,10 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN clients cl ON wo.client_id = cl.id
-         WHERE wo.franchise_partner_id = ? AND (wo.created_by = ? OR wo.created_by = ? OR wo.manager_id = ?)
+         WHERE wo.franchise_partner_id = ? AND (wo.created_by = ? OR wo.created_by = ? OR wo.created_by LIKE ?)
          ORDER BY wo.created_at DESC
          LIMIT 10`,
-        [franchisePartnerId, creatorEmail, req.user?.username || '', managerId]
+        [franchisePartnerId, creatorEmail, req.user?.username || '', `manager-${managerId}`]
       ).then(([rows]) => rows).catch(() => [])
     ]);
 
@@ -611,7 +611,7 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
     console.log('[Manager Work Orders] managerId:', managerId, 'franchisePartnerId:', franchisePartnerId, 'assignedZones:', assignedZones, 'creatorEmail:', creatorEmail);
     
     // Build zone filter for properties linked to work orders (zone-centric + own created)
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo', managerId, 'manager_id');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
     
     // FP employees see FP work orders, standalone managers see their created work orders
     let query = `SELECT wo.*, 
@@ -665,7 +665,7 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
     
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId);
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo', managerId, 'manager_id');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
     
     const query = `SELECT wo.*, 
               COALESCE(p.name, wo.property_name, op.community_name) as property_name,
@@ -702,7 +702,7 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
     
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId);
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo', managerId, 'manager_id');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
     
     const query = `SELECT wo.*, 
               COALESCE(p.name, wo.property_name, op.community_name) as property_name,
@@ -784,12 +784,12 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
     
     const [result] = await pool.execute(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
-        priority, permission_to_enter, has_pet, scheduled_date, status, manager_id, franchise_partner_id, created_by, created_at,
+        priority, permission_to_enter, has_pet, scheduled_date, status, franchise_partner_id, created_by, created_at,
         property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone, zone)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`,
       [workOrderId, propertyId || null, categoryId || null, clientId || null, title || null, description || null,
        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null,
-       managerId || null, franchisePartnerId || null, createdBy,
+       franchisePartnerId || null, `manager-${managerId}`,
        finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
        customerName || null, customerEmail || null, customerPhone || null, propertyZone]
     );
@@ -835,8 +835,8 @@ router.patch('/work-orders/:id/status', requireManagerScope, async (req, res) =>
       params.push(notes);
     }
     
-    updateQuery += ` WHERE id = ? AND manager_id = ?`;
-    params.push(req.params.id, managerId);
+    updateQuery += ` WHERE id = ? AND (created_by = ? OR created_by LIKE ? OR franchise_partner_id = ?)`;
+    params.push(req.params.id, req.user?.email || '', `manager-${managerId}`, franchisePartnerId);
     
     await pool.execute(updateQuery, params);
 
@@ -2076,8 +2076,8 @@ router.get('/export/work-orders', requireManagerScope, async (req, res) => {
   }
   try {
     const [data] = await pool.execute(
-      'SELECT * FROM work_orders WHERE manager_id = ?',
-      [req.managerId]
+      'SELECT * FROM work_orders WHERE created_by LIKE ? OR franchise_partner_id = ?',
+      [`manager-${req.managerId}`, req.franchisePartnerId]
     );
     res.json({ success: true, data, exportedAt: new Date().toISOString() });
   } catch (error) {
