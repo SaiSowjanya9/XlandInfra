@@ -1531,123 +1531,163 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
     html: `
       <!DOCTYPE html>
       <html>
-      <head><meta charset="utf-8"></head>
-      <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Arial, sans-serif;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #334155 0%, #1e293b 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
-            <h1 style="margin: 0; color: #c9a227; font-size: 22px; font-weight: 600;">New Work Order Created</h1>
-          </div>
-          
-          <!-- Content -->
-          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-            
-            <!-- Customer Info - First -->
-            <div style="background: #f8f9fc; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #3b82f6;">
-              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Customer Details</h2>
-              <table style="width: 100%; border-collapse: collapse;">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Work Order Notification</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Arial, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f3f4f6;">
+          <tr>
+            <td style="padding: 20px 10px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <!-- Header -->
                 <tr>
-                  <td style="padding: 8px 0; color: #64748b; width: 120px;">Name:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold; font-size: 16px;">${customerName || '-'}</td>
+                  <td style="background: linear-gradient(135deg, #334155 0%, #1e293b 100%); padding: 25px 20px; text-align: center;">
+                    <h1 style="margin: 0; color: #c9a227; font-size: 20px; font-weight: 600; word-wrap: break-word;">New Work Order Created</h1>
+                  </td>
                 </tr>
+                
+                <!-- Content -->
                 <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Email:</td>
-                  <td style="padding: 8px 0; color: #1e293b;"><a href="mailto:${customerEmail}" style="color: #3b82f6;">${customerEmail || '-'}</a></td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Phone:</td>
-                  <td style="padding: 8px 0; color: #1e293b;"><a href="tel:${customerPhone}" style="color: #3b82f6; font-weight: bold;">${customerPhone || '-'}</a></td>
-                </tr>
-              </table>
-            </div>
+                  <td style="padding: 20px;">
+                    
+                    <!-- Customer Info -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #f8f9fc; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #3b82f6;">
+                      <tr>
+                        <td style="padding: 16px;">
+                          <h2 style="margin: 0 0 12px 0; color: #1e293b; font-size: 15px; font-weight: 600;">Customer Details</h2>
+                          <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; width: 80px; vertical-align: top;">Name:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-weight: bold; font-size: 14px; word-break: break-word;">${customerName || '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Email:</td>
+                              <td style="padding: 6px 0; word-break: break-all;"><a href="mailto:${customerEmail}" style="color: #3b82f6; font-size: 13px; text-decoration: none;">${customerEmail || '-'}</a></td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Phone:</td>
+                              <td style="padding: 6px 0;"><a href="tel:${customerPhone}" style="color: #3b82f6; font-weight: bold; font-size: 14px; text-decoration: none;">${customerPhone || '-'}</a></td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
 
-            <!-- Property Info - Second -->
-            <div style="background: #f8faf8; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #6b7280;">
-              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Property Details</h2>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b; width: 120px;">Name:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${propertyName || '-'}</td>
+                    <!-- Property Info -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #f8faf8; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #6b7280;">
+                      <tr>
+                        <td style="padding: 16px;">
+                          <h2 style="margin: 0 0 12px 0; color: #1e293b; font-size: 15px; font-weight: 600;">Property Details</h2>
+                          <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; width: 80px; vertical-align: top;">Name:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-weight: 600; font-size: 14px; word-break: break-word;">${propertyName || '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Type:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-size: 13px;">${propertyType || '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">ID:</td>
+                              <td style="padding: 6px 0; color: #64748b; font-family: monospace; font-size: 12px; word-break: break-all;">${propertyId || '-'}</td>
+                            </tr>
+                            ${fullAddress ? `
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Address:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-size: 13px; word-break: break-word;">${fullAddress}</td>
+                            </tr>
+                            ` : ''}
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Work Order Details -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #fafafa; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #c9a227;">
+                      <tr>
+                        <td style="padding: 16px;">
+                          <h2 style="margin: 0 0 12px 0; color: #1e293b; font-size: 15px; font-weight: 600;">Work Order Details</h2>
+                          <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; width: 80px; vertical-align: top;">Order ID:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-weight: 600; font-size: 14px; word-break: break-all;">${orderNumber || orderId}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Title:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-weight: 600; font-size: 13px; word-break: break-word;">${title || `Service Request - ${categoryName}`}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Category:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-size: 13px;">${categoryName || '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Subcategory:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-size: 13px;">${subcategoryName || '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Priority:</td>
+                              <td style="padding: 6px 0;">
+                                <span style="display: inline-block; background: ${priorityColors[priority] || '#64748b'}; color: white; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                  ${(priority || 'MEDIUM').toUpperCase()}
+                                </span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Description -->
+                    ${description ? `
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #fafafa; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #9ca3af;">
+                      <tr>
+                        <td style="padding: 16px;">
+                          <h2 style="margin: 0 0 8px 0; color: #1e293b; font-size: 14px; font-weight: 600;">Description</h2>
+                          <p style="margin: 0; color: #374151; line-height: 1.5; font-size: 13px; word-break: break-word;">${description}</p>
+                        </td>
+                      </tr>
+                    </table>
+                    ` : ''}
+                    
+                    <!-- Entry Notes -->
+                    ${entryNotes ? `
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #fef2f2; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #f87171;">
+                      <tr>
+                        <td style="padding: 16px;">
+                          <h2 style="margin: 0 0 8px 0; color: #991b1b; font-size: 14px; font-weight: 600;">Entry Notes</h2>
+                          <p style="margin: 0; color: #374151; line-height: 1.5; font-size: 13px; word-break: break-word;">${entryNotes}</p>
+                        </td>
+                      </tr>
+                    </table>
+                    ` : ''}
+                    
+                    <!-- Created By -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #f1f5f9; border-radius: 8px; margin-top: 20px;">
+                      <tr>
+                        <td style="padding: 12px; text-align: center;">
+                          <p style="margin: 0; color: #64748b; font-size: 12px;">
+                            Created by <strong style="color: #1e293b;">${createdBy || 'System'}</strong>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
                 </tr>
+                
+                <!-- Footer -->
                 <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Type:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${propertyType || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">ID:</td>
-                  <td style="padding: 8px 0; color: #64748b; font-family: monospace;">${propertyId || '-'}</td>
-                </tr>
-                ${fullAddress ? `
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Address:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${fullAddress}</td>
-                </tr>
-                ` : ''}
-              </table>
-            </div>
-            
-            <!-- Work Order Details - Third -->
-            <div style="background: #fafafa; border-radius: 8px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #c9a227;">
-              <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Work Order Details</h2>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b; width: 120px;">Order ID:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${orderNumber || orderId}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Title:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${title || `Service Request - ${categoryName}`}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Category:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${categoryName || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Subcategory:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${subcategoryName || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Priority:</td>
-                  <td style="padding: 8px 0;">
-                    <span style="background: ${priorityColors[priority] || '#64748b'}; color: white; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">
-                      ${(priority || 'MEDIUM').toUpperCase()}
-                    </span>
+                  <td style="background: #334155; padding: 16px; text-align: center;">
+                    <p style="margin: 0; color: #e2e8f0; font-size: 11px;">
+                      XLAND INFRA Private Limited | Automated Notification
+                    </p>
                   </td>
                 </tr>
               </table>
-            </div>
-            
-            <!-- Description -->
-            ${description ? `
-            <div style="background: #fafafa; border-radius: 8px; padding: 16px; margin-bottom: 16px; border-left: 4px solid #9ca3af;">
-              <h2 style="margin: 0 0 10px 0; color: #1e293b; font-size: 14px; font-weight: 600;">Description</h2>
-              <p style="margin: 0; color: #374151; line-height: 1.5; font-size: 14px;">${description}</p>
-            </div>
-            ` : ''}
-            
-            <!-- Entry Notes -->
-            ${entryNotes ? `
-            <div style="background: #fef2f2; border-radius: 8px; padding: 16px; margin-bottom: 16px; border-left: 4px solid #f87171;">
-              <h2 style="margin: 0 0 10px 0; color: #991b1b; font-size: 14px; font-weight: 600;">Entry Notes</h2>
-              <p style="margin: 0; color: #374151; line-height: 1.5; font-size: 14px;">${entryNotes}</p>
-            </div>
-            ` : ''}
-            
-            <!-- Created By -->
-            <div style="background: #f1f5f9; border-radius: 8px; padding: 12px; text-align: center; margin-top: 20px;">
-              <p style="margin: 0; color: #64748b; font-size: 13px;">
-                Created by <strong style="color: #1e293b;">${createdBy || 'System'}</strong>
-              </p>
-            </div>
-          </div>
-          
-          <!-- Footer -->
-          <div style="background: #334155; padding: 16px; border-radius: 0 0 12px 12px; text-align: center;">
-            <p style="margin: 0; color: #e2e8f0; font-size: 12px;">
-              XLAND INFRA Private Limited | Automated Notification
-            </p>
-          </div>
-        </div>
+            </td>
+          </tr>
+        </table>
       </body>
       </html>
     `
