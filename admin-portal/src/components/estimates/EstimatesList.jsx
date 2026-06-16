@@ -173,6 +173,14 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
           communityName: estimate.communityName || estimate.property_name,
           zone: estimate.zone,
           division: estimate.division || '',
+          // APT specific fields
+          towerName: estimate.towerName || estimate.tower_name,
+          blockNumber: estimate.blockNumber || estimate.block_number,
+          // GC specific fields
+          numberOfBlocks: estimate.numberOfBlocks || estimate.number_of_blocks,
+          totalUnits: estimate.totalUnits || estimate.total_units,
+          // Villa/Plot specific
+          villaPlotNumber: estimate.villaPlotNumber || estimate.villa_plot_number,
           city: estimate.city,
           customerName: estimate.customerName || estimate.clientName || estimate.client_name,
           customerPhone: estimate.customerPhone || estimate.phone || estimate.client_phone,

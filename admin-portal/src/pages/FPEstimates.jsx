@@ -347,6 +347,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       communityName: estimate.property_name,
       zone: estimate.zone,
       division: estimate.division || '',
+      // APT specific fields
+      towerName: estimate.tower_name,
+      blockNumber: estimate.block_number,
+      // GC specific fields
+      numberOfBlocks: estimate.number_of_blocks,
+      totalUnits: estimate.total_units,
+      // Villa/Plot specific
+      villaPlotNumber: estimate.villa_plot_number,
       customerName: estimate.client_name,
       customerPhone: estimate.client_phone,
       customerEmail: estimate.client_email,

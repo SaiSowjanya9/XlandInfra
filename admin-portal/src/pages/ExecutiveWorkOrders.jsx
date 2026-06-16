@@ -725,10 +725,6 @@ const ExecutiveWorkOrders = ({ user }) => {
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Title</p>
-                  <p className="font-medium text-gray-900">{selectedWorkOrder.title || '-'}</p>
-                </div>
-                <div>
                   <p className="text-sm text-gray-500">Priority</p>
                   <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(selectedWorkOrder.priority)}`}>
                     {selectedWorkOrder.priority?.toUpperCase() || '-'}

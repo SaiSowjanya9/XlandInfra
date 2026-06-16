@@ -745,6 +745,9 @@ export const exportEstimateToPDF = (estimate) => {
       unitsPerBlock: estimate.unitsPerBlock || estimate.units_per_block,
       totalUnits: estimate.totalUnits || estimate.total_units || estimate.numberOfUnits || estimate.number_of_units,
       blockNames: estimate.blockNames || estimate.block_names,
+      // APT specific fields
+      towerName: estimate.towerName || estimate.tower_name,
+      blockNumber: estimate.blockNumber || estimate.block_number,
       // PLOT/VILLA specific fields
       villaPlotNumber: estimate.villaPlotNumber || estimate.villa_plot_number || estimate.plotNumber || estimate.plot_number,
       address: estimate.address || estimate.propertyAddress || estimate.property_address || estimate.fullAddress,
@@ -759,9 +762,12 @@ export const exportEstimateToPDF = (estimate) => {
       services,
       addons,
       billingDuration: estimate.billingDuration || estimate.billing_duration || 'Yearly',
-      subtotal: parseFloat(estimate.subtotal || estimate.subTotal || estimate.sub_total || estimate.total_amount || estimate.totalPrice || 0),
-      discount: parseFloat(estimate.discount || 0),
-      totalPrice: parseFloat(estimate.totalPrice || estimate.total || estimate.total_price || estimate.total_amount || estimate.subtotal || 0),
+      subtotal: parseFloat(estimate.subtotal || estimate.subTotal || estimate.sub_total || 0),
+      discountPercent: parseFloat(estimate.discountPercent || estimate.discount_percent || estimate.discount || 0),
+      discountAmount: parseFloat(estimate.discountAmount || estimate.discount_amount || 0),
+      gstPercent: parseFloat(estimate.gstPercent || estimate.gst_percent || estimate.gst || 0),
+      gstAmount: parseFloat(estimate.gstAmount || estimate.gst_amount || 0),
+      totalPrice: parseFloat(estimate.totalPrice || estimate.total || estimate.total_price || estimate.total_amount || 0),
       createdAt: estimate.createdAt || estimate.created_at || new Date().toISOString()
     };
 
