@@ -1553,9 +1553,6 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
               <p style="margin: 0; color: #64748b; font-size: 13px;">
                 Created by <strong style="color: #1e293b;">${createdBy || 'System'}</strong>
               </p>
-              <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 12px;">
-                ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' })}
-              </p>
             </div>
           </div>
           
@@ -1675,9 +1672,6 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
               <p style="margin: 0; color: #64748b; font-size: 14px;">
                 Marked as completed by <strong style="color: #059669;">${completedBy || 'System'}</strong>
                 ${completedByRole ? `(${completedByRole})` : ''}
-              </p>
-              <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">
-                ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' })}
               </p>
             </div>
           </div>
