@@ -1324,10 +1324,6 @@ const CoordinatorWorkOrders = ({ user }) => {
                   <p className="font-mono font-medium text-gray-900">{selectedWorkOrder.work_order_id}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Title</p>
-                  <p className="text-gray-900">{selectedWorkOrder.title || '-'}</p>
-                </div>
-                <div>
                   <p className="text-sm text-gray-500">Status</p>
                   <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedWorkOrder.status)}`}>
                     {selectedWorkOrder.status?.replace(/_/g, ' ').toUpperCase()}
