@@ -702,6 +702,7 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
     );
 
     // Send email notification for new work order
+    // Sends to: FP email + zone-centric employees + customer
     const { sendWorkOrderCreatedNotification } = require('../services/emailService');
     sendWorkOrderCreatedNotification({
       orderId: result.insertId,
@@ -718,7 +719,9 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
       priority,
       description,
       createdBy: req.user?.username || req.user?.email || 'Executive',
-      createdByRole: 'Executive'
+      createdByRole: 'Executive',
+      franchisePartnerId: franchisePartnerId,
+      propertyZone: propertyZone
     }).catch(err => console.error('Email notification error:', err));
 
     res.json({
