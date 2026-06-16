@@ -147,35 +147,9 @@ function App() {
     setLoading(false);
   }, []);
 
-  // Track QR code visits (for printed QR codes) - every page load counts
-  useEffect(() => {
-    const trackVisit = async () => {
-      // Detect which page based on path
-      const path = window.location.pathname;
-      // Main website: /, /portal, empty, or any path that's NOT /login or /dashboard
-      const isLoginPage = path.includes('/login') || path.includes('/dashboard');
-      const page = isLoginPage ? 'login' : 'main';
-      
-      try {
-        await fetch('https://admin.xlandinfra.com/api/qr/track-visit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            page, 
-            source: 'printed_qr',
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            language: navigator.language,
-            screenWidth: window.screen.width,
-            screenHeight: window.screen.height
-          }),
-          credentials: 'include'
-        });
-      } catch (e) {
-        // Silent fail
-      }
-    };
-    trackVisit();
-  }, []);
+  // QR scans are tracked only via the QR redirect service (qr.xlandinfra.com)
+  // when users scan printed QR codes with their phone cameras.
+  // Direct website visits are NOT counted as scans.
 
   // Track user activity to keep session alive
   useEffect(() => {

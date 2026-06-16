@@ -16,6 +16,33 @@ import {
   Layers,
 } from 'lucide-react';
 
+// Helper function to format role display name
+const formatRoleName = (role) => {
+  const roleMap = {
+    'coordinator': 'Coordinator',
+    'supervisor': 'Supervisor',
+    'executive': 'Executive',
+    'manager': 'Manager',
+    'employee': 'Employee',
+    'field_staff': 'Field Staff',
+    'technician': 'Technician'
+  };
+  return roleMap[role?.toLowerCase()] || role?.charAt(0).toUpperCase() + role?.slice(1) || 'Employee';
+};
+
+// Helper function to get role badge colors
+const getRoleBadgeStyle = (role) => {
+  const roleStyles = {
+    'coordinator': 'bg-purple-100 text-purple-700 border-purple-200',
+    'supervisor': 'bg-blue-100 text-blue-700 border-blue-200',
+    'executive': 'bg-orange-100 text-orange-700 border-orange-200',
+    'manager': 'bg-indigo-100 text-indigo-700 border-indigo-200',
+    'field_staff': 'bg-teal-100 text-teal-700 border-teal-200',
+    'technician': 'bg-cyan-100 text-cyan-700 border-cyan-200'
+  };
+  return roleStyles[role?.toLowerCase()] || 'bg-gray-100 text-gray-700 border-gray-200';
+};
+
 const FPEmployeeZones = ({ user }) => {
   const [employees, setEmployees] = useState([]);
   const [zones, setZones] = useState([]);
@@ -379,7 +406,7 @@ const FPEmployeeZones = ({ user }) => {
                 className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg hover:border-indigo-200 transition-all duration-200"
               >
                 {/* Employee Header */}
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="text-xs font-mono text-gray-500 mb-1">{employee.employeeId || employee.employee_id || employee.employee_code}</p>
                     <h3 className="font-semibold text-gray-900">{employee.name}</h3>
@@ -390,6 +417,13 @@ const FPEmployeeZones = ({ user }) => {
                       : 'bg-gray-100 text-gray-600'
                   }`}>
                     {hasZones ? 'Active' : 'Pending'}
+                  </span>
+                </div>
+
+                {/* Role Badge */}
+                <div className="mb-3">
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${getRoleBadgeStyle(employee.role || employee.employee_type)}`}>
+                    {formatRoleName(employee.role || employee.employee_type)}
                   </span>
                 </div>
 
