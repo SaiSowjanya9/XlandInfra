@@ -119,7 +119,7 @@ const ForgotPassword = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input-field pl-10"
+                  className="input-field !pl-11"
                   placeholder="Enter your email address"
                   required
                 />
