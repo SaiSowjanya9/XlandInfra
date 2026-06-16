@@ -20,6 +20,23 @@ const generateEstimatePDF = async (estimate) => {
         subtotal, discount, discountAmount, tax, gstPercent, total, description, createdAt
       } = estimate;
 
+      // Debug log received price values
+      console.log('[PDF Service] Received price values:', {
+        subtotal, discount, discountAmount, tax, gstPercent, total
+      });
+
+      // Ensure numeric values are valid (handle NaN, undefined, null)
+      const safeNum = (val) => {
+        const num = parseFloat(val);
+        return isNaN(num) ? 0 : num;
+      };
+      const safeSubtotal = safeNum(subtotal);
+      const safeDiscount = safeNum(discount);
+      const safeDiscountAmount = safeNum(discountAmount);
+      const safeTax = safeNum(tax);
+      const safeGstPercent = safeNum(gstPercent);
+      const safeTotal = safeNum(total);
+
       // Colors
       const black = '#1a1a1a';
       const gold = '#d4a84b';
@@ -175,27 +192,27 @@ const generateEstimatePDF = async (estimate) => {
         y += 10;
       }
 
-      // Price Summary
+      // Price Summary - use safe values
       doc.fontSize(10).fillColor(navy).text('PRICE SUMMARY', 50, y);
       y += 15;
       doc.rect(50, y, 500, 80).fill(lightGray).stroke('#e0e0e0');
       
       doc.fontSize(9).fillColor('#666666');
       doc.text('Subtotal:', 60, y + 10);
-      doc.fillColor('#333333').text(`Rs. ${Number(subtotal || 0).toLocaleString()}`, 450, y + 10);
+      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString()}`, 450, y + 10);
       
-      if (discount > 0 || discountAmount > 0) {
-        doc.fillColor('#666666').text(`Discount (${discount || 0}%):`, 60, y + 25);
-        doc.fillColor('#333333').text(`-Rs. ${Number(discountAmount || 0).toLocaleString()}`, 450, y + 25);
+      if (safeDiscount > 0 || safeDiscountAmount > 0) {
+        doc.fillColor('#666666').text(`Discount (${safeDiscount}%):`, 60, y + 25);
+        doc.fillColor('#333333').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, 450, y + 25);
       }
       
-      doc.fillColor('#666666').text(`GST (${gstPercent ?? 0}%):`, 60, y + 40);
-      doc.fillColor('#333333').text(`Rs. ${Number(tax || 0).toLocaleString()}`, 450, y + 40);
+      doc.fillColor('#666666').text(`GST (${safeGstPercent}%):`, 60, y + 40);
+      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString()}`, 450, y + 40);
       
       // Total line
       doc.rect(60, y + 55, 480, 1).fill('#e0e0e0');
       doc.fontSize(12).fillColor(navy).text('TOTAL:', 60, y + 62);
-      doc.font('Helvetica-Bold').fontSize(12).fillColor('#000000').text(`Rs. ${Number(total || 0).toLocaleString()}`, 450, y + 62);
+      doc.font('Helvetica-Bold').fontSize(12).fillColor('#000000').text(`Rs. ${safeTotal.toLocaleString()}`, 450, y + 62);
       doc.font('Helvetica');
       y += 90;
 

@@ -546,7 +546,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         setPropertyIdInput('');
         setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: '', gst: '', description: '', numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0 });
         loadData();
-        setActiveTab('list');
       } else {
         console.error('Create estimate failed:', result);
         showToast(result.message || 'Failed to save estimate', 'error');
@@ -1053,7 +1052,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               )}
 
               {/* Apartment */}
-              {estimateForm.propertyType === 'Apt' && (
+              {estimateForm.propertyType === 'APT' && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Tower/Building Name</label>
@@ -1071,7 +1070,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               )}
 
               {/* Villa */}
-              {estimateForm.propertyType === 'Villa' && (
+              {estimateForm.propertyType === 'VILLA' && (
                 <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
                   <div className="max-w-xs">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Villa Number <span className="text-red-500">*</span></label>
@@ -1081,7 +1080,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               )}
 
               {/* Flat */}
-              {estimateForm.propertyType === 'Flat' && (
+              {estimateForm.propertyType === 'FLAT' && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="max-w-xs">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Flat Number <span className="text-red-500">*</span></label>
@@ -1091,7 +1090,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               )}
 
               {/* Plot */}
-              {estimateForm.propertyType === 'Plot' && (
+              {estimateForm.propertyType === 'PLOT' && (
                 <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
                   <div className="max-w-xs">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Plot Number <span className="text-red-500">*</span></label>
