@@ -147,24 +147,24 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
       const propId = propertyId && propertyId !== 'undefined' ? propertyId : null;
       
       if (propId) {
-        // Try properties table first
+        // Try properties table first - check by both id and property_id columns
         const [propData] = await pool.query(
-          `SELECT franchise_partner_id, name, property_type, property_id, zone_id as zone, division,
+          `SELECT id, franchise_partner_id, name, property_type, property_id, zone_id as zone, division,
                   address, city, state, contact_person, contact_phone, contact_email
-           FROM properties WHERE id = ?`,
-          [propId]
+           FROM properties WHERE id = ? OR property_id = ?`,
+          [propId, propId]
         );
         if (propData.length > 0) {
           propDetails = propData[0];
           franchisePartnerId = propData[0].franchise_partner_id;
           actualPropertyId = propData[0].property_id;
         } else {
-          // Try onboarded_properties
+          // Try onboarded_properties - check by both id and property_id columns
           const [opData] = await pool.query(
-            `SELECT franchise_partner_id, community_name as name, property_type, property_id, zone, division,
+            `SELECT id, franchise_partner_id, community_name as name, property_type, property_id, zone, division,
                     address, city, state, contact_person, contact_phone, contact_email
-             FROM onboarded_properties WHERE id = ?`,
-            [propId]
+             FROM onboarded_properties WHERE id = ? OR property_id = ?`,
+            [propId, propId]
           );
           if (opData.length > 0) {
             propDetails = opData[0];
@@ -193,7 +193,7 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
         [
           orderNumber,
           residentId && residentId !== 'undefined' ? residentId : null,
-          propId,
+          propDetails.id || propId,
           unitId && unitId !== 'undefined' && !isNaN(parseInt(unitId)) ? parseInt(unitId) : null,
           parseInt(categoryId),
           parseInt(subcategoryId),
