@@ -189,17 +189,12 @@ function CorporateLanding() {
   const [formSuccess, setFormSuccess] = useState(false);
   const [heroPhase, setHeroPhase] = useState('intro'); // 'intro' or 'services'
   const [activeHeroService, setActiveHeroService] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Hero two-phase effect: Intro (3s) → Services rotation (3s each)
+  // Hero two-phase effect: Intro (3s) → Services rotation (4s each)
   useEffect(() => {
-    // Phase 1: Show intro for 3 seconds, then transition to services
+    // Phase 1: Show intro for 3 seconds, then smoothly transition to services
     const introTimeout = setTimeout(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setHeroPhase('services');
-        setIsTransitioning(false);
-      }, 800); // Cinematic fade duration
+      setHeroPhase('services'); // Direct transition - no intermediate state
     }, 3000);
 
     return () => clearTimeout(introTimeout);
@@ -530,7 +525,7 @@ function CorporateLanding() {
         <div className="absolute inset-0 z-0">
           {/* Intro Phase Background */}
           <div 
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+            className={`absolute inset-0 transition-opacity duration-[1500ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
               heroPhase === 'intro' ? 'opacity-100' : 'opacity-0'
             }`}
           >
@@ -547,7 +542,7 @@ function CorporateLanding() {
           {heroServices.map((service, index) => (
             <div
               key={service.id}
-              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+              className={`absolute inset-0 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
                 heroPhase === 'services' && index === activeHeroService
                   ? 'opacity-100' 
                   : 'opacity-0'
@@ -592,10 +587,10 @@ function CorporateLanding() {
           <div className="max-w-3xl">
             
             {/* ===== PHASE 1: INTRO CONTENT ===== */}
-            <div className={`transition-all duration-700 ease-out ${
+            <div className={`transition-all duration-[1200ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
               heroPhase === 'intro'
-                ? 'opacity-100 translate-y-0' 
-                : 'opacity-0 -translate-y-4 pointer-events-none absolute'
+                ? 'opacity-100' 
+                : 'opacity-0 pointer-events-none absolute'
             }`}>
               {/* Eyebrow Text */}
               <div className="flex items-center gap-3 mb-6 opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.2s_forwards]">
@@ -643,10 +638,10 @@ function CorporateLanding() {
             </div>
 
             {/* ===== PHASE 2: ROTATING SERVICES CONTENT ===== */}
-            <div className={`transition-all duration-700 ease-out ${
+            <div className={`transition-all duration-[1200ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
               heroPhase === 'services'
-                ? 'opacity-100 translate-y-0' 
-                : 'opacity-0 translate-y-8 pointer-events-none absolute'
+                ? 'opacity-100' 
+                : 'opacity-0 pointer-events-none absolute'
             }`}>
               {/* Active Service Icon */}
               <div className="w-14 h-14 mb-6 bg-gradient-to-br from-gold-400/20 to-gold-600/20 border border-gold-500/30 rounded-xl flex items-center justify-center shadow-[0_0_30px_rgba(216,178,92,0.2)]">
