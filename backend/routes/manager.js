@@ -245,12 +245,11 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       // Recent work orders (own created)
       pool.execute(
         `SELECT wo.*, p.name as property_name, c.name as category_name, 
-                v.company_name as vendor_name, cl.name as client_name
+                v.company_name as vendor_name
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-         LEFT JOIN clients cl ON wo.client_id = cl.id
          WHERE wo.franchise_partner_id = ? AND (wo.created_by = ? OR wo.created_by = ? OR wo.created_by LIKE ?)
          ORDER BY wo.created_at DESC
          LIMIT 10`,
@@ -621,7 +620,7 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
                         COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
                         COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
                         op.total_units, op.blocks as total_blocks,
-                        c.name as category_name, v.company_name as vendor_name, cl.name as client_name,
+                        c.name as category_name, v.company_name as vendor_name,
                         COALESCE(
                           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
                           wo.created_by, 'System'
@@ -631,7 +630,6 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
                  LEFT JOIN onboarded_properties op ON wo.property_id = op.id
                  LEFT JOIN categories c ON wo.category_id = c.id
                  LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-                 LEFT JOIN clients cl ON wo.client_id = cl.id
                  LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username
                  WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'}${zoneFilter.clause}`;
     
@@ -674,13 +672,12 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
               COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
               COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
               op.total_units, op.blocks as total_blocks,
-              c.name as category_name, v.company_name as vendor_name, cl.name as client_name
+              c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-       LEFT JOIN clients cl ON wo.client_id = cl.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status NOT IN ('completed', 'closed', 'cancelled')${zoneFilter.clause}
        ORDER BY wo.created_at DESC`;
     const params = franchisePartnerId ? [franchisePartnerId, ...zoneFilter.params] : [creatorEmail, ...zoneFilter.params];
@@ -711,13 +708,12 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
               COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
               COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
               op.total_units, op.blocks as total_blocks,
-              c.name as category_name, v.company_name as vendor_name, cl.name as client_name
+              c.name as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-       LEFT JOIN clients cl ON wo.client_id = cl.id
        WHERE ${franchisePartnerId ? 'wo.franchise_partner_id = ?' : 'wo.created_by = ?'} AND wo.status IN ('completed', 'closed')${zoneFilter.clause}
        ORDER BY wo.created_at DESC`;
     const params = franchisePartnerId ? [franchisePartnerId, ...zoneFilter.params] : [creatorEmail, ...zoneFilter.params];

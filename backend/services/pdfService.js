@@ -133,24 +133,29 @@ const generateEstimatePDF = async (estimate) => {
       doc.text('Visits', 480, y + 6);
       y += 20;
 
-      // Services rows
+      // Services rows - dynamic height for full descriptions
       const svcList = services || [];
       svcList.forEach((s, idx) => {
+        const svcDesc = s.description || '-';
+        // Calculate row height based on description length (approx 50 chars per line at font 8)
+        const descLines = Math.ceil(svcDesc.length / 45);
+        const rowHeight = Math.max(22, descLines * 12 + 10);
+        
         const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
-        doc.rect(50, y, 500, 22).fill(rowColor).stroke('#e0e0e0');
+        doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
         doc.fontSize(8).fillColor('#333333');
         doc.text(String(idx + 1), 55, y + 6);
         const svcName = s.name || s.service || 'Service';
-        doc.text(svcName.substring(0, 28), 75, y + 6);
-        const svcDesc = s.description || '-';
-        doc.text(svcDesc.substring(0, 35), 190, y + 6, { width: 200, align: 'center' }); // Center aligned
+        doc.text(svcName.length > 25 ? svcName.substring(0, 25) + '...' : svcName, 75, y + 6);
+        // Full description with text wrapping
+        doc.text(svcDesc, 190, y + 6, { width: 200, align: 'left' });
         const freqCount = s.frequencyCount || s.frequency_count || 1;
         let freqType = s.frequencyType || s.frequency_type || 'Monthly';
         // Remove "Nx " prefix if present (e.g., "12x Monthly" -> "Monthly")
         freqType = freqType.replace(/^\d+x\s*/i, '');
         doc.text(freqType, 400, y + 6);
         doc.text(String(freqCount), 490, y + 6);
-        y += 22;
+        y += rowHeight;
       });
 
       y += 10;
@@ -172,21 +177,26 @@ const generateEstimatePDF = async (estimate) => {
         y += 20;
 
         addonList.forEach((a, idx) => {
+          const addonDesc = a.description || '-';
+          // Calculate row height based on description length
+          const descLines = Math.ceil(addonDesc.length / 45);
+          const rowHeight = Math.max(22, descLines * 12 + 10);
+          
           const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
-          doc.rect(50, y, 500, 22).fill(rowColor).stroke('#e0e0e0');
+          doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
           doc.fontSize(8).fillColor('#333333');
           doc.text(String(idx + 1), 55, y + 6);
           const addonName = a.name || a.service_name || 'Add-on';
-          doc.text(addonName.substring(0, 28), 75, y + 6);
-          const addonDesc = a.description || '-';
-          doc.text(addonDesc.substring(0, 35), 190, y + 6, { width: 200, align: 'center' }); // Center aligned
+          doc.text(addonName.length > 25 ? addonName.substring(0, 25) + '...' : addonName, 75, y + 6);
+          // Full description with text wrapping
+          doc.text(addonDesc, 190, y + 6, { width: 200, align: 'left' });
           const freqCount = a.frequency_count || a.frequencyCount || 1;
           let freqType = a.frequency_type || a.frequencyType || 'Monthly';
           // Remove "Nx " prefix if present (e.g., "12x Monthly" -> "Monthly")
           freqType = freqType.replace(/^\d+x\s*/i, '');
           doc.text(freqType, 400, y + 6);
           doc.text(String(freqCount), 490, y + 6);
-          y += 22;
+          y += rowHeight;
         });
 
         y += 10;
