@@ -342,6 +342,7 @@ const ExecutiveWorkOrders = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Category</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created By</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
                 </tr>
               </thead>
@@ -365,6 +366,19 @@ const ExecutiveWorkOrders = ({ user }) => {
                       </span>
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-500">{formatDate(wo.created_at)}</td>
+                    <td className="py-4 px-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {wo.source === 'customer' ? (wo.customer_name || 'Customer') : (wo.created_by || wo.source || 'System')}
+                        </p>
+                        {wo.source === 'customer' && wo.property_id && (
+                          <p className="text-xs text-gray-500">{wo.property_id}</p>
+                        )}
+                        {wo.source !== 'customer' && wo.source && (
+                          <p className="text-xs text-gray-400 capitalize">{wo.source}</p>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-4 px-4">
                       <button 
                         onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
