@@ -410,7 +410,8 @@ const generatePDF = (data, type, filename) => {
         3: { cellWidth: 30, halign: 'center' },
         4: { cellWidth: 15, halign: 'center' }
       },
-      alternateRowStyles: { fillColor: [252, 252, 253] }
+      alternateRowStyles: { fillColor: [252, 252, 253] },
+      rowPageBreak: 'avoid'
     });
 
     y = doc.lastAutoTable.finalY + 8;
@@ -452,7 +453,8 @@ const generatePDF = (data, type, filename) => {
           3: { cellWidth: 30, halign: 'center' },
           4: { cellWidth: 15, halign: 'center' }
         },
-        alternateRowStyles: { fillColor: [252, 252, 253] }
+        alternateRowStyles: { fillColor: [252, 252, 253] },
+        rowPageBreak: 'avoid'
       });
 
       y = doc.lastAutoTable.finalY + 8;
