@@ -1012,7 +1012,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                     <td className="py-4 px-4">
                       <div>
                         <p className="font-medium text-gray-900">{wo.work_order_id}</p>
-                        <p className="text-sm text-gray-500">{wo.title || '-'}</p>
+                        {wo.title && <p className="text-sm text-gray-500">{wo.title}</p>}
                       </div>
                     </td>
                     <td className="py-4 px-4">
