@@ -494,8 +494,7 @@ const ManagerWorkOrders = ({ user }) => {
                       <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {/* View Details */}
+                      <div className="flex items-center justify-end">
                         <button
                           onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
                           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -503,45 +502,6 @@ const ManagerWorkOrders = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Change Status Dropdown */}
-                        <select
-                          value={wo.status}
-                          onChange={(e) => {
-                            if (e.target.value === 'cancelled') {
-                              setShowCancelModal(wo);
-                            } else {
-                              handleStatusUpdate(wo.id, e.target.value);
-                            }
-                          }}
-                          className="px-2 py-1 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="assigned">Assigned</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                          <option value="closed">Closed</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                        {/* Mark As Closed - Only for Completed work orders */}
-                        {(wo.status === 'completed' || activeTab === 'completed') && wo.status !== 'closed' && (
-                          <button
-                            onClick={() => handleStatusUpdate(wo.id, 'closed')}
-                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="Mark As Closed"
-                          >
-                            <Lock className="w-4 h-4" />
-                          </button>
-                        )}
-                        {/* Revert to Pending - Only for Completed/Closed work orders */}
-                        {activeTab === 'completed' && (
-                          <button
-                            onClick={() => handleStatusUpdate(wo.id, 'pending')}
-                            className="p-2 text-orange-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                            title="Revert to Pending"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
