@@ -120,41 +120,48 @@ const generateEstimatePDF = async (estimate) => {
       }
 
       // Services Table
-      doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y);
+      doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y, { continued: false });
       y += 15;
       
       // Table header - separate Service and Description columns
       doc.rect(50, y, 500, 20).fill('#475569');
       doc.fontSize(8).fillColor('#ffffff');
-      doc.text('#', 55, y + 6);
-      doc.text('Service', 75, y + 6);
-      doc.text('Description', 260, y + 6, { width: 130, align: 'center' }); // Center aligned
-      doc.text('Frequency', 400, y + 6);
-      doc.text('Visits', 480, y + 6);
+      doc.text('#', 55, y + 6, { continued: false });
+      doc.text('Service', 75, y + 6, { continued: false });
+      doc.text('Description', 260, y + 6, { width: 130, align: 'center', continued: false });
+      doc.text('Frequency', 400, y + 6, { continued: false });
+      doc.text('Visits', 480, y + 6, { continued: false });
       y += 20;
 
       // Services rows
       const svcList = services || [];
+      const pageHeight = 780; // A4 usable height
+      
       svcList.forEach((s, idx) => {
         const svcDesc = s.description || '-';
-        // Calculate row height based on description length to show full text
+        // Calculate row height based on description length (approx 40 chars per line)
         const descLines = Math.ceil(svcDesc.length / 40);
         const rowHeight = Math.max(22, descLines * 11);
+        
+        // Check if we need a new page
+        if (y + rowHeight > pageHeight) {
+          doc.addPage();
+          y = 50;
+        }
         
         const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
         doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
         doc.fontSize(8).fillColor('#333333');
-        doc.text(String(idx + 1), 55, y + 6);
+        doc.text(String(idx + 1), 55, y + 6, { continued: false });
         const svcName = s.name || s.service || 'Service';
-        doc.text(svcName.substring(0, 28), 75, y + 6);
-        // Full description with text wrapping - no truncation
-        doc.text(svcDesc, 190, y + 6, { width: 200, align: 'center' });
+        doc.text(svcName.substring(0, 28), 75, y + 6, { continued: false });
+        // Full description with height constraint to prevent page overflow
+        doc.text(svcDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
         const freqCount = s.frequencyCount || s.frequency_count || 1;
         let freqType = s.frequencyType || s.frequency_type || 'Monthly';
-        // Remove "Nx " prefix if present (e.g., "12x Monthly" -> "Monthly")
         freqType = freqType.replace(/^\d+x\s*/i, '');
-        doc.text(freqType, 400, y + 6);
-        doc.text(String(freqCount), 490, y + 6);
+        doc.text(freqType, 400, y + 6, { continued: false });
+        doc.text(String(freqCount), 490, y + 6, { continued: false });
         y += rowHeight;
       });
 
@@ -163,74 +170,96 @@ const generateEstimatePDF = async (estimate) => {
       // Add-ons Table (if any)
       const addonList = addons || [];
       if (addonList.length > 0) {
-        doc.fontSize(10).fillColor(navy).text('ADD-ONS', 50, y);
+        // Check if Add-ons header needs new page
+        if (y + 50 > pageHeight) {
+          doc.addPage();
+          y = 50;
+        }
+        
+        doc.fontSize(10).fillColor(navy).text('ADD-ONS', 50, y, { continued: false });
         y += 15;
         
         // Add-ons header - separate Service and Description columns
         doc.rect(50, y, 500, 20).fill('#475569');
         doc.fontSize(8).fillColor('#ffffff');
-        doc.text('#', 55, y + 6);
-        doc.text('Add-on Service', 75, y + 6);
-        doc.text('Description', 260, y + 6, { width: 130, align: 'center' }); // Center aligned
-        doc.text('Frequency', 400, y + 6);
-        doc.text('Visits', 480, y + 6);
+        doc.text('#', 55, y + 6, { continued: false });
+        doc.text('Add-on Service', 75, y + 6, { continued: false });
+        doc.text('Description', 260, y + 6, { width: 130, align: 'center', continued: false });
+        doc.text('Frequency', 400, y + 6, { continued: false });
+        doc.text('Visits', 480, y + 6, { continued: false });
         y += 20;
 
         addonList.forEach((a, idx) => {
           const addonDesc = a.description || '-';
-          // Calculate row height based on description length to show full text
+          // Calculate row height based on description length (approx 40 chars per line)
           const descLines = Math.ceil(addonDesc.length / 40);
           const rowHeight = Math.max(22, descLines * 11);
+          
+          // Check if we need a new page
+          if (y + rowHeight > pageHeight) {
+            doc.addPage();
+            y = 50;
+          }
           
           const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
           doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
           doc.fontSize(8).fillColor('#333333');
-          doc.text(String(idx + 1), 55, y + 6);
+          doc.text(String(idx + 1), 55, y + 6, { continued: false });
           const addonName = a.name || a.service_name || 'Add-on';
-          doc.text(addonName.substring(0, 28), 75, y + 6);
-          // Full description with text wrapping - no truncation
-          doc.text(addonDesc, 190, y + 6, { width: 200, align: 'center' });
+          doc.text(addonName.substring(0, 28), 75, y + 6, { continued: false });
+          // Full description with height constraint to prevent page overflow
+          doc.text(addonDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
           const freqCount = a.frequency_count || a.frequencyCount || 1;
           let freqType = a.frequency_type || a.frequencyType || 'Monthly';
-          // Remove "Nx " prefix if present (e.g., "12x Monthly" -> "Monthly")
           freqType = freqType.replace(/^\d+x\s*/i, '');
-          doc.text(freqType, 400, y + 6);
-          doc.text(String(freqCount), 490, y + 6);
+          doc.text(freqType, 400, y + 6, { continued: false });
+          doc.text(String(freqCount), 490, y + 6, { continued: false });
           y += rowHeight;
         });
 
         y += 10;
       }
 
+      // Check if Price Summary needs new page
+      if (y + 100 > pageHeight) {
+        doc.addPage();
+        y = 50;
+      }
+      
       // Price Summary - use safe values
-      doc.fontSize(10).fillColor(navy).text('PRICE SUMMARY', 50, y);
+      doc.fontSize(10).fillColor(navy).text('PRICE SUMMARY', 50, y, { continued: false });
       y += 15;
       doc.rect(50, y, 500, 80).fill(lightGray).stroke('#e0e0e0');
       
       doc.fontSize(9).fillColor('#666666');
-      doc.text('Subtotal:', 60, y + 10);
-      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString()}`, 450, y + 10);
+      doc.text('Subtotal:', 60, y + 10, { continued: false });
+      doc.fillColor('#333333').text(`Rs. ${safeSubtotal.toLocaleString()}`, 450, y + 10, { continued: false });
       
       if (safeDiscount > 0 || safeDiscountAmount > 0) {
-        doc.fillColor('#666666').text(`Discount (${safeDiscount}%):`, 60, y + 25);
-        doc.fillColor('#333333').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, 450, y + 25);
+        doc.fillColor('#666666').text(`Discount (${safeDiscount}%):`, 60, y + 25, { continued: false });
+        doc.fillColor('#333333').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, 450, y + 25, { continued: false });
       }
       
-      doc.fillColor('#666666').text(`GST (${safeGstPercent}%):`, 60, y + 40);
-      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString()}`, 450, y + 40);
+      doc.fillColor('#666666').text(`GST (${safeGstPercent}%):`, 60, y + 40, { continued: false });
+      doc.fillColor('#333333').text(`Rs. ${safeTax.toLocaleString()}`, 450, y + 40, { continued: false });
       
       // Total line
       doc.rect(60, y + 55, 480, 1).fill('#e0e0e0');
-      doc.fontSize(12).fillColor(navy).text('TOTAL:', 60, y + 62);
-      doc.font('Helvetica-Bold').fontSize(12).fillColor('#000000').text(`Rs. ${safeTotal.toLocaleString()}`, 450, y + 62);
+      doc.fontSize(12).fillColor(navy).text('TOTAL:', 60, y + 62, { continued: false });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor('#000000').text(`Rs. ${safeTotal.toLocaleString()}`, 450, y + 62, { continued: false });
       doc.font('Helvetica');
       y += 90;
 
       // Notes/Description (after Price Summary)
       if (description) {
-        doc.fontSize(10).fillColor(navy).text('NOTES / DESCRIPTION', 50, y);
+        // Check if notes need new page
+        if (y + 70 > pageHeight) {
+          doc.addPage();
+          y = 50;
+        }
+        doc.fontSize(10).fillColor(navy).text('NOTES / DESCRIPTION', 50, y, { continued: false });
         y += 18;
-        doc.fontSize(9).fillColor('#333333').text(description, 50, y, { width: 500, lineGap: 4 });
+        doc.fontSize(9).fillColor('#333333').text(description, 50, y, { width: 500, lineGap: 4, continued: false });
         y += 50;
       }
 
