@@ -823,7 +823,7 @@ router.post('/work-orders', requireCoordinatorScope, async (req, res) => {
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
         priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, franchisePartnerId,
         finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
-        customerName || null, customerEmail || null, customerPhone || null, propertyZone, `coordinator-${coordinatorId}`]
+        customerName || null, customerEmail || null, customerPhone || null, propertyZone, createdBy]
     );
 
     // Send email notification for new work order

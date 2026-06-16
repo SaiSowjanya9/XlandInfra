@@ -789,7 +789,7 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`,
       [workOrderId, propertyId || null, categoryId || null, clientId || null, title || null, description || null,
        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null,
-       franchisePartnerId || null, `manager-${managerId}`,
+       franchisePartnerId || null, createdBy,
        finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
        customerName || null, customerEmail || null, customerPhone || null, propertyZone]
     );
