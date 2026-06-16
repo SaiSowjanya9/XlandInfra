@@ -610,7 +610,7 @@ const CoordinatorProperties = ({ user }) => {
                         <span className="text-sm text-gray-600">{property.area || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-sm text-gray-600">{property.division || '-'}</span>
+                        <span className="text-sm text-gray-600">{property.division_name || property.division || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600 max-w-[150px] truncate block">{property.address || '-'}</span>
@@ -734,7 +734,7 @@ const CoordinatorProperties = ({ user }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Division</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.division || selectedProperty.division_id || '-'}</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.division_name || selectedProperty.division || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Property Type</p>

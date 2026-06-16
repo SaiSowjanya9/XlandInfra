@@ -611,7 +611,7 @@ const FPProperties = ({ user }) => {
                         <span className="text-sm text-gray-600">{property.area || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-sm text-gray-600">{property.division_name || property.division || '-'}</span>
+                        <span className="text-sm text-gray-600">{property.division_name || property.division || property.division_id || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600 max-w-[150px] truncate block">{property.address || '-'}</span>

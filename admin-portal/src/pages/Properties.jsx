@@ -649,7 +649,7 @@ const Properties = () => {
                         {property.areaName || '-'}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {property.division || '-'}
+                        {property.division_name || property.division || '-'}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
                         {property.totalUnits || 0}

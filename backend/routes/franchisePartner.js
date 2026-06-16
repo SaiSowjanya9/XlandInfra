@@ -3148,9 +3148,16 @@ router.get('/estimates', requireFPScope, async (req, res) => {
           // Enrich addons with descriptions from fp_addons if not already present
           addons = addons.map(addon => {
             if (!addon.description) {
-              const foundAddon = fpAddons.find(a => a.id == addon.id || a.service_name === (addon.name || addon.service_name));
-              if (foundAddon) {
-                addon.description = foundAddon.description || '';
+              const addonName = addon.name || addon.serviceName || addon.service_name || '';
+              const addonId = addon.id || addon.addon_id;
+              const foundAddon = fpAddons.find(a => 
+                a.id == addonId || 
+                a.service_name === addonName ||
+                a.service_name.toLowerCase() === addonName.toLowerCase()
+              );
+              if (foundAddon && foundAddon.description) {
+                addon.description = foundAddon.description;
+                console.log('Enriched addon', addonName, 'with description:', foundAddon.description);
               }
             }
             return addon;
@@ -3461,12 +3468,28 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
     try {
       const { sendEstimateEmail } = require('../services/emailService');
       
-      // Parse addons
+      // Parse addons and enrich with descriptions
       let addons = [];
       if (estimate.addons_data) {
         try {
           addons = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
-        } catch (e) {}
+          // Fetch addon descriptions from fp_addons table
+          const [fpAddons] = await pool.execute(
+            `SELECT id, service_name, description FROM fp_addons WHERE franchise_partner_id = ?`,
+            [req.fpId]
+          );
+          // Enrich addons with descriptions
+          addons = addons.map(addon => {
+            if (!addon.description) {
+              const foundAddon = fpAddons.find(a => a.id == addon.id || a.id == addon.addon_id || a.service_name === (addon.name || addon.serviceName || addon.service_name));
+              if (foundAddon && foundAddon.description) {
+                addon.description = foundAddon.description;
+              }
+            }
+            return addon;
+          });
+          console.log('[Email] Enriched addons with descriptions:', addons.map(a => ({ name: a.name || a.serviceName, desc: a.description })));
+        } catch (e) { console.log('Addon parse error:', e); }
       }
       
       // Parse block data for GC

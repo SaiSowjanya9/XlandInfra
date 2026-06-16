@@ -401,7 +401,7 @@ const generatePDF = (data, type, filename) => {
       columnStyles: {
         0: { cellWidth: 8, halign: 'center' },
         1: { cellWidth: 35, halign: 'left' },
-        2: { cellWidth: 'auto', halign: 'left' },
+        2: { cellWidth: 'auto', halign: 'center' },
         3: { cellWidth: 22, halign: 'center' },
         4: { cellWidth: 15, halign: 'center' }
       },
@@ -443,7 +443,7 @@ const generatePDF = (data, type, filename) => {
         columnStyles: {
           0: { cellWidth: 8, halign: 'center' },
           1: { cellWidth: 35, halign: 'left' },
-          2: { cellWidth: 'auto', halign: 'left' },
+          2: { cellWidth: 'auto', halign: 'center' },
           3: { cellWidth: 22, halign: 'center' },
           4: { cellWidth: 15, halign: 'center' }
         },
