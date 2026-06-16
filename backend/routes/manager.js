@@ -318,7 +318,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
        FROM properties p 
        LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id
        LEFT JOIN zones zn ON p.zone_id = zn.name
-       LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
+       LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
        LEFT JOIN users u ON p.created_by = u.email OR CAST(p.created_by AS UNSIGNED) = u.id
        WHERE ${franchisePartnerId ? 'p.franchise_partner_id = ?' : 'p.manager_id = ?'} AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
