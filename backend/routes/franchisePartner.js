@@ -842,12 +842,12 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       categoryName: reqCategoryName, subcategoryName: reqSubcategoryName
     } = req.body;
 
-    // Validate property belongs to FP - check both tables (include property_id and property_type for email)
+    // Validate property belongs to FP - check both tables (include property_id, property_type, and zone for email)
     let property = [];
     
     // Check properties table first
     const [regularProp] = await pool.execute(
-      'SELECT id, name, property_id, property_type FROM properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
+      'SELECT id, name, property_id, property_type, zone_id as zone FROM properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
       [propertyId, propertyId, req.fpId]
     );
     
@@ -856,7 +856,7 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
     } else {
       // Check onboarded_properties table
       const [onboardedProp] = await pool.execute(
-        'SELECT id, community_name as name, property_id, property_type FROM onboarded_properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
+        'SELECT id, community_name as name, property_id, property_type, zone FROM onboarded_properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
         [propertyId, propertyId, req.fpId]
       );
       property = onboardedProp;
@@ -912,6 +912,7 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
     }
 
     // Send email notification for new work order
+    // Sends to: FP email + zone-centric employees + customer
     const { sendWorkOrderCreatedNotification } = require('../services/emailService');
     sendWorkOrderCreatedNotification({
       orderId: result.insertId,
@@ -928,7 +929,9 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       priority,
       description,
       createdBy: req.user?.username || req.user?.email || 'FP Admin',
-      createdByRole: 'Franchise Partner'
+      createdByRole: 'Franchise Partner',
+      franchisePartnerId: req.fpId,
+      propertyZone: property[0]?.zone || null
     }).catch(err => console.error('Email notification error:', err));
 
     res.status(201).json({

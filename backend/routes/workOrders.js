@@ -234,6 +234,7 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
       );
 
       // Send email notification for new work order
+      // Sends to: FP email + zone-centric employees + customer
       const { sendWorkOrderCreatedNotification } = require('../services/emailService');
       sendWorkOrderCreatedNotification({
         orderId: workOrderId,
@@ -256,7 +257,9 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
         hasPet: hasPet || 'no',
         entryNotes: entryNotes || '',
         createdBy: finalCustomerName || finalCustomerEmail || 'Customer',
-        createdByRole: 'Customer'
+        createdByRole: 'Customer',
+        franchisePartnerId: franchisePartnerId,
+        propertyZone: propDetails.zone || null
       }).catch(err => console.error('Email notification error:', err));
 
       return res.status(201).json({
@@ -561,22 +564,38 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
       filePath: file.path
     })) : [];
 
-    // Fetch actual property_id from database
+    // Fetch actual property_id, franchise_partner_id, and zone from database
     let actualPropertyId = null;
     let finalPropertyName = propertyName;
     let finalPropertyType = propertyType;
+    let propFranchisePartnerId = null;
+    let propZone = null;
     const propId = propertyId && propertyId !== 'undefined' ? propertyId : null;
     
     if (propId) {
       const [propData] = await pool.query(
-        `SELECT property_id, name, property_type FROM properties WHERE id = ?
-         UNION SELECT property_id, community_name as name, property_type FROM onboarded_properties WHERE id = ?`,
-        [propId, propId]
+        `SELECT property_id, name, property_type, franchise_partner_id, zone_id as zone FROM properties WHERE id = ?`,
+        [propId]
       );
       if (propData.length > 0) {
         actualPropertyId = propData[0].property_id;
         finalPropertyName = finalPropertyName || propData[0].name;
         finalPropertyType = finalPropertyType || propData[0].property_type;
+        propFranchisePartnerId = propData[0].franchise_partner_id;
+        propZone = propData[0].zone;
+      } else {
+        // Try onboarded_properties
+        const [opData] = await pool.query(
+          `SELECT property_id, community_name as name, property_type, franchise_partner_id, zone FROM onboarded_properties WHERE id = ?`,
+          [propId]
+        );
+        if (opData.length > 0) {
+          actualPropertyId = opData[0].property_id;
+          finalPropertyName = finalPropertyName || opData[0].name;
+          finalPropertyType = finalPropertyType || opData[0].property_type;
+          propFranchisePartnerId = opData[0].franchise_partner_id;
+          propZone = opData[0].zone;
+        }
       }
     }
 
@@ -631,6 +650,7 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
       );
 
       // Send email notification for new work order
+      // Sends to: FP email + zone-centric employees + customer
       const { sendWorkOrderCreatedNotification } = require('../services/emailService');
       sendWorkOrderCreatedNotification({
         orderId: workOrderId,
@@ -647,7 +667,9 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
         priority: priority || 'medium',
         description,
         createdBy: 'Admin',
-        createdByRole: 'Admin'
+        createdByRole: 'Admin',
+        franchisePartnerId: propFranchisePartnerId,
+        propertyZone: propZone
       }).catch(err => console.error('Email notification error:', err));
 
       return res.status(201).json({

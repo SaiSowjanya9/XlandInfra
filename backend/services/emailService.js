@@ -1,5 +1,80 @@
 const nodemailer = require('nodemailer');
 const { generateEstimatePDF } = require('./pdfService');
+const { pool } = require('../config/database');
+
+// Notification email addresses - Use info@xlandinfra.com only (no Gmail)
+const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'info@xlandinfra.com';
+const CONTACT_EMAILS = ['info@xlandinfra.com'];
+
+/**
+ * Get work order notification recipients based on property zone
+ * Returns: FP email + zone-centric employees' emails + customer email
+ * @param {number} franchisePartnerId - The FP ID for the property
+ * @param {string} propertyZone - The zone name/id of the property
+ * @param {string} customerEmail - Customer's email (optional)
+ * @returns {Promise<string[]>} Array of email addresses
+ */
+const getWorkOrderNotificationRecipients = async (franchisePartnerId, propertyZone, customerEmail = null) => {
+  const recipients = new Set();
+  
+  try {
+    // 1. Get FP email
+    if (franchisePartnerId) {
+      const [fpResult] = await pool.execute(
+        `SELECT email FROM franchise_partners WHERE id = ? AND is_active = 1`,
+        [franchisePartnerId]
+      );
+      if (fpResult.length > 0 && fpResult[0].email) {
+        recipients.add(fpResult[0].email.toLowerCase());
+        console.log(`📧 Added FP email: ${fpResult[0].email}`);
+      }
+    }
+    
+    // 2. Get zone-centric employees' emails
+    if (franchisePartnerId && propertyZone) {
+      // Get employees who have this zone assigned to them
+      const [zoneEmployees] = await pool.execute(
+        `SELECT DISTINCT fpe.email 
+         FROM fp_employees fpe
+         INNER JOIN fp_employee_zones fez ON fpe.id = fez.fp_employee_id
+         WHERE fpe.franchise_partner_id = ? 
+           AND fpe.is_active = 1 
+           AND fpe.email IS NOT NULL
+           AND (fez.zone_name = ? OR fez.zone_name = (SELECT name FROM zones WHERE id = ? LIMIT 1))`,
+        [franchisePartnerId, propertyZone, propertyZone]
+      );
+      
+      for (const emp of zoneEmployees) {
+        if (emp.email) {
+          recipients.add(emp.email.toLowerCase());
+          console.log(`📧 Added zone employee email: ${emp.email}`);
+        }
+      }
+      
+      // NOTE: Employees with NO zone restrictions do NOT receive work order emails
+      // Only zone-centric employees (assigned to the property's zone) receive notifications
+    }
+    
+    // 3. Add customer email if provided
+    if (customerEmail) {
+      recipients.add(customerEmail.toLowerCase());
+      console.log(`📧 Added customer email: ${customerEmail}`);
+    }
+    
+  } catch (error) {
+    console.error('Error fetching work order notification recipients:', error.message);
+    // Fallback to info email if there's an error
+    recipients.add(NOTIFICATION_EMAIL);
+  }
+  
+  // If no recipients found, use fallback
+  if (recipients.size === 0) {
+    recipients.add(NOTIFICATION_EMAIL);
+    console.log(`📧 No recipients found, using fallback: ${NOTIFICATION_EMAIL}`);
+  }
+  
+  return Array.from(recipients);
+};
 
 // Email configuration - uses environment variables
 // Supports custom SMTP servers (Hostinger, GoDaddy, cPanel, etc.)
@@ -37,10 +112,6 @@ const getDefaultHeaders = () => ({
   'List-Unsubscribe': `<mailto:${process.env.EMAIL_USER}?subject=Unsubscribe>`,
   'Organization': 'XLAND INFRA Private Limited'
 });
-
-// Notification email addresses - Use info@xlandinfra.com only (no Gmail)
-const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'info@xlandinfra.com';
-const CONTACT_EMAILS = ['info@xlandinfra.com'];
 
 // Send notification for new work order submission
 const sendWorkOrderNotification = async (workOrder) => {
@@ -1419,7 +1490,8 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
     customerName, customerEmail, customerPhone,
     categoryName, subcategoryName, priority, description,
     permissionToEnter, hasPet, entryNotes,
-    createdBy, createdByRole, createdFromPortal
+    createdBy, createdByRole, createdFromPortal,
+    franchisePartnerId, propertyZone
   } = workOrderData;
 
   const priorityColors = {
@@ -1439,10 +1511,17 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
   // Build full address
   const fullAddress = [propertyAddress, propertyCity, propertyState].filter(Boolean).join(', ');
 
-  // Send to both admin (info@) AND customer
-  const recipients = [NOTIFICATION_EMAIL];
-  if (customerEmail) {
-    recipients.push(customerEmail);
+  // Get recipients: FP email + zone-centric employees + customer
+  let recipients;
+  if (franchisePartnerId) {
+    recipients = await getWorkOrderNotificationRecipients(franchisePartnerId, propertyZone, customerEmail);
+    console.log(`📧 Work order notification recipients for FP ${franchisePartnerId}, zone ${propertyZone}:`, recipients);
+  } else {
+    // Fallback to old behavior if no FP ID
+    recipients = [NOTIFICATION_EMAIL];
+    if (customerEmail) {
+      recipients.push(customerEmail);
+    }
   }
 
   const mailOptions = {
@@ -1720,5 +1799,6 @@ module.exports = {
   sendPasswordResetSuccess,
   sendPasswordUpdatedByAdminEmail,
   sendVendorAssignmentEmail,
+  getWorkOrderNotificationRecipients,
   NOTIFICATION_EMAIL
 };
