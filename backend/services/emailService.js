@@ -784,6 +784,12 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   // Generate PDF attachment
   let pdfBuffer = null;
   try {
+    // Debug log: values being passed to PDF
+    console.log('[Email Service] Price values for PDF:', {
+      subtotal, discount, discountAmount: estimate.discountAmount,
+      tax, gstPercent: estimate.gstPercent, total
+    });
+    
     pdfBuffer = await generateEstimatePDF({
       estimateId, customerName, customerEmail, customerPhone: estimate.customerPhone,
       propertyName, propertyType, propertyCode: estimate.propertyCode, zone, division, city, address,

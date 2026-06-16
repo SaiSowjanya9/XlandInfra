@@ -214,14 +214,14 @@ const generatePDF = (data, type, filename) => {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
       doc.text('Name', margin + 6, py);
-      doc.text('Type', margin + cardWidth/2 + 4, py);
+      doc.text('Type', margin + cardWidth/2 + 6, py);
       py += 5;
       doc.setTextColor(...darkText);
       doc.setFont('helvetica', 'bold');
       const propName = String(data.propertyName || data.communityName || '-');
       doc.text(propName.length > 16 ? propName.substring(0, 16) + '...' : propName, margin + 6, py);
       const typeLabel = isGC ? 'Gated Community' : isApt ? 'Apartment' : isVilla ? 'Villa' : isFlat ? 'Flat' : isPlot ? 'Plot' : String(data.propertyType || '-');
-      doc.text(typeLabel, margin + cardWidth/2 + 4, py);
+      doc.text(typeLabel, margin + cardWidth/2 + 6, py);
       py += 7;
       
       // Row 2: Zone
@@ -233,64 +233,67 @@ const generatePDF = (data, type, filename) => {
       doc.setFont('helvetica', 'bold');
       doc.text(String(data.zone || '-'), margin + 6, py);
       
-      // Property-type specific fields
+      // Property-type specific fields - use consistent x-coordinates (margin + 6 for left, margin + cardWidth/2 + 6 for right)
+      const leftCol = margin + 6;
+      const rightCol = margin + cardWidth/2 + 6;
+      
       if (isGC) {
         py += 6;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('No. of Blocks', margin + 4, py);
-        doc.text('Total Units', margin + cardWidth/2 + 2, py);
-        py += 4;
+        doc.text('No. of Blocks', leftCol, py);
+        doc.text('Total Units', rightCol, py);
+        py += 5;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.numberOfBlocks || data.number_of_blocks || '-'), margin + 4, py);
-        doc.text(String(data.totalUnits || data.total_units || '-'), margin + cardWidth/2 + 2, py);
+        doc.text(String(data.numberOfBlocks || data.number_of_blocks || '-'), leftCol, py);
+        doc.text(String(data.totalUnits || data.total_units || '-'), rightCol, py);
       } else if (isApt) {
         py += 6;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('Tower/Building', margin + 4, py);
-        doc.text('Block No.', margin + cardWidth/2 + 2, py);
-        py += 4;
+        doc.text('Tower/Building', leftCol, py);
+        doc.text('Block No.', rightCol, py);
+        py += 5;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.towerName || data.tower_name || '-'), margin + 4, py);
-        doc.text(String(data.blockNumber || data.block_number || '-'), margin + cardWidth/2 + 2, py);
-        py += 6;
+        doc.text(String(data.towerName || data.tower_name || '-'), leftCol, py);
+        doc.text(String(data.blockNumber || data.block_number || '-'), rightCol, py);
+        py += 7;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('No. of Units', margin + 4, py);
-        py += 4;
+        doc.text('No. of Units', leftCol, py);
+        py += 5;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.totalUnits || data.total_units || '-'), margin + 4, py);
+        doc.text(String(data.totalUnits || data.total_units || '-'), leftCol, py);
       } else if (isVilla) {
         py += 6;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('Villa Number', margin + 4, py);
-        py += 4;
+        doc.text('Villa Number', leftCol, py);
+        py += 5;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.villa_number || '-'), margin + 4, py);
+        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.villa_number || '-'), leftCol, py);
       } else if (isFlat) {
         py += 6;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('Flat Number', margin + 4, py);
-        py += 4;
+        doc.text('Flat Number', leftCol, py);
+        py += 5;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.flat_number || '-'), margin + 4, py);
+        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.flat_number || '-'), leftCol, py);
       } else if (isPlot) {
         py += 6;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...lightText);
-        doc.text('Plot Number', margin + 4, py);
-        py += 4;
+        doc.text('Plot Number', leftCol, py);
+        py += 5;
         doc.setTextColor(...darkText);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.plot_number || '-'), margin + 4, py);
+        doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.plot_number || '-'), leftCol, py);
       }
       
       // Customer Details Card
@@ -396,15 +399,16 @@ const generatePDF = (data, type, filename) => {
       head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
       body: tableBody,
       margin: { left: margin, right: margin },
-      styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak', cellHeight: 'wrap' },
+      tableWidth: 'auto',
+      styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak' },
       headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
-      bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 8 },
+      bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 6 },
       columnStyles: {
         0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 26, halign: 'left' },
-        2: { cellWidth: 75, halign: 'left' },
-        3: { cellWidth: 22, halign: 'center' },
-        4: { cellWidth: 12, halign: 'center' }
+        1: { cellWidth: 28, halign: 'left' },
+        2: { cellWidth: 'auto', halign: 'left' },
+        3: { cellWidth: 24, halign: 'center' },
+        4: { cellWidth: 14, halign: 'center' }
       },
       alternateRowStyles: { fillColor: [252, 252, 253] }
     });
@@ -435,18 +439,19 @@ const generatePDF = (data, type, filename) => {
 
       autoTable(doc, {
         startY: y,
-        head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
+        head: [['#', 'Add-on Service', 'Description', 'Frequency', 'Visits']],
         body: addonsBody,
         margin: { left: margin, right: margin },
-        styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak', cellHeight: 'wrap' },
+        tableWidth: 'auto',
+        styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak' },
         headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
-        bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 8 },
+        bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 6 },
         columnStyles: {
           0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 26, halign: 'left' },
-          2: { cellWidth: 75, halign: 'left' },
-          3: { cellWidth: 22, halign: 'center' },
-          4: { cellWidth: 12, halign: 'center' }
+          1: { cellWidth: 28, halign: 'left' },
+          2: { cellWidth: 'auto', halign: 'left' },
+          3: { cellWidth: 24, halign: 'center' },
+          4: { cellWidth: 14, halign: 'center' }
         },
         alternateRowStyles: { fillColor: [252, 252, 253] }
       });

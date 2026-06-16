@@ -307,8 +307,8 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     let propQuery = `SELECT p.*,
         COALESCE(z.name, zn.name, p.zone_id) as zone_name,
         COALESCE(p.area_name, p.city) as area,
-        COALESCE(fd.name, p.division) as division_name,
-        COALESCE(fd.name, p.division, p.division_id) as division,
+        COALESCE(fd.name, p.division_id) as division_name,
+        COALESCE(fd.name, p.division_id) as division,
         COALESCE(p.number_of_units, 1) as units,
         COALESCE(
           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
@@ -618,7 +618,7 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
                         COALESCE(p.name, wo.property_name, op.community_name) as property_name,
                         COALESCE(p.property_id, op.property_id) as actual_property_id,
                         COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-                        COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division, op.division) as division,
+                        COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
                         COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
                         op.total_units, op.blocks as total_blocks,
                         c.name as category_name, v.company_name as vendor_name, cl.name as client_name,
@@ -671,7 +671,7 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
               COALESCE(p.name, wo.property_name, op.community_name) as property_name,
               COALESCE(p.property_id, op.property_id) as actual_property_id,
               COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-              COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division, op.division) as division,
+              COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
               COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
               op.total_units, op.blocks as total_blocks,
               c.name as category_name, v.company_name as vendor_name, cl.name as client_name
@@ -708,7 +708,7 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
               COALESCE(p.name, wo.property_name, op.community_name) as property_name,
               COALESCE(p.property_id, op.property_id) as actual_property_id,
               COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-              COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division, op.division) as division,
+              COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
               COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
               op.total_units, op.blocks as total_blocks,
               c.name as category_name, v.company_name as vendor_name, cl.name as client_name

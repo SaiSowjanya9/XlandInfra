@@ -318,7 +318,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
       const [rows] = await pool.query(
         `SELECT p.*,
                 COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area, 
-                COALESCE(fd.name, p.division) as division_name, p.number_of_units as units,
+                COALESCE(fd.name, p.division_id) as division_name, p.division_id as division, p.number_of_units as units,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
                 TRUE as is_active,
                 'fp' as access_type, FALSE as can_modify, FALSE as can_delete,
@@ -326,7 +326,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
                 'properties' as source_table
          FROM properties p
          LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
-         LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
+         LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
          LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
          WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
@@ -339,7 +339,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
       const [rows] = await pool.query(
         `SELECT p.*,
                 COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area,
-                COALESCE(fd.name, p.division) as division_name, p.number_of_units as units,
+                COALESCE(fd.name, p.division_id) as division_name, p.division_id as division, p.number_of_units as units,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
                 TRUE as is_active,
                 'own' as access_type, TRUE as can_modify, FALSE as can_delete,
@@ -347,7 +347,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
                 'properties' as source_table
          FROM properties p
          LEFT JOIN zones z ON p.zone_id = z.id OR p.zone_id = z.name
-         LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
+         LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
          LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
          WHERE p.executive_id = ? AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
@@ -527,7 +527,7 @@ router.get('/work-orders', requireExecutiveScope, async (req, res) => {
              COALESCE(p.name, wo.property_name, op.community_name) as property_name,
              COALESCE(p.property_id, op.property_id) as actual_property_id,
              COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-             COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division, op.division) as division,
+             COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
              COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
              op.total_units, op.blocks as total_blocks,
              COALESCE(c.name, wo.category_name) as category_name, 
@@ -574,7 +574,7 @@ router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
              COALESCE(p.name, wo.property_name, op.community_name) as property_name,
              COALESCE(p.property_id, op.property_id) as actual_property_id,
              COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-             COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division, op.division) as division,
+             COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
              COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
              op.total_units, op.blocks as total_blocks,
              COALESCE(c.name, wo.category_name) as category_name, 
@@ -615,7 +615,7 @@ router.get('/work-orders/completed', requireExecutiveScope, async (req, res) => 
              COALESCE(p.name, wo.property_name, op.community_name) as property_name,
              COALESCE(p.property_id, op.property_id) as actual_property_id,
              COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-             COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division, op.division) as division,
+             COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
              COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
              op.total_units, op.blocks as total_blocks,
              COALESCE(c.name, wo.category_name) as category_name, 

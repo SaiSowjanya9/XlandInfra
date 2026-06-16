@@ -282,7 +282,8 @@ router.get('/properties', requireFPScope, async (req, res) => {
     const [regularProperties] = await pool.execute(
       `SELECT p.*,
         COALESCE(z.name, zn.name, p.zone_id) as zone_name,
-        COALESCE(fd.name, p.division) as division_name,
+        COALESCE(fd.name, p.division_id) as division_name,
+        p.division_id as division,
         p.area_name as area,
         COALESCE(p.number_of_units, p.number_of_blocks, 1) as units,
         COALESCE(
@@ -294,7 +295,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
        FROM properties p
        LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id
        LEFT JOIN zones zn ON p.zone_id = zn.name
-       LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
+       LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS UNSIGNED) = fpe.id
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR p.created_by = u.id
        WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted')
@@ -3563,11 +3564,29 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
         discount: parseFloat(estimate.discount_percent) || 0,
         discountAmount: parseFloat(estimate.discount_amount) || 0,
         tax: parseFloat(estimate.gst_amount) || 0,
-        gstPercent: estimate.gst_percent !== null ? parseFloat(estimate.gst_percent) : 0,
+        gstPercent: parseFloat(estimate.gst_percent) || 0,
         total: parseFloat(estimate.total_amount) || 0,
         validUntil: estimate.valid_until,
         createdAt: estimate.created_at
       };
+      
+      // Debug log price summary values
+      console.log('[Email PDF] Price Summary values from DB:', {
+        subtotal: estimate.subtotal,
+        discount_percent: estimate.discount_percent,
+        discount_amount: estimate.discount_amount,
+        gst_percent: estimate.gst_percent,
+        gst_amount: estimate.gst_amount,
+        total_amount: estimate.total_amount
+      });
+      console.log('[Email PDF] Parsed values for PDF:', {
+        subtotal: estimateData.subtotal,
+        discount: estimateData.discount,
+        discountAmount: estimateData.discountAmount,
+        gstPercent: estimateData.gstPercent,
+        tax: estimateData.tax,
+        total: estimateData.total
+      });
       
       const emailResult = await sendEstimateEmail(estimateData, actionToken);
       
