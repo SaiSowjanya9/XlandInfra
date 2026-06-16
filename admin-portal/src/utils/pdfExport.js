@@ -195,11 +195,12 @@ const generatePDF = (data, type, filename) => {
       const isVilla = ['VILLA', 'VL'].includes(propType);
       const isFlat = ['FLAT', 'FL'].includes(propType);
       const isPlot = ['PLOT', 'PL'].includes(propType);
-      const cardHeight = (isGC || isApt) ? 44 : ((isVilla || isFlat || isPlot) ? 38 : 32);
+      // APT has 4 rows (Name/Type, Zone, Tower/Block, Units) - needs more height than GC (3 rows)
+      const cardHeight = isApt ? 56 : (isGC ? 46 : ((isVilla || isFlat || isPlot) ? 40 : 34));
       
-      // Property Details Card
-      doc.setFillColor(...cardBgBlue);
-      doc.setDrawColor(...borderLight);
+      // Property Details Card - ensure same blue background as Customer Details
+      doc.setFillColor(239, 246, 255); // cardBgBlue - explicit RGB
+      doc.setDrawColor(229, 231, 235); // borderLight - explicit RGB
       doc.roundedRect(margin, y, cardWidth, cardHeight, 2, 2, 'FD');
       
       doc.setTextColor(...navy);
@@ -296,10 +297,10 @@ const generatePDF = (data, type, filename) => {
         doc.text(String(data.villaPlotNumber || data.villa_plot_number || data.plot_number || '-'), leftCol, py);
       }
       
-      // Customer Details Card
+      // Customer Details Card - same blue background as Property Details
       const cx = margin + cardWidth + gap;
-      doc.setFillColor(...cardBgBlue);
-      doc.setDrawColor(...borderLight);
+      doc.setFillColor(239, 246, 255); // cardBgBlue - explicit RGB
+      doc.setDrawColor(229, 231, 235); // borderLight - explicit RGB  
       doc.roundedRect(cx, y, cardWidth, cardHeight, 2, 2, 'FD');
       
       doc.setTextColor(...navy);
@@ -399,16 +400,15 @@ const generatePDF = (data, type, filename) => {
       head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
       body: tableBody,
       margin: { left: margin, right: margin },
-      tableWidth: 'auto',
-      styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak' },
+      styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak', cellWidth: 'wrap' },
       headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
-      bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 6 },
+      bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 8 },
       columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 28, halign: 'left' },
-        2: { cellWidth: 'auto', halign: 'left' },
-        3: { cellWidth: 24, halign: 'center' },
-        4: { cellWidth: 14, halign: 'center' }
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 35, halign: 'left' },
+        2: { cellWidth: 75, halign: 'left' },
+        3: { cellWidth: 30, halign: 'center' },
+        4: { cellWidth: 15, halign: 'center' }
       },
       alternateRowStyles: { fillColor: [252, 252, 253] }
     });
@@ -442,16 +442,15 @@ const generatePDF = (data, type, filename) => {
         head: [['#', 'Add-on Service', 'Description', 'Frequency', 'Visits']],
         body: addonsBody,
         margin: { left: margin, right: margin },
-        tableWidth: 'auto',
-        styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak' },
+        styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak', cellWidth: 'wrap' },
         headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
-        bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 6 },
+        bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 8 },
         columnStyles: {
-          0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 28, halign: 'left' },
-          2: { cellWidth: 'auto', halign: 'left' },
-          3: { cellWidth: 24, halign: 'center' },
-          4: { cellWidth: 14, halign: 'center' }
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 35, halign: 'left' },
+          2: { cellWidth: 75, halign: 'left' },
+          3: { cellWidth: 30, halign: 'center' },
+          4: { cellWidth: 15, halign: 'center' }
         },
         alternateRowStyles: { fillColor: [252, 252, 253] }
       });
@@ -461,7 +460,6 @@ const generatePDF = (data, type, filename) => {
 
     // ===== PRICE SUMMARY BOX =====
     const subtotal = parseFloat(data.subtotal) || 0;
-    const total = parseFloat(data.totalPrice || data.total_amount) || 0;
     
     // Get discount values - try explicit values first, then calculate
     let discountPercent = parseFloat(data.discountPercent || data.discount_percent || data.discount) || 0;
@@ -471,46 +469,39 @@ const generatePDF = (data, type, filename) => {
     let gstPercent = parseFloat(data.gstPercent || data.gst_percent || data.gst) || 0;
     let gstAmount = parseFloat(data.gstAmount || data.gst_amount) || 0;
     
-    // If we have discount percent but no amount, calculate it
+    // Calculate discount amount from percent if not provided
     if (discountAmount === 0 && discountPercent > 0 && subtotal > 0) {
-      discountAmount = (subtotal * discountPercent) / 100;
+      discountAmount = Math.round((subtotal * discountPercent) / 100);
     }
     
-    // If we have GST percent but no amount, calculate it
-    if (gstAmount === 0 && gstPercent > 0 && subtotal > 0) {
-      gstAmount = ((subtotal - discountAmount) * gstPercent) / 100;
+    // Calculate amount after discount
+    const afterDiscount = subtotal - discountAmount;
+    
+    // Calculate GST on the after-discount amount
+    if (gstAmount === 0 && gstPercent > 0 && afterDiscount > 0) {
+      gstAmount = Math.round((afterDiscount * gstPercent) / 100);
     }
     
-    // If total differs from subtotal but we don't have discount/GST info, try to infer
-    if (subtotal > 0 && total > 0 && total !== subtotal && discountAmount === 0 && gstAmount === 0) {
-      const diff = subtotal - total;
-      if (diff > 0) {
-        // Total is less than subtotal - this is a discount
-        discountAmount = diff;
-        discountPercent = Math.round((diff / subtotal) * 100);
-      } else if (diff < 0) {
-        // Total is more than subtotal - this is GST
-        gstAmount = Math.abs(diff);
-        gstPercent = Math.round((Math.abs(diff) / subtotal) * 100);
-      }
-    }
-    
-    // Price Summary Title
-    doc.setTextColor(...navy);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PRICE SUMMARY', pageWidth - margin - 85, y);
-    y += 6;
+    // Calculate final total: (Subtotal - Discount) + GST
+    const total = Math.round(afterDiscount + gstAmount);
     
     const priceBoxW = 85;
     const priceBoxX = pageWidth - margin - priceBoxW;
     const hasDiscount = discountAmount > 0;
     const priceBoxH = 14 + (hasDiscount ? 7 : 0) + 7 + 12;
 
-    if (y + priceBoxH + 25 > pageHeight) {
+    // Check for page break BEFORE drawing title (keep title and box together)
+    if (y + priceBoxH + 30 > pageHeight) {
       doc.addPage();
       y = 20;
     }
+
+    // Price Summary Title - right aligned above the box
+    doc.setTextColor(...navy);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PRICE SUMMARY', priceBoxX, y);
+    y += 6;
 
     // Price Summary Card
     doc.setFillColor(...cardBg);
