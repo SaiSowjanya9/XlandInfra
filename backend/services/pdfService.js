@@ -83,8 +83,8 @@ const generateEstimatePDF = async (estimate) => {
       // Property & Customer Details (side by side)
       const cardWidth = 235;
       
-      // Property Details Card
-      doc.rect(50, y, cardWidth, 100).fill(lightGray).stroke('#e0e0e0');
+      // Property Details Card - same blue background as Customer Details
+      doc.rect(50, y, cardWidth, 100).fill('#e8f4fc').stroke('#cce7f7');
       doc.fontSize(10).fillColor(navy).text('Property Details', 60, y + 10);
       doc.fontSize(8).fillColor('#666666');
       let py = y + 28;

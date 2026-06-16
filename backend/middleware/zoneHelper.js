@@ -104,18 +104,20 @@ function buildOnboardedPropertyZoneFilter(zones, tableAlias = 'op') {
  * @param {string[]} zones - Array of zone names
  * @param {string} propertyAlias - Property table alias
  * @param {string} workOrderAlias - Work order table alias
+ * @param {string} onboardedPropertyAlias - Onboarded property table alias (optional)
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
-function buildWorkOrderZoneFilter(zones, propertyAlias = 'p', workOrderAlias = 'wo') {
+function buildWorkOrderZoneFilter(zones, propertyAlias = 'p', workOrderAlias = 'wo', onboardedPropertyAlias = 'op') {
   if (!zones || zones.length === 0) {
     return { clause: '', params: [] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
   // Work orders link to properties, so we filter by property's zone
+  // work_orders table does NOT have a zone column - use joined tables only
   return {
-    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${propertyAlias}.zone IN (${placeholders}) OR ${workOrderAlias}.zone IN (${placeholders}))`,
-    params: [...zones, ...zones, ...zones]
+    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${onboardedPropertyAlias}.zone IN (${placeholders}))`,
+    params: [...zones, ...zones]
   };
 }
 
@@ -274,18 +276,20 @@ function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias 
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} propertyAlias - Property table alias
  * @param {string} workOrderAlias - Work order table alias
+ * @param {string} onboardedPropertyAlias - Onboarded property table alias (optional)
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
-function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p', workOrderAlias = 'wo') {
+function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p', workOrderAlias = 'wo', onboardedPropertyAlias = 'op') {
   // If no zones assigned, allow access to all data (no additional filter)
   if (!zones || zones.length === 0) {
     return { clause: '', params: [] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // properties table uses zone_id column, work orders may have zone column
+  // properties table uses zone_id column, onboarded_properties uses zone column
+  // work_orders table does NOT have a zone column - use joined tables only
   return {
-    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${workOrderAlias}.zone IN (${placeholders}) OR ${workOrderAlias}.created_by = ?)`,
+    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${onboardedPropertyAlias}.zone IN (${placeholders}) OR ${workOrderAlias}.created_by = ?)`,
     params: [...zones, ...zones, createdBy]
   };
 }
