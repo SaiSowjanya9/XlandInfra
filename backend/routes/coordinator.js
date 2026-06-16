@@ -364,7 +364,9 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
       if (isFPCoordinator) {
         // FP Coordinators see: zone-centric onboarded properties + their own created
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                  op.zone as zone_name, op.area_name as area, op.division, op.division as division_name, op.total_units as units,
+                  op.zone as zone_name, op.area_name as area, 
+                  COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
+                  op.total_units as units,
                   op.total_units, op.number_of_blocks, op.block_names, op.units_per_block, op.number_of_units,
                   op.address, op.city, op.state, op.postal_code as zip_code,
                   op.contact_person, op.contact_phone, op.contact_email as email,
@@ -372,13 +374,16 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
                   op.created_at, op.status,
                   'onboarded_properties' as source_table
            FROM onboarded_properties op
+           LEFT JOIN fp_divisions fd ON (CAST(op.division AS UNSIGNED) = fd.id OR op.division = fd.name) AND fd.franchise_partner_id = op.franchise_partner_id
            LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR CAST(op.created_by AS UNSIGNED) = u.id
            WHERE op.franchise_partner_id = ?${onbZoneFilter.clause}
            ORDER BY op.created_at DESC`;
         onbParams = [franchisePartnerId, ...onbZoneFilter.params];
       } else {
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                  op.zone as zone_name, op.area_name as area, op.division, op.division as division_name, op.total_units as units,
+                  op.zone as zone_name, op.area_name as area, 
+                  COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
+                  op.total_units as units,
                   op.total_units, op.number_of_blocks, op.block_names, op.units_per_block, op.number_of_units,
                   op.address, op.city, op.state, op.postal_code as zip_code,
                   op.contact_person, op.contact_phone, op.contact_email as email,
@@ -386,6 +391,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
                   op.created_at, op.status,
                   'onboarded_properties' as source_table
            FROM onboarded_properties op
+           LEFT JOIN fp_divisions fd ON (CAST(op.division AS UNSIGNED) = fd.id OR op.division = fd.name) AND fd.franchise_partner_id = op.franchise_partner_id
            LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR CAST(op.created_by AS UNSIGNED) = u.id
            WHERE (op.coordinator_id = ? OR op.created_by = ? OR op.created_by = ?)${onbZoneFilter.clause}
            ORDER BY op.created_at DESC`;

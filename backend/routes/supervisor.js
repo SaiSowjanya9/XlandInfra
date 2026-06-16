@@ -411,13 +411,16 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
       const scopeId = franchisePartnerId || supervisorId;
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                op.zone as zone_name, op.area_name as area, op.division, op.division as division_name, COALESCE(op.total_units, 1) as units,
+                op.zone as zone_name, op.area_name as area, 
+                COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
+                COALESCE(op.total_units, 1) as units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 NULL as contact_person, NULL as contact_phone, NULL as email,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
                 op.created_at, op.status,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
+         LEFT JOIN fp_divisions fd ON (CAST(op.division AS UNSIGNED) = fd.id OR op.division = fd.name) AND fd.franchise_partner_id = op.franchise_partner_id
          LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username OR CAST(op.created_by AS CHAR) = CAST(fpe.id AS CHAR)
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.username OR op.created_by = u.user_id OR CAST(op.created_by AS CHAR) = CAST(u.id AS CHAR)
          WHERE op.${scopeColumn} = ? AND op.status = 'active'${onbZoneFilter.clause}

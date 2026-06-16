@@ -308,12 +308,14 @@ router.get('/properties', requireFPScope, async (req, res) => {
       [req.fpId]
     );
 
-    // Also fetch from onboarded_properties with creator name
+    // Also fetch from onboarded_properties with creator name and division name
     let onboardedProperties = [];
     try {
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                op.zone as zone_name, op.area_name as area, op.division, op.division as division_name, op.total_units as units,
+                op.zone as zone_name, op.area_name as area, 
+                COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
+                op.total_units as units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 NULL as contact_person, NULL as contact_phone, NULL as email,
                 COALESCE(
@@ -324,6 +326,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
                 op.created_at, op.status,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
+         LEFT JOIN fp_divisions fd ON (CAST(op.division AS UNSIGNED) = fd.id OR op.division = fd.name) AND fd.franchise_partner_id = op.franchise_partner_id
          LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username OR CAST(op.created_by AS UNSIGNED) = fpe.id
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.username OR op.created_by = u.user_id OR op.created_by = u.id
          WHERE op.franchise_partner_id = ? AND op.status = 'active'
@@ -3485,26 +3488,26 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
       try {
         if (estimate.package_services) {
           packageServices = typeof estimate.package_services === 'string' ? JSON.parse(estimate.package_services) : estimate.package_services;
+          console.log('Found package_services in estimate:', packageServices.length);
         }
-        // If no package_services stored, fetch from AMC package by ID or name
+        // If no package_services stored, fetch from FP AMC package by ID or name
         if (packageServices.length === 0 && (estimate.package_id || estimate.package_name)) {
           let pkgRows = [];
+          // First try fp_amc_packages table (FP-specific packages)
           if (estimate.package_id) {
-            [pkgRows] = await pool.execute('SELECT services, service_rows FROM amc_packages WHERE id = ?', [estimate.package_id]);
+            [pkgRows] = await pool.execute('SELECT services FROM fp_amc_packages WHERE id = ?', [estimate.package_id]);
+            console.log('Searched fp_amc_packages by ID:', estimate.package_id, '- found:', pkgRows.length);
           }
-          // Fallback to search by package_name if ID didn't work
+          // Fallback to search by name
           if (pkgRows.length === 0 && estimate.package_name) {
-            [pkgRows] = await pool.execute('SELECT services, service_rows FROM amc_packages WHERE package_name = ?', [estimate.package_name]);
+            [pkgRows] = await pool.execute('SELECT services FROM fp_amc_packages WHERE name = ? AND franchise_partner_id = ?', [estimate.package_name, req.fpId]);
+            console.log('Searched fp_amc_packages by name:', estimate.package_name, '- found:', pkgRows.length);
           }
-          if (pkgRows.length > 0) {
-            // Prefer service_rows (structured data) over services
-            if (pkgRows[0].service_rows) {
-              packageServices = typeof pkgRows[0].service_rows === 'string' ? JSON.parse(pkgRows[0].service_rows) : pkgRows[0].service_rows;
-            } else if (pkgRows[0].services) {
-              const svcData = typeof pkgRows[0].services === 'string' ? JSON.parse(pkgRows[0].services) : pkgRows[0].services;
-              packageServices = svcData?.serviceRows || svcData?.services || (Array.isArray(svcData) ? svcData : []);
-            }
-            console.log('Fetched package services from AMC package:', packageServices.length, 'services');
+          if (pkgRows.length > 0 && pkgRows[0].services) {
+            const svcData = typeof pkgRows[0].services === 'string' ? JSON.parse(pkgRows[0].services) : pkgRows[0].services;
+            console.log('Raw services data structure:', typeof svcData, Array.isArray(svcData) ? 'array' : Object.keys(svcData || {}));
+            packageServices = svcData?.serviceRows || svcData?.services || (Array.isArray(svcData) ? svcData : []);
+            console.log('Parsed package services:', packageServices.length, 'services');
           }
         }
       } catch (e) { console.log('Package services parse error:', e); }
