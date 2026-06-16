@@ -730,7 +730,7 @@ const WorkOrders = ({ admin }) => {
                           <option value="closed">Closed</option>
                           <option value="cancelled">Cancelled</option>
                         </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
+                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-current opacity-70" />
                       </div>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">
