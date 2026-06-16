@@ -74,9 +74,9 @@ function buildPropertyZoneFilter(zones, tableAlias = 'p') {
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // Handle both zone_id (storing zone name) and properties that might have zone stored differently
+  // Use subquery to convert zone names to zone IDs since zone_id is numeric
   return {
-    clause: ` AND (${tableAlias}.zone_id IN (${placeholders}) OR ${tableAlias}.zone IN (${placeholders}))`,
+    clause: ` AND (${tableAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${tableAlias}.zone IN (${placeholders}))`,
     params: [...zones, ...zones]
   };
 }
@@ -115,8 +115,9 @@ function buildWorkOrderZoneFilter(zones, propertyAlias = 'p', workOrderAlias = '
   const placeholders = zones.map(() => '?').join(',');
   // Work orders link to properties, so we filter by property's zone
   // work_orders table does NOT have a zone column - use joined tables only
+  // Use subquery to convert zone names to zone IDs for properties table
   return {
-    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${onboardedPropertyAlias}.zone IN (${placeholders}))`,
+    clause: ` AND (${propertyAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${onboardedPropertyAlias}.zone IN (${placeholders}))`,
     params: [...zones, ...zones]
   };
 }
@@ -136,8 +137,9 @@ function buildClientZoneFilter(zones, clientAlias = 'c', propertyAlias = 'p') {
   
   const placeholders = zones.map(() => '?').join(',');
   // Clients may have direct zone or through property relationship
+  // Use subquery to convert zone names to zone IDs for properties table
   return {
-    clause: ` AND (${clientAlias}.zone IN (${placeholders}) OR ${propertyAlias}.zone_id IN (${placeholders}) OR ${propertyAlias}.zone IN (${placeholders}))`,
+    clause: ` AND (${clientAlias}.zone IN (${placeholders}) OR ${propertyAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${propertyAlias}.zone IN (${placeholders}))`,
     params: [...zones, ...zones, ...zones]
   };
 }
@@ -241,9 +243,9 @@ function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p') {
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // properties table uses zone_id column only
+  // Use subquery to convert zone names to zone IDs since zone_id is numeric
   return {
-    clause: ` AND (${tableAlias}.zone_id IN (${placeholders}) OR ${tableAlias}.created_by = ?)`,
+    clause: ` AND (${tableAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${tableAlias}.created_by = ?)`,
     params: [...zones, createdBy]
   };
 }
@@ -286,10 +288,11 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // properties table uses zone_id column, onboarded_properties uses zone column
+  // properties table uses zone_id column (numeric), onboarded_properties uses zone column (string)
+  // Use subquery to convert zone names to zone IDs for properties table
   // work_orders table does NOT have a zone column - use joined tables only
   return {
-    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${onboardedPropertyAlias}.zone IN (${placeholders}) OR ${workOrderAlias}.created_by = ?)`,
+    clause: ` AND (${propertyAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${onboardedPropertyAlias}.zone IN (${placeholders}) OR ${workOrderAlias}.created_by = ?)`,
     params: [...zones, ...zones, createdBy]
   };
 }
@@ -310,9 +313,9 @@ function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', pro
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // properties table uses zone_id column only
+  // Use subquery to convert zone names to zone IDs since zone_id is numeric
   return {
-    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${clientAlias}.created_by = ?)`,
+    clause: ` AND (${propertyAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${clientAlias}.created_by = ?)`,
     params: [...zones, createdBy]
   };
 }
@@ -333,9 +336,9 @@ function buildEstimateZoneOrCreatorFilter(zones, createdBy, estimateAlias = 'e',
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // properties table uses zone_id column only
+  // Use subquery to convert zone names to zone IDs since zone_id is numeric
   return {
-    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${estimateAlias}.created_by = ?)`,
+    clause: ` AND (${propertyAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${estimateAlias}.created_by = ?)`,
     params: [...zones, createdBy]
   };
 }
