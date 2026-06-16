@@ -186,8 +186,8 @@ const generateEstimatePDF = async (estimate) => {
       doc.fillColor('#333333').text(`Rs. ${Number(subtotal || 0).toLocaleString()}`, 450, y + 10);
       
       if (discount > 0 || discountAmount > 0) {
-        doc.fillColor('#22c55e').text(`Discount (${discount || 0}%):`, 60, y + 25);
-        doc.text(`-Rs. ${Number(discountAmount || 0).toLocaleString()}`, 450, y + 25);
+        doc.fillColor('#666666').text(`Discount (${discount || 0}%):`, 60, y + 25);
+        doc.fillColor('#333333').text(`-Rs. ${Number(discountAmount || 0).toLocaleString()}`, 450, y + 25);
       }
       
       doc.fillColor('#666666').text(`GST (${gstPercent ?? 0}%):`, 60, y + 40);
