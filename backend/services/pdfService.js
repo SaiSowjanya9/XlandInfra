@@ -40,9 +40,6 @@ const generateEstimatePDF = async (estimate) => {
         doc.fontSize(14).fillColor(black).text('XI', 56, 20);
       }
       
-      // Company name
-      doc.fontSize(18).fillColor('#ffffff').text('XLAND INFRA', 90, 20);
-      
       // ESTIMATE badge
       doc.rect(470, 15, 80, 22).fill(gold);
       doc.fontSize(10).fillColor(black).text('ESTIMATE', 485, 22);

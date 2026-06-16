@@ -103,11 +103,6 @@ const generatePDF = (data, type, filename) => {
     }
     
     // Company Name (white text on dark bg)
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', margin + 20, 10);
-    
     // Tagline
 
     // Document Badge (right side) - centered text
