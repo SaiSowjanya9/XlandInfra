@@ -978,8 +978,9 @@ const CreateCustomer = ({ admin }) => {
         {/* Watchman Information Section - Only for GC and APT */}
         {(selectedEntryType === 'GC' || selectedEntryType === 'APT') && (
           <div className="p-8 border-b border-gray-200">
-            <h2 className="text-xl font-medium text-gray-800 mb-6">Watchman Information</h2>
-            <p className="text-sm text-gray-500 mb-4">Optional - Enter watchman/security details for the property</p>
+            <h2 className="text-xl font-medium text-gray-800 mb-6">
+              Watchman Information <span className="text-gray-400 text-sm font-normal">(Optional)</span>
+            </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
               <div>
