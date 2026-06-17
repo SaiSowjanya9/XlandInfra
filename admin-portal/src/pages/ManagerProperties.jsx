@@ -764,7 +764,7 @@ const ManagerProperties = ({ user }) => {
                 </div>
 
                 {/* Gated Community Block Details */}
-                {viewingProperty.property_type === 'gated_community' && (
+                {(viewingProperty.property_type === 'gated_community' || viewingProperty.property_type === 'GC') && (
                   <div className="md:col-span-2 mt-4 p-4 bg-blue-50 rounded-lg">
                     <h4 className="text-sm font-semibold text-blue-800 mb-3">Block Details</h4>
                     <div className="mb-3">
@@ -795,7 +795,7 @@ const ManagerProperties = ({ user }) => {
                 )}
 
                 {/* Apartment Details */}
-                {viewingProperty.property_type === 'apartment' && (
+                {(viewingProperty.property_type === 'apartment' || viewingProperty.property_type === 'APT') && (
                   <div className="md:col-span-2 mt-4 p-4 bg-green-50 rounded-lg">
                     <h4 className="text-sm font-semibold text-green-800 mb-3">Apartment Details</h4>
                     <div className="grid grid-cols-2 gap-4">
@@ -812,7 +812,7 @@ const ManagerProperties = ({ user }) => {
                 )}
 
                 {/* Villa Details */}
-                {viewingProperty.property_type === 'villa' && (
+                {(viewingProperty.property_type === 'villa' || viewingProperty.property_type === 'VILLA') && (
                   <div className="md:col-span-2 mt-4 p-4 bg-purple-50 rounded-lg">
                     <h4 className="text-sm font-semibold text-purple-800 mb-3">Villa Details</h4>
                     <div>
@@ -823,7 +823,7 @@ const ManagerProperties = ({ user }) => {
                 )}
 
                 {/* Flat Details */}
-                {viewingProperty.property_type === 'flat' && (
+                {(viewingProperty.property_type === 'flat' || viewingProperty.property_type === 'FLAT') && (
                   <div className="md:col-span-2 mt-4 p-4 bg-orange-50 rounded-lg">
                     <h4 className="text-sm font-semibold text-orange-800 mb-3">Flat Details</h4>
                     <div className="grid grid-cols-2 gap-4">
@@ -840,7 +840,7 @@ const ManagerProperties = ({ user }) => {
                 )}
 
                 {/* Plot Details */}
-                {viewingProperty.property_type === 'plot' && (
+                {(viewingProperty.property_type === 'plot' || viewingProperty.property_type === 'PLOT') && (
                   <div className="md:col-span-2 mt-4 p-4 bg-amber-50 rounded-lg">
                     <h4 className="text-sm font-semibold text-amber-800 mb-3">Plot Details</h4>
                     <div>
@@ -850,20 +850,81 @@ const ManagerProperties = ({ user }) => {
                   </div>
                 )}
 
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Contact Person</p>
-                  <p className="text-gray-900">{viewingProperty.contact_person || '-'}</p>
-                </div>
+                {/* Contact Information */}
+                {(() => {
+                  let contacts = [];
+                  try {
+                    if (viewingProperty.association_contacts) {
+                      contacts = typeof viewingProperty.association_contacts === 'string' 
+                        ? JSON.parse(viewingProperty.association_contacts) 
+                        : viewingProperty.association_contacts;
+                    }
+                  } catch { contacts = []; }
+                  
+                  if (contacts.length === 0 && (viewingProperty.contact_person || viewingProperty.contact_email || viewingProperty.contact_phone)) {
+                    contacts = [{
+                      name: viewingProperty.contact_person,
+                      email: viewingProperty.contact_email,
+                      phone: viewingProperty.contact_phone
+                    }];
+                  }
+                  
+                  if (contacts.length === 0) return null;
+                  
+                  return (
+                    <div className="md:col-span-2 mt-4">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3">Contact Information</h4>
+                      <div className="space-y-3">
+                        {contacts.map((contact, index) => (
+                          <div key={index} className="bg-gray-50 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-xs font-medium text-blue-600">{index + 1}</span>
+                              </div>
+                              <span className="text-xs text-gray-500">Contact {index + 1}</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Name</p>
+                                <p className="text-sm text-gray-900">{contact.name || '-'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Email</p>
+                                <p className="text-sm text-gray-900 break-all">{contact.email || '-'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Phone</p>
+                                <p className="text-sm text-gray-900">{contact.phone ? `+91 ${contact.phone}` : '-'}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Contact Phone</p>
-                  <p className="text-gray-900">{viewingProperty.contact_phone || '-'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Contact Email</p>
-                  <p className="text-gray-900">{viewingProperty.contact_email || '-'}</p>
-                </div>
+                {/* Watchman Information - Only for GC and APT */}
+                {(['gated_community', 'GC', 'apartment', 'APT'].includes(viewingProperty.property_type)) && 
+                 (viewingProperty.watchman_name || viewingProperty.watchman_contact) && (
+                  <div className="md:col-span-2 mt-4">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-3">Watchman Information</h4>
+                    <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Watchman Name</p>
+                          <p className="text-sm text-gray-900">{viewingProperty.watchman_name || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Watchman Contact</p>
+                          <p className="text-sm text-gray-900">
+                            {viewingProperty.watchman_contact ? `+91 ${viewingProperty.watchman_contact}` : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Created By</p>

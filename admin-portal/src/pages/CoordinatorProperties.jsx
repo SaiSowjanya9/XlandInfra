@@ -758,7 +758,7 @@ const CoordinatorProperties = ({ user }) => {
               </div>
 
               {/* Gated Community Block Details */}
-              {selectedProperty.property_type === 'gated_community' && (
+              {(selectedProperty.property_type === 'gated_community' || selectedProperty.property_type === 'GC') && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
                   <div className="mb-4">
@@ -795,7 +795,7 @@ const CoordinatorProperties = ({ user }) => {
               )}
 
               {/* Apartment Details */}
-              {selectedProperty.property_type === 'apartment' && (
+              {(selectedProperty.property_type === 'apartment' || selectedProperty.property_type === 'APT') && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -812,7 +812,7 @@ const CoordinatorProperties = ({ user }) => {
               )}
 
               {/* Villa Details */}
-              {selectedProperty.property_type === 'villa' && (
+              {(selectedProperty.property_type === 'villa' || selectedProperty.property_type === 'VILLA') && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Villa Details</h3>
                   <div>
@@ -823,7 +823,7 @@ const CoordinatorProperties = ({ user }) => {
               )}
 
               {/* Flat Details */}
-              {selectedProperty.property_type === 'flat' && (
+              {(selectedProperty.property_type === 'flat' || selectedProperty.property_type === 'FLAT') && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Flat Details</h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -840,7 +840,7 @@ const CoordinatorProperties = ({ user }) => {
               )}
 
               {/* Plot Details */}
-              {selectedProperty.property_type === 'plot' && (
+              {(selectedProperty.property_type === 'plot' || selectedProperty.property_type === 'PLOT') && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Plot Details</h3>
                   <div>
@@ -906,30 +906,63 @@ const CoordinatorProperties = ({ user }) => {
               )}
 
               {/* Contact Information */}
-              {(selectedProperty.contact_person || selectedProperty.contact_email || selectedProperty.contact_phone) && (
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Contact Information</h3>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                      <div className="min-w-0">
-                        <p className="text-xs text-gray-500 mb-1">Name</p>
-                        <p className="text-sm font-medium text-gray-900">{selectedProperty.contact_person || '-'}</p>
-                      </div>
-                      <div className="min-w-0 sm:col-span-2">
-                        <p className="text-xs text-gray-500 mb-1">Email</p>
-                        <p className="text-sm font-medium text-gray-900 break-all">{selectedProperty.contact_email || '-'}</p>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs text-gray-500 mb-1">Phone</p>
-                        <p className="text-sm font-medium text-gray-900 whitespace-nowrap">{selectedProperty.contact_phone || '-'}</p>
-                      </div>
+              {(() => {
+                let contacts = [];
+                try {
+                  if (selectedProperty.association_contacts) {
+                    contacts = typeof selectedProperty.association_contacts === 'string' 
+                      ? JSON.parse(selectedProperty.association_contacts) 
+                      : selectedProperty.association_contacts;
+                  }
+                } catch { contacts = []; }
+                
+                if (contacts.length === 0 && (selectedProperty.contact_person || selectedProperty.contact_email || selectedProperty.contact_phone)) {
+                  contacts = [{
+                    name: selectedProperty.contact_person,
+                    email: selectedProperty.contact_email,
+                    phone: selectedProperty.contact_phone
+                  }];
+                }
+                
+                if (contacts.length === 0) return null;
+                
+                return (
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-900 mb-4">Contact Information</h3>
+                    <div className="space-y-3">
+                      {contacts.map((contact, index) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-blue-600">{index + 1}</span>
+                            </div>
+                            <span className="text-xs text-gray-500">Contact {index + 1}</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-500 mb-1">Name</p>
+                              <p className="text-sm font-medium text-gray-900">{contact.name || '-'}</p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-500 mb-1">Email</p>
+                              <p className="text-sm font-medium text-gray-900 break-all">{contact.email || '-'}</p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-500 mb-1">Phone</p>
+                              <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                                {contact.phone ? `+91 ${contact.phone}` : '-'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Watchman Information - Only for GC and APT */}
-              {(selectedProperty.property_type === 'gated_community' || selectedProperty.property_type === 'apartment') && 
+              {(['gated_community', 'GC', 'apartment', 'APT'].includes(selectedProperty.property_type)) && 
                (selectedProperty.watchman_name || selectedProperty.watchman_contact) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Watchman Information</h3>
