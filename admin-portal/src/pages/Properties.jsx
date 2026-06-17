@@ -253,7 +253,7 @@ const Properties = () => {
       'Apt/Suite/Unit': p.aptSuiteNA ? 'N/A' : (p.aptSuiteUnit || ''),
       'City': p.city || '',
       'State': p.state || '',
-      'Postal Code': p.postalCode || '',
+      'Postal Code': p.zip_code || p.postal_code || '',
       'Landmark': p.landmark || '',
       'Map Coordinates': p.mapLocation?.lat && p.mapLocation?.lng 
         ? `${p.mapLocation.lat}, ${p.mapLocation.lng}` 
@@ -315,7 +315,7 @@ const Properties = () => {
       'Address': property.address || '',
       'City': property.city || '',
       'State': property.state || '',
-      'Postal Code': property.postalCode || '',
+      'Postal Code': property.zip_code || property.postal_code || '',
       'Total Units': property.totalUnits || 0,
       'Status': property.status || 'Active',
       'Created By': property.createdBy || '',
@@ -946,7 +946,7 @@ const Properties = () => {
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">ZIP/Postal Code</label>
-                        <p className="text-sm text-gray-900">{viewProperty.postalCode || '-'}</p>
+                        <p className="text-sm text-gray-900">{viewProperty.zip_code || viewProperty.postal_code || '-'}</p>
                       </div>
                       {viewProperty.landmark && (
                         <div className="col-span-2">

@@ -393,7 +393,7 @@ const CustomerSubmissions = () => {
       'Apt/Suite/Unit': p.aptSuiteNA ? 'N/A' : (p.aptSuiteUnit || ''),
       'City': p.city || '',
       'State': p.state || '',
-      'Postal Code': p.postalCode || '',
+      'Postal Code': p.zipCode || p.zip_code || p.postal_code || '',
       'Landmark': p.landmark || '',
       'Map Coordinates': p.mapLocation?.lat && p.mapLocation?.lng 
         ? `${p.mapLocation.lat}, ${p.mapLocation.lng}` 
@@ -451,7 +451,7 @@ const CustomerSubmissions = () => {
       'Address': p.address || '',
       'City': p.city || '',
       'State': p.state || '',
-      'Postal Code': p.postalCode || '',
+      'Postal Code': p.zipCode || p.zip_code || p.postal_code || '',
       'Contacts': p.contacts?.length || 0,
       'Status': p.status === 'deleted' ? 'Deleted' : 'Active',
       'Created At': p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN') : ''
@@ -1194,7 +1194,7 @@ const CustomerSubmissions = () => {
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">ZIP/Postal Code</label>
-                    <p className="text-sm text-gray-900">{viewProperty.postalCode || '-'}</p>
+                    <p className="text-sm text-gray-900">{viewProperty.zipCode || viewProperty.zip_code || viewProperty.postal_code || '-'}</p>
                   </div>
                   {viewProperty.landmark && (
                     <div className="col-span-2">
@@ -1235,7 +1235,7 @@ const CustomerSubmissions = () => {
                   <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Contact Information</h3>
                   <div className="space-y-3">
                     {viewProperty.contacts.map((c, i) => (
-                      <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_2.5fr_1fr] gap-4 p-3 bg-gray-50 rounded-md">
+                      <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr_1fr] gap-4 p-3 bg-gray-50 rounded-md">
                         <div className="min-w-0">
                           <label className="block text-xs text-gray-500 mb-1">Name</label>
                           <p className="text-sm text-gray-900">{c.name}</p>
