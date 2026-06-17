@@ -197,7 +197,9 @@ const CoordinatorProperties = ({ user }) => {
       division: property.division || property.division_id || '',
       area: property.area || property.area_name || '',
       isActive: property.is_active !== false,
-      sourceTable: property.source_table || 'properties'
+      sourceTable: property.source_table || 'properties',
+      watchmanName: property.watchman_name || '',
+      watchmanContact: property.watchman_contact || ''
     });
     setShowEditModal(true);
   };
@@ -224,7 +226,9 @@ const CoordinatorProperties = ({ user }) => {
           divisionId: editFormData.division,
           areaName: editFormData.area,
           isActive: editFormData.isActive,
-          sourceTable: editFormData.sourceTable
+          sourceTable: editFormData.sourceTable,
+          watchmanName: editFormData.watchmanName,
+          watchmanContact: editFormData.watchmanContact
         })
       });
 
@@ -924,6 +928,28 @@ const CoordinatorProperties = ({ user }) => {
                 </div>
               )}
 
+              {/* Watchman Information - Only for GC and APT */}
+              {(selectedProperty.property_type === 'gated_community' || selectedProperty.property_type === 'apartment') && 
+               (selectedProperty.watchman_name || selectedProperty.watchman_contact) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Watchman Information</h3>
+                  <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Watchman Name</p>
+                        <p className="text-sm font-medium text-gray-900">{selectedProperty.watchman_name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Watchman Contact</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {selectedProperty.watchman_contact ? `+91 ${selectedProperty.watchman_contact}` : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Estimates Section */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
@@ -1104,6 +1130,26 @@ const CoordinatorProperties = ({ user }) => {
                   </select>
                 </div>
               </div>
+              
+              {/* Watchman Fields - Only for GC and APT */}
+              {(editFormData.propertyType === 'gated_community' || editFormData.propertyType === 'apartment') && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3">Watchman Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Watchman Name</label>
+                      <input type="text" value={editFormData.watchmanName || ''} onChange={(e) => setEditFormData({ ...editFormData, watchmanName: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter watchman name" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Watchman Contact</label>
+                      <div className="flex gap-2">
+                        <div className="w-14 flex-shrink-0 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-600 flex items-center justify-center">+91</div>
+                        <input type="tel" inputMode="numeric" maxLength={10} value={editFormData.watchmanContact || ''} onChange={(e) => { const digits = e.target.value.replace(/\D/g, '').slice(0, 10); setEditFormData({ ...editFormData, watchmanContact: digits }); }} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="10-digit number" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
               <button onClick={() => { setShowEditModal(false); setEditFormData({}); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>

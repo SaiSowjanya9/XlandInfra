@@ -223,7 +223,9 @@ const CreateCustomer = ({ admin }) => {
     postalCode: '',
     landmark: '',
     mapLocation: { lat: null, lng: null, address: '' },
-    notes: ''
+    notes: '',
+    watchmanName: '',
+    watchmanContact: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -438,7 +440,9 @@ const CreateCustomer = ({ admin }) => {
       postalCode: '',
       landmark: '',
       mapLocation: { lat: null, lng: null, address: '' },
-      notes: ''
+      notes: '',
+      watchmanName: '',
+      watchmanContact: ''
     });
   };
 
@@ -970,6 +974,52 @@ const CreateCustomer = ({ admin }) => {
             );
           })}
         </div>
+
+        {/* Watchman Information Section - Only for GC and APT */}
+        {(selectedEntryType === 'GC' || selectedEntryType === 'APT') && (
+          <div className="p-8 border-b border-gray-200">
+            <h2 className="text-xl font-medium text-gray-800 mb-6">Watchman Information</h2>
+            <p className="text-sm text-gray-500 mb-4">Optional - Enter watchman/security details for the property</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+              <div>
+                <label className="block text-sm text-gray-700 mb-1.5">
+                  Watchman Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.watchmanName}
+                  onChange={(e) => updateFormData('watchmanName', e.target.value)}
+                  className={inputClass(false)}
+                  placeholder="Enter watchman name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm text-gray-700 mb-1.5">
+                  Watchman Contact
+                </label>
+                <div className="flex gap-2 max-w-md">
+                  <div className="w-16 flex-shrink-0 px-3 py-2.5 border border-gray-300 rounded-md text-sm bg-gray-50 text-gray-600">
+                    +91
+                  </div>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    value={formData.watchmanContact}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      updateFormData('watchmanContact', digits);
+                    }}
+                    className={`flex-1 ${inputClass(false)}`}
+                    placeholder="10-digit number"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Entry Type Specific Section */}
         {selectedEntryType === 'GC' && (
