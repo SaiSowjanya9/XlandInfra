@@ -63,7 +63,9 @@ router.post('/', authenticate, async (req, res) => {
       landmark,
       mapLocation,
       notes,
-      associationContacts
+      associationContacts,
+      watchmanName,
+      watchmanContact
     } = req.body;
 
     // Get actual user name from authenticated user
@@ -106,8 +108,8 @@ router.post('/', authenticate, async (req, res) => {
          community_name, number_of_blocks, block_names, units_per_block, block_info,
          block_na, number_of_units, villa_plot_number, total_units,
          address, address_line1, apt_suite_unit, apt_suite_na, city, state, postal_code,
-         landmark, map_lat, map_lng, map_address, notes, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         landmark, map_lat, map_lng, map_address, notes, created_by, watchman_name, watchman_contact)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         propertyId,
         entryType,
@@ -137,7 +139,9 @@ router.post('/', authenticate, async (req, res) => {
         mapLocation?.lng || null,
         mapLocation?.address || null,
         notes || null,
-        creatorName
+        creatorName,
+        (entryType === 'GC' || entryType === 'APT') ? (watchmanName || null) : null,
+        (entryType === 'GC' || entryType === 'APT') ? (watchmanContact || null) : null
       ]
     );
 
@@ -347,6 +351,8 @@ router.get('/', async (req, res) => {
         } : null,
         notes: row.notes,
         contacts: contactsMap[row.id] || [],
+        watchmanName: row.watchman_name || null,
+        watchmanContact: row.watchman_contact || null,
         status: row.status,
         createdBy: row.created_by || 'System',
         createdAt: row.created_at,
@@ -532,6 +538,58 @@ router.get('/lookup/:propertyId', async (req, res) => {
   } catch (error) {
     console.error('Error looking up property:', error);
     res.status(500).json({ success: false, message: 'Error looking up property' });
+  }
+});
+
+// ============================================
+// PUT /api/onboarding/:id  — Update a property
+// ============================================
+router.put('/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name, zone, area, division, address, city, state,
+      contactPerson, contactPhone, contactEmail,
+      watchmanName, watchmanContact
+    } = req.body;
+
+    // Build dynamic update query based on provided fields
+    const updates = [];
+    const values = [];
+
+    if (name !== undefined) { updates.push('community_name = ?'); values.push(name); }
+    if (zone !== undefined) { updates.push('zone = ?'); values.push(zone); }
+    if (area !== undefined) { updates.push('area_name = ?'); values.push(area); }
+    if (division !== undefined) { updates.push('division = ?'); values.push(division); }
+    if (address !== undefined) { updates.push('address = ?'); values.push(address); }
+    if (city !== undefined) { updates.push('city = ?'); values.push(city); }
+    if (state !== undefined) { updates.push('state = ?'); values.push(state); }
+    if (watchmanName !== undefined) { updates.push('watchman_name = ?'); values.push(watchmanName || null); }
+    if (watchmanContact !== undefined) { updates.push('watchman_contact = ?'); values.push(watchmanContact || null); }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+
+    values.push(id);
+
+    const [result] = await pool.execute(
+      `UPDATE onboarded_properties SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+
+    res.json({ success: true, message: 'Property updated successfully' });
+  } catch (error) {
+    console.error('Error updating property:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating property',
+      error: error.message
+    });
   }
 });
 

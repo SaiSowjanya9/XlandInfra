@@ -160,7 +160,10 @@ const Properties = () => {
       state: property.state || '',
       contactPerson: property.contactPerson || property.contact_person || '',
       contactPhone: property.contactPhone || property.contact_phone || '',
-      contactEmail: property.contactEmail || property.contact_email || ''
+      contactEmail: property.contactEmail || property.contact_email || '',
+      entryType: property.entryType || '',
+      watchmanName: property.watchmanName || '',
+      watchmanContact: property.watchmanContact || ''
     });
     setShowEditModal(true);
   };
@@ -1005,6 +1008,28 @@ const Properties = () => {
                     </div>
                   )}
 
+                  {/* Watchman Information - Only for GC and APT */}
+                  {(viewProperty.entryType === 'GC' || viewProperty.entryType === 'APT') && 
+                   (viewProperty.watchmanName || viewProperty.watchmanContact) && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Watchman Information</h3>
+                      <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Watchman Name</label>
+                            <p className="text-sm font-medium text-gray-900">{viewProperty.watchmanName || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Watchman Contact</label>
+                            <p className="text-sm text-gray-900">
+                              {viewProperty.watchmanContact ? `+91 ${viewProperty.watchmanContact}` : 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Notes */}
                   {viewProperty.notes && (
                     <div>
@@ -1458,6 +1483,45 @@ const Properties = () => {
                   <input type="text" value={editFormData.contactPhone || ''} onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
+              
+              {/* Watchman Fields - Only for GC and APT */}
+              {(editFormData.entryType === 'GC' || editFormData.entryType === 'APT') && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3">Watchman Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Watchman Name</label>
+                      <input 
+                        type="text" 
+                        value={editFormData.watchmanName || ''} 
+                        onChange={(e) => setEditFormData({ ...editFormData, watchmanName: e.target.value })} 
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                        placeholder="Enter watchman name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Watchman Contact</label>
+                      <div className="flex gap-2">
+                        <div className="w-14 flex-shrink-0 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-600 flex items-center justify-center">
+                          +91
+                        </div>
+                        <input 
+                          type="tel" 
+                          inputMode="numeric"
+                          maxLength={10}
+                          value={editFormData.watchmanContact || ''} 
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                            setEditFormData({ ...editFormData, watchmanContact: digits });
+                          }} 
+                          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                          placeholder="10-digit number"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
               <button onClick={() => { setShowEditModal(false); setEditFormData({}); }} className="px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">

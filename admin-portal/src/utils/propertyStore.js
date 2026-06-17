@@ -200,6 +200,8 @@ export const saveProperty = async (formData, entryType, category, createdBy = 's
         mapLocation: formData.mapLocation,
         notes: formData.notes,
         associationContacts: formData.associationContacts,
+        watchmanName: formData.watchmanName,
+        watchmanContact: formData.watchmanContact,
         createdBy,
       }),
     });
