@@ -382,7 +382,7 @@ const CustomerSubmissions = () => {
       'Name': p.name || '',
       'Type': TYPE_LABELS[p.entryType] || '',
       'Zone': p.zone || '',
-      'Area Name': p.areaName || '',
+      'Area Name': p.area || '',
       'Division': p.division || '',
       'Total Units': p.totalUnits || 0,
       'Number of Blocks': p.numberOfBlocks || '',
@@ -445,7 +445,7 @@ const CustomerSubmissions = () => {
       'Name': p.name || '',
       'Type': TYPE_LABELS[p.entryType] || '',
       'Zone': p.zone || '',
-      'Area Name': p.areaName || '',
+      'Area Name': p.area || '',
       'Division': p.division || '',
       'Total Units': p.totalUnits || 0,
       'Address': p.address || '',
@@ -487,7 +487,7 @@ const CustomerSubmissions = () => {
         p.propertyId?.toLowerCase().includes(q) ||
         p.address?.toLowerCase().includes(q) ||
         p.zone?.toLowerCase().includes(q) ||
-        p.areaName?.toLowerCase().includes(q)
+        p.area?.toLowerCase().includes(q)
       );
     }
     return true;
@@ -1066,7 +1066,7 @@ const CustomerSubmissions = () => {
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Area Name</label>
-                    <p className="text-sm text-gray-900">{viewProperty.areaName || '-'}</p>
+                    <p className="text-sm text-gray-900">{viewProperty.area || '-'}</p>
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Division</label>
@@ -1235,7 +1235,7 @@ const CustomerSubmissions = () => {
                   <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Contact Information</h3>
                   <div className="space-y-3">
                     {viewProperty.contacts.map((c, i) => (
-                      <div key={i} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-3 bg-gray-50 rounded-md">
+                      <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_2.5fr_1fr] gap-4 p-3 bg-gray-50 rounded-md">
                         <div className="min-w-0">
                           <label className="block text-xs text-gray-500 mb-1">Name</label>
                           <p className="text-sm text-gray-900">{c.name}</p>

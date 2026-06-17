@@ -345,7 +345,7 @@ const Properties = () => {
         p.propertyId?.toLowerCase().includes(q) ||
         p.address?.toLowerCase().includes(q) ||
         p.zone?.toLowerCase().includes(q) ||
-        p.areaName?.toLowerCase().includes(q)
+        p.area?.toLowerCase().includes(q)
       );
     }
     return true;
@@ -649,7 +649,7 @@ const Properties = () => {
                         {property.zone || '-'}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {property.areaName || '-'}
+                        {property.area || '-'}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         {property.division_name || property.division || '-'}
@@ -822,7 +822,7 @@ const Properties = () => {
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Area Name</label>
-                        <p className="text-sm text-gray-900">{viewProperty.areaName || '-'}</p>
+                        <p className="text-sm text-gray-900">{viewProperty.area || '-'}</p>
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Division</label>
