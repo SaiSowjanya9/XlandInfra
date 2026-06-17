@@ -1235,18 +1235,18 @@ const CustomerSubmissions = () => {
                   <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Contact Information</h3>
                   <div className="space-y-3">
                     {viewProperty.contacts.map((c, i) => (
-                      <div key={i} className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded-md">
-                        <div>
+                      <div key={i} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-3 bg-gray-50 rounded-md">
+                        <div className="min-w-0">
                           <label className="block text-xs text-gray-500 mb-1">Name</label>
                           <p className="text-sm text-gray-900">{c.name}</p>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <label className="block text-xs text-gray-500 mb-1">Email</label>
-                          <p className="text-sm text-gray-900">{c.email}</p>
+                          <p className="text-sm text-gray-900 break-all" title={c.email}>{c.email}</p>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <label className="block text-xs text-gray-500 mb-1">Phone</label>
-                          <p className="text-sm text-gray-900">{c.countryCode || '+91'} {c.phone}</p>
+                          <p className="text-sm text-gray-900 whitespace-nowrap">{c.countryCode || '+91'} {c.phone}</p>
                         </div>
                       </div>
                     ))}
