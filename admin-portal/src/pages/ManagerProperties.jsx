@@ -739,6 +739,11 @@ const ManagerProperties = ({ user }) => {
                 </div>
 
                 <div>
+                  <p className="text-sm text-gray-500 mb-1">Area Name</p>
+                  <p className="text-gray-900">{viewingProperty.area || viewingProperty.area_name || '-'}</p>
+                </div>
+
+                <div>
                   <p className="text-sm text-gray-500 mb-1">Division</p>
                   <p className="text-gray-900">{viewingProperty.division_name || divisions.find(d => d.id == viewingProperty.division_id)?.name || viewingProperty.division || '-'}</p>
                 </div>
@@ -883,7 +888,7 @@ const ManagerProperties = ({ user }) => {
                               </div>
                               <span className="text-xs text-gray-500">Contact {index + 1}</span>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_2.5fr_1fr] gap-4">
                               <div className="min-w-0">
                                 <p className="text-xs text-gray-500 mb-1">Name</p>
                                 <p className="text-sm text-gray-900">{contact.name || '-'}</p>
