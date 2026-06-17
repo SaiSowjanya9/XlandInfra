@@ -883,18 +883,18 @@ const ManagerProperties = ({ user }) => {
                               </div>
                               <span className="text-xs text-gray-500">Contact {index + 1}</span>
                             </div>
-                            <div className="grid grid-cols-3 gap-4">
-                              <div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                              <div className="min-w-0">
                                 <p className="text-xs text-gray-500 mb-1">Name</p>
                                 <p className="text-sm text-gray-900">{contact.name || '-'}</p>
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <p className="text-xs text-gray-500 mb-1">Email</p>
                                 <p className="text-sm text-gray-900 break-all">{contact.email || '-'}</p>
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <p className="text-xs text-gray-500 mb-1">Phone</p>
-                                <p className="text-sm text-gray-900">{contact.phone ? `+91 ${contact.phone}` : '-'}</p>
+                                <p className="text-sm text-gray-900 whitespace-nowrap">{contact.phone ? `+91 ${contact.phone}` : '-'}</p>
                               </div>
                             </div>
                           </div>
