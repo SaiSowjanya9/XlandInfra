@@ -417,8 +417,15 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                 op.zone as zone_name, op.area_name as area, 
                 COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
-                COALESCE(op.total_units, 1) as units,
+                COALESCE(op.total_units, 1) as units, op.number_of_units,
+                op.number_of_blocks, op.block_names, op.units_per_block,
+                op.block_info, op.block_na, op.flat_block_info, op.flat_block_na,
+                op.villa_plot_number, op.plot_na,
                 op.address, op.city, op.state, op.postal_code as zip_code,
+                op.landmark, op.latitude, op.longitude,
+                op.association_contacts,
+                op.watchman_name, op.watchman_contact,
+                op.notes,
                 NULL as contact_person, NULL as contact_phone, NULL as email,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
                 op.created_at, op.status,
@@ -934,9 +941,10 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
       // Property form data
       zone, areaName, division, propertyType, communityName,
       associationContacts, numberOfBlocks, unitsPerBlock, blockNames,
-      numberOfUnits, villaPlotNumber, blockInfo, blockNA,
+      numberOfUnits, villaPlotNumber, blockInfo, blockNA, flatBlockInfo, flatBlockNA, plotNA,
       address, city, state, postalCode, landmark, mapLocation, notes,
       entryType, category,
+      watchmanName, watchmanContact,
       // Simple customer data (backward compatibility)
       name, email, phone, alternatePhone, zipCode,
       clientType, companyName, propertyId, gstNumber
@@ -956,22 +964,26 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
       const contactCountryCode = contact.countryCode || '+91';
 
       const [propertyResult] = await pool.query(
-        `INSERT INTO properties (
-          property_id, name, property_type, address, city, state, zip_code,
-          contact_person, contact_phone, contact_email, zone_id, division_id,
+        `INSERT INTO onboarded_properties (
+          property_id, community_name, property_type, address, city, state, postal_code,
+          contact_person, contact_phone, contact_email, zone, division,
           supervisor_id, franchise_partner_id, created_by, latitude, longitude, landmark, notes,
           entry_type, category, area_name, number_of_blocks, units_per_block,
-          block_names, number_of_units, villa_plot_number, block_info
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          block_names, number_of_units, villa_plot_number, block_info, block_na,
+          flat_block_info, flat_block_na, plot_na,
+          watchman_name, watchman_contact, association_contacts, total_units, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
         [
-          propertyIdGen, communityName, propertyType || 'residential', address, city, state, postalCode || '',
+          propertyIdGen, communityName, entryType || propertyType || 'residential', address, city, state, postalCode || '',
           contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
           zone || null, division || null,
           supervisorId, franchisePartnerId, req.user?.username || req.user?.email || req.user.id, 
           mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
           entryType || null, category || null, areaName || '',
           numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}),
-          JSON.stringify(blockNames || {}), numberOfUnits || null, villaPlotNumber || '', blockInfo || ''
+          JSON.stringify(blockNames || {}), numberOfUnits || null, villaPlotNumber || '', blockInfo || '', blockNA ? 1 : 0,
+          flatBlockInfo || '', flatBlockNA ? 1 : 0, plotNA ? 1 : 0,
+          watchmanName || null, watchmanContact || null, JSON.stringify(associationContacts || []), numberOfUnits || null
         ]
       );
 
@@ -998,11 +1010,11 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
         if (existing.length === 0) {
           [customerResult] = await pool.query(
             `INSERT INTO customer_accounts (
-              customer_id, first_name, last_name, email, phone, temp_password_hash, property_id,
+              customer_id, first_name, last_name, email, phone, temp_password_hash, property_id, property_code,
               activation_token, activation_expires, is_activated, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [clientId, contactName, '', contactEmail.toLowerCase(), `${contactCountryCode}${contactPhone}`,
-              tempPasswordHash, propertyResult.insertId, activationToken, activationExpires, 0, 'supervisor']
+              tempPasswordHash, propertyResult.insertId, propertyIdGen, activationToken, activationExpires, 0, 'supervisor']
           );
           
           // Send activation email

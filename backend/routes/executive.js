@@ -367,8 +367,15 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
                 op.zone as zone_name, op.area_name as area, 
                 COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
-                op.total_units as units,
+                op.total_units as units, op.number_of_units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
+                op.landmark, op.latitude, op.longitude,
+                op.association_contacts,
+                op.number_of_blocks, op.block_names, op.units_per_block,
+                op.block_info, op.block_na, op.flat_block_info, op.flat_block_na,
+                op.villa_plot_number, op.plot_na,
+                op.watchman_name, op.watchman_contact,
+                op.notes,
                 NULL as contact_person, NULL as contact_phone, NULL as email,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
                 op.created_at, op.status, TRUE as is_active,
@@ -812,7 +819,7 @@ router.get('/customers', requireExecutiveScope, async (req, res) => {
 
 // Helper function to create customer account and send activation email
 async function createCustomerAccountAndSendEmail(customerData) {
-  const { clientId, customerName, customerEmail, customerPhone, propertyId, propertyName } = customerData;
+  const { clientId, customerName, customerEmail, customerPhone, propertyId, propertyName, propertyCode } = customerData;
   
   console.log('📧 [CreateCustomerAccount] Starting for email:', customerEmail);
   
@@ -857,11 +864,11 @@ async function createCustomerAccountAndSendEmail(customerData) {
       console.log('📧 [CreateCustomerAccount] Creating new customer account');
       await pool.query(
         `INSERT INTO customer_accounts (
-          customer_id, first_name, last_name, email, phone, temp_password_hash, property_id,
+          customer_id, first_name, last_name, email, phone, temp_password_hash, property_id, property_code,
           activation_token, activation_expires, is_activated, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [clientId, customerName || '', '', emailLower, customerPhone || '',
-          tempPasswordHash, propertyId, activationToken, activationExpires, 0, 'executive']
+          tempPasswordHash, propertyId, propertyCode, activationToken, activationExpires, 0, 'executive']
       );
     }
 
@@ -873,7 +880,7 @@ async function createCustomerAccountAndSendEmail(customerData) {
       tempPassword,
       activationLink,
       propertyName: propertyName || 'XLAND INFRA',
-      propertyId: propertyId || clientId
+      propertyId: propertyCode || clientId
     });
 
     console.log('� [CreateCustomerAccount] Email result:', emailResult);
@@ -896,9 +903,10 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
       // Property form data
       zone, areaName, division, propertyType, communityName,
       associationContacts, numberOfBlocks, unitsPerBlock, blockNames,
-      numberOfUnits, villaPlotNumber, blockInfo,
+      numberOfUnits, villaPlotNumber, blockInfo, blockNA, flatBlockInfo, flatBlockNA, plotNA,
       address, city, state, postalCode, landmark, mapLocation, notes,
       entryType, category,
+      watchmanName, watchmanContact,
       // Simple customer data
       name, email, phone, alternatePhone, zipCode,
       clientType, companyName, propertyId, gstNumber
@@ -921,24 +929,28 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
 
       console.log('📋 [Executive] Contact info - name:', contactName, 'email:', contactEmail);
 
-      // Create property
+      // Create property in onboarded_properties (same as FP portal)
       const [propertyResult] = await pool.query(
-        `INSERT INTO properties (
-          property_id, name, property_type, address, city, state, zip_code,
-          contact_person, contact_phone, contact_email, zone_id, division_id,
+        `INSERT INTO onboarded_properties (
+          property_id, community_name, property_type, address, city, state, postal_code,
+          contact_person, contact_phone, contact_email, zone, division,
           executive_id, franchise_partner_id, created_by, latitude, longitude, landmark, notes,
           entry_type, category, area_name, number_of_blocks, units_per_block,
-          block_names, number_of_units, villa_plot_number, block_info
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          block_names, number_of_units, villa_plot_number, block_info, block_na,
+          flat_block_info, flat_block_na, plot_na,
+          watchman_name, watchman_contact, association_contacts, total_units, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
         [
-          propertyIdGen, communityName, propertyType || 'residential', address, city, state, postalCode || '',
+          propertyIdGen, communityName, entryType || propertyType || 'residential', address, city, state, postalCode || '',
           contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
           zone || null, division || null,
           executiveId, franchisePartnerId, creatorId, 
           mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
           entryType || null, category || null, areaName || '',
           numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}),
-          JSON.stringify(blockNames || {}), numberOfUnits || null, villaPlotNumber || '', blockInfo || ''
+          JSON.stringify(blockNames || {}), numberOfUnits || null, villaPlotNumber || '', blockInfo || '', blockNA ? 1 : 0,
+          flatBlockInfo || '', flatBlockNA ? 1 : 0, plotNA ? 1 : 0,
+          watchmanName || null, watchmanContact || null, JSON.stringify(associationContacts || []), numberOfUnits || null
         ]
       );
 
@@ -959,7 +971,8 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
         customerEmail: contactEmail,
         customerPhone: `${contactCountryCode}${contactPhone}`,
         propertyId: propertyResult.insertId,
-        propertyName: communityName
+        propertyName: communityName,
+        propertyCode: propertyIdGen
       });
 
       res.status(201).json({

@@ -190,9 +190,9 @@ router.post('/', authenticate, async (req, res) => {
             // Create new customer account
             await pool.execute(
               `INSERT INTO customer_accounts (
-                customer_id, first_name, last_name, email, phone, temp_password_hash, property_id,
+                customer_id, first_name, last_name, email, phone, temp_password_hash, property_id, property_code,
                 activation_token, activation_expires, is_activated, created_by
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 customerId,
                 primaryContact.name || '',
@@ -201,6 +201,7 @@ router.post('/', authenticate, async (req, res) => {
                 primaryContact.phone ? `${primaryContact.countryCode || '+91'}${primaryContact.phone}` : '',
                 tempPasswordHash,
                 insertedId,
+                propertyId,
                 activationToken,
                 activationExpires,
                 0,
