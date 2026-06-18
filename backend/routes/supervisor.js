@@ -414,7 +414,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
       const scopeColumn = franchisePartnerId ? 'franchise_partner_id' : 'supervisor_id';
       const scopeId = franchisePartnerId || supervisorId;
       const [rows] = await pool.execute(
-        `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
+        `SELECT op.id, op.property_id, op.community_name as name, op.property_type, op.entry_type,
                 op.zone as zone_name, op.area_name as area, 
                 COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
                 COALESCE(op.total_units, 1) as units, op.number_of_units,

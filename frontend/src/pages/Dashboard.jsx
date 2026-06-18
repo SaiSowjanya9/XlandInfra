@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin } from 'lucide-react';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 const Dashboard = ({ user }) => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,7 +20,7 @@ const Dashboard = ({ user }) => {
           return;
         }
 
-        const response = await fetch('/api/customers/dashboard', {
+        const response = await fetch(`${API_BASE_URL}/api/customers/dashboard`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -26,6 +28,7 @@ const Dashboard = ({ user }) => {
         });
 
         const result = await response.json();
+        console.log('[Dashboard] API response:', result);
         if (result.success) {
           setDashboardData(result.data);
         } else {

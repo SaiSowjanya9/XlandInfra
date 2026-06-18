@@ -334,7 +334,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     if (franchisePartnerId) {
       try {
         const onbZoneFilter = buildOnboardedPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'op');
-        let onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
+        let onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type, op.entry_type,
                   op.zone as zone_name, op.area_name as area, 
                   COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
                   op.total_units as units, op.number_of_units,
