@@ -778,7 +778,7 @@ router.get('/work-orders', async (req, res) => {
              wo.customer_email,
              wo.customer_phone,
              COALESCE(p.name, op.community_name, wo.property_name) as property_name,
-             COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
+             COALESCE(p.property_id, op.property_id) as property_code,
              COALESCE(c.name, wo.category_name) as category_name,
              wo.subcategory_name,
              v.company_name as vendor_name,
@@ -796,8 +796,8 @@ router.get('/work-orders', async (req, res) => {
              COALESCE(p.contact_email, op.contact_email) as contact_email,
              COALESCE(p.property_type, op.property_type, wo.property_type) as property_type
       FROM work_orders wo
-      LEFT JOIN properties p ON wo.property_id = p.id
-      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+      LEFT JOIN properties p ON wo.property_id = p.id OR wo.property_name = p.name
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.id OR wo.property_name = op.community_name
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
       LEFT JOIN residents r ON wo.resident_id = r.id
@@ -1473,7 +1473,7 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
     let query = `
       SELECT wo.*,
              COALESCE(p.name, op.community_name, wo.property_name) as property_name,
-             COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
+             COALESCE(p.property_id, op.property_id) as property_code,
              COALESCE(c.name, wo.category_name) as category_name,
              COALESCE(p.zone_id, op.zone) as zone,
              COALESCE(p.division_id, op.division) as division,
@@ -1487,8 +1487,8 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
              fp.fp_code, fp.company_name as fp_name,
              v.company_name as vendor_name
       FROM work_orders wo
-      LEFT JOIN properties p ON wo.property_id = p.id
-      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+      LEFT JOIN properties p ON wo.property_id = p.id OR wo.property_name = p.name
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.id OR wo.property_name = op.community_name
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN franchise_partners fp ON wo.franchise_partner_id = fp.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
