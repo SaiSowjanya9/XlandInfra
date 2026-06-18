@@ -21,6 +21,7 @@ const BrandLogo = ({
         className={`${s.logo} w-auto ${className}`}
         loading="eager"
         decoding="async"
+        fetchpriority="high"
       />
     );
   }
@@ -33,6 +34,7 @@ const BrandLogo = ({
         className={`${s.logo} w-auto`}
         loading="eager"
         decoding="async"
+        fetchpriority="high"
       />
       <div className="flex flex-col items-center leading-none">
         <span className={`${s.text} font-bold tracking-[0.15em] text-gold-shine`}>

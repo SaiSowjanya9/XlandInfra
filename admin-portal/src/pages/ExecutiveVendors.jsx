@@ -261,7 +261,7 @@ const ExecutiveVendors = ({ user }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Mobile</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.owner_country_code || '+91'} {selectedVendor.owner_mobile || selectedVendor.phone || '-'}</p>
+                    <p className="font-medium text-gray-900">{(() => { const mobile = selectedVendor.owner_mobile || selectedVendor.phone || '-'; return mobile.startsWith('+') ? mobile : `${selectedVendor.owner_country_code || '+91'} ${mobile}`; })()}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Email</p>

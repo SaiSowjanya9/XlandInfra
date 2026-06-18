@@ -353,7 +353,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
       blockTower,
       flatUnit,
       customerName: primaryContact.name || '',
-      customerPhone: primaryContact.phone ? `${primaryContact.countryCode || '+91'} ${primaryContact.phone}` : '',
+      customerPhone: primaryContact.phone ? (primaryContact.phone.startsWith('+') ? primaryContact.phone : `${primaryContact.countryCode || '+91'} ${primaryContact.phone}`) : '',
       customerEmail: primaryContact.email || '',
       services: [] // Start with empty new services
     }));
@@ -795,7 +795,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     } else {
       estimateData.customerName = estimateForm.customerName;
       estimateData.phone = estimateForm.phone;
-      estimateData.customerPhone = `${estimateForm.countryCode} ${estimateForm.phone}`;
+      estimateData.customerPhone = estimateForm.phone?.startsWith('+') ? estimateForm.phone : `${estimateForm.countryCode} ${estimateForm.phone}`;
       estimateData.countryCode = estimateForm.countryCode;
       estimateData.email = estimateForm.email;
       estimateData.customerEmail = estimateForm.email;

@@ -194,14 +194,14 @@ const VendorDetails = () => {
       'Area': vendor.areaName || vendor.area_name || vendor.area || '-',
       'Division': vendor.division || '-',
       'Owner Name': vendor.ownerName || vendor.owner_name || vendor.company_name,
-      'Owner Mobile': `${vendor.ownerCountryCode || vendor.owner_country_code || '+91'} ${vendor.ownerMobile || vendor.owner_mobile || vendor.phone || '-'}`,
+      'Owner Mobile': (() => { const mobile = vendor.ownerMobile || vendor.owner_mobile || vendor.phone || '-'; return mobile.startsWith('+') ? mobile : `${vendor.ownerCountryCode || vendor.owner_country_code || '+91'} ${mobile}`; })(),
       'Owner Email': vendor.ownerEmail || vendor.owner_email || vendor.email || '-',
       'Owner Aadhar': vendor.ownerAadhar || vendor.owner_aadhar || '-',
       'Manager Name': vendor.managerName || vendor.manager_name || '-',
-      'Manager Mobile': (vendor.managerMobile || vendor.manager_mobile) ? `${vendor.managerCountryCode || vendor.manager_country_code || '+91'} ${vendor.managerMobile || vendor.manager_mobile}` : '-',
+      'Manager Mobile': (() => { const mobile = vendor.managerMobile || vendor.manager_mobile; if (!mobile) return '-'; return mobile.startsWith('+') ? mobile : `${vendor.managerCountryCode || vendor.manager_country_code || '+91'} ${mobile}`; })(),
       'Manager Email': vendor.managerEmail || vendor.manager_email || '-',
       'POC Name': vendor.pocName || vendor.poc_name || '-',
-      'POC Mobile': (vendor.pocMobile || vendor.poc_mobile) ? `${vendor.pocCountryCode || vendor.poc_country_code || '+91'} ${vendor.pocMobile || vendor.poc_mobile}` : '-',
+      'POC Mobile': (() => { const mobile = vendor.pocMobile || vendor.poc_mobile; if (!mobile) return '-'; return mobile.startsWith('+') ? mobile : `${vendor.pocCountryCode || vendor.poc_country_code || '+91'} ${mobile}`; })(),
       'POC Email': vendor.pocEmail || vendor.poc_email || '-',
       'Rate Per Visit': `₹${vendor.ratePerVisit || vendor.rate_per_visit || 0}`,
       'Coverage Per Day': vendor.coveragePerDay || vendor.coverage_per_day || 0,
@@ -225,7 +225,7 @@ const VendorDetails = () => {
       'Area': v.areaName || v.area_name || v.area || '-',
       'Division': v.division || '-',
       'Owner Name': v.ownerName || v.owner_name || v.company_name,
-      'Owner Mobile': `${v.ownerCountryCode || v.owner_country_code || '+91'} ${v.ownerMobile || v.owner_mobile || v.phone || '-'}`,
+      'Owner Mobile': (() => { const mobile = v.ownerMobile || v.owner_mobile || v.phone || '-'; return mobile.startsWith('+') ? mobile : `${v.ownerCountryCode || v.owner_country_code || '+91'} ${mobile}`; })(),
       'Rate Per Visit': `₹${v.ratePerVisit || v.rate_per_visit || 0}`,
       'Coverage Per Day': v.coveragePerDay || v.coverage_per_day || 0,
       'Created By': v.created_by_name || v.createdBy || 'System',
@@ -731,7 +731,7 @@ const VendorDetails = () => {
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Owner Details</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div><span className="text-xs text-gray-400">Name</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerName || viewVendor.owner_name || viewVendor.company_name || '-'}</p></div>
-                  <div><span className="text-xs text-gray-400">Mobile</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerCountryCode || viewVendor.owner_country_code || '+91'} {viewVendor.ownerMobile || viewVendor.owner_mobile || viewVendor.phone || '-'}</p></div>
+                  <div><span className="text-xs text-gray-400">Mobile</span><p className="text-sm font-medium text-gray-900">{(() => { const mobile = viewVendor.ownerMobile || viewVendor.owner_mobile || viewVendor.phone || '-'; return mobile.startsWith('+') ? mobile : `${viewVendor.ownerCountryCode || viewVendor.owner_country_code || '+91'} ${mobile}`; })()}</p></div>
                   <div><span className="text-xs text-gray-400">Email</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerEmail || viewVendor.owner_email || viewVendor.email || '-'}</p></div>
                   <div><span className="text-xs text-gray-400">Aadhar</span><p className="text-sm font-medium text-gray-900">{viewVendor.ownerAadhar || viewVendor.owner_aadhar || '-'}</p></div>
                 </div>

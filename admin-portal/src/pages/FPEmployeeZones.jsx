@@ -435,7 +435,7 @@ const FPEmployeeZones = ({ user }) => {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Phone className="w-4 h-4 text-gray-400" />
-                    <span>{employee.countryCode || employee.country_code || '+91'} {employee.phone}</span>
+                    <span>{employee.phone?.startsWith('+') ? employee.phone : `${employee.countryCode || employee.country_code || '+91'} ${employee.phone}`}</span>
                   </div>
                 </div>
 

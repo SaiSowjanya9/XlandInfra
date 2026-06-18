@@ -1138,7 +1138,8 @@ router.get('/dashboard', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
 
-    const customerId = decoded.customerId || decoded.id;
+    const customerId = decoded.id;
+    const customerEmail = decoded.email;
     if (!customerId) {
       return res.status(401).json({ success: false, message: 'Customer ID not found in token' });
     }
@@ -1147,10 +1148,11 @@ router.get('/dashboard', async (req, res) => {
     const [customer] = await pool.execute(
       `SELECT ca.*, 
               COALESCE(op.community_name, p.name) as property_name,
-              COALESCE(op.property_id, p.property_id) as actual_property_id
+              COALESCE(op.property_id, p.property_id) as actual_property_id,
+              COALESCE(op.id, p.id) as db_property_id
        FROM customer_accounts ca
-       LEFT JOIN onboarded_properties op ON ca.property_id = op.id
-       LEFT JOIN properties p ON ca.property_id = p.id
+       LEFT JOIN onboarded_properties op ON ca.property_id = op.id OR ca.property_id = op.property_id
+       LEFT JOIN properties p ON ca.property_id = p.id OR ca.property_id = p.property_id
        WHERE ca.id = ?`,
       [customerId]
     );
@@ -1159,54 +1161,141 @@ router.get('/dashboard', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Customer not found' });
     }
 
-    // Get work orders for this customer only
+    const customerData = customer[0];
+    const propertyId = customerData.db_property_id || customerData.property_id;
+    const actualPropertyCode = customerData.actual_property_id || customerData.property_code;
+
+    // Get work orders for this customer - match by property_id, resident_id, or customer_email
     const [workOrders] = await pool.execute(
-      `SELECT wo.*, c.name as category_name, sc.name as subcategory_name
+      `SELECT wo.id, wo.work_order_id, wo.category_id, wo.subcategory_id,
+              wo.category_name, wo.subcategory_name, wo.description,
+              wo.permission_to_enter, wo.entry_notes, wo.has_pet, wo.priority,
+              wo.status, wo.customer_name, wo.customer_email, wo.customer_phone,
+              wo.property_name as wo_property_name, wo.property_type, wo.block, wo.flat_number,
+              wo.assigned_vendor_id, wo.scheduled_date, wo.completed_at,
+              wo.created_at, wo.updated_at, wo.source
        FROM work_orders wo
-       LEFT JOIN categories c ON wo.category_id = c.id
-       LEFT JOIN subcategories sc ON wo.subcategory_id = sc.id
-       WHERE wo.customer_id = ?
+       WHERE wo.property_id = ? 
+          OR wo.resident_id = ?
+          OR LOWER(wo.customer_email) = LOWER(?)
        ORDER BY wo.created_at DESC
        LIMIT 10`,
-      [customerId]
+      [propertyId, customerId, customerEmail || customerData.email]
     );
 
     // Get stats for this customer
-    const [pendingCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE customer_id = ? AND status IN ('pending', 'under_review', 'assigned', 'in_progress')`,
-      [customerId]
-    );
-    const [completedCount] = await pool.execute(
-      `SELECT COUNT(*) as count FROM work_orders WHERE customer_id = ? AND status IN ('completed', 'closed', 'verified')`,
-      [customerId]
+    const [[stats]] = await pool.execute(
+      `SELECT 
+         COUNT(*) as total,
+         SUM(CASE WHEN status IN ('pending', 'under_review', 'assigned', 'in_progress', 'accepted') THEN 1 ELSE 0 END) as pending,
+         SUM(CASE WHEN status IN ('completed', 'closed', 'verified') THEN 1 ELSE 0 END) as completed
+       FROM work_orders 
+       WHERE property_id = ? OR resident_id = ? OR LOWER(customer_email) = LOWER(?)`,
+      [propertyId, customerId, customerEmail || customerData.email]
     );
 
     // Determine actual property code - only use real property codes
-    const dashPropCode = customer[0].actual_property_id || customer[0].property_code || null;
+    const dashPropCode = actualPropertyCode || null;
 
     res.json({
       success: true,
       data: {
         customer: {
-          id: customer[0].id,
-          firstName: customer[0].first_name,
-          lastName: customer[0].last_name,
-          email: customer[0].email,
-          propertyName: customer[0].property_name,
+          id: customerData.id,
+          firstName: customerData.first_name,
+          lastName: customerData.last_name,
+          email: customerData.email,
+          propertyName: customerData.property_name,
           propertyId: dashPropCode,
           propertyCode: dashPropCode
         },
         recentWorkOrders: workOrders,
         stats: {
-          pending: pendingCount[0].count,
-          completed: completedCount[0].count,
-          total: pendingCount[0].count + completedCount[0].count
+          pending: stats?.pending || 0,
+          completed: stats?.completed || 0,
+          total: stats?.total || 0
         }
       }
     });
   } catch (error) {
     console.error('Customer dashboard error:', error);
     res.status(500).json({ success: false, message: 'Failed to load dashboard', error: error.message });
+  }
+});
+
+// ============================================
+// GET CUSTOMER WORK ORDERS - Get all work orders for logged-in customer
+// ============================================
+router.get('/work-orders', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    const customerId = decoded.id;
+    const customerEmail = decoded.email;
+
+    // Get customer property info
+    const [customer] = await pool.execute(
+      `SELECT ca.*, 
+              COALESCE(op.id, p.id) as db_property_id,
+              COALESCE(op.property_id, p.property_id) as actual_property_id
+       FROM customer_accounts ca
+       LEFT JOIN onboarded_properties op ON ca.property_id = op.id OR ca.property_id = op.property_id
+       LEFT JOIN properties p ON ca.property_id = p.id OR ca.property_id = p.property_id
+       WHERE ca.id = ?`,
+      [customerId]
+    );
+
+    if (customer.length === 0) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    const propertyId = customer[0].db_property_id || customer[0].property_id;
+
+    // Get all work orders with full details
+    const [workOrders] = await pool.execute(
+      `SELECT wo.id, wo.work_order_id, wo.category_id, wo.subcategory_id,
+              wo.category_name, wo.subcategory_name, wo.description,
+              wo.permission_to_enter, wo.entry_notes, wo.has_pet, wo.priority,
+              wo.status, wo.customer_name, wo.customer_email, wo.customer_phone,
+              wo.property_name, wo.property_type, wo.block, wo.flat_number,
+              wo.assigned_vendor_id, wo.scheduled_date, wo.completed_at,
+              wo.admin_notes, wo.created_at, wo.updated_at, wo.source
+       FROM work_orders wo
+       WHERE wo.property_id = ? 
+          OR wo.resident_id = ?
+          OR LOWER(wo.customer_email) = LOWER(?)
+       ORDER BY wo.created_at DESC`,
+      [propertyId, customerId, customerEmail || customer[0].email]
+    );
+
+    // Get attachments for each work order
+    for (const wo of workOrders) {
+      const [attachments] = await pool.execute(
+        `SELECT id, file_name, original_name, file_type, file_size, created_at
+         FROM work_order_attachments WHERE work_order_id = ?`,
+        [wo.id]
+      );
+      wo.attachments = attachments;
+    }
+
+    res.json({
+      success: true,
+      data: workOrders
+    });
+  } catch (error) {
+    console.error('Error fetching customer work orders:', error);
+    res.status(500).json({ success: false, message: 'Error fetching work orders', error: error.message });
   }
 });
 
