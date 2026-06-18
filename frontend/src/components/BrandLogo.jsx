@@ -15,27 +15,33 @@ const BrandLogo = ({
 
   if (!showText) {
     return (
-      <img
-        src="/XLAND_INFRA_Website.png"
-        alt="XLAND INFRA"
-        className={`${s.logo} w-auto ${className}`}
-        loading="eager"
-        decoding="async"
-        fetchpriority="high"
-      />
+      <picture>
+        <source srcSet="/logo.webp" type="image/webp" />
+        <img
+          src="/logo.png"
+          alt="XLAND INFRA"
+          className={`${s.logo} w-auto ${className}`}
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+        />
+      </picture>
     );
   }
 
   return (
     <div className={`flex items-center ${s.gap} ${className}`}>
-      <img
-        src="/XLAND_INFRA_Website.png"
-        alt="XLAND INFRA"
-        className={`${s.logo} w-auto`}
-        loading="eager"
-        decoding="async"
-        fetchpriority="high"
-      />
+      <picture>
+        <source srcSet="/logo.webp" type="image/webp" />
+        <img
+          src="/logo.png"
+          alt="XLAND INFRA"
+          className={`${s.logo} w-auto`}
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+        />
+      </picture>
       <div className="flex flex-col items-center leading-none">
         <span className={`${s.text} font-bold tracking-[0.15em] text-gold-shine`}>
           XLAND INFRA

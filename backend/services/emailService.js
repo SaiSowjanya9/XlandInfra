@@ -1512,21 +1512,25 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
   const fullAddress = [propertyAddress, propertyCity, propertyState].filter(Boolean).join(', ');
 
   // Get recipients: FP email + zone-centric employees + customer
-  let recipients;
+  let internalRecipients;
   if (franchisePartnerId) {
-    recipients = await getWorkOrderNotificationRecipients(franchisePartnerId, propertyZone, customerEmail);
-    console.log(`📧 Work order notification recipients for FP ${franchisePartnerId}, zone ${propertyZone}:`, recipients);
+    internalRecipients = await getWorkOrderNotificationRecipients(franchisePartnerId, propertyZone, null); // Don't include customer in recipients
+    console.log(`📧 Work order notification recipients for FP ${franchisePartnerId}, zone ${propertyZone}:`, internalRecipients);
   } else {
     // Fallback to old behavior if no FP ID
-    recipients = [NOTIFICATION_EMAIL];
-    if (customerEmail) {
-      recipients.push(customerEmail);
-    }
+    internalRecipients = [NOTIFICATION_EMAIL];
   }
+
+  // Send to customer in TO field (visible), internal recipients in BCC (hidden from customer)
+  const toAddress = customerEmail || NOTIFICATION_EMAIL;
+  const bccAddresses = customerEmail 
+    ? internalRecipients.filter(email => email.toLowerCase() !== customerEmail.toLowerCase())
+    : internalRecipients.filter(email => email !== NOTIFICATION_EMAIL); // Avoid duplicate if no customer
 
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
-    to: recipients.join(', '),
+    to: toAddress,
+    bcc: bccAddresses.length > 0 ? bccAddresses.join(', ') : undefined,
     subject: `Work Order Created - ${orderNumber || orderId} | ${propertyName || 'Service Request'}`,
     html: `
       <!DOCTYPE html>
@@ -1711,15 +1715,14 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
     categoryName, subcategoryName, completedBy, completedByRole
   } = workOrderData;
 
-  // Send to both admin AND customer
-  const recipients = [NOTIFICATION_EMAIL];
-  if (customerEmail) {
-    recipients.push(customerEmail);
-  }
+  // Send to customer in TO field, admin in BCC (hidden from customer)
+  const toAddress = customerEmail || NOTIFICATION_EMAIL;
+  const bccAddress = customerEmail ? NOTIFICATION_EMAIL : undefined;
 
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
-    to: recipients.join(', '),
+    to: toAddress,
+    bcc: bccAddress,
     subject: `✅ Work Order Completed - ${orderNumber || orderId}`,
     html: `
       <!DOCTYPE html>
