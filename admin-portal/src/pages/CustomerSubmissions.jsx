@@ -411,7 +411,7 @@ const CustomerSubmissions = () => {
       p.contacts.forEach((c, i) => {
         exportData[0][`Contact ${i + 1} Name`] = c.name || '';
         exportData[0][`Contact ${i + 1} Email`] = c.email || '';
-        exportData[0][`Contact ${i + 1} Phone`] = `${c.countryCode || '+91'} ${c.phone}` || '';
+        exportData[0][`Contact ${i + 1} Phone`] = c.phone?.startsWith('+') ? c.phone : `${c.countryCode || '+91'} ${c.phone}` || '';
       });
     }
 
@@ -1246,7 +1246,7 @@ const CustomerSubmissions = () => {
                         </div>
                         <div className="min-w-0">
                           <label className="block text-xs text-gray-500 mb-1">Phone</label>
-                          <p className="text-sm text-gray-900 whitespace-nowrap">{c.countryCode || '+91'} {c.phone}</p>
+                          <p className="text-sm text-gray-900 whitespace-nowrap">{c.phone?.startsWith('+') ? c.phone : `${c.countryCode || '+91'} ${c.phone}`}</p>
                         </div>
                       </div>
                     ))}

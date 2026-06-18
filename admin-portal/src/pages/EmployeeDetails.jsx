@@ -443,7 +443,7 @@ const EmployeeDetails = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                      {employee.phone ? `+91 ${employee.phone}` : '-'}
+                      {employee.phone ? (employee.phone.startsWith('+') ? employee.phone : `+91 ${employee.phone}`) : '-'}
                     </td>
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap truncate max-w-[180px]" title={employee.email}>
                       {employee.email || '-'}

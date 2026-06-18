@@ -345,7 +345,7 @@ const FPEmployees = ({ user }) => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        +91 {employee.phone}
+                        {employee.phone?.startsWith('+') ? employee.phone : `+91 ${employee.phone}`}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         {employee.email}
@@ -479,7 +479,7 @@ const FPEmployees = ({ user }) => {
                   <Phone className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className="text-xs text-gray-500">Phone</p>
-                    <p className="text-sm font-medium text-gray-900">{viewEmployee.countryCode || '+91'} {viewEmployee.phone}</p>
+                    <p className="text-sm font-medium text-gray-900">{viewEmployee.phone?.startsWith('+') ? viewEmployee.phone : `${viewEmployee.countryCode || '+91'} ${viewEmployee.phone}`}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">

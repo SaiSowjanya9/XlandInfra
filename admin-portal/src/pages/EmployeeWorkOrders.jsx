@@ -214,7 +214,7 @@ const EmployeeWorkOrders = ({ admin }) => {
     const contact = property.contacts?.[0] || property.associationContacts?.[0] || {};
     const customerName = contact.name || property.communityName || property.name || '';
     const customerEmail = contact.email || '';
-    const customerPhone = contact.phone ? `${contact.countryCode || '+91'} ${contact.phone}` : '';
+    const customerPhone = contact.phone ? (contact.phone.startsWith('+') ? contact.phone : `${contact.countryCode || '+91'} ${contact.phone}`) : '';
     
     // Use helper functions for consistent block/unit extraction
     const blockValue = extractBlockNames(property);

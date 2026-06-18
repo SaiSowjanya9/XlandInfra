@@ -919,7 +919,7 @@ const ExecutiveProperties = ({ user }) => {
                             <div className="min-w-0">
                               <p className="text-xs text-gray-500 mb-1">Phone</p>
                               <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
-                                {contact.phone ? `+91 ${contact.phone}` : '-'}
+                                {contact.phone ? (contact.phone.startsWith('+') ? contact.phone : `+91 ${contact.phone}`) : '-'}
                               </p>
                             </div>
                           </div>
@@ -931,8 +931,7 @@ const ExecutiveProperties = ({ user }) => {
               })()}
 
               {/* Watchman Information - Only for GC and APT */}
-              {(['gated_community', 'GC', 'apartment', 'APT'].includes(selectedProperty.property_type)) && 
-               (selectedProperty.watchman_name || selectedProperty.watchman_contact) && (
+              {(['gated_community', 'GC', 'apartment', 'APT'].includes(selectedProperty.property_type)) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Watchman Information</h3>
                   <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
@@ -944,7 +943,7 @@ const ExecutiveProperties = ({ user }) => {
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Watchman Contact</p>
                         <p className="text-sm font-medium text-gray-900">
-                          {selectedProperty.watchman_contact ? `+91 ${selectedProperty.watchman_contact}` : 'N/A'}
+                          {selectedProperty.watchman_contact ? (selectedProperty.watchman_contact.startsWith('+') ? selectedProperty.watchman_contact : `+91 ${selectedProperty.watchman_contact}`) : 'N/A'}
                         </p>
                       </div>
                     </div>

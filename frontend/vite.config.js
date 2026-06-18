@@ -11,5 +11,17 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    // Inline assets smaller than 4KB as base64 for faster loading
+    assetsInlineLimit: 4096,
+    // Optimize chunk splitting
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom']
+        }
+      }
+    }
   }
 })
