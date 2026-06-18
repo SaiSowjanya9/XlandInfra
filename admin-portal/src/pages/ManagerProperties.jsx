@@ -910,7 +910,8 @@ const ManagerProperties = ({ user }) => {
                 })()}
 
                 {/* Watchman Information - Only for GC and APT */}
-                {(['gated_community', 'GC', 'apartment', 'APT'].includes(viewingProperty.property_type)) && (
+                {(['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((viewingProperty.property_type || '').toLowerCase()) ||
+                 ['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((viewingProperty.entry_type || '').toLowerCase())) && (
                   <div className="md:col-span-2 mt-4">
                     <h4 className="text-sm font-semibold text-gray-800 mb-3">Watchman Information</h4>
                     <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">

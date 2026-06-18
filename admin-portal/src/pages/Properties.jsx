@@ -271,7 +271,7 @@ const Properties = () => {
       p.contacts.forEach((c, i) => {
         exportData[0][`Contact ${i + 1} Name`] = c.name || '';
         exportData[0][`Contact ${i + 1} Email`] = c.email || '';
-        exportData[0][`Contact ${i + 1} Phone`] = c.phone?.startsWith('+') ? c.phone : `${c.countryCode || '+91'} ${c.phone}` || '';
+        exportData[0][`Contact ${i + 1} Phone`] = c.phone ? (c.phone.toString().startsWith('+') ? c.phone : `${c.countryCode || '+91'} ${c.phone}`) : '';
       });
     }
 
@@ -999,7 +999,14 @@ const Properties = () => {
                               </div>
                               <div className="min-w-0">
                                 <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
-                                <p className="text-sm text-gray-900 whitespace-nowrap">{c.phone?.startsWith('+') ? c.phone : `${c.countryCode || '+91'} ${c.phone || 'N/A'}`}</p>
+                                <p className="text-sm text-gray-900 whitespace-nowrap">{(() => {
+                                  if (!c.phone) return 'N/A';
+                                  const phone = c.phone.toString().trim();
+                                  const cc = (c.countryCode || '+91').replace(/\s/g, '');
+                                  // If phone already starts with + or country code, show as-is
+                                  if (phone.startsWith('+') || phone.startsWith(cc.replace('+', ''))) return phone.startsWith('+') ? phone : `+${phone}`;
+                                  return `${cc} ${phone}`;
+                                })()}</p>
                               </div>
                             </div>
                           </div>
@@ -1009,7 +1016,8 @@ const Properties = () => {
                   )}
 
                   {/* Watchman Information - Only for GC and APT */}
-                  {(viewProperty.entryType === 'GC' || viewProperty.entryType === 'APT') && (
+                  {(['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((viewProperty.entryType || '').toLowerCase()) || 
+                    ['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((viewProperty.propertyType || '').toLowerCase())) && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Watchman Information</h3>
                       <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
