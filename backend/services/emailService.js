@@ -30,7 +30,7 @@ const getWorkOrderNotificationRecipients = async (franchisePartnerId, propertyZo
       }
     }
     
-    // 2. Get zone-centric employees' emails
+    // 2. Get zone-centric employees' emails (ONLY employees with zone restrictions receive emails)
     if (franchisePartnerId && propertyZone) {
       // Get employees who have this zone assigned to them
       const [zoneEmployees] = await pool.execute(
@@ -51,7 +51,7 @@ const getWorkOrderNotificationRecipients = async (franchisePartnerId, propertyZo
         }
       }
       
-      // NOTE: Employees with NO zone restrictions do NOT receive work order emails
+      // NOTE: Employees WITHOUT zone restrictions do NOT receive work order emails
       // Only zone-centric employees (assigned to the property's zone) receive notifications
     }
     
@@ -1511,21 +1511,24 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
   // Build full address
   const fullAddress = [propertyAddress, propertyCity, propertyState].filter(Boolean).join(', ');
 
-  // Get recipients: FP email + zone-centric employees + customer
-  let internalRecipients;
+  // Get recipients: FP email + zone-centric employees (NOT customer - we handle that separately)
+  let internalRecipients = [NOTIFICATION_EMAIL]; // Always include admin
   if (franchisePartnerId) {
-    internalRecipients = await getWorkOrderNotificationRecipients(franchisePartnerId, propertyZone, null); // Don't include customer in recipients
+    const fpRecipients = await getWorkOrderNotificationRecipients(franchisePartnerId, propertyZone, null);
+    // Merge with admin, avoiding duplicates
+    fpRecipients.forEach(email => {
+      if (email.toLowerCase() !== NOTIFICATION_EMAIL.toLowerCase()) {
+        internalRecipients.push(email);
+      }
+    });
     console.log(`📧 Work order notification recipients for FP ${franchisePartnerId}, zone ${propertyZone}:`, internalRecipients);
-  } else {
-    // Fallback to old behavior if no FP ID
-    internalRecipients = [NOTIFICATION_EMAIL];
   }
 
   // Send to customer in TO field (visible), internal recipients in BCC (hidden from customer)
   const toAddress = customerEmail || NOTIFICATION_EMAIL;
   const bccAddresses = customerEmail 
     ? internalRecipients.filter(email => email.toLowerCase() !== customerEmail.toLowerCase())
-    : internalRecipients.filter(email => email !== NOTIFICATION_EMAIL); // Avoid duplicate if no customer
+    : internalRecipients.slice(1); // Skip first (NOTIFICATION_EMAIL) since it's already in TO
 
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
