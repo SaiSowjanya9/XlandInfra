@@ -1196,8 +1196,7 @@ router.get('/dashboard', async (req, res) => {
       storedPropertyId, storedPropertyCode, numericPropertyId, propertyCode, propertyName, custEmail, customerId
     });
 
-    // Get work orders for this customer - match by property_id (INT), property_name, resident_id, or customer_email
-    // Note: property_id is INT so only match with numeric values
+    // Get work orders for this customer - match by property_id (numeric or code string), property_name, resident_id, or customer_email
     const [workOrders] = await pool.execute(
       `SELECT wo.id, wo.work_order_id, wo.category_id, wo.subcategory_id,
               wo.category_name, wo.subcategory_name, wo.description,
@@ -1208,12 +1207,13 @@ router.get('/dashboard', async (req, res) => {
               wo.created_at, wo.updated_at, wo.source
        FROM work_orders wo
        WHERE wo.property_id = ? 
+          OR wo.property_id = ?
           OR wo.property_name = ?
           OR wo.resident_id = ?
           OR LOWER(wo.customer_email) = LOWER(?)
        ORDER BY wo.created_at DESC
        LIMIT 10`,
-      [numericPropertyId, propertyName, customerId, custEmail]
+      [numericPropertyId, propertyCode, propertyName, customerId, custEmail]
     );
 
     console.log('[Customer Dashboard] Found work orders:', workOrders.length, 'for property:', propertyName);
@@ -1225,8 +1225,8 @@ router.get('/dashboard', async (req, res) => {
          SUM(CASE WHEN status IN ('pending', 'under_review', 'assigned', 'in_progress', 'accepted') THEN 1 ELSE 0 END) as pending,
          SUM(CASE WHEN status IN ('completed', 'closed', 'verified') THEN 1 ELSE 0 END) as completed
        FROM work_orders 
-       WHERE property_id = ? OR property_name = ? OR resident_id = ? OR LOWER(customer_email) = LOWER(?)`,
-      [numericPropertyId, propertyName, customerId, custEmail]
+       WHERE property_id = ? OR property_id = ? OR property_name = ? OR resident_id = ? OR LOWER(customer_email) = LOWER(?)`,
+      [numericPropertyId, propertyCode, propertyName, customerId, custEmail]
     );
 
     res.json({
@@ -1319,7 +1319,7 @@ router.get('/work-orders', async (req, res) => {
       }
     }
 
-    // Get all work orders with full details - match by property_id (INT), property_name, resident_id, or customer_email
+    // Get all work orders with full details - match by property_id (numeric or code string), property_name, resident_id, or customer_email
     const [workOrders] = await pool.execute(
       `SELECT wo.id, wo.work_order_id, wo.category_id, wo.subcategory_id,
               wo.category_name, wo.subcategory_name, wo.description,
@@ -1330,11 +1330,12 @@ router.get('/work-orders', async (req, res) => {
               wo.admin_notes, wo.created_at, wo.updated_at, wo.source
        FROM work_orders wo
        WHERE wo.property_id = ? 
+          OR wo.property_id = ?
           OR wo.property_name = ?
           OR wo.resident_id = ?
           OR LOWER(wo.customer_email) = LOWER(?)
        ORDER BY wo.created_at DESC`,
-      [numericPropertyId, propertyName, customerId, custEmail]
+      [numericPropertyId, propertyCode, propertyName, customerId, custEmail]
     );
 
     // Get attachments for each work order
