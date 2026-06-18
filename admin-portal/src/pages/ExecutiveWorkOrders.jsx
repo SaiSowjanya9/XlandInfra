@@ -780,7 +780,7 @@ const ExecutiveWorkOrders = ({ user }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Property ID</p>
-                    <p className="font-medium text-gray-900 font-mono text-blue-600">{selectedWorkOrder.actual_property_id || '-'}</p>
+                    <p className="font-medium text-gray-900 font-mono text-blue-600">{selectedWorkOrder.property_code || selectedWorkOrder.actual_property_id || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Property Type</p>

@@ -532,6 +532,7 @@ router.get('/work-orders', requireExecutiveScope, async (req, res) => {
     let query = `
       SELECT wo.*, 
              COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+             COALESCE(p.property_id, op.property_id) as property_code,
              COALESCE(p.property_id, op.property_id) as actual_property_id,
              COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
              COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
@@ -579,6 +580,7 @@ router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
 
     const query = `SELECT wo.*, 
              COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+             COALESCE(p.property_id, op.property_id) as property_code,
              COALESCE(p.property_id, op.property_id) as actual_property_id,
              COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
              COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
@@ -620,6 +622,7 @@ router.get('/work-orders/completed', requireExecutiveScope, async (req, res) => 
 
     const query = `SELECT wo.*, 
              COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+             COALESCE(p.property_id, op.property_id) as property_code,
              COALESCE(p.property_id, op.property_id) as actual_property_id,
              COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
              COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
