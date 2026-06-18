@@ -777,7 +777,7 @@ router.get('/work-orders', async (req, res) => {
              wo.customer_name,
              wo.customer_email,
              wo.customer_phone,
-             COALESCE(p.name, wo.property_name, op.community_name) as property_name,
+             COALESCE(p.name, op.community_name, wo.property_name) as property_name,
              COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
              COALESCE(c.name, wo.category_name) as category_name,
              wo.subcategory_name,
@@ -789,11 +789,12 @@ router.get('/work-orders', async (req, res) => {
              COALESCE(p.zone_id, op.zone) as zone,
              COALESCE(p.division_id, op.division) as division,
              COALESCE(p.address, op.address) as address,
-             p.city as city,
-             p.state as state,
-             p.contact_person as contact_person,
-             p.contact_phone as contact_phone,
-             p.contact_email as contact_email
+             COALESCE(p.city, op.city) as city,
+             COALESCE(p.state, op.state) as state,
+             COALESCE(p.contact_person, op.contact_person) as contact_person,
+             COALESCE(p.contact_phone, op.contact_phone) as contact_phone,
+             COALESCE(p.contact_email, op.contact_email) as contact_email,
+             COALESCE(p.property_type, op.property_type, wo.property_type) as property_type
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN onboarded_properties op ON wo.property_id = op.id
@@ -1472,20 +1473,22 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
     let query = `
       SELECT wo.*,
              COALESCE(p.name, op.community_name, wo.property_name) as property_name,
+             COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
              COALESCE(c.name, wo.category_name) as category_name,
-             CASE WHEN p.id IS NOT NULL THEN p.zone_id ELSE op.zone END as zone,
-             CASE WHEN p.id IS NOT NULL THEN p.division_id ELSE op.division END as division,
-             CASE WHEN p.id IS NOT NULL THEN p.address ELSE NULL END as address,
-             CASE WHEN p.id IS NOT NULL THEN p.city ELSE NULL END as city,
-             CASE WHEN p.id IS NOT NULL THEN p.state ELSE NULL END as state,
-             CASE WHEN p.id IS NOT NULL THEN p.contact_person ELSE NULL END as contact_person,
-             CASE WHEN p.id IS NOT NULL THEN p.contact_phone ELSE NULL END as property_contact_phone,
-             CASE WHEN p.id IS NOT NULL THEN p.contact_email ELSE NULL END as property_contact_email,
+             COALESCE(p.zone_id, op.zone) as zone,
+             COALESCE(p.division_id, op.division) as division,
+             COALESCE(p.address, op.address) as address,
+             COALESCE(p.city, op.city) as city,
+             COALESCE(p.state, op.state) as state,
+             COALESCE(p.contact_person, op.contact_person) as contact_person,
+             COALESCE(p.contact_phone, op.contact_phone) as contact_phone,
+             COALESCE(p.contact_email, op.contact_email) as contact_email,
+             COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
              fp.fp_code, fp.company_name as fp_name,
              v.company_name as vendor_name
       FROM work_orders wo
-      LEFT JOIN properties p ON wo.property_id = p.id AND p.name = wo.property_name
-      LEFT JOIN onboarded_properties op ON wo.property_id = op.id AND op.community_name = wo.property_name
+      LEFT JOIN properties p ON wo.property_id = p.id
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN franchise_partners fp ON wo.franchise_partner_id = fp.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
