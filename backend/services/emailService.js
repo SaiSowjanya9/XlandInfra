@@ -1530,6 +1530,9 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
     ? internalRecipients.filter(email => email.toLowerCase() !== customerEmail.toLowerCase())
     : internalRecipients.slice(1); // Skip first (NOTIFICATION_EMAIL) since it's already in TO
 
+  console.log(`📧 Email TO: ${toAddress}`);
+  console.log(`📧 Email BCC: ${bccAddresses.length > 0 ? bccAddresses.join(', ') : 'none'}`);
+
   const mailOptions = {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
     to: toAddress,
@@ -1702,10 +1705,11 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`📧 Work order creation notification sent for ${orderNumber || orderId} to: ${recipients.join(', ')}`);
+    const allRecipients = [toAddress, ...bccAddresses].filter(Boolean);
+    console.log(`📧 Work order creation notification sent for ${orderNumber || orderId} to: ${allRecipients.join(', ')}`);
     return { success: true };
   } catch (error) {
-    console.error('Error sending work order notification:', error.message);
+    console.error('❌ Error sending work order notification:', error.message);
     return { success: false, error: error.message };
   }
 };
