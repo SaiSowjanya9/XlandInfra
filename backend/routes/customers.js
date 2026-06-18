@@ -1144,16 +1144,9 @@ router.get('/dashboard', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Customer ID not found in token' });
     }
 
-    // Get customer details - check both onboarded_properties and properties tables
+    // Get customer details
     const [customer] = await pool.execute(
-      `SELECT ca.*, 
-              COALESCE(op.community_name, p.name) as property_name,
-              COALESCE(op.property_id, p.property_id) as actual_property_id,
-              COALESCE(op.id, p.id) as db_property_id
-       FROM customer_accounts ca
-       LEFT JOIN onboarded_properties op ON ca.property_id = op.id OR ca.property_id = op.property_id
-       LEFT JOIN properties p ON ca.property_id = p.id OR ca.property_id = p.property_id
-       WHERE ca.id = ?`,
+      `SELECT * FROM customer_accounts WHERE id = ?`,
       [customerId]
     );
 
@@ -1162,12 +1155,42 @@ router.get('/dashboard', async (req, res) => {
     }
 
     const customerData = customer[0];
-    const propertyId = customerData.db_property_id || customerData.property_id;
-    const actualPropertyCode = customerData.actual_property_id || customerData.property_code;
     const custEmail = customerEmail || customerData.email;
+    const storedPropertyId = customerData.property_id;
 
-    console.log('[Customer Dashboard] Matching work orders for:', {
-      propertyId, actualPropertyCode, custEmail, customerId
+    // Resolve property to get both numeric ID and property code
+    let numericPropertyId = null;
+    let propertyCode = null;
+    let propertyName = customerData.property_name;
+
+    if (storedPropertyId) {
+      // Try onboarded_properties first (check both id and property_id)
+      const [opData] = await pool.execute(
+        `SELECT id, property_id, community_name FROM onboarded_properties 
+         WHERE id = ? OR property_id = ?`,
+        [storedPropertyId, storedPropertyId]
+      );
+      if (opData.length > 0) {
+        numericPropertyId = opData[0].id;
+        propertyCode = opData[0].property_id;
+        propertyName = propertyName || opData[0].community_name;
+      } else {
+        // Try properties table
+        const [pData] = await pool.execute(
+          `SELECT id, property_id, name FROM properties 
+           WHERE id = ? OR property_id = ?`,
+          [storedPropertyId, storedPropertyId]
+        );
+        if (pData.length > 0) {
+          numericPropertyId = pData[0].id;
+          propertyCode = pData[0].property_id;
+          propertyName = propertyName || pData[0].name;
+        }
+      }
+    }
+
+    console.log('[Customer Dashboard] Resolved property:', {
+      storedPropertyId, numericPropertyId, propertyCode, custEmail, customerId
     });
 
     // Get work orders for this customer - match by numeric property_id, string property code, resident_id, or customer_email
@@ -1186,8 +1209,10 @@ router.get('/dashboard', async (req, res) => {
           OR LOWER(wo.customer_email) = LOWER(?)
        ORDER BY wo.created_at DESC
        LIMIT 10`,
-      [propertyId, actualPropertyCode, customerId, custEmail]
+      [numericPropertyId, propertyCode, customerId, custEmail]
     );
+
+    console.log('[Customer Dashboard] Found work orders:', workOrders.length);
 
     // Get stats for this customer
     const [[stats]] = await pool.execute(
@@ -1197,11 +1222,8 @@ router.get('/dashboard', async (req, res) => {
          SUM(CASE WHEN status IN ('completed', 'closed', 'verified') THEN 1 ELSE 0 END) as completed
        FROM work_orders 
        WHERE property_id = ? OR property_id = ? OR resident_id = ? OR LOWER(customer_email) = LOWER(?)`,
-      [propertyId, actualPropertyCode, customerId, custEmail]
+      [numericPropertyId, propertyCode, customerId, custEmail]
     );
-
-    // Determine actual property code - only use real property codes
-    const dashPropCode = actualPropertyCode || null;
 
     res.json({
       success: true,
@@ -1211,9 +1233,9 @@ router.get('/dashboard', async (req, res) => {
           firstName: customerData.first_name,
           lastName: customerData.last_name,
           email: customerData.email,
-          propertyName: customerData.property_name,
-          propertyId: dashPropCode,
-          propertyCode: dashPropCode
+          propertyName: propertyName,
+          propertyId: propertyCode,
+          propertyCode: propertyCode
         },
         recentWorkOrders: workOrders,
         stats: {
@@ -1250,15 +1272,9 @@ router.get('/work-orders', async (req, res) => {
     const customerId = decoded.id;
     const customerEmail = decoded.email;
 
-    // Get customer property info
+    // Get customer details
     const [customer] = await pool.execute(
-      `SELECT ca.*, 
-              COALESCE(op.id, p.id) as db_property_id,
-              COALESCE(op.property_id, p.property_id) as actual_property_id
-       FROM customer_accounts ca
-       LEFT JOIN onboarded_properties op ON ca.property_id = op.id OR ca.property_id = op.property_id
-       LEFT JOIN properties p ON ca.property_id = p.id OR ca.property_id = p.property_id
-       WHERE ca.id = ?`,
+      `SELECT * FROM customer_accounts WHERE id = ?`,
       [customerId]
     );
 
@@ -1266,9 +1282,33 @@ router.get('/work-orders', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Customer not found' });
     }
 
-    const propertyId = customer[0].db_property_id || customer[0].property_id;
-    const actualPropertyCode = customer[0].actual_property_id || customer[0].property_code;
-    const custEmail = customerEmail || customer[0].email;
+    const customerData = customer[0];
+    const custEmail = customerEmail || customerData.email;
+    const storedPropertyId = customerData.property_id;
+
+    // Resolve property to get numeric ID
+    let numericPropertyId = null;
+    let propertyCode = null;
+
+    if (storedPropertyId) {
+      const [opData] = await pool.execute(
+        `SELECT id, property_id FROM onboarded_properties WHERE id = ? OR property_id = ?`,
+        [storedPropertyId, storedPropertyId]
+      );
+      if (opData.length > 0) {
+        numericPropertyId = opData[0].id;
+        propertyCode = opData[0].property_id;
+      } else {
+        const [pData] = await pool.execute(
+          `SELECT id, property_id FROM properties WHERE id = ? OR property_id = ?`,
+          [storedPropertyId, storedPropertyId]
+        );
+        if (pData.length > 0) {
+          numericPropertyId = pData[0].id;
+          propertyCode = pData[0].property_id;
+        }
+      }
+    }
 
     // Get all work orders with full details - match by numeric ID, string property code, resident_id, or email
     const [workOrders] = await pool.execute(
@@ -1285,7 +1325,7 @@ router.get('/work-orders', async (req, res) => {
           OR wo.resident_id = ?
           OR LOWER(wo.customer_email) = LOWER(?)
        ORDER BY wo.created_at DESC`,
-      [propertyId, actualPropertyCode, customerId, custEmail]
+      [numericPropertyId, propertyCode, customerId, custEmail]
     );
 
     // Get attachments for each work order
