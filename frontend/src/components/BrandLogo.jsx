@@ -1,7 +1,5 @@
-import Logo from '../assets/LOGO 2.png';
-
-const BrandLogo = ({ 
-  size = 'default', 
+const BrandLogo = ({
+  size = 'default',
   className = '',
   showText = true
 }) => {
@@ -17,20 +15,24 @@ const BrandLogo = ({
 
   if (!showText) {
     return (
-      <img 
-        src={Logo} 
-        alt="XLAND INFRA" 
-        className={`${s.logo} w-auto ${className}`} 
+      <img
+        src="/XLAND_INFRA_Website.png"
+        alt="XLAND INFRA"
+        className={`${s.logo} w-auto ${className}`}
+        loading="eager"
+        decoding="async"
       />
     );
   }
 
   return (
     <div className={`flex items-center ${s.gap} ${className}`}>
-      <img 
-        src={Logo} 
-        alt="XLAND INFRA" 
-        className={`${s.logo} w-auto`} 
+      <img
+        src="/XLAND_INFRA_Website.png"
+        alt="XLAND INFRA"
+        className={`${s.logo} w-auto`}
+        loading="eager"
+        decoding="async"
       />
       <div className="flex flex-col items-center leading-none">
         <span className={`${s.text} font-bold tracking-[0.15em] text-gold-shine`}>
