@@ -899,7 +899,12 @@ const ManagerProperties = ({ user }) => {
                               </div>
                               <div className="min-w-0">
                                 <p className="text-xs text-gray-500 mb-1">Phone</p>
-                                <p className="text-sm text-gray-900 whitespace-nowrap">{contact.phone ? (contact.phone.startsWith('+') ? contact.phone : `+91 ${contact.phone}`) : '-'}</p>
+                                <p className="text-sm text-gray-900 whitespace-nowrap">{(() => {
+                                  if (!contact.phone) return '-';
+                                  const phone = contact.phone.toString().trim();
+                                  if (phone.startsWith('+')) return phone;
+                                  return `+91 ${phone}`;
+                                })()}</p>
                               </div>
                             </div>
                           </div>
