@@ -339,90 +339,86 @@ const Dashboard = ({ user }) => {
               </div>
 
               {/* Service Details */}
-              <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600/50">
-                <h4 className="text-gold-400 font-medium mb-3 flex items-center gap-2">
+              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-4 border border-dark-600/50 backdrop-blur-sm">
+                <h4 className="text-gold-400 font-medium mb-4 flex items-center gap-2">
                   <Wrench className="w-4 h-4" /> Service Details
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-dark-400">Category</p>
-                    <p className="text-white font-medium">{selectedWorkOrder.category_name || '-'}</p>
+                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Category</p>
+                    <p className="text-white font-medium bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.category_name || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-dark-400">Subcategory</p>
-                    <p className="text-white font-medium">{selectedWorkOrder.subcategory_name || '-'}</p>
+                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Subcategory</p>
+                    <p className="text-white font-medium bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.subcategory_name || '-'}</p>
                   </div>
                 </div>
                 {selectedWorkOrder.description && (
                   <div className="mt-4">
-                    <p className="text-dark-400 text-sm">Description</p>
-                    <p className="text-white mt-1">{selectedWorkOrder.description}</p>
+                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Description</p>
+                    <p className="text-white bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.description}</p>
                   </div>
                 )}
               </div>
 
               {/* Property & Location */}
-              <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600/50">
-                <h4 className="text-gold-400 font-medium mb-3 flex items-center gap-2">
+              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-4 border border-dark-600/50 backdrop-blur-sm">
+                <h4 className="text-gold-400 font-medium mb-4 flex items-center gap-2">
                   <MapPin className="w-4 h-4" /> Property & Location
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-dark-400">Property</p>
-                    <p className="text-white font-medium">{selectedWorkOrder.wo_property_name || selectedWorkOrder.property_name || '-'}</p>
+                  <div className="col-span-2 sm:col-span-1">
+                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Property Type</p>
+                    <p className="text-white font-medium capitalize bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.property_type || '-'}</p>
                   </div>
-                  <div>
-                    <p className="text-dark-400">Property Type</p>
-                    <p className="text-white font-medium capitalize">{selectedWorkOrder.property_type || '-'}</p>
+                  <div className="col-span-2 sm:col-span-1">
+                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Location</p>
+                    <p className="text-white font-medium bg-dark-600/30 px-3 py-2 rounded-lg">
+                      {[selectedWorkOrder.block && `Block ${selectedWorkOrder.block}`, selectedWorkOrder.flat_number && `Flat ${selectedWorkOrder.flat_number}`].filter(Boolean).join(', ') || '-'}
+                    </p>
                   </div>
-                  {selectedWorkOrder.block && (
-                    <div>
-                      <p className="text-dark-400">Block</p>
-                      <p className="text-white font-medium">{selectedWorkOrder.block}</p>
-                    </div>
-                  )}
-                  {selectedWorkOrder.flat_number && (
-                    <div>
-                      <p className="text-dark-400">Flat Number</p>
-                      <p className="text-white font-medium">{selectedWorkOrder.flat_number}</p>
-                    </div>
-                  )}
                 </div>
               </div>
 
               {/* Customer Details */}
-              <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600/50">
-                <h4 className="text-gold-400 font-medium mb-3 flex items-center gap-2">
+              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-4 border border-dark-600/50 backdrop-blur-sm">
+                <h4 className="text-gold-400 font-medium mb-4 flex items-center gap-2">
                   <User className="w-4 h-4" /> Customer Details
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-dark-400" />
-                    <span className="text-white">{selectedWorkOrder.customer_name || '-'}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                  <div className="flex items-center gap-3 bg-dark-600/30 px-3 py-2.5 rounded-lg">
+                    <div className="w-8 h-8 bg-gold-500/20 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-gold-400" />
+                    </div>
+                    <span className="text-white font-medium">{selectedWorkOrder.customer_name || '-'}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-dark-400" />
+                  <div className="flex items-center gap-3 bg-dark-600/30 px-3 py-2.5 rounded-lg">
+                    <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+                      <Phone className="w-4 h-4 text-blue-400" />
+                    </div>
                     <span className="text-white">{selectedWorkOrder.customer_phone || '-'}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-dark-400" />
-                    <span className="text-white truncate">{selectedWorkOrder.customer_email || '-'}</span>
+                  <div className="flex items-center gap-3 bg-dark-600/30 px-3 py-2.5 rounded-lg">
+                    <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center">
+                      <Mail className="w-4 h-4 text-purple-400" />
+                    </div>
+                    <span className="text-white truncate text-sm">{selectedWorkOrder.customer_email || '-'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Entry & Pet Info */}
-              <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600/50">
-                <h4 className="text-gold-400 font-medium mb-3">Entry & Additional Info</h4>
+              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-4 border border-dark-600/50 backdrop-blur-sm">
+                <h4 className="text-gold-400 font-medium mb-4">Entry & Additional Info</h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-dark-400">Permission to Enter</p>
+                  <div className="bg-dark-600/30 px-3 py-2.5 rounded-lg">
+                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Permission to Enter</p>
                     <p className={`font-medium ${selectedWorkOrder.permission_to_enter === 'yes' ? 'text-green-400' : 'text-red-400'}`}>
                       {selectedWorkOrder.permission_to_enter === 'yes' ? 'Yes' : 'No'}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-dark-400">Has Pet</p>
+                  <div className="bg-dark-600/30 px-3 py-2.5 rounded-lg">
+                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Has Pet</p>
                     <p className={`font-medium ${selectedWorkOrder.has_pet === 'yes' ? 'text-yellow-400' : 'text-dark-200'}`}>
                       {selectedWorkOrder.has_pet === 'yes' ? 'Yes' : 'No'}
                     </p>
@@ -430,31 +426,31 @@ const Dashboard = ({ user }) => {
                 </div>
                 {selectedWorkOrder.entry_notes && (
                   <div className="mt-4">
-                    <p className="text-dark-400 text-sm">Entry Notes</p>
-                    <p className="text-white mt-1">{selectedWorkOrder.entry_notes}</p>
+                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Entry Notes</p>
+                    <p className="text-white bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.entry_notes}</p>
                   </div>
                 )}
               </div>
 
               {/* Timeline */}
-              <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600/50">
-                <h4 className="text-gold-400 font-medium mb-3 flex items-center gap-2">
+              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-4 border border-dark-600/50 backdrop-blur-sm">
+                <h4 className="text-gold-400 font-medium mb-4 flex items-center gap-2">
                   <Clock className="w-4 h-4" /> Timeline
                 </h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-dark-400">Created At</p>
+                <div className="flex flex-wrap gap-3 text-sm">
+                  <div className="bg-dark-600/30 px-4 py-2.5 rounded-lg flex-1 min-w-[140px]">
+                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Created</p>
                     <p className="text-white font-medium">{formatDate(selectedWorkOrder.created_at)}</p>
                   </div>
                   {selectedWorkOrder.scheduled_date && (
-                    <div>
-                      <p className="text-dark-400">Scheduled Date</p>
+                    <div className="bg-blue-500/10 border border-blue-500/20 px-4 py-2.5 rounded-lg flex-1 min-w-[140px]">
+                      <p className="text-blue-400 text-xs uppercase tracking-wider mb-1">Scheduled</p>
                       <p className="text-white font-medium">{formatDate(selectedWorkOrder.scheduled_date)}</p>
                     </div>
                   )}
                   {selectedWorkOrder.completed_at && (
-                    <div>
-                      <p className="text-dark-400">Completed At</p>
+                    <div className="bg-green-500/10 border border-green-500/20 px-4 py-2.5 rounded-lg flex-1 min-w-[140px]">
+                      <p className="text-green-400 text-xs uppercase tracking-wider mb-1">Completed</p>
                       <p className="text-green-400 font-medium">{formatDate(selectedWorkOrder.completed_at)}</p>
                     </div>
                   )}

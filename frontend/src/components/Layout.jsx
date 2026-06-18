@@ -15,18 +15,22 @@ const Layout = ({ children, user, onLogout }) => {
             </Link>
             {/* User Menu */}
             <div className="flex items-center space-x-3">
-              <div className="hidden sm:flex items-center space-x-2 text-sm">
-                <div className="w-8 h-8 bg-gold-600/20 border border-gold-500/30 rounded-full flex items-center justify-center">
+              <div className="hidden sm:flex items-center space-x-3 text-sm bg-dark-700/50 px-3 py-2 rounded-xl border border-dark-600/50">
+                <div className="w-9 h-9 bg-gradient-to-br from-gold-500/30 to-gold-600/20 border border-gold-500/40 rounded-full flex items-center justify-center shadow-lg shadow-gold-500/10">
                   <User className="w-4 h-4 text-gold-400" />
                 </div>
                 <div className="text-right">
                   <p className="font-medium text-white">{user?.firstName} {user?.lastName}</p>
-                  <p className="text-xs text-dark-400">Unit {user?.unitNumber}</p>
                 </div>
+                <LogOut 
+                  onClick={onLogout}
+                  className="w-5 h-5 text-dark-400 hover:text-red-400 cursor-pointer transition-colors ml-2"
+                  title="Logout"
+                />
               </div>
               <button
                 onClick={onLogout}
-                className="p-2 text-dark-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                className="sm:hidden p-2 text-dark-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                 title="Logout"
               >
                 <LogOut className="w-5 h-5" />
