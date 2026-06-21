@@ -1091,12 +1091,16 @@ const FPProperties = ({ user }) => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Watchman Name</p>
-                        <p className="text-sm font-medium text-gray-900">{selectedProperty.watchman_name || 'N/A'}</p>
+                        <p className="text-sm font-medium text-gray-900">{selectedProperty.watchman_name || selectedProperty.watchmanName || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Watchman Contact</p>
                         <p className="text-sm font-medium text-gray-900">
-                          {selectedProperty.watchman_contact ? (selectedProperty.watchman_contact.startsWith('+') ? selectedProperty.watchman_contact : `+91 ${selectedProperty.watchman_contact}`) : 'N/A'}
+                          {(() => {
+                            const contact = selectedProperty.watchman_contact || selectedProperty.watchmanContact;
+                            if (!contact) return 'N/A';
+                            return contact.startsWith('+') ? contact : `+91 ${contact}`;
+                          })()}
                         </p>
                       </div>
                     </div>
