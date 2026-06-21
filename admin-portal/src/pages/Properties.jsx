@@ -672,7 +672,7 @@ const Properties = () => {
                       <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                         {formatDate(property.createdAt)}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap text-center">
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => handleViewProperty(property)}
