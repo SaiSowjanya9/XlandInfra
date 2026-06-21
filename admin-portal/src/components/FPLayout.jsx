@@ -169,10 +169,10 @@ const FPLayout = ({ admin, onLogout, children }) => {
             <div className="flex items-center gap-3">
               <img src="/logo.png" alt="XLAND INFRA" className="h-16 w-auto object-contain" />
               <div className="flex flex-col">
-                <span className="text-sm font-semibold text-white">
+                <span className="text-base font-semibold text-white">
                   {admin?.firstName} {admin?.lastName}
                 </span>
-                <span className="text-xs text-amber-400 font-medium flex items-center gap-1">
+                <span className="text-sm text-amber-400 font-medium flex items-center gap-1">
                   <Crown className="w-3 h-3" />
                   {getRoleDisplay()}
                 </span>
@@ -282,8 +282,8 @@ const FPLayout = ({ admin, onLogout, children }) => {
           <div className="px-3 py-4 border-t border-slate-700/50">
             <button
               onClick={onLogout}
-              className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-medium 
-                       hover:from-amber-600 hover:to-amber-700 transition-all duration-300 shadow-md hover:shadow-lg"
+              className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-slate-800 text-amber-400 font-medium 
+                       hover:bg-slate-700 transition-all duration-300 border border-slate-700"
             >
               <LogOut className="w-4 h-4" />
               <span>Logout</span>
