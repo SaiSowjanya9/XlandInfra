@@ -136,15 +136,15 @@ const FPLayout = ({ admin, onLogout, children }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Desktop Top Header Bar */}
-      <header className="hidden lg:flex fixed top-0 right-0 left-64 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/50 z-30 items-center justify-end px-6 shadow-sm">
+      <header className="hidden lg:flex fixed top-0 right-0 left-64 h-16 bg-slate-900 border-b border-slate-700/50 z-30 items-center justify-end px-6">
         <div className="flex items-center gap-4">
           {/* User Profile */}
-          <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-gradient-to-r from-slate-50 to-slate-100/80 border border-slate-200/50">
+          <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-800 border border-slate-700/50">
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-slate-800">
+              <span className="text-sm font-semibold text-white">
                 {admin?.firstName} {admin?.lastName}
               </span>
-              <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
+              <span className="text-xs text-amber-400 font-medium flex items-center gap-1">
                 <Crown className="w-3 h-3" />
                 {getRoleDisplay()}
               </span>
@@ -193,11 +193,9 @@ const FPLayout = ({ admin, onLogout, children }) => {
       >
         <div className="flex flex-col h-full">
           {/* Logo Header */}
-          <div className="flex items-center justify-between px-4 h-20 border-b border-slate-700/50">
-            <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="XLAND INFRA" className="h-14 w-auto object-contain" />
-            </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-xl hover:bg-slate-800 transition-colors">
+          <div className="flex items-center justify-center px-4 h-20 border-b border-slate-700/50 relative">
+            <img src="/logo.png" alt="XLAND INFRA" className="h-14 w-auto object-contain" />
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden absolute right-4 p-2 rounded-xl hover:bg-slate-800 transition-colors">
               <X className="w-5 h-5 text-slate-400" />
             </button>
           </div>
