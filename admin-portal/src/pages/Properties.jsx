@@ -73,6 +73,7 @@ const Properties = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   
   // Property detail view state
   const [detailTab, setDetailTab] = useState('details'); // 'details' or 'estimates'
@@ -95,8 +96,9 @@ const Properties = () => {
   const hasFullAccess = !isOpsManager || currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
   // Load properties from backend API (onboarding endpoint)
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (showLoading = false) => {
+    // Only show loading spinner on initial load or manual refresh
+    if (showLoading) setLoading(true);
     try {
       const response = await fetch('/api/onboarding', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -109,14 +111,18 @@ const Properties = () => {
     } catch (error) {
       console.error('Error loading properties:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
+      if (!initialLoadDone) {
+        setLoading(false);
+        setInitialLoadDone(true);
+      }
     }
   };
 
   useEffect(() => {
-    loadData();
-    // Poll for new entries every 10 seconds
-    const interval = setInterval(loadData, 10000);
+    loadData(true); // Initial load shows loading spinner
+    // Poll for new entries every 30 seconds (silent background refresh)
+    const interval = setInterval(() => loadData(false), 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -135,7 +141,7 @@ const Properties = () => {
       });
       const result = await response.json();
       if (result.success) {
-        await loadData();
+        await loadData(false); // Silent refresh after delete
         showToast('Property deleted successfully');
       } else {
         showToast(result.message || 'Failed to delete property', 'error');
@@ -184,7 +190,7 @@ const Properties = () => {
         showToast('Property updated successfully');
         setShowEditModal(false);
         setEditFormData({});
-        loadData();
+        loadData(false); // Silent refresh after edit
       } else {
         showToast(result.message || 'Failed to update property', 'error');
       }
