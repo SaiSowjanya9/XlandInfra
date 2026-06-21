@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Building2,
   Plus,
@@ -35,26 +36,63 @@ import * as XLSX from 'xlsx';
 const FPProperties = ({ user }) => {
   // Check if user is FP Manager (restricted access - view only)
   const isFPManager = user?.role === 'manager';
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // URL-synced state for filters and navigation
+  const searchTerm = searchParams.get('search') || '';
+  const activeTab = searchParams.get('type') || 'all';
+  const selectedZone = searchParams.get('zone') || '';
+  const statusFilter = searchParams.get('status') || 'active';
+  const selectedCategory = searchParams.get('category') || null;
+  const viewPropertyId = searchParams.get('view');
+  const editPropertyId = searchParams.get('edit');
+  
+  // Helper to update URL params
+  const updateUrlParam = useCallback((key, value) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (value === '' || value === null || value === undefined || value === 'all' || value === 'active') {
+        // Don't store default values in URL
+        if (key === 'status' && value === 'active') {
+          newParams.delete(key);
+        } else if (key === 'type' && value === 'all') {
+          newParams.delete(key);
+        } else if (!value) {
+          newParams.delete(key);
+        } else {
+          newParams.set(key, value);
+        }
+      } else {
+        newParams.set(key, value);
+      }
+      return newParams;
+    }, { replace: true });
+  }, [setSearchParams]);
+  
+  // Setters that update URL
+  const setSearchTerm = (value) => updateUrlParam('search', value);
+  const setActiveTab = (value) => updateUrlParam('type', value);
+  const setSelectedZone = (value) => updateUrlParam('zone', value);
+  const setStatusFilter = (value) => updateUrlParam('status', value);
+  const setSelectedCategory = (value) => updateUrlParam('category', value);
   
   const [properties, setProperties] = useState([]);
   const [zones, setZones] = useState([]);
   const [divisions, setDivisions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
   const [selectedDivision, setSelectedDivision] = useState('');
-  const [selectedZone, setSelectedZone] = useState('');
-  const [statusFilter, setStatusFilter] = useState('active');
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedProperty, setSelectedProperty] = useState(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignType, setAssignType] = useState('vendor');
   const [vendors, setVendors] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({});
+  
+  // Derived state for modals based on URL
+  const showDetailsModal = !!viewPropertyId;
+  const showEditModal = !!editPropertyId;
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -123,6 +161,77 @@ const FPProperties = ({ user }) => {
     fetchVendors();
     fetchEmployees();
   }, []);
+  
+  // Sync selectedProperty from URL params
+  useEffect(() => {
+    if (viewPropertyId && properties.length > 0) {
+      const property = properties.find(p => String(p.id) === viewPropertyId);
+      if (property) setSelectedProperty(property);
+    } else if (editPropertyId && properties.length > 0) {
+      const property = properties.find(p => String(p.id) === editPropertyId);
+      if (property) {
+        setSelectedProperty(property);
+        // Also set edit form data
+        setEditFormData({
+          id: property.id,
+          name: property.name || '',
+          propertyType: property.property_type || 'residential',
+          address: property.address || '',
+          city: property.city || '',
+          state: property.state || '',
+          zipCode: property.zip_code || '',
+          contactPerson: property.contact_person || '',
+          contactPhone: property.contact_phone || '',
+          contactEmail: property.contact_email || '',
+          zone: property.zone_name || property.zone_id || '',
+          division: property.division || property.division_id || '',
+          area: property.area || property.area_name || '',
+          isActive: property.is_active !== false,
+          sourceTable: property.source_table || 'properties',
+          watchmanName: property.watchman_name || '',
+          watchmanContact: property.watchman_contact || ''
+        });
+      }
+    } else if (!viewPropertyId && !editPropertyId) {
+      setSelectedProperty(null);
+    }
+  }, [viewPropertyId, editPropertyId, properties]);
+  
+  // URL-based modal handlers
+  const openViewModal = (property) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('view', String(property.id));
+      return newParams;
+    });
+  };
+  
+  const closeViewModal = () => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.delete('view');
+      return newParams;
+    }, { replace: true });
+    setSelectedProperty(null);
+  };
+  
+  const openEditModalUrl = (property) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('edit', String(property.id));
+      return newParams;
+    });
+  };
+  
+  const closeEditModal = () => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.delete('edit');
+      return newParams;
+    }, { replace: true });
+    setSelectedProperty(null);
+    setEditFormData({});
+  };
 
   const handleDeleteProperty = async (propertyId) => {
     if (!window.confirm('Are you sure you want to delete this property?')) return;
@@ -202,7 +311,8 @@ const FPProperties = ({ user }) => {
       watchmanName: property.watchman_name || '',
       watchmanContact: property.watchman_contact || ''
     });
-    setShowEditModal(true);
+    // Use URL-based modal
+    openEditModalUrl(property);
   };
 
   const handleSaveEdit = async () => {
@@ -237,8 +347,7 @@ const FPProperties = ({ user }) => {
 
       if (result.success) {
         setMessage({ type: 'success', text: 'Property updated successfully!' });
-        setShowEditModal(false);
-        setEditFormData({});
+        closeEditModal();
         fetchProperties();
       } else {
         setMessage({ type: 'error', text: result.message || 'Update failed' });
@@ -642,10 +751,7 @@ const FPProperties = ({ user }) => {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => {
-                              setSelectedProperty(property);
-                              setShowDetailsModal(true);
-                            }}
+                            onClick={() => openViewModal(property)}
                             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                             title="View Details"
                           >
@@ -724,7 +830,7 @@ const FPProperties = ({ user }) => {
                 <p className="text-sm text-gray-500 mt-1">{selectedProperty.property_id}</p>
               </div>
               <button
-                onClick={() => { setShowDetailsModal(false); setSelectedProperty(null); }}
+                onClick={closeViewModal}
                 className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
@@ -1109,7 +1215,7 @@ const FPProperties = ({ user }) => {
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">Edit Property</h2>
-              <button onClick={() => { setShowEditModal(false); setEditFormData({}); }} className="p-2 hover:bg-gray-100 rounded-lg">
+              <button onClick={closeEditModal} className="p-2 hover:bg-gray-100 rounded-lg">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
@@ -1207,7 +1313,7 @@ const FPProperties = ({ user }) => {
               )}
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button onClick={() => { setShowEditModal(false); setEditFormData({}); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
+              <button onClick={closeEditModal} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
               <button onClick={handleSaveEdit} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><Save className="w-4 h-4" />Save Changes</button>
             </div>
           </div>

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
@@ -30,9 +30,63 @@ const TAB_TITLES = {
 
 const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Check if user is FP Manager (restricted access)
   const isFPManager = user?.role === 'manager';
+  
+  // URL-synced state for filters and modals
+  const urlSearchTerm = searchParams.get('search') || '';
+  const urlFilterStatus = searchParams.get('status') || 'all';
+  const urlFilterType = searchParams.get('type') || 'all';
+  const viewEstimateId = searchParams.get('viewEstimate');
+  const viewPackageId = searchParams.get('viewPackage');
+  
+  // Helper to update URL params
+  const updateUrlParam = useCallback((key, value, defaultValue = '') => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (value === defaultValue || value === null || value === undefined || value === '' || value === 'all') {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, String(value));
+      }
+      return newParams;
+    }, { replace: true });
+  }, [setSearchParams]);
+  
+  // URL-based modal handlers
+  const openViewEstimate = useCallback((estimate) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('viewEstimate', String(estimate.id));
+      return newParams;
+    });
+  }, [setSearchParams]);
+  
+  const closeViewEstimate = useCallback(() => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.delete('viewEstimate');
+      return newParams;
+    }, { replace: true });
+  }, [setSearchParams]);
+  
+  const openViewPackage = useCallback((pkg) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('viewPackage', String(pkg.id));
+      return newParams;
+    });
+  }, [setSearchParams]);
+  
+  const closeViewPackage = useCallback(() => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.delete('viewPackage');
+      return newParams;
+    }, { replace: true });
+  }, [setSearchParams]);
   
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +96,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [addons, setAddons] = useState([]);
   const [properties, setProperties] = useState([]);
   const [stats, setStats] = useState({ estimates: 0, amcPackages: 0, addons: 0, archived: 0 });
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(urlSearchTerm);
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
@@ -82,6 +136,26 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const token = sessionStorage.getItem('pm_auth_token');
 
   useEffect(() => { loadData(); }, [defaultTab]);
+  
+  // Sync viewEstimate and viewAmcPackage from URL params
+  useEffect(() => {
+    if (viewEstimateId && estimates.length > 0) {
+      const estimate = estimates.find(e => String(e.id) === viewEstimateId) || 
+                       archivedEstimates.find(e => String(e.id) === viewEstimateId);
+      if (estimate) setViewEstimate(estimate);
+    } else if (!viewEstimateId) {
+      setViewEstimate(null);
+    }
+  }, [viewEstimateId, estimates, archivedEstimates]);
+  
+  useEffect(() => {
+    if (viewPackageId && amcPackages.length > 0) {
+      const pkg = amcPackages.find(p => String(p.id) === viewPackageId);
+      if (pkg) setViewAmcPackage(pkg);
+    } else if (!viewPackageId) {
+      setViewAmcPackage(null);
+    }
+  }, [viewPackageId, amcPackages]);
 
   const loadData = async () => {
     setLoading(true);
@@ -1703,7 +1777,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="View"><Eye className="w-4 h-4" /></button>
+                        <button onClick={() => openViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="View"><Eye className="w-4 h-4" /></button>
                         <button onClick={() => handleExportPDF(est)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button>
                         <button onClick={() => handleSendEmail(est)} disabled={sendingEmailId === est.id} className={`p-1.5 rounded ${sendingEmailId === est.id ? 'text-indigo-400 cursor-wait' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`} title="Send Email"><Send className={`w-4 h-4 ${sendingEmailId === est.id ? 'animate-pulse' : ''}`} /></button>
                         <button onClick={() => handleArchiveEstimate(est.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
@@ -1900,7 +1974,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <td className="px-4 py-4">
                             <div className="flex items-center justify-center gap-1">
                               <button 
-                                onClick={() => setViewAmcPackage({ ...pkg, servicesData: serviceRows, propertyType, billingDuration })}
+                                onClick={() => openViewPackage({ ...pkg, servicesData: serviceRows, propertyType, billingDuration })}
                                 className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" 
                                 title="View"
                               >
@@ -2628,7 +2702,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const renderArchived = () => (
     <div className="space-y-4">
       {archivedEstimates.length > 0 && !isFPManager && <div className="flex justify-end"><button onClick={() => setShowDeleteAllConfirm(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"><Trash2 className="w-4 h-4" />Delete All ({archivedEstimates.length})</button></div>}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <tr key={e.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-mono text-xs">{e.estimate_id}</td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3">{e.client_name}</td><td className="px-4 py-3 text-gray-500">{e.archived_at ? new Date(e.archived_at).toLocaleDateString() : '-'}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => setViewEstimate(e)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="View"><Eye className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <tr key={e.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-mono text-xs">{e.estimate_id}</td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3">{e.client_name}</td><td className="px-4 py-3 text-gray-500">{e.archived_at ? new Date(e.archived_at).toLocaleDateString() : '-'}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => openViewEstimate(e)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="View"><Eye className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
       {deleteConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Permanently?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></div></div>}
       {showDeleteAllConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-red-600 mb-2">⚠️ Delete All Archived?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete <strong>all {archivedEstimates.length} archived estimates</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setShowDeleteAllConfirm(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={handleDeleteAllArchived} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete All</button></div></div></div>}
     </div>
@@ -2675,7 +2749,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
-              <button onClick={() => setViewEstimate(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+              <button onClick={closeViewEstimate} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
               {/* Basic Info */}
@@ -2928,7 +3002,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <h3 className="text-base sm:text-lg font-semibold text-gray-800">AMC Package Details</h3>
-              <button onClick={() => setViewAmcPackage(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+              <button onClick={closeViewPackage} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
               {/* Package Header */}
