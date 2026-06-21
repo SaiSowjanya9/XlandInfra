@@ -267,12 +267,12 @@ function App() {
             {/* Estimate Action - Public */}
             <Route path="/estimate-action/:estimateId" element={<EstimateAction />} />
             
-            {/* Employee Portal Login */}
+            {/* Employee Portal Login - routes to correct portal based on user's role/FP association */}
             <Route path="/employee/login" element={
-              user && portal === 'employee' ? (
-                <Navigate to="/employee" replace />
+              user && portal ? (
+                <Navigate to={`/${portal === 'franchise' ? 'fp' : portal}`} replace />
               ) : (
-                <EmployeeLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('employee'); }} onBack={() => { handleBackToPortals(); }} />
+                <EmployeeLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal(userData.portal || 'employee'); }} onBack={() => { handleBackToPortals(); }} />
               )
             } />
             
