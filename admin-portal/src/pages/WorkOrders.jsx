@@ -683,7 +683,7 @@ const WorkOrders = ({ admin }) => {
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Status</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Created</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Created By</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600 whitespace-nowrap">Actions</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-600 whitespace-nowrap text-center w-24">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -750,7 +750,7 @@ const WorkOrders = ({ admin }) => {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-center">
+                    <td className="px-4 py-4 text-center w-24">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => setSelectedOrder(wo)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="View">
                           <Eye className="w-4 h-4" />
@@ -783,20 +783,25 @@ const WorkOrders = ({ admin }) => {
               <button onClick={() => setSelectedOrder(null)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Order ID</p>
-                  <p className="font-mono font-medium">{selectedOrder.work_order_id}</p>
+              <div>
+                <p className="text-sm text-gray-500">Order ID</p>
+                <p className="font-mono font-medium">{selectedOrder.work_order_id}</p>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 uppercase">Status:</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
+                    {selectedOrder.status}
+                  </span>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Status</p>
-                  <select value={selectedOrder.status} onChange={(e) => { updateStatus(selectedOrder.id, e.target.value); setSelectedOrder({ ...selectedOrder, status: e.target.value }); }} className="mt-1 px-3 py-1 border border-gray-300 rounded-lg text-sm">
-                    <option value="pending">Pending</option>
-                    <option value="assigned">Assigned</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 uppercase">Priority:</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    selectedOrder.priority === 'high' || selectedOrder.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                    selectedOrder.priority === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {selectedOrder.priority}
+                  </span>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
