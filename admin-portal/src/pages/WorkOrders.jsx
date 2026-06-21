@@ -683,7 +683,7 @@ const WorkOrders = ({ admin }) => {
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Status</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Created</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 whitespace-nowrap">Created By</th>
-                <th className="px-4 py-3 text-sm font-medium text-gray-600 whitespace-nowrap text-center w-24">Actions</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-600 whitespace-nowrap text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -750,13 +750,10 @@ const WorkOrders = ({ admin }) => {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-center w-24">
-                      <div className="flex items-center justify-center gap-1">
+                    <td className="px-4 py-4">
+                      <div className="flex items-center justify-center">
                         <button onClick={() => setSelectedOrder(wo)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="View">
                           <Eye className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleEditWorkOrder(wo)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Edit">
-                          <Pencil className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
