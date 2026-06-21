@@ -38,8 +38,16 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
         const userRole = result.data.user?.role || result.data.role;
         const franchisePartnerId = result.data.user?.franchisePartnerId || result.data.user?.franchise_partner_id;
         
+        // DEBUG: Log the login response to see what we're getting
+        console.log('[EmployeeLogin] Login response:', {
+          role: userRole,
+          franchisePartnerId: franchisePartnerId,
+          fullUser: result.data.user
+        });
+        
         // Determine portal: FP employees (with franchisePartnerId) go to 'franchise' portal
         const portalType = franchisePartnerId ? 'franchise' : getPortalTypeFromRole(userRole);
+        console.log('[EmployeeLogin] Determined portal:', portalType);
         
         const user = {
           id: result.data.user?.id || result.data.id,
