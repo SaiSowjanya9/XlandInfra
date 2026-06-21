@@ -20,6 +20,8 @@ import {
   Hammer,
   ClipboardCheck,
   Crown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -27,6 +29,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   // Check if user is FP Manager (restricted access - created under FP)
   const isFPManager = admin?.role === 'manager';
