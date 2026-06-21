@@ -923,12 +923,16 @@ const ManagerProperties = ({ user }) => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-xs text-gray-500 mb-1">Watchman Name</p>
-                          <p className="text-sm text-gray-900">{viewingProperty.watchman_name || 'N/A'}</p>
+                          <p className="text-sm text-gray-900">{viewingProperty.watchman_name || viewingProperty.watchmanName || 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 mb-1">Watchman Contact</p>
                           <p className="text-sm text-gray-900">
-                            {viewingProperty.watchman_contact ? (viewingProperty.watchman_contact.startsWith('+') ? viewingProperty.watchman_contact : `+91 ${viewingProperty.watchman_contact}`) : 'N/A'}
+                            {(() => {
+                              const contact = viewingProperty.watchman_contact || viewingProperty.watchmanContact;
+                              if (!contact) return 'N/A';
+                              return contact.startsWith('+') ? contact : `+91 ${contact}`;
+                            })()}
                           </p>
                         </div>
                       </div>

@@ -303,12 +303,16 @@ router.get('/', async (req, res) => {
 
     try {
       let query = `
-        SELECT wo.*,
+        SELECT DISTINCT wo.*,
                op.community_name as onboarded_property_name,
                op.entry_type as onboarded_entry_type,
                op.zone as onboarded_zone
         FROM work_orders wo
-        LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
+        LEFT JOIN (
+          SELECT property_id, community_name, entry_type, zone 
+          FROM onboarded_properties 
+          GROUP BY property_id
+        ) op ON wo.property_id = op.property_id
       `;
       
       const params = [];
@@ -398,7 +402,11 @@ router.get('/:id', async (req, res) => {
                 op.entry_type as onboarded_entry_type,
                 op.zone as onboarded_zone
          FROM work_orders wo
-         LEFT JOIN onboarded_properties op ON wo.property_id = op.property_id
+         LEFT JOIN (
+           SELECT property_id, community_name, entry_type, zone 
+           FROM onboarded_properties 
+           GROUP BY property_id
+         ) op ON wo.property_id = op.property_id
          WHERE wo.id = ?`,
         [id]
       );
