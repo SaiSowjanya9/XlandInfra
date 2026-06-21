@@ -1024,12 +1024,16 @@ const Properties = () => {
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">Watchman Name</label>
-                            <p className="text-sm font-medium text-gray-900">{viewProperty.watchmanName || 'N/A'}</p>
+                            <p className="text-sm font-medium text-gray-900">{viewProperty.watchmanName || viewProperty.watchman_name || 'N/A'}</p>
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">Watchman Contact</label>
                             <p className="text-sm text-gray-900">
-                              {viewProperty.watchmanContact ? (viewProperty.watchmanContact.startsWith('+') ? viewProperty.watchmanContact : `+91 ${viewProperty.watchmanContact}`) : 'N/A'}
+                              {(() => {
+                                const contact = viewProperty.watchmanContact || viewProperty.watchman_contact;
+                                if (!contact) return 'N/A';
+                                return contact.startsWith('+') ? contact : `+91 ${contact}`;
+                              })()}
                             </p>
                           </div>
                         </div>
