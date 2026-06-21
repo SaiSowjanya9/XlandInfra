@@ -123,8 +123,8 @@ const FPLayout = ({ admin, onLogout, children }) => {
         onClick={handleClick}
         className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${
           isActive
-            ? 'bg-amber-100/80 text-amber-800 font-semibold border border-amber-200/50'
-            : 'text-slate-600 hover:bg-slate-100/50 hover:text-slate-800'
+            ? 'bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30'
+            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
         }`}
       >
         <Icon className="w-5 h-5" />
@@ -140,9 +140,6 @@ const FPLayout = ({ admin, onLogout, children }) => {
         <div className="flex items-center gap-4">
           {/* User Profile */}
           <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-gradient-to-r from-slate-50 to-slate-100/80 border border-slate-200/50">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-slate-900 font-bold text-sm shadow-md">
-              {getInitials()}
-            </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-slate-800">
                 {admin?.firstName} {admin?.lastName}
@@ -173,12 +170,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl hover:bg-slate-100 transition-colors">
             <Menu className="w-6 h-6 text-slate-700" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-slate-900 font-bold text-xs">
-              {getInitials()}
-            </div>
-            <span className="font-semibold text-slate-800">{admin?.firstName}</span>
-          </div>
+          <span className="font-semibold text-slate-800">{admin?.firstName} {admin?.lastName}</span>
           <button
             onClick={onLogout}
             className="p-2 rounded-xl bg-slate-800 text-amber-400 hover:bg-slate-700 transition-colors"
@@ -195,18 +187,18 @@ const FPLayout = ({ admin, onLogout, children }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-slate-50 to-stone-100 shadow-xl z-50 transform transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed top-0 left-0 h-full w-64 bg-slate-900 shadow-xl z-50 transform transition-transform duration-300 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo Header */}
-          <div className="flex items-center justify-between px-5 h-16 border-b border-slate-100">
+          <div className="flex items-center justify-between px-4 h-20 border-b border-slate-700/50">
             <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="XLAND INFRA" className="h-10 w-auto object-contain" />
+              <img src="/logo.png" alt="XLAND INFRA" className="h-14 w-auto object-contain" />
             </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-xl hover:bg-slate-100 transition-colors">
-              <X className="w-5 h-5 text-slate-500" />
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-xl hover:bg-slate-800 transition-colors">
+              <X className="w-5 h-5 text-slate-400" />
             </button>
           </div>
 
@@ -217,13 +209,13 @@ const FPLayout = ({ admin, onLogout, children }) => {
             ))}
 
             {/* Vendor Management Section */}
-            <div className="mt-3 pt-3 border-t border-slate-100">
+            <div className="mt-3 pt-3 border-t border-slate-700">
               <button
                 onClick={() => setVendorOpen(!vendorOpen)}
                 className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
                   isVendorSectionActive && !vendorOpen
-                    ? 'bg-amber-50 text-amber-700'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-slate-800 text-amber-400'
+                    : 'text-slate-300 hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -237,7 +229,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 />
               </button>
               {vendorOpen && (
-                <div className="ml-4 mt-1 space-y-1 border-l-2 border-amber-200 pl-3">
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-700 pl-3">
                   {vendorSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
                   ))}
@@ -251,8 +243,8 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 onClick={() => setEmployeeOpen(!employeeOpen)}
                 className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
                   isEmployeeSectionActive && !employeeOpen
-                    ? 'bg-amber-50 text-amber-700'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-slate-800 text-amber-400'
+                    : 'text-slate-300 hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -266,7 +258,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 />
               </button>
               {employeeOpen && (
-                <div className="ml-4 mt-1 space-y-1 border-l-2 border-amber-200 pl-3">
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-700 pl-3">
                   {employeeSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
                   ))}
@@ -280,8 +272,8 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 onClick={() => setEstimatesOpen(!estimatesOpen)}
                 className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
                   isEstimatesSectionActive && !estimatesOpen
-                    ? 'bg-amber-50 text-amber-700'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-slate-800 text-amber-400'
+                    : 'text-slate-300 hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -295,7 +287,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 />
               </button>
               {estimatesOpen && (
-                <div className="ml-4 mt-1 space-y-1 border-l-2 border-amber-200 pl-3">
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-700 pl-3">
                   {estimatesSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
                   ))}
