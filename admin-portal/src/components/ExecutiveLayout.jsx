@@ -138,8 +138,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                 <span className="text-base font-semibold text-white">
                   {admin?.firstName} {admin?.lastName}
                 </span>
-                <span className="text-sm text-amber-400 font-medium flex items-center gap-1">
-                  <Crown className="w-3 h-3" />
+                <span className="text-sm text-amber-400 font-medium">
                   Executive
                 </span>
               </div>
