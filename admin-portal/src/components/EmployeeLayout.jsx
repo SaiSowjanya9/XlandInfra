@@ -136,8 +136,8 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
         onClick={handleClick}
         className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${
           isActive
-            ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-900 shadow-md font-semibold'
-            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            ? 'bg-amber-100/80 text-amber-800 font-semibold border border-amber-200/50'
+            : 'text-slate-600 hover:bg-slate-100/50 hover:text-slate-800'
         }`}
       >
         <Icon className="w-5 h-5" />
@@ -208,7 +208,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-xl z-50 transform transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-slate-50 to-stone-100 shadow-xl z-50 transform transition-transform duration-300 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -216,13 +216,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
           {/* Logo Header */}
           <div className="flex items-center justify-between px-5 h-16 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center shadow-lg shadow-amber-200">
-                <Crown className="w-5 h-5 text-slate-900" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-slate-800 text-sm">{getRoleDisplay()}</span>
-                <span className="text-xs text-slate-500">Portal</span>
-              </div>
+              <img src="/logo.png" alt="XLAND INFRA" className="h-10 w-auto object-contain" />
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-xl hover:bg-slate-100 transition-colors">
               <X className="w-5 h-5 text-slate-500" />
@@ -331,13 +325,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
           </nav>
 
-          {/* Footer branding */}
-          <div className="p-4 border-t border-slate-100">
-            <div className="text-center">
-              <p className="text-xs text-slate-400">XLAND INFRA</p>
-              <p className="text-xs text-slate-300">Management System</p>
-            </div>
-          </div>
         </div>
       </aside>
 
