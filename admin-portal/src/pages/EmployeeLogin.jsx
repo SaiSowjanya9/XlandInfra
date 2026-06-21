@@ -36,6 +36,10 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
       
       if (result.success && result.data) {
         const userRole = result.data.user?.role || result.data.role;
+        const franchisePartnerId = result.data.user?.franchisePartnerId || result.data.user?.franchise_partner_id;
+        
+        // Determine portal: FP employees (with franchisePartnerId) go to 'franchise' portal
+        const portalType = franchisePartnerId ? 'franchise' : getPortalTypeFromRole(userRole);
         
         const user = {
           id: result.data.user?.id || result.data.id,
@@ -48,8 +52,8 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
           isSuperAdmin: result.data.user?.isSuperAdmin || false,
           status: 'active',
           permissions: result.data.user?.permissions || ['all'],
-          franchisePartnerId: result.data.user?.franchisePartnerId,
-          portal: getPortalTypeFromRole(userRole)
+          franchisePartnerId: franchisePartnerId,
+          portal: portalType
         };
         
         // Check if user must change password (first login)
