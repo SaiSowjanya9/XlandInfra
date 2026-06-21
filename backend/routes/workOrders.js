@@ -182,6 +182,25 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
       const finalPropertyName = propertyName || propDetails.name || null;
       const finalPropertyType = propertyType || propDetails.property_type || null;
 
+      // Check for duplicate work order (same property, category, subcategory created in last 30 seconds)
+      const [recentDuplicates] = await pool.query(
+        `SELECT id, work_order_id FROM work_orders 
+         WHERE property_id = ? AND category_id = ? AND subcategory_id = ? 
+         AND created_at > DATE_SUB(NOW(), INTERVAL 30 SECOND)
+         LIMIT 1`,
+        [propDetails.id || propId, parseInt(categoryId), parseInt(subcategoryId)]
+      );
+      
+      if (recentDuplicates.length > 0) {
+        console.log('[WorkOrder] Duplicate detected - returning existing:', recentDuplicates[0].work_order_id);
+        return res.status(200).json({
+          success: true,
+          message: 'Work order already submitted',
+          workOrderId: recentDuplicates[0].id,
+          orderNumber: recentDuplicates[0].work_order_id
+        });
+      }
+
       const [result] = await pool.query(
         `INSERT INTO work_orders (
           work_order_id, resident_id, property_id, unit_id,
@@ -341,7 +360,7 @@ router.get('/', async (req, res) => {
         query += ` WHERE ${conditions.join(' AND ')}`;
       }
       
-      query += ` ORDER BY wo.created_at DESC LIMIT ? OFFSET ?`;
+      query += ` GROUP BY wo.id ORDER BY wo.created_at DESC LIMIT ? OFFSET ?`;
       params.push(parseInt(limit), parseInt(offset));
 
       const [workOrders] = await pool.query(query, params);
