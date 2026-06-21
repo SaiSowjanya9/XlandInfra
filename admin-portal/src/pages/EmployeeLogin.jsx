@@ -45,8 +45,8 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
           fullUser: result.data.user
         });
         
-        // Determine portal: FP employees (with franchisePartnerId) go to 'franchise' portal
-        const portalType = franchisePartnerId ? 'franchise' : getPortalTypeFromRole(userRole);
+        // Determine portal based on role (FP employees stay in their role-based portal, not franchise portal)
+        const portalType = getPortalTypeFromRole(userRole);
         console.log('[EmployeeLogin] Determined portal:', portalType);
         
         const user = {
