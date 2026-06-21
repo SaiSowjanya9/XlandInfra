@@ -1,21 +1,36 @@
 import { Briefcase, Truck, Sparkles, Lock, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const PortalSelector = ({ onSelectPortal }) => {
+  const navigate = useNavigate();
+  
   const portals = [
     { 
       id: 'employee', 
       label: 'Employee Portal', 
       icon: Briefcase,
-      enabled: true
+      enabled: true,
+      loginPath: '/employee/login'
     },
     { 
       id: 'vendor', 
       label: 'Vendor Portal', 
       icon: Truck,
       enabled: false,
-      comingSoon: true
+      comingSoon: true,
+      loginPath: '/vendor/login'
     },
   ];
+  
+  const handlePortalSelect = (portal) => {
+    if (!portal.enabled) return;
+    // Call the parent handler if provided
+    if (onSelectPortal) {
+      onSelectPortal(portal.id);
+    }
+    // Navigate to the login page
+    navigate(portal.loginPath);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#0f0d08] to-[#0a0a0a] flex flex-col relative overflow-hidden">
@@ -89,7 +104,7 @@ const PortalSelector = ({ onSelectPortal }) => {
               return (
                 <button
                   key={portal.id}
-                  onClick={() => portal.enabled && onSelectPortal(portal.id)}
+                  onClick={() => handlePortalSelect(portal)}
                   disabled={!portal.enabled}
                   className={`relative group transition-all duration-400 ease-out ${
                     portal.enabled ? 'cursor-pointer' : 'cursor-not-allowed'

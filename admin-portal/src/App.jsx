@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
 import PortalSelector from './pages/PortalSelector';
 import EmployeeLogin from './pages/EmployeeLogin';
@@ -91,9 +91,27 @@ import { FPProvider } from './contexts/FPContext';
 // Session timeout in milliseconds (30 minutes)
 const SESSION_TIMEOUT = 30 * 60 * 1000;
 
+// Auth Context for sharing auth state across routes
+import { createContext, useContext } from 'react';
+const AuthContext = createContext(null);
+export const useAuth = () => useContext(AuthContext);
+
+// Protected Route wrapper component
+const ProtectedRoute = ({ children, requiredPortal }) => {
+  const { user, portal } = useAuth();
+  const location = useLocation();
+  
+  if (!user || portal !== requiredPortal) {
+    // Redirect to login while preserving intended destination
+    return <Navigate to={`/${requiredPortal}/login`} state={{ from: location }} replace />;
+  }
+  
+  return children;
+};
+
 function App() {
   const [user, setUser] = useState(null);
-  const [portal, setPortal] = useState(null); // 'employee' | 'vendor'
+  const [portal, setPortal] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Check if session is still valid
@@ -176,7 +194,7 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback((redirectPath = '/') => {
     setUser(null);
     setPortal(null);
     // Clear sessionStorage
@@ -190,20 +208,21 @@ function App() {
     localStorage.removeItem('pm_auth_token');
     localStorage.removeItem('pm_current_user');
     localStorage.removeItem('pm_demo_mode');
-    // Redirect to home page
-    window.location.href = '/';
-  };
+    // Return path for navigation (handled by component)
+    return redirectPath;
+  }, []);
 
-  const handleSelectPortal = (portalKey) => {
+  const handleSelectPortal = useCallback((portalKey) => {
     setPortal(portalKey);
-  };
+    sessionStorage.setItem('activePortal', portalKey);
+  }, []);
 
-  const handleBackToPortals = () => {
+  const handleBackToPortals = useCallback(() => {
     setPortal(null);
     setUser(null);
     sessionStorage.removeItem('adminUser');
     sessionStorage.removeItem('activePortal');
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -213,246 +232,330 @@ function App() {
     );
   }
 
-  // Public route: Password Reset page (accessible without login)
-  if (window.location.pathname.startsWith('/reset-password/')) {
-    return (
-      <Router>
-        <Routes>
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-        </Routes>
-      </Router>
-    );
-  }
+  // Auth context value
+  const authValue = { user, portal, handleLogin, handleLogout, handleBackToPortals };
 
-  // Public route: Estimate Action page (accessible without login)
-  if (window.location.pathname.startsWith('/estimate-action/')) {
-    return (
-      <Router>
-        <Routes>
-          <Route path="/estimate-action/:estimateId" element={<EstimateAction />} />
-        </Routes>
-      </Router>
-    );
-  }
+  // Wrapper component for logout that handles navigation
+  const LogoutWrapper = ({ children, portalPath }) => {
+    const navigate = useNavigate();
+    const handleLogoutWithNav = () => {
+      handleLogout();
+      navigate('/');
+    };
+    return children(handleLogoutWithNav);
+  };
 
-  // Step 1: No portal selected → show portal selector
-  if (!portal) {
-    return <PortalSelector onSelectPortal={handleSelectPortal} />;
-  }
-
-  // Step 2: Portal selected but not logged in → show that portal's login
-  if (!user) {
-    if (portal === 'employee') {
-      return <EmployeeLogin onLogin={handleLogin} onBack={handleBackToPortals} />;
-    }
-    if (portal === 'vendor') {
-      return <VendorLogin onLogin={handleLogin} onBack={handleBackToPortals} />;
-    }
-    if (portal === 'franchise') {
-      return <FPLogin onLogin={handleLogin} onBack={handleBackToPortals} />;
-    }
-    if (portal === 'manager') {
-      return <ManagerLogin onLogin={handleLogin} onBack={handleBackToPortals} />;
-    }
-    if (portal === 'coordinator') {
-      return <CoordinatorLogin onLogin={handleLogin} onBack={handleBackToPortals} />;
-    }
-    if (portal === 'supervisor') {
-      return <SupervisorLogin onLogin={handleLogin} onBack={handleBackToPortals} />;
-    }
-    if (portal === 'executive') {
-      return <ExecutiveLogin onLogin={handleLogin} onBack={handleBackToPortals} />;
-    }
-  }
-
-  // Step 3: Logged in → show that portal's layout + routes
-  if (portal === 'employee') {
-    return (
+  return (
+    <AuthContext.Provider value={authValue}>
       <FPProvider>
         <Router>
-          <EmployeeLayout admin={user} onLogout={handleLogout}>
-            <Routes>
-              <Route path="/employee" element={<Dashboard />} />
-              <Route path="/employee/customer-submissions" element={<CustomerSubmissions />} />
-              <Route path="/employee/work-orders" element={<EmployeeWorkOrders admin={user} />} />
-              <Route path="/employee/create-customer" element={<CreateCustomer admin={user} />} />
-              <Route path="/employee/add-vendor" element={<AddVendor admin={user} />} />
-              <Route path="/employee/vendor-details" element={<VendorDetails />} />
-              <Route path="/employee/assigned-vendors" element={<AssignedVendors user={user} />} />
-              <Route path="/employee/add-employee" element={<AddEmployee admin={user} />} />
-              <Route path="/employee/employee-details" element={<EmployeeDetails />} />
-              <Route path="/employee/employee-zone-management" element={<EmployeeZoneManagement />} />
-              <Route path="/employee/user-management" element={<UserManagement />} />
-              <Route path="/employee/qr-management" element={<QRManagement />} />
-              <Route path="/employee/estimates" element={<Navigate to="/employee/estimates/list" replace />} />
-              <Route path="/employee/estimates/create" element={<Estimates admin={user} defaultTab="create" />} />
-              <Route path="/employee/estimates/list" element={<Estimates admin={user} defaultTab="list" />} />
-              <Route path="/employee/estimates/amc-manager" element={<Estimates admin={user} defaultTab="amc-manager" />} />
-              <Route path="/employee/estimates/addons" element={<Estimates admin={user} defaultTab="addons" />} />
-              <Route path="/employee/estimates/archived" element={<Estimates admin={user} defaultTab="archived" />} />
-              <Route path="*" element={<Navigate to="/employee" replace />} />
-            </Routes>
-          </EmployeeLayout>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={
+              user && portal ? (
+                <Navigate to={`/${portal === 'franchise' ? 'fp' : portal}`} replace />
+              ) : (
+                <PortalSelector onSelectPortal={(p) => {
+                  handleSelectPortal(p);
+                }} />
+              )
+            } />
+            
+            {/* Password Reset - Public */}
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
+            
+            {/* Estimate Action - Public */}
+            <Route path="/estimate-action/:estimateId" element={<EstimateAction />} />
+            
+            {/* Employee Portal Login */}
+            <Route path="/employee/login" element={
+              user && portal === 'employee' ? (
+                <Navigate to="/employee" replace />
+              ) : (
+                <EmployeeLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('employee'); }} onBack={() => { handleBackToPortals(); }} />
+              )
+            } />
+            
+            {/* Employee Portal Routes */}
+            <Route path="/employee" element={
+              user && portal === 'employee' ? (
+                <EmployeeLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <Dashboard />
+                </EmployeeLayout>
+              ) : <Navigate to="/employee/login" replace />
+            } />
+            <Route path="/employee/*" element={
+              user && portal === 'employee' ? (
+                <EmployeeLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <Routes>
+                    <Route path="customer-submissions" element={<CustomerSubmissions />} />
+                    <Route path="work-orders" element={<EmployeeWorkOrders admin={user} />} />
+                    <Route path="create-customer" element={<CreateCustomer admin={user} />} />
+                    <Route path="add-vendor" element={<AddVendor admin={user} />} />
+                    <Route path="vendor-details" element={<VendorDetails />} />
+                    <Route path="assigned-vendors" element={<AssignedVendors user={user} />} />
+                    <Route path="add-employee" element={<AddEmployee admin={user} />} />
+                    <Route path="employee-details" element={<EmployeeDetails />} />
+                    <Route path="employee-zone-management" element={<EmployeeZoneManagement />} />
+                    <Route path="user-management" element={<UserManagement />} />
+                    <Route path="qr-management" element={<QRManagement />} />
+                    <Route path="estimates" element={<Navigate to="/employee/estimates/list" replace />} />
+                    <Route path="estimates/create" element={<Estimates admin={user} defaultTab="create" />} />
+                    <Route path="estimates/list" element={<Estimates admin={user} defaultTab="list" />} />
+                    <Route path="estimates/amc-manager" element={<Estimates admin={user} defaultTab="amc-manager" />} />
+                    <Route path="estimates/addons" element={<Estimates admin={user} defaultTab="addons" />} />
+                    <Route path="estimates/archived" element={<Estimates admin={user} defaultTab="archived" />} />
+                    <Route path="*" element={<Navigate to="/employee" replace />} />
+                  </Routes>
+                </EmployeeLayout>
+              ) : <Navigate to="/employee/login" replace />
+            } />
+            
+            {/* Vendor Portal Login */}
+            <Route path="/vendor/login" element={
+              user && portal === 'vendor' ? (
+                <Navigate to="/vendor" replace />
+              ) : (
+                <VendorLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('vendor'); }} onBack={() => { handleBackToPortals(); }} />
+              )
+            } />
+            
+            {/* Vendor Portal Routes */}
+            <Route path="/vendor" element={
+              user && portal === 'vendor' ? (
+                <VendorLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <VendorDashboard />
+                </VendorLayout>
+              ) : <Navigate to="/vendor/login" replace />
+            } />
+            <Route path="/vendor/*" element={
+              user && portal === 'vendor' ? (
+                <VendorLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <Routes>
+                    <Route path="*" element={<Navigate to="/vendor" replace />} />
+                  </Routes>
+                </VendorLayout>
+              ) : <Navigate to="/vendor/login" replace />
+            } />
+            
+            {/* FP Portal Login */}
+            <Route path="/fp/login" element={
+              user && portal === 'franchise' ? (
+                <Navigate to="/fp" replace />
+              ) : (
+                <FPLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('franchise'); }} onBack={() => { handleBackToPortals(); }} />
+              )
+            } />
+            
+            {/* FP Portal Routes */}
+            <Route path="/fp" element={
+              user && portal === 'franchise' ? (
+                <FPLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <FPDashboard user={user} />
+                </FPLayout>
+              ) : <Navigate to="/fp/login" replace />
+            } />
+            <Route path="/fp/*" element={
+              user && portal === 'franchise' ? (
+                <FPLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <Routes>
+                    <Route path="properties" element={<FPProperties user={user} />} />
+                    <Route path="work-orders" element={<FPWorkOrders user={user} />} />
+                    <Route path="customers" element={<FPCustomers user={user} />} />
+                    <Route path="customers/add" element={<FPCustomers user={user} defaultTab="add" />} />
+                    <Route path="vendors" element={<FPVendors user={user} />} />
+                    <Route path="vendors/add" element={<FPAddVendor user={user} />} />
+                    <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
+                    <Route path="employees" element={<FPEmployees user={user} />} />
+                    <Route path="employees/add" element={<FPAddEmployee user={user} />} />
+                    <Route path="employees/edit/:id" element={<FPEditEmployee user={user} />} />
+                    <Route path="employees/zones" element={<FPEmployeeZones user={user} />} />
+                    <Route path="estimates" element={<FPEstimates user={user} defaultTab="list" />} />
+                    <Route path="estimates/create" element={<FPEstimates user={user} defaultTab="create" />} />
+                    <Route path="estimates/amc" element={<FPEstimates user={user} defaultTab="amc" />} />
+                    <Route path="estimates/addons" element={<FPEstimates user={user} defaultTab="addons" />} />
+                    <Route path="estimates/archived" element={<FPEstimates user={user} defaultTab="archived" />} />
+                    <Route path="qr-management" element={<QRManagement />} />
+                    <Route path="*" element={<Navigate to="/fp" replace />} />
+                  </Routes>
+                </FPLayout>
+              ) : <Navigate to="/fp/login" replace />
+            } />
+            
+            {/* Manager Portal Login */}
+            <Route path="/manager/login" element={
+              user && portal === 'manager' ? (
+                <Navigate to="/manager" replace />
+              ) : (
+                <ManagerLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('manager'); }} onBack={() => { handleBackToPortals(); }} />
+              )
+            } />
+            
+            {/* Manager Portal Routes */}
+            <Route path="/manager" element={
+              user && portal === 'manager' ? (
+                <ManagerLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <ManagerDashboard user={user} />
+                </ManagerLayout>
+              ) : <Navigate to="/manager/login" replace />
+            } />
+            <Route path="/manager/*" element={
+              user && portal === 'manager' ? (
+                <ManagerLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <Routes>
+                    <Route path="properties" element={<ManagerProperties user={user} />} />
+                    <Route path="work-orders" element={<ManagerWorkOrders user={user} />} />
+                    <Route path="work-orders/pending" element={<ManagerWorkOrders user={user} />} />
+                    <Route path="work-orders/completed" element={<ManagerWorkOrders user={user} />} />
+                    <Route path="customers" element={<ManagerCustomers user={user} />} />
+                    <Route path="customers/add" element={<ManagerCustomers user={user} defaultTab="add" />} />
+                    <Route path="vendors" element={<ManagerVendors user={user} />} />
+                    <Route path="vendors/add" element={<ManagerAddVendor user={user} />} />
+                    <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
+                    <Route path="employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
+                    <Route path="estimates" element={<ManagerEstimates user={user} defaultTab="list" />} />
+                    <Route path="estimates/create" element={<ManagerEstimates user={user} defaultTab="create" />} />
+                    <Route path="estimates/amc" element={<ManagerEstimates user={user} defaultTab="amc" />} />
+                    <Route path="estimates/addons" element={<ManagerEstimates user={user} defaultTab="addons" />} />
+                    <Route path="estimates/archived" element={<ManagerEstimates user={user} defaultTab="archived" />} />
+                    <Route path="*" element={<Navigate to="/manager" replace />} />
+                  </Routes>
+                </ManagerLayout>
+              ) : <Navigate to="/manager/login" replace />
+            } />
+            
+            {/* Coordinator Portal Login */}
+            <Route path="/coordinator/login" element={
+              user && portal === 'coordinator' ? (
+                <Navigate to="/coordinator" replace />
+              ) : (
+                <CoordinatorLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('coordinator'); }} onBack={() => { handleBackToPortals(); }} />
+              )
+            } />
+            
+            {/* Coordinator Portal Routes */}
+            <Route path="/coordinator" element={
+              user && portal === 'coordinator' ? (
+                <CoordinatorLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <CoordinatorDashboard user={user} />
+                </CoordinatorLayout>
+              ) : <Navigate to="/coordinator/login" replace />
+            } />
+            <Route path="/coordinator/*" element={
+              user && portal === 'coordinator' ? (
+                <CoordinatorLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <Routes>
+                    <Route path="properties" element={<CoordinatorProperties user={user} />} />
+                    <Route path="work-orders" element={<CoordinatorWorkOrders user={user} />} />
+                    <Route path="work-orders/pending" element={<CoordinatorWorkOrders user={user} />} />
+                    <Route path="work-orders/completed" element={<CoordinatorWorkOrders user={user} />} />
+                    <Route path="work-orders/create" element={<CoordinatorWorkOrders user={user} />} />
+                    <Route path="customers" element={<CoordinatorCustomers user={user} />} />
+                    <Route path="customers/add" element={<CoordinatorCustomers user={user} defaultTab="add" />} />
+                    <Route path="vendors" element={<CoordinatorVendors user={user} />} />
+                    <Route path="vendors/add" element={<CoordinatorAddVendor user={user} />} />
+                    <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
+                    <Route path="employees/zones" element={<CoordinatorEmployees user={user} />} />
+                    <Route path="estimates" element={<CoordinatorEstimates user={user} defaultTab="list" />} />
+                    <Route path="estimates/create" element={<CoordinatorEstimates user={user} defaultTab="create" />} />
+                    <Route path="estimates/amc" element={<CoordinatorEstimates user={user} defaultTab="amc" />} />
+                    <Route path="estimates/addons" element={<CoordinatorEstimates user={user} defaultTab="addons" />} />
+                    <Route path="estimates/archived" element={<CoordinatorEstimates user={user} defaultTab="archived" />} />
+                    <Route path="*" element={<Navigate to="/coordinator" replace />} />
+                  </Routes>
+                </CoordinatorLayout>
+              ) : <Navigate to="/coordinator/login" replace />
+            } />
+            
+            {/* Supervisor Portal Login */}
+            <Route path="/supervisor/login" element={
+              user && portal === 'supervisor' ? (
+                <Navigate to="/supervisor" replace />
+              ) : (
+                <SupervisorLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('supervisor'); }} onBack={() => { handleBackToPortals(); }} />
+              )
+            } />
+            
+            {/* Supervisor Portal Routes */}
+            <Route path="/supervisor" element={
+              user && portal === 'supervisor' ? (
+                <SupervisorLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <SupervisorDashboard user={user} />
+                </SupervisorLayout>
+              ) : <Navigate to="/supervisor/login" replace />
+            } />
+            <Route path="/supervisor/*" element={
+              user && portal === 'supervisor' ? (
+                <SupervisorLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <Routes>
+                    <Route path="properties" element={<SupervisorProperties user={user} />} />
+                    <Route path="work-orders" element={<SupervisorWorkOrders user={user} />} />
+                    <Route path="work-orders/pending" element={<SupervisorWorkOrders user={user} />} />
+                    <Route path="work-orders/completed" element={<SupervisorWorkOrders user={user} />} />
+                    <Route path="customers" element={<SupervisorCustomers user={user} />} />
+                    <Route path="customers/add" element={<SupervisorCustomers user={user} defaultTab="add" />} />
+                    <Route path="vendors" element={<SupervisorVendors user={user} />} />
+                    <Route path="vendors/add" element={<SupervisorAddVendor user={user} />} />
+                    <Route path="estimates" element={<SupervisorEstimates user={user} defaultTab="list" />} />
+                    <Route path="estimates/create" element={<SupervisorEstimates user={user} defaultTab="create" />} />
+                    <Route path="estimates/amc" element={<SupervisorEstimates user={user} defaultTab="amc" />} />
+                    <Route path="estimates/addons" element={<SupervisorEstimates user={user} defaultTab="addons" />} />
+                    <Route path="estimates/archived" element={<SupervisorEstimates user={user} defaultTab="archived" />} />
+                    <Route path="*" element={<Navigate to="/supervisor" replace />} />
+                  </Routes>
+                </SupervisorLayout>
+              ) : <Navigate to="/supervisor/login" replace />
+            } />
+            
+            {/* Executive Portal Login */}
+            <Route path="/executive/login" element={
+              user && portal === 'executive' ? (
+                <Navigate to="/executive" replace />
+              ) : (
+                <ExecutiveLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('executive'); }} onBack={() => { handleBackToPortals(); }} />
+              )
+            } />
+            
+            {/* Executive Portal Routes */}
+            <Route path="/executive" element={
+              user && portal === 'executive' ? (
+                <ExecutiveLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <ExecutiveDashboard user={user} />
+                </ExecutiveLayout>
+              ) : <Navigate to="/executive/login" replace />
+            } />
+            <Route path="/executive/*" element={
+              user && portal === 'executive' ? (
+                <ExecutiveLayout admin={user} onLogout={() => { handleLogout(); }}>
+                  <Routes>
+                    <Route path="properties" element={<ExecutiveProperties user={user} />} />
+                    <Route path="work-orders" element={<ExecutiveWorkOrders user={user} />} />
+                    <Route path="work-orders/pending" element={<ExecutiveWorkOrders user={user} />} />
+                    <Route path="work-orders/completed" element={<ExecutiveWorkOrders user={user} />} />
+                    <Route path="customers" element={<ExecutiveCustomers user={user} />} />
+                    <Route path="customers/add" element={<ExecutiveCustomers user={user} defaultTab="add" />} />
+                    <Route path="vendors" element={<ExecutiveVendors user={user} />} />
+                    <Route path="vendors/add" element={<ExecutiveAddVendor user={user} />} />
+                    <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
+                    <Route path="employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
+                    <Route path="estimates" element={<ExecutiveEstimates user={user} defaultTab="list" />} />
+                    <Route path="estimates/create" element={<ExecutiveEstimates user={user} defaultTab="create" />} />
+                    <Route path="estimates/amc" element={<ExecutiveEstimates user={user} defaultTab="amc" />} />
+                    <Route path="estimates/addons" element={<ExecutiveEstimates user={user} defaultTab="addons" />} />
+                    <Route path="estimates/archived" element={<ExecutiveEstimates user={user} defaultTab="archived" />} />
+                    <Route path="*" element={<Navigate to="/executive" replace />} />
+                  </Routes>
+                </ExecutiveLayout>
+              ) : <Navigate to="/executive/login" replace />
+            } />
+            
+            {/* Fallback - redirect to portal selector */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </Router>
       </FPProvider>
-    );
-  }
-
-  if (portal === 'vendor') {
-    return (
-      <Router>
-        <VendorLayout admin={user} onLogout={handleLogout}>
-          <Routes>
-            <Route path="/vendor" element={<VendorDashboard />} />
-            <Route path="*" element={<Navigate to="/vendor" replace />} />
-          </Routes>
-        </VendorLayout>
-      </Router>
-    );
-  }
-
-  if (portal === 'franchise') {
-    return (
-      <Router>
-        <FPLayout admin={user} onLogout={handleLogout}>
-          <Routes>
-            <Route path="/fp" element={<FPDashboard user={user} />} />
-            <Route path="/fp/properties" element={<FPProperties user={user} />} />
-            <Route path="/fp/work-orders" element={<FPWorkOrders user={user} />} />
-            <Route path="/fp/customers" element={<FPCustomers user={user} />} />
-            <Route path="/fp/customers/add" element={<FPCustomers user={user} defaultTab="add" />} />
-            <Route path="/fp/vendors" element={<FPVendors user={user} />} />
-            <Route path="/fp/vendors/add" element={<FPAddVendor user={user} />} />
-            <Route path="/fp/vendors/assigned" element={<AssignedVendors user={user} />} />
-            <Route path="/fp/employees" element={<FPEmployees user={user} />} />
-            <Route path="/fp/employees/add" element={<FPAddEmployee user={user} />} />
-            <Route path="/fp/employees/edit/:id" element={<FPEditEmployee user={user} />} />
-            <Route path="/fp/employees/zones" element={<FPEmployeeZones user={user} />} />
-            <Route path="/fp/estimates" element={<FPEstimates user={user} defaultTab="list" />} />
-            <Route path="/fp/estimates/create" element={<FPEstimates user={user} defaultTab="create" />} />
-            <Route path="/fp/estimates/amc" element={<FPEstimates user={user} defaultTab="amc" />} />
-            <Route path="/fp/estimates/addons" element={<FPEstimates user={user} defaultTab="addons" />} />
-            <Route path="/fp/estimates/archived" element={<FPEstimates user={user} defaultTab="archived" />} />
-            <Route path="/fp/qr-management" element={<QRManagement />} />
-            <Route path="*" element={<Navigate to="/fp" replace />} />
-          </Routes>
-        </FPLayout>
-      </Router>
-    );
-  }
-
-  if (portal === 'manager') {
-    return (
-      <Router>
-        <ManagerLayout admin={user} onLogout={handleLogout}>
-          <Routes>
-            <Route path="/manager" element={<ManagerDashboard user={user} />} />
-            <Route path="/manager/properties" element={<ManagerProperties user={user} />} />
-            <Route path="/manager/work-orders" element={<ManagerWorkOrders user={user} />} />
-            <Route path="/manager/work-orders/pending" element={<ManagerWorkOrders user={user} />} />
-            <Route path="/manager/work-orders/completed" element={<ManagerWorkOrders user={user} />} />
-            <Route path="/manager/customers" element={<ManagerCustomers user={user} />} />
-            <Route path="/manager/customers/add" element={<ManagerCustomers user={user} defaultTab="add" />} />
-            <Route path="/manager/vendors" element={<ManagerVendors user={user} />} />
-            <Route path="/manager/vendors/add" element={<ManagerAddVendor user={user} />} />
-            <Route path="/manager/vendors/assigned" element={<AssignedVendors user={user} />} />
-            <Route path="/manager/employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
-            <Route path="/manager/estimates" element={<ManagerEstimates user={user} defaultTab="list" />} />
-            <Route path="/manager/estimates/create" element={<ManagerEstimates user={user} defaultTab="create" />} />
-            <Route path="/manager/estimates/amc" element={<ManagerEstimates user={user} defaultTab="amc" />} />
-            <Route path="/manager/estimates/addons" element={<ManagerEstimates user={user} defaultTab="addons" />} />
-            <Route path="/manager/estimates/archived" element={<ManagerEstimates user={user} defaultTab="archived" />} />
-            <Route path="*" element={<Navigate to="/manager" replace />} />
-          </Routes>
-        </ManagerLayout>
-      </Router>
-    );
-  }
-
-  if (portal === 'coordinator') {
-    return (
-      <Router>
-        <CoordinatorLayout admin={user} onLogout={handleLogout}>
-          <Routes>
-            <Route path="/coordinator" element={<CoordinatorDashboard user={user} />} />
-            <Route path="/coordinator/properties" element={<CoordinatorProperties user={user} />} />
-            <Route path="/coordinator/work-orders" element={<CoordinatorWorkOrders user={user} />} />
-            <Route path="/coordinator/work-orders/pending" element={<CoordinatorWorkOrders user={user} />} />
-            <Route path="/coordinator/work-orders/completed" element={<CoordinatorWorkOrders user={user} />} />
-            <Route path="/coordinator/work-orders/create" element={<CoordinatorWorkOrders user={user} />} />
-            <Route path="/coordinator/customers" element={<CoordinatorCustomers user={user} />} />
-            <Route path="/coordinator/customers/add" element={<CoordinatorCustomers user={user} defaultTab="add" />} />
-            <Route path="/coordinator/vendors" element={<CoordinatorVendors user={user} />} />
-            <Route path="/coordinator/vendors/add" element={<CoordinatorAddVendor user={user} />} />
-            <Route path="/coordinator/vendors/assigned" element={<AssignedVendors user={user} />} />
-            <Route path="/coordinator/employees/zones" element={<CoordinatorEmployees user={user} />} />
-            <Route path="/coordinator/estimates" element={<CoordinatorEstimates user={user} defaultTab="list" />} />
-            <Route path="/coordinator/estimates/create" element={<CoordinatorEstimates user={user} defaultTab="create" />} />
-            <Route path="/coordinator/estimates/amc" element={<CoordinatorEstimates user={user} defaultTab="amc" />} />
-            <Route path="/coordinator/estimates/addons" element={<CoordinatorEstimates user={user} defaultTab="addons" />} />
-            <Route path="/coordinator/estimates/archived" element={<CoordinatorEstimates user={user} defaultTab="archived" />} />
-            <Route path="*" element={<Navigate to="/coordinator" replace />} />
-          </Routes>
-        </CoordinatorLayout>
-      </Router>
-    );
-  }
-
-  if (portal === 'supervisor') {
-    return (
-      <Router>
-        <SupervisorLayout admin={user} onLogout={handleLogout}>
-          <Routes>
-            <Route path="/supervisor" element={<SupervisorDashboard user={user} />} />
-            <Route path="/supervisor/properties" element={<SupervisorProperties user={user} />} />
-            <Route path="/supervisor/work-orders" element={<SupervisorWorkOrders user={user} />} />
-            <Route path="/supervisor/work-orders/pending" element={<SupervisorWorkOrders user={user} />} />
-            <Route path="/supervisor/work-orders/completed" element={<SupervisorWorkOrders user={user} />} />
-            <Route path="/supervisor/customers" element={<SupervisorCustomers user={user} />} />
-            <Route path="/supervisor/customers/add" element={<SupervisorCustomers user={user} defaultTab="add" />} />
-            <Route path="/supervisor/vendors" element={<SupervisorVendors user={user} />} />
-            <Route path="/supervisor/vendors/add" element={<SupervisorAddVendor user={user} />} />
-            <Route path="/supervisor/estimates" element={<SupervisorEstimates user={user} defaultTab="list" />} />
-            <Route path="/supervisor/estimates/create" element={<SupervisorEstimates user={user} defaultTab="create" />} />
-            <Route path="/supervisor/estimates/amc" element={<SupervisorEstimates user={user} defaultTab="amc" />} />
-            <Route path="/supervisor/estimates/addons" element={<SupervisorEstimates user={user} defaultTab="addons" />} />
-            <Route path="/supervisor/estimates/archived" element={<SupervisorEstimates user={user} defaultTab="archived" />} />
-            <Route path="*" element={<Navigate to="/supervisor" replace />} />
-          </Routes>
-        </SupervisorLayout>
-      </Router>
-    );
-  }
-
-  if (portal === 'executive') {
-    return (
-      <Router>
-        <ExecutiveLayout admin={user} onLogout={handleLogout}>
-          <Routes>
-            <Route path="/executive" element={<ExecutiveDashboard user={user} />} />
-            <Route path="/executive/properties" element={<ExecutiveProperties user={user} />} />
-            <Route path="/executive/work-orders" element={<ExecutiveWorkOrders user={user} />} />
-            <Route path="/executive/work-orders/pending" element={<ExecutiveWorkOrders user={user} />} />
-            <Route path="/executive/work-orders/completed" element={<ExecutiveWorkOrders user={user} />} />
-            <Route path="/executive/customers" element={<ExecutiveCustomers user={user} />} />
-            <Route path="/executive/customers/add" element={<ExecutiveCustomers user={user} defaultTab="add" />} />
-            <Route path="/executive/vendors" element={<ExecutiveVendors user={user} />} />
-            <Route path="/executive/vendors/add" element={<ExecutiveAddVendor user={user} />} />
-            <Route path="/executive/vendors/assigned" element={<AssignedVendors user={user} />} />
-            <Route path="/executive/employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
-            <Route path="/executive/estimates" element={<ExecutiveEstimates user={user} defaultTab="list" />} />
-            <Route path="/executive/estimates/create" element={<ExecutiveEstimates user={user} defaultTab="create" />} />
-            <Route path="/executive/estimates/amc" element={<ExecutiveEstimates user={user} defaultTab="amc" />} />
-            <Route path="/executive/estimates/addons" element={<ExecutiveEstimates user={user} defaultTab="addons" />} />
-            <Route path="/executive/estimates/archived" element={<ExecutiveEstimates user={user} defaultTab="archived" />} />
-            <Route path="*" element={<Navigate to="/executive" replace />} />
-          </Routes>
-        </ExecutiveLayout>
-      </Router>
-    );
-  }
-
-  return null;
+    </AuthContext.Provider>
+  );
 }
 
 export default App;

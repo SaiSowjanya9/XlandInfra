@@ -1,5 +1,5 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { useState, useEffect, lazy, Suspense, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import BrandLogo from './components/BrandLogo';
 
 // Direct imports for critical post-login components (no loading delay)
@@ -35,6 +35,49 @@ const PageLoader = () => (
     </div>
   </div>
 );
+
+// Protected Dashboard wrapper - preserves intended destination on redirect
+const ProtectedDashboard = ({ user, onLogout }) => {
+  const location = useLocation();
+  
+  if (!user) {
+    // Redirect to login but preserve the intended destination
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  
+  return (
+    <Layout user={user} onLogout={onLogout}>
+      <Routes>
+        <Route path="/" element={<Dashboard user={user} />} />
+        <Route path="/work-order" element={<WorkOrder user={user} />} />
+        <Route path="/schedule" element={<Suspense fallback={<PageLoader />}><Schedule /></Suspense>} />
+        <Route path="/payment" element={<Suspense fallback={<PageLoader />}><Payment /></Suspense>} />
+        <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
+      </Routes>
+    </Layout>
+  );
+};
+
+// Login wrapper - redirects to intended destination after login
+const LoginWrapper = ({ user, onLogin }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // If already logged in, redirect to intended destination or dashboard
+  if (user) {
+    const from = location.state?.from?.pathname || '/dashboard';
+    return <Navigate to={from} replace />;
+  }
+  
+  // Wrap onLogin to navigate after successful login
+  const handleLogin = (userData) => {
+    onLogin(userData);
+    const from = location.state?.from?.pathname || '/dashboard';
+    navigate(from, { replace: true });
+  };
+  
+  return <Login onLogin={handleLogin} />;
+};
 
 // Session timeout in milliseconds (30 minutes)
 const SESSION_TIMEOUT = 30 * 60 * 1000;
@@ -229,7 +272,7 @@ function App() {
         
         {/* Customer Portal Routes - Login uses direct import for fast loading */}
         <Route path="/login" element={
-          user ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />
+          <LoginWrapper user={user} onLogin={handleLogin} />
         } />
         <Route path="/forgot-password" element={
           user ? <Navigate to="/dashboard" replace /> : <ForgotPassword />
@@ -238,19 +281,7 @@ function App() {
         <Route path="/activate/:token" element={<ActivateAccount />} />
         {/* Dashboard routes use direct imports for instant loading after login */}
         <Route path="/dashboard/*" element={
-          user ? (
-            <Layout user={user} onLogout={handleLogout}>
-              <Routes>
-                <Route path="/" element={<Dashboard user={user} />} />
-                <Route path="/work-order" element={<WorkOrder user={user} />} />
-                <Route path="/schedule" element={<Suspense fallback={<PageLoader />}><Schedule /></Suspense>} />
-                <Route path="/payment" element={<Suspense fallback={<PageLoader />}><Payment /></Suspense>} />
-                <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
-              </Routes>
-            </Layout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
+          <ProtectedDashboard user={user} onLogout={handleLogout} />
         } />
         
         {/* Vendor Portal Routes (Coming Soon - UI Only, Backend Preserved) */}

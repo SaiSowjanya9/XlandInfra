@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Users,
   Plus,
@@ -119,18 +120,40 @@ const INDIAN_STATES = [
 ];
 
 const FPCustomers = ({ user, defaultTab = 'list' }) => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // URL-synced state
+  const activeView = searchParams.get('view') || defaultTab;
+  const selectedCategory = searchParams.get('category') || null;
+  const selectedEntryType = searchParams.get('entryType') || null;
+  const currentStep = parseInt(searchParams.get('step') || '1', 10);
+  const searchTerm = searchParams.get('search') || '';
+  
+  // URL state setters
+  const updateUrlParam = useCallback((key, value, defaultValue = '') => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (value === defaultValue || value === null || value === undefined || value === '') {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, String(value));
+      }
+      return newParams;
+    }, { replace: true });
+  }, [setSearchParams]);
+  
+  const setActiveView = (value) => updateUrlParam('view', value, 'list');
+  const setSelectedCategory = (value) => updateUrlParam('category', value);
+  const setSelectedEntryType = (value) => updateUrlParam('entryType', value);
+  const setCurrentStep = (value) => updateUrlParam('step', value, '1');
+  const setSearchTerm = (value) => updateUrlParam('search', value);
+  
   const [customers, setCustomers] = useState([]);
   const [properties, setProperties] = useState([]);
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
-  
-  // View states - 'list' or 'add'
-  const [activeView, setActiveView] = useState(defaultTab);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedEntryType, setSelectedEntryType] = useState(null);
-  const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
