@@ -1,12 +1,24 @@
 /* Google Fonts are loaded asynchronously in index.html to prevent render blocking */
 
-/* Gotham Light Font - Using system fallbacks that mimic Gotham Light */
+/* Cross-platform font normalization - ensures consistent rendering on Mac/iOS/Windows */
 @font-face {
   font-family: 'Gotham Light';
   src: local('Gotham Light'), local('GothamLight'), local('Gotham-Light');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
+}
+
+/* Universal font rendering normalization */
+:root {
+  /* Consistent font rendering across all platforms */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;
+  /* Prevent font size inflation on iOS */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 @tailwind base;
@@ -47,35 +59,40 @@ img, video, canvas, svg {
 }
 
 body {
-  font-family: 'Gotham Light', 'Century Gothic', 'Futura', 'Trebuchet MS', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-weight: 300;
+  /* Use Inter as primary font - loaded as web font for consistent cross-platform rendering */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'liga' 1, 'kern' 1;
   background-color: #0D0D0D;
   color: #f1f5f9;
   letter-spacing: 0.01em;
+  /* Prevent iOS from adjusting font sizes */
+  -webkit-text-size-adjust: 100%;
 }
 
-/* Gotham Light Typography Classes */
+/* Typography Classes - Using Inter for consistent cross-platform rendering */
 .font-gotham {
-  font-family: 'Gotham Light', 'Century Gothic', 'Futura', 'Trebuchet MS', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-weight: 300;
 }
 
 .font-gotham-medium {
-  font-family: 'Gotham Light', 'Century Gothic', 'Futura', 'Trebuchet MS', sans-serif;
-  font-weight: 400;
-}
-
-.font-gotham-bold {
-  font-family: 'Gotham Light', 'Century Gothic', 'Futura', 'Trebuchet MS', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-weight: 500;
 }
 
-/* Premium Display Font - Now using Gotham Light style */
+.font-gotham-bold {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+}
+
+/* Premium Display Font - Using Playfair Display for headlines */
 .font-display {
-  font-family: 'Gotham Light', 'Century Gothic', 'Futura', 'Trebuchet MS', sans-serif;
-  font-weight: 300;
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-weight: 400;
   letter-spacing: 0.02em;
 }
 
@@ -475,11 +492,11 @@ body {
   transform: scale(0.95);
 }
 
-/* Typography - Gotham Light */
+/* Typography - Cross-platform consistent */
 .section-title {
-  font-family: 'Gotham Light', 'Century Gothic', 'Futura', 'Trebuchet MS', sans-serif;
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
   font-size: 2.25rem;
-  font-weight: 300;
+  font-weight: 500;
   color: white;
   letter-spacing: -0.01em;
 }
@@ -656,8 +673,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Gotham Light', 'Century Gothic', sans-serif;
-  font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
   font-size: 1.25rem;
   color: #0D0D0D;
   box-shadow: 0 4px 15px rgba(216, 178, 92, 0.3);
@@ -895,6 +912,18 @@ img {
 @supports (-webkit-touch-callout: none) {
   body, .min-h-screen {
     min-height: -webkit-fill-available;
+  }
+  
+  /* iOS/Safari font rendering normalization */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-stroke: 0;
+  }
+  
+  /* Ensure consistent font weights on iOS */
+  h1, h2, h3, h4, h5, h6, .font-bold, .font-semibold, .font-medium {
+    -webkit-font-smoothing: antialiased;
+    font-synthesis: none;
   }
 }
 
