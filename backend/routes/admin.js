@@ -2301,7 +2301,7 @@ const transformPackage = (pkg) => {
   let servicesString = '';
   let serviceRows = [];
   let propertyType = pkg.property_type || 'GC';
-  let billingDuration = pkg.billing_duration || 'Annual';
+  let billingDuration = pkg.billing_duration || 'yearly';
   
   // Parse the services field - it contains JSON with serviceRows nested inside
   if (pkg.services) {
@@ -2331,6 +2331,9 @@ const transformPackage = (pkg) => {
   const propTypeMap = { 'AP': 'APT', 'VL': 'VILLA', 'FL': 'FLAT', 'PL': 'PLOT' };
   const mappedPropertyType = propTypeMap[propertyType] || propertyType || 'GC';
   
+  // Normalize billing duration to lowercase
+  const normalizedBilling = billingDuration?.toLowerCase() === 'annual' ? 'yearly' : (billingDuration || 'yearly').toLowerCase();
+  
   return {
     id: pkg.id,
     packageId: pkg.package_code || `PKG-${pkg.id}`,
@@ -2343,7 +2346,8 @@ const transformPackage = (pkg) => {
     services: servicesString, // String for display
     serviceRows: serviceRows,
     durationMonths: pkg.duration_months || 12,
-    billingCycle: billingDuration,
+    billingCycle: normalizedBilling,
+    billingDuration: normalizedBilling, // Frontend uses this field
     termsConditions: pkg.terms_conditions || '',
     franchisePartnerId: pkg.franchise_partner_id,
     fpCode: pkg.fp_code,
