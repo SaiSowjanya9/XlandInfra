@@ -3719,17 +3719,29 @@ const transformPackage = (pkg) => ({
   serviceRows: pkg.service_rows ? (typeof pkg.service_rows === 'string' ? JSON.parse(pkg.service_rows) : pkg.service_rows) : [],
   durationMonths: pkg.duration_months || 12,
   billingCycle: pkg.billing_duration || 'Annual',
-  createdAt: pkg.created_at
+  createdAt: pkg.created_at,
+  createdBy: pkg.created_by,
+  createdByName: pkg.created_by_name
 });
 
 // Get FP AMC packages - Scoped to each FP
 router.get('/amc-packages', requireFPScope, async (req, res) => {
   try {
     const [packages] = await pool.execute(
-      `SELECT id, franchise_partner_id, package_code, name, description, 
-              duration_months, base_price as price, services, terms_conditions,
-              created_at, updated_at
-       FROM fp_amc_packages WHERE franchise_partner_id = ? ORDER BY created_at DESC`,
+      `SELECT p.id, p.franchise_partner_id, p.package_code, p.name, p.description, 
+              p.duration_months, p.base_price as price, p.services, p.terms_conditions,
+              p.created_at, p.updated_at, p.created_by,
+              COALESCE(
+                CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+                fp.company_name,
+                p.created_by, 'System'
+              ) as created_by_name
+       FROM fp_amc_packages p
+       LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
+       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username
+       LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
+       WHERE p.franchise_partner_id = ? ORDER BY p.created_at DESC`,
       [req.fpId]
     );
 

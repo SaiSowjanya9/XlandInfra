@@ -12,34 +12,52 @@ const { pool } = require('../config/database');
 /**
  * Get assigned zones for an FP employee
  * @param {number} employeeId - The employee's user ID or fp_employee ID
+ * @param {string} email - Optional email for fallback lookup
  * @returns {Promise<string[]>} Array of zone names assigned to the employee
  */
-async function getAssignedZones(employeeId) {
-  if (!employeeId) return [];
+async function getAssignedZones(employeeId, email = null) {
+  if (!employeeId && !email) return [];
   
   try {
-    // First try direct lookup by fp_employee_id - join with zones table to get zone name
-    let [zones] = await pool.execute(
-      `SELECT z.name as zone_name 
-       FROM fp_employee_zones fez
-       INNER JOIN zones z ON fez.zone_id = z.id
-       WHERE fez.fp_employee_id = ? AND fez.is_active = TRUE`,
-      [employeeId]
-    );
+    let zones = [];
     
-    // If no zones found, try lookup via user_id in fp_employees table
-    if (zones.length === 0) {
+    if (employeeId) {
+      // First try direct lookup by fp_employee_id
+      [zones] = await pool.execute(
+        `SELECT z.name as zone_name 
+         FROM fp_employee_zones fez
+         INNER JOIN zones z ON fez.zone_id = z.id
+         WHERE fez.fp_employee_id = ? AND fez.is_active = TRUE`,
+        [employeeId]
+      );
+      
+      // If no zones found, try lookup via user_id in fp_employees table
+      if (zones.length === 0) {
+        [zones] = await pool.execute(
+          `SELECT z.name as zone_name 
+           FROM fp_employee_zones fez
+           INNER JOIN fp_employees fpe ON fez.fp_employee_id = fpe.id
+           INNER JOIN zones z ON fez.zone_id = z.id
+           WHERE fpe.user_id = ? AND fez.is_active = TRUE`,
+          [employeeId]
+        );
+      }
+    }
+    
+    // Final fallback: lookup by email/username in fp_employees table
+    if (zones.length === 0 && email) {
       [zones] = await pool.execute(
         `SELECT z.name as zone_name 
          FROM fp_employee_zones fez
          INNER JOIN fp_employees fpe ON fez.fp_employee_id = fpe.id
          INNER JOIN zones z ON fez.zone_id = z.id
-         WHERE fpe.user_id = ? AND fez.is_active = TRUE`,
-        [employeeId]
+         WHERE (fpe.email = ? OR fpe.username = ?) AND fez.is_active = TRUE`,
+        [email, email]
       );
+      console.log('[ZoneHelper] Used email fallback for:', email);
     }
     
-    console.log('[ZoneHelper] employeeId:', employeeId, 'zones found:', zones.map(z => z.zone_name));
+    console.log('[ZoneHelper] employeeId:', employeeId, 'email:', email, 'zones found:', zones.map(z => z.zone_name));
     return zones.map(z => z.zone_name).filter(Boolean);
   } catch (e) {
     console.log('[ZoneHelper] Zone fetch error:', e.message);
