@@ -92,26 +92,32 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Get franchise_partner_id - check users table first, then fp_employees table
+    // Get franchise_partner_id and fp_employee_id - needed for zone lookup
     let franchisePartnerId = user.franchise_partner_id || null;
-    if (!franchisePartnerId) {
-      // Check fp_employees table by email or username
-      const [fpEmployee] = await pool.execute(
-        `SELECT franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
-        [user.email, user.username]
-      );
-      if (fpEmployee.length > 0 && fpEmployee[0].franchise_partner_id) {
+    let fpEmployeeId = null;
+    
+    // Look up corresponding fp_employees record
+    const [fpEmployee] = await pool.execute(
+      `SELECT id, franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
+      [user.email, user.username]
+    );
+    if (fpEmployee.length > 0) {
+      fpEmployeeId = fpEmployee[0].id;
+      if (!franchisePartnerId && fpEmployee[0].franchise_partner_id) {
         franchisePartnerId = fpEmployee[0].franchise_partner_id;
       }
     }
+    
+    console.log('[Manager Login] fpEmployeeId:', fpEmployeeId, 'franchisePartnerId:', franchisePartnerId);
 
-    // Generate token - include franchisePartnerId for FP-created managers
+    // Generate token (include fpEmployeeId for zone lookup)
     const token = generateToken({
       id: user.id,
       username: user.username,
       email: user.email,
       role: user.role,
       managerId: user.id,
+      fpEmployeeId: fpEmployeeId,
       franchisePartnerId: franchisePartnerId
     });
 
@@ -135,6 +141,7 @@ router.post('/login', async (req, res) => {
           role: user.role,
           roleName: ROLE_NAMES[user.role],
           managerId: user.id,
+          fpEmployeeId: fpEmployeeId,
           franchisePartnerId: franchisePartnerId,
           portal: 'manager'
         }

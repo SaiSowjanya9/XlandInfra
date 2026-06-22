@@ -1746,6 +1746,25 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 )}
               </div>
 
+              {/* Price Summary */}
+              <div className="border-t border-gray-100 pt-4">
+                <h4 className="text-sm font-bold text-gray-800 mb-3 text-center uppercase">Price Summary</h4>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Subtotal:</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">GST ({viewAmcPackage.gst_percentage || 0}%):</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                    <span className="font-bold text-gray-800">TOTAL:</span>
+                    <span className="font-bold text-lg text-green-700">{formatCurrency((viewAmcPackage.price || viewAmcPackage.base_price) + (((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100))}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Created Info */}
               <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
                 <div className="flex justify-between">

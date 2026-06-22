@@ -110,25 +110,35 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Get franchise_partner_id - check users table first, then fp_employees table
+    // Get franchise_partner_id and fp_employee_id - needed for zone lookup
     let franchisePartnerId = user.franchise_partner_id || null;
-    if (!franchisePartnerId && userSource === 'users') {
+    let fpEmployeeId = userSource === 'fp_employees' ? user.id : null;
+    
+    // If logged in via users table, look up corresponding fp_employees record
+    if (userSource === 'users') {
       const [fpCheck] = await pool.query(
-        `SELECT franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
+        `SELECT id, franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
         [user.email, user.username]
       );
-      if (fpCheck.length > 0 && fpCheck[0].franchise_partner_id) {
-        franchisePartnerId = fpCheck[0].franchise_partner_id;
+      if (fpCheck.length > 0) {
+        fpEmployeeId = fpCheck[0].id;
+        if (!franchisePartnerId && fpCheck[0].franchise_partner_id) {
+          franchisePartnerId = fpCheck[0].franchise_partner_id;
+        }
       }
     }
+    
+    console.log('[Executive Login] fpEmployeeId:', fpEmployeeId, 'franchisePartnerId:', franchisePartnerId);
 
-    // Generate JWT token (include franchise_partner_id for FP data linking)
+    // Generate JWT token (include fp_employee_id for zone lookup)
     const token = jwt.sign(
       {
         id: user.id,
         username: user.username,
+        email: user.email,
         role: user.role,
         executiveId: user.id,
+        fpEmployeeId: fpEmployeeId,
         franchisePartnerId: franchisePartnerId
       },
       process.env.JWT_SECRET || 'your-secret-key',
@@ -147,6 +157,7 @@ router.post('/login', async (req, res) => {
           lastName: user.last_name,
           role: user.role,
           executiveId: user.id,
+          fpEmployeeId: fpEmployeeId,
           franchisePartnerId: franchisePartnerId,
           portal: 'executive'
         }
