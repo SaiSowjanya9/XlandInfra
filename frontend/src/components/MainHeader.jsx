@@ -253,7 +253,7 @@ const MainHeader = () => {
           <div className="pt-6 mt-4 border-t border-white/10">
             <button
               onClick={() => navigate('/login')}
-              className="block w-full py-4 bg-gradient-to-r from-gold-400 to-gold-600 text-[#0D0D0D] font-semibold rounded-xl text-center"
+              className="block w-full py-4 bg-[#D4AF37] hover:bg-[#C9A227] text-[#0D0D0D] font-semibold rounded-xl text-center transition-colors"
             >
               HomeHub Login
             </button>

@@ -339,6 +339,7 @@ body {
 
 /* Button Components */
 .btn-primary {
+  background-color: #D4AF37;
   background: linear-gradient(to right, #D8B25C, #B8860B);
   color: #0D0D0D;
   font-weight: 600;
@@ -349,6 +350,7 @@ body {
 }
 
 .btn-primary:hover {
+  background-color: #C9A227;
   background: linear-gradient(to right, #E8C26C, #C9A227);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
@@ -384,6 +386,7 @@ body {
 .btn-premium {
   position: relative;
   overflow: hidden;
+  background-color: #D4AF37;
   background: linear-gradient(to right, #D8B25C, #C9A227, #D8B25C);
   color: #0D0D0D;
   font-weight: 700;

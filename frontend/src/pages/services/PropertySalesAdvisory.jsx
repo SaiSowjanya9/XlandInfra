@@ -105,7 +105,7 @@ const PropertySalesAdvisory = () => {
                     document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
                   }, 100);
                 }}
-                className="group px-8 py-4 bg-gradient-to-r from-gold-400 to-gold-600 text-[#0a0a0a] font-semibold rounded-full hover:shadow-2xl hover:shadow-gold-500/30 transition-all duration-300"
+                className="group px-8 py-4 bg-[#D4AF37] text-[#0a0a0a] font-semibold rounded-full hover:bg-[#C9A227] hover:shadow-2xl hover:shadow-gold-500/30 transition-all duration-300"
               >
                 <span className="flex items-center gap-2">
                   Get Started
@@ -308,7 +308,7 @@ const PropertySalesAdvisory = () => {
                   document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
                 }, 100);
               }}
-              className="group relative px-10 py-5 overflow-hidden rounded-full bg-gradient-to-r from-gold-400 to-gold-600 transition-all duration-500 hover:shadow-2xl hover:shadow-gold-500/30"
+              className="group relative px-10 py-5 overflow-hidden rounded-full bg-[#D4AF37] transition-all duration-500 hover:bg-[#C9A227] hover:shadow-2xl hover:shadow-gold-500/30"
             >
               <span className="relative flex items-center gap-3 font-bold text-lg text-[#0D0D0D]">
                 Get Started Today

@@ -103,7 +103,7 @@ const InvestmentConsultation = () => {
                     document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
                   }, 100);
                 }}
-                className="group px-8 py-4 bg-gradient-to-r from-gold-400 to-gold-600 text-[#0a0a0a] font-semibold rounded-full hover:shadow-2xl hover:shadow-gold-500/30 transition-all duration-300"
+                className="group px-8 py-4 bg-[#D4AF37] text-[#0a0a0a] font-semibold rounded-full hover:bg-[#C9A227] hover:shadow-2xl hover:shadow-gold-500/30 transition-all duration-300"
               >
                 <span className="flex items-center gap-2">
                   Schedule Consultation
@@ -367,7 +367,7 @@ const InvestmentConsultation = () => {
                     document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
                   }, 100);
                 }}
-              className="group inline-flex items-center gap-2 px-7 py-3.5 bg-gradient-to-r from-gold-400 to-gold-600 text-[#0a0a0a] font-semibold rounded-full hover:shadow-xl hover:shadow-gold-500/25 hover:scale-105 transition-all duration-300"
+              className="group inline-flex items-center gap-2 px-7 py-3.5 bg-[#D4AF37] text-[#0a0a0a] font-semibold rounded-full hover:bg-[#C9A227] hover:shadow-xl hover:shadow-gold-500/25 hover:scale-105 transition-all duration-300"
             >
               <span>Contact Us</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
