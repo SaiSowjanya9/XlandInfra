@@ -3102,13 +3102,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               </div>
 
-              {/* Created Info */}
-              <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
-                <div className="flex justify-between">
-                  <span>Created by: {viewAmcPackage.createdByName || viewAmcPackage.created_by_name || viewAmcPackage.createdBy || '-'}</span>
-                  <span>ID: {viewAmcPackage.id}</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
