@@ -28,7 +28,8 @@ import {
   Image,
   Camera,
   FileText,
-  Send
+  Send,
+  List
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -38,7 +39,7 @@ const CoordinatorWorkOrders = ({ user }) => {
   
   const location = useLocation();
   const [workOrders, setWorkOrders] = useState([]);
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('all');
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -76,10 +77,9 @@ const CoordinatorWorkOrders = ({ user }) => {
     scheduledDate: ''
   });
 
-  const viewType = location.pathname.includes('/pending') ? 'pending' 
-                 : location.pathname.includes('/completed') ? 'completed'
+  const viewType = location.pathname.includes('/completed') ? 'completed'
                  : location.pathname.includes('/create') ? 'create'
-                 : 'pending'; // Default to pending
+                 : 'all'; // Default to all
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -387,13 +387,9 @@ const CoordinatorWorkOrders = ({ user }) => {
     });
   };
 
-  // Filter by tab (pending/completed) first, then by status filter, then by search
-  const pendingStatuses = ['pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'];
-  const completedStatuses = ['completed', 'closed'];
-  const tabFilteredWorkOrders = viewType === 'pending' 
-    ? workOrders.filter(wo => pendingStatuses.includes(wo.status))
-    : viewType === 'completed'
-    ? workOrders.filter(wo => completedStatuses.includes(wo.status))
+  // Filter by tab (all/completed) first, then by status filter, then by search
+  const tabFilteredWorkOrders = viewType === 'completed'
+    ? workOrders.filter(wo => wo.status === 'completed')
     : workOrders;
   
   // Apply status filter
@@ -409,22 +405,20 @@ const CoordinatorWorkOrders = ({ user }) => {
   );
 
   const getViewTitle = () => {
-    if (viewType === 'pending') return 'Pending Work Orders';
     if (viewType === 'completed') return 'Completed Work Orders';
     return 'All Work Orders';
   };
 
   const getViewIcon = () => {
-    if (viewType === 'pending') return Clock;
     if (viewType === 'completed') return CheckCircle2;
-    return ClipboardList;
+    return List;
   };
 
   const ViewIcon = getViewIcon();
 
-  // Get pending and completed counts
-  const pendingCount = workOrders.filter(wo => ['pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)).length;
-  const completedCount = workOrders.filter(wo => ['completed', 'closed'].includes(wo.status)).length;
+  // Get all and completed counts
+  const allCount = workOrders.length;
+  const completedCount = workOrders.filter(wo => wo.status === 'completed').length;
 
   // Filter properties based on search
   const filteredProperties = properties.filter(p =>
@@ -448,19 +442,19 @@ const CoordinatorWorkOrders = ({ user }) => {
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-gray-200">
         <Link
-            to="/coordinator/work-orders/pending"
+            to="/coordinator/work-orders"
             className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-              viewType === 'pending'
+              viewType === 'all'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Clock className="w-4 h-4" />
-            <span>Pending</span>
+            <List className="w-4 h-4" />
+            <span>All</span>
             <span className={`px-2 py-0.5 rounded-full text-xs ${
-              viewType === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+              viewType === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
             }`}>
-              {pendingCount}
+              {allCount}
             </span>
           </Link>
           <Link

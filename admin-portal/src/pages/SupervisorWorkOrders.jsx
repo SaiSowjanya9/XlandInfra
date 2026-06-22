@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList, Plus, Search, RefreshCw, X, AlertCircle,
-  CheckCircle, Clock, CheckCircle2, Eye, Image, Camera, FileText, Trash2
+  CheckCircle, Clock, CheckCircle2, Eye, Image, Camera, FileText, Trash2, List
 } from 'lucide-react';
 
 const SupervisorWorkOrders = ({ user }) => {
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('all');
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -175,7 +175,7 @@ const SupervisorWorkOrders = ({ user }) => {
       if (result.success) {
         setMessage({ type: 'success', text: 'Work order created successfully!' });
         resetForm();
-        setActiveTab('pending');
+        setActiveTab('all');
         fetchWorkOrders();
       } else {
         setMessage({ type: 'error', text: result.message || 'Failed to create work order' });
@@ -230,13 +230,9 @@ const SupervisorWorkOrders = ({ user }) => {
 
   const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
-  // Filter by tab (pending/completed) first, then by status filter, then by search
-  const pendingStatuses = ['pending', 'requested', 'assigned', 'in_progress'];
-  const completedStatuses = ['completed'];
-  const tabFilteredWorkOrders = activeTab === 'pending' 
-    ? workOrders.filter(wo => pendingStatuses.includes(wo.status))
-    : activeTab === 'completed'
-    ? workOrders.filter(wo => completedStatuses.includes(wo.status))
+  // Filter by tab (all/completed) first, then by status filter, then by search
+  const tabFilteredWorkOrders = activeTab === 'completed'
+    ? workOrders.filter(wo => wo.status === 'completed')
     : workOrders;
   
   // Apply status filter
@@ -252,8 +248,8 @@ const SupervisorWorkOrders = ({ user }) => {
     wo.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const pendingCount = workOrders.filter(wo => ['pending', 'requested', 'assigned', 'in_progress'].includes(wo.status)).length;
-  const completedCount = workOrders.filter(wo => ['completed'].includes(wo.status)).length;
+  const allCount = workOrders.length;
+  const completedCount = workOrders.filter(wo => wo.status === 'completed').length;
 
   return (
     <div className="space-y-6">
@@ -271,15 +267,15 @@ const SupervisorWorkOrders = ({ user }) => {
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-gray-200">
         <button
-          onClick={() => setActiveTab('pending')}
+          onClick={() => setActiveTab('all')}
           className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'pending' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            activeTab === 'all' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Clock className="w-4 h-4" />
-          <span>Pending</span>
-          <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
-            {pendingCount}
+          <List className="w-4 h-4" />
+          <span>All</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+            {allCount}
           </span>
         </button>
         <button

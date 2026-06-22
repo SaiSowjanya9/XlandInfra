@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList, Plus, Search, RefreshCw, X, AlertCircle,
-  CheckCircle, Clock, Eye, Building2, User, Camera, Upload, FileText, Image
+  CheckCircle, Clock, Eye, Building2, User, Camera, Upload, FileText, Image, List
 } from 'lucide-react';
 
 const ExecutiveWorkOrders = ({ user }) => {
@@ -14,7 +14,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('all');
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -79,21 +79,13 @@ const ExecutiveWorkOrders = ({ user }) => {
   useEffect(() => { fetchWorkOrders(); fetchDependencies(); }, []);
 
   // Count work orders by status
-  const pendingCount = workOrders.filter(wo => 
-    ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)
-  ).length;
-  const completedCount = workOrders.filter(wo => 
-    ['completed', 'verified', 'closed'].includes(wo.status)
-  ).length;
+  const allCount = workOrders.length;
+  const completedCount = workOrders.filter(wo => wo.status === 'completed').length;
 
   // Filter work orders by active tab, status filter, and search term
   const filteredWorkOrders = workOrders.filter(wo => {
-    const isPending = ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status);
-    const isCompleted = ['completed', 'verified', 'closed'].includes(wo.status);
-    
-    // Tab filter
-    if (activeTab === 'pending' && !isPending) return false;
-    if (activeTab === 'completed' && !isCompleted) return false;
+    // Tab filter - All shows everything, Completed shows only completed
+    if (activeTab === 'completed' && wo.status !== 'completed') return false;
 
     // Status filter
     if (statusFilter && wo.status !== statusFilter) return false;
@@ -248,18 +240,18 @@ const ExecutiveWorkOrders = ({ user }) => {
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-gray-200">
         <button
-          onClick={() => setActiveTab('pending')}
+          onClick={() => setActiveTab('all')}
           className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'pending'
+            activeTab === 'all'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Clock className="w-4 h-4" />
-          <span>Pending</span>
+          <List className="w-4 h-4" />
+          <span>All</span>
           <span className={`px-2 py-0.5 rounded-full text-xs ${
-            activeTab === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
-          }`}>{pendingCount}</span>
+            activeTab === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+          }`}>{allCount}</span>
         </button>
         <button
           onClick={() => setActiveTab('completed')}
@@ -289,7 +281,7 @@ const ExecutiveWorkOrders = ({ user }) => {
       </div>
 
       {/* Search Bar - shown for pending/completed tabs */}
-      {(activeTab === 'pending' || activeTab === 'completed') && (
+      {(activeTab === 'all' || activeTab === 'completed') && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
@@ -326,7 +318,7 @@ const ExecutiveWorkOrders = ({ user }) => {
       )}
 
       {/* Work Orders List - shown for pending/completed tabs */}
-      {(activeTab === 'pending' || activeTab === 'completed') && (
+      {(activeTab === 'all' || activeTab === 'completed') && (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12"><RefreshCw className="w-6 h-6 text-indigo-600 animate-spin" /></div>
@@ -705,7 +697,7 @@ const ExecutiveWorkOrders = ({ user }) => {
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
               <button
                 type="button"
-                onClick={() => { resetForm(); setActiveTab('pending'); }}
+                onClick={() => { resetForm(); setActiveTab('all'); }}
                 className="px-6 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 font-medium"
               >
                 Cancel
