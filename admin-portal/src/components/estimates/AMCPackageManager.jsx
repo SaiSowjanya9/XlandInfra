@@ -14,6 +14,7 @@ import {
   Tag,
   Layers,
   ChevronDown,
+  Eye,
 } from 'lucide-react';
 import {
   getAMCPackages,
@@ -69,6 +70,9 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Edit Modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingPackage, setEditingPackage] = useState(null);
+  
+  // View Modal state
+  const [viewAmcPackage, setViewAmcPackage] = useState(null);
 
   // Selected property type for package
   const [selectedPropertyType, setSelectedPropertyType] = useState(null);
@@ -528,6 +532,21 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                               {!isOpsManager && (
                                 <td className="px-4 py-4">
                                   <div className="flex items-center justify-center gap-1">
+                                    <button
+                                      onClick={() => {
+                                        // Parse services data for view
+                                        let servicesData = pkg.services;
+                                        if (typeof servicesData === 'string') {
+                                          try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = null; }
+                                        }
+                                        const serviceRows = servicesData?.serviceRows || servicesData || [];
+                                        setViewAmcPackage({ ...pkg, servicesData: serviceRows });
+                                      }}
+                                      className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                      title="View"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </button>
                                     <button
                                       onClick={() => handleOpenEditModal(pkg)}
                                       className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
@@ -1044,6 +1063,103 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                   <Save className="w-4 h-4" />
                   Save Changes
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View AMC Package Modal */}
+      {viewAmcPackage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">AMC Package Details</h3>
+              <button onClick={() => setViewAmcPackage(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              {/* Package Header */}
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-4 rounded-lg border border-indigo-100">
+                <h4 className="text-xl font-bold text-indigo-900">{viewAmcPackage.name || viewAmcPackage.packageName}</h4>
+                <p className="text-sm text-indigo-600 mt-1">{viewAmcPackage.packageId || viewAmcPackage.package_code || `PKG-${viewAmcPackage.id}`}</p>
+              </div>
+
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Property Type</p>
+                  <p className="font-semibold text-sm capitalize">{viewAmcPackage.propertyType || 'N/A'}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Billing Duration</p>
+                  <p className="font-semibold text-sm capitalize">{viewAmcPackage.billingDuration || viewAmcPackage.billingCycle || 'Yearly'}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Total Price</p>
+                  <p className="font-bold text-lg text-green-700">₹{(viewAmcPackage.price || viewAmcPackage.rate || 0).toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Services Included */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Services Included</p>
+                {viewAmcPackage.servicesData && viewAmcPackage.servicesData.length > 0 ? (
+                  <div className="space-y-2">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-100 rounded-lg">
+                      <div className="col-span-1 text-xs font-semibold text-gray-600">#</div>
+                      <div className="col-span-3 text-xs font-semibold text-gray-600">Service</div>
+                      <div className="col-span-5 text-xs font-semibold text-gray-600 text-center">Description</div>
+                      <div className="col-span-2 text-xs font-semibold text-gray-600 text-center">Frequency</div>
+                      <div className="col-span-1 text-xs font-semibold text-gray-600 text-center">Visits</div>
+                    </div>
+                    {viewAmcPackage.servicesData.map((svc, idx) => (
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-amber-50 px-3 py-3 rounded-lg border border-amber-100">
+                        <div className="col-span-1">
+                          <span className="w-6 h-6 bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                        </div>
+                        <div className="col-span-3">
+                          <p className="font-medium text-amber-900 text-sm">{svc.name || svc.service || 'Service'}</p>
+                        </div>
+                        <div className="col-span-5">
+                          <p className={`text-xs text-amber-700 break-words whitespace-normal ${!(svc.description && svc.description.trim() && svc.description.trim() !== '-') ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</p>
+                        </div>
+                        <div className="col-span-2 text-center">
+                          <p className="text-sm font-medium text-amber-700">{svc.frequency_type || svc.frequencyType || 'Monthly'}</p>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <p className="text-sm font-medium text-amber-700">{svc.frequency_count || svc.frequencyCount || 1}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No services listed</p>
+                )}
+              </div>
+
+              {/* Price Summary */}
+              <div className="border-t border-gray-100 pt-4">
+                <h4 className="text-sm font-bold text-gray-800 mb-3 text-center uppercase">Price Summary</h4>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Subtotal:</span>
+                    <span className="font-semibold text-gray-900">₹{(viewAmcPackage.price || viewAmcPackage.rate || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">GST (0%):</span>
+                    <span className="font-semibold text-gray-900">₹0</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                    <span className="font-bold text-gray-800">TOTAL:</span>
+                    <span className="font-bold text-lg text-green-700">₹{(viewAmcPackage.price || viewAmcPackage.rate || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <div className="flex justify-end pt-4 border-t border-gray-100">
+                <button onClick={() => setViewAmcPackage(null)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Close</button>
               </div>
             </div>
           </div>
