@@ -534,12 +534,15 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                                   <div className="flex items-center justify-center gap-1">
                                     <button
                                       onClick={() => {
-                                        // Parse services data for view
-                                        let servicesData = pkg.services;
-                                        if (typeof servicesData === 'string') {
-                                          try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = null; }
+                                        // Use already-parsed serviceRows from backend, or parse services if needed
+                                        let serviceRows = pkg.serviceRows || [];
+                                        if (serviceRows.length === 0 && pkg.services) {
+                                          let servicesData = pkg.services;
+                                          if (typeof servicesData === 'string') {
+                                            try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = null; }
+                                          }
+                                          serviceRows = servicesData?.serviceRows || (Array.isArray(servicesData) ? servicesData : []);
                                         }
-                                        const serviceRows = servicesData?.serviceRows || servicesData || [];
                                         setViewAmcPackage({ ...pkg, servicesData: serviceRows });
                                       }}
                                       className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"

@@ -48,6 +48,14 @@ export const FPProvider = ({ children }) => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
+      // Handle 403 Forbidden gracefully - user is not an admin
+      if (response.status === 403) {
+        setFpList([]);
+        setSelectedFp(null);
+        setLoading(false);
+        return;
+      }
+      
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
