@@ -280,15 +280,29 @@ const EmployeeWorkOrders = ({ admin }) => {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'assigned': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'in_progress': return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'completed': return 'bg-green-100 text-green-700 border-green-200';
-      case 'closed': return 'bg-gray-100 text-gray-700 border-gray-200';
-      case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
+    const colors = {
+      draft: 'bg-gray-100 text-gray-700',
+      requested: 'bg-blue-100 text-blue-700',
+      under_review: 'bg-yellow-100 text-yellow-700',
+      pending: 'bg-yellow-100 text-yellow-700',
+      assigned: 'bg-purple-100 text-purple-700',
+      accepted: 'bg-indigo-100 text-indigo-700',
+      in_progress: 'bg-orange-100 text-orange-700',
+      completed: 'bg-green-100 text-green-700',
+      verified: 'bg-green-100 text-green-700',
+      closed: 'bg-gray-100 text-gray-700',
+      cancelled: 'bg-red-100 text-red-700'
+    };
+    return colors[status] || 'bg-gray-100 text-gray-700';
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   };
 
   const filtered = workOrders.filter(wo => {
@@ -844,20 +858,21 @@ const EmployeeWorkOrders = ({ admin }) => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600 text-sm">Order ID</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600 text-sm">Resident</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600 text-sm">Category</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600 text-sm">Status</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600 text-sm">Created</th>
-                    <th className="text-center py-3 px-4 font-semibold text-gray-600 text-sm">Actions</th>
+                <thead className="border-b border-gray-100">
+                  <tr>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Order ID</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Resident</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Category</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created By</th>
+                    <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan="6" className="text-center py-12">
+                      <td colSpan="7" className="text-center py-12">
                         <div className="flex flex-col items-center justify-center">
                           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mb-3"></div>
                           <span className="text-gray-500">Loading work orders...</span>
@@ -866,7 +881,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="text-center py-12">
+                      <td colSpan="7" className="text-center py-12">
                         <div className="flex flex-col items-center justify-center">
                           <ClipboardList className="w-12 h-12 text-gray-300 mb-3" />
                           <span className="text-gray-500">No work orders found</span>
@@ -881,35 +896,56 @@ const EmployeeWorkOrders = ({ admin }) => {
                     </tr>
                   ) : (
                     filtered.map((wo) => (
-                      <tr key={wo.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="py-3 px-4">
-                          <span className="font-mono text-sm font-medium text-gray-900">{wo.work_order_id}</span>
+                      <tr key={wo.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-4 px-4">
+                          <span className="text-sm text-gray-900">{wo.work_order_id}</span>
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-4 px-4">
                           <div>
-                            <p className="font-medium text-gray-900">
-                              {wo.customer_name || wo.resident_first_name 
-                                ? `${wo.customer_name || ''} ${wo.resident_first_name || ''} ${wo.resident_last_name || ''}`.trim() 
-                                : (wo.first_name ? `${wo.first_name} ${wo.last_name || ''}`.trim() : 'N/A')}
+                            <p className="text-sm font-medium text-gray-900">{wo.customer_name || 'N/A'}</p>
+                            <p className="text-xs text-gray-500">{wo.property_name || ''}</p>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{wo.category_name || '-'}</p>
+                            {wo.subcategory_name && <p className="text-xs text-gray-500">{wo.subcategory_name}</p>}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="relative inline-block">
+                            <select
+                              value={wo.status}
+                              onChange={(e) => handleStatusChange(wo.id, e.target.value)}
+                              className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="assigned">Assigned</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="completed">Completed</option>
+                              <option value="closed">Closed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {wo.source === 'customer' ? (wo.customer_name || 'Customer') : (wo.created_by || wo.source || 'System')}
                             </p>
-                            <p className="text-sm text-gray-500">{wo.unit_number ? `Unit ${wo.unit_number}` : (wo.property_name || 'N/A')}</p>
+                            {wo.source === 'customer' && (
+                              <p className="text-xs text-gray-500">{wo.property_code || wo.property_name}</p>
+                            )}
+                            {wo.source !== 'customer' && wo.source && (
+                              <p className="text-xs text-gray-400 capitalize">{wo.source}</p>
+                            )}
                           </div>
                         </td>
-                        <td className="py-3 px-4">
-                          <div>
-                            <p className="font-medium text-gray-900">{wo.category_name}</p>
-                            <p className="text-sm text-gray-500">{wo.subcategory_name}</p>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(wo.status)}`}>
-                            {wo.status?.replace(/_/g, ' ').toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600">
-                          {new Date(wo.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4">
+                        <td className="py-4 px-4">
                           <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => setSelectedOrder(wo)}
@@ -1607,8 +1643,8 @@ const EmployeeWorkOrders = ({ admin }) => {
       {/* Edit Work Order Modal */}
       {showEditModal && selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100 sticky top-0 bg-white">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">Edit Work Order</h2>
@@ -1619,44 +1655,75 @@ const EmployeeWorkOrders = ({ admin }) => {
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-4">
               {/* Property Info (Read Only) */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Property Information</h3>
-                <p className="text-sm text-gray-600">
-                  {selectedOrder.property_name || selectedOrder.community_name || 'N/A'} 
-                  {selectedOrder.unit_number && ` - Unit ${selectedOrder.unit_number}`}
-                </p>
+                <p className="text-sm text-gray-600">{selectedOrder.property_name || selectedOrder.community_name || 'N/A'}</p>
+                <p className="text-xs text-gray-500">Zone: {selectedOrder.zone || 'N/A'} | Division: {selectedOrder.division || 'N/A'}</p>
               </div>
 
-              {/* Category & Subcategory */}
+              {/* Customer Information */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                  <input type="text" value={editFormData.customerName || ''} onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Customer name" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input type="email" value={editFormData.customerEmail || ''} onChange={(e) => setEditFormData({ ...editFormData, customerEmail: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Email" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input type="tel" value={editFormData.customerPhone || ''} onChange={(e) => setEditFormData({ ...editFormData, customerPhone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Phone" />
+                </div>
+              </div>
+
+              {/* Block & Flat */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select
-                    value={editFormData.categoryId}
-                    onChange={(e) => setEditFormData({ ...editFormData, categoryId: e.target.value, subcategoryId: '' })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Block</label>
+                  <input type="text" value={editFormData.block || ''} onChange={(e) => setEditFormData({ ...editFormData, block: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Block" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
-                  <select
-                    value={editFormData.subcategoryId}
-                    onChange={(e) => setEditFormData({ ...editFormData, subcategoryId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">Select Subcategory</option>
-                    {(categories.find(c => c.id === parseInt(editFormData.categoryId))?.subcategories || []).map(sub => (
-                      <option key={sub.id || sub} value={sub.id || sub}>{sub.name || sub}</option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Flat/Unit</label>
+                  <input type="text" value={editFormData.flatNumber || ''} onChange={(e) => setEditFormData({ ...editFormData, flatNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Flat/Unit" />
                 </div>
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={editFormData.categoryId}
+                  onChange={(e) => setEditFormData({ ...editFormData, categoryId: e.target.value, subcategoryId: '' })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subcategory */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                <select
+                  value={editFormData.subcategoryId}
+                  onChange={(e) => setEditFormData({ ...editFormData, subcategoryId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Subcategory</option>
+                  {(categories.find(c => c.id === parseInt(editFormData.categoryId))?.subcategories || []).map(sub => (
+                    <option key={sub.id || sub} value={sub.id || sub}>{sub.name || sub}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Description */}
@@ -1666,69 +1733,70 @@ const EmployeeWorkOrders = ({ admin }) => {
                   value={editFormData.description}
                   onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
                   rows={3}
-                  placeholder="Describe the issue in detail..."
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Describe the issue..."
                 />
               </div>
 
-              {/* Priority & Status */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                  <select
-                    value={editFormData.priority}
-                    onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="urgent">Urgent</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select
-                    value={editFormData.status}
-                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="assigned">Assigned</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="closed">Closed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
+              {/* Priority */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                <select
+                  value={editFormData.priority}
+                  onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
               </div>
 
-              {/* Permission & Pet */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Permission to Enter</label>
-                  <select
-                    value={editFormData.permissionToEnter}
-                    onChange={(e) => setEditFormData({ ...editFormData, permissionToEnter: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">Select</option>
-                    <option value="yes">Yes</option>
-                    <option value="no">No</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Has Pet</label>
-                  <select
-                    value={editFormData.hasPet}
-                    onChange={(e) => setEditFormData({ ...editFormData, hasPet: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">Select</option>
-                    <option value="yes">Yes</option>
-                    <option value="no">No</option>
-                  </select>
-                </div>
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={editFormData.status}
+                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="assigned">Assigned</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="closed">Closed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {/* Permission to Enter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Permission to Enter</label>
+                <select
+                  value={editFormData.permissionToEnter}
+                  onChange={(e) => setEditFormData({ ...editFormData, permissionToEnter: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                  <option value="accompanied">Accompanied Only</option>
+                </select>
+              </div>
+
+              {/* Has Pet */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Has Pet</label>
+                <select
+                  value={editFormData.hasPet}
+                  onChange={(e) => setEditFormData({ ...editFormData, hasPet: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
               </div>
 
               {/* Entry Notes */}
@@ -1738,16 +1806,22 @@ const EmployeeWorkOrders = ({ admin }) => {
                   value={editFormData.entryNotes}
                   onChange={(e) => setEditFormData({ ...editFormData, entryNotes: e.target.value })}
                   rows={2}
-                  placeholder="Special instructions for entry..."
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Any special instructions for entry..."
                 />
               </div>
             </div>
-            <div className="p-6 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white">
-              <button onClick={() => setShowEditModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
                 Cancel
               </button>
-              <button onClick={handleSaveEdit} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
                 Save Changes
               </button>
             </div>
