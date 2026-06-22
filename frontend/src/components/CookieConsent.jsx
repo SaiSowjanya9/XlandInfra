@@ -106,7 +106,7 @@ const CookieConsent = () => {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={handleAcceptAll}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-gold-400 to-gold-600 text-[#0D0D0D] font-semibold rounded-xl hover:shadow-lg hover:shadow-gold-500/25 transition-all duration-300"
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#D4AF37] text-[#0D0D0D] font-semibold rounded-xl hover:bg-[#C9A227] hover:shadow-lg hover:shadow-gold-500/25 transition-all duration-300"
                 >
                   <Check className="w-4 h-4" />
                   Accept All
@@ -157,7 +157,7 @@ const CookieConsent = () => {
                       disabled={cookie.required}
                       className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${
                         preferences[cookie.key] 
-                          ? 'bg-gradient-to-r from-gold-400 to-gold-600' 
+                          ? 'bg-[#D4AF37]' 
                           : 'bg-charcoal-600'
                       } ${cookie.required ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
@@ -179,7 +179,7 @@ const CookieConsent = () => {
                 </button>
                 <button
                   onClick={handleSavePreferences}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-gold-400 to-gold-600 text-[#0D0D0D] font-semibold rounded-xl hover:shadow-lg hover:shadow-gold-500/25 transition-all duration-300"
+                  className="flex-1 px-6 py-3 bg-[#D4AF37] hover:bg-[#C9A227] text-[#0D0D0D] font-semibold rounded-xl hover:shadow-lg hover:shadow-gold-500/25 transition-all duration-300"
                 >
                   Save Preferences
                 </button>

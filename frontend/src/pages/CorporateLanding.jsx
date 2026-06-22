@@ -510,7 +510,7 @@ function CorporateLanding() {
             <div className="pt-6 mt-4 border-t border-white/10">
               <button
                 onClick={() => navigate('/login')}
-                className="block w-full py-4 bg-gradient-to-r from-gold-400 to-gold-600 text-[#0D0D0D] font-semibold rounded-xl text-center"
+                className="block w-full py-4 bg-[#D4AF37] hover:bg-[#C9A227] text-[#0D0D0D] font-semibold rounded-xl text-center transition-colors"
               >
                 HomeHub Login
               </button>
@@ -615,7 +615,7 @@ function CorporateLanding() {
               <div className="flex flex-wrap gap-4 opacity-0 animate-[fadeSlideIn_0.8s_ease-out_1.1s_forwards] relative z-20">
                 <button
                   onClick={() => scrollToSection('services')}
-                  className="group relative z-10 px-8 py-4 overflow-hidden rounded-full bg-gradient-to-r from-gold-400 to-gold-600 transition-all duration-500 hover:shadow-2xl hover:shadow-gold-500/30 isolate"
+                  className="group relative z-10 px-8 py-4 overflow-hidden rounded-full bg-[#D4AF37] transition-all duration-500 hover:bg-[#C9A227] hover:shadow-2xl hover:shadow-gold-500/30 isolate"
                 >
                   <span className="relative z-10 flex items-center gap-2 font-semibold text-[#0D0D0D]">
                     Explore Services
@@ -624,7 +624,7 @@ function CorporateLanding() {
                 </button>
                 <button
                   onClick={() => scrollToSection('contact')}
-                  className="group relative z-10 px-8 py-4 rounded-full border border-white/20 hover:border-gold-400/50 hover:bg-white/5 transition-all duration-500 bg-black/30 backdrop-blur-sm isolate"
+                  className="group relative z-10 px-8 py-4 rounded-full border border-white/40 hover:border-gold-400/50 bg-[#1a1a1a] hover:bg-[#252525] transition-all duration-500 isolate"
                 >
                   <span className="relative z-10 flex items-center gap-2 font-semibold text-white group-hover:text-gold-400">
                     <Phone className="w-4 h-4" />
@@ -656,7 +656,7 @@ function CorporateLanding() {
                       className={`transition-all duration-500 ease-out cursor-pointer ${
                         isActive 
                           ? 'opacity-100 scale-100' 
-                          : 'opacity-30 scale-95 hover:opacity-50'
+                          : 'opacity-50 scale-95 hover:opacity-70'
                       }`}
                       onClick={() => setActiveHeroService(index)}
                     >
@@ -683,7 +683,7 @@ function CorporateLanding() {
               <div className="flex flex-wrap gap-4 mt-8 relative z-20">
                 <button
                   onClick={() => scrollToSection('services')}
-                  className="group relative z-10 px-8 py-4 overflow-hidden rounded-full bg-gradient-to-r from-gold-400 to-gold-600 transition-all duration-500 hover:shadow-2xl hover:shadow-gold-500/30 isolate"
+                  className="group relative z-10 px-8 py-4 overflow-hidden rounded-full bg-[#D4AF37] transition-all duration-500 hover:bg-[#C9A227] hover:shadow-2xl hover:shadow-gold-500/30 isolate"
                 >
                   <span className="relative z-10 flex items-center gap-2 font-semibold text-[#0D0D0D]">
                     Explore Services
@@ -692,7 +692,7 @@ function CorporateLanding() {
                 </button>
                 <button
                   onClick={() => scrollToSection('contact')}
-                  className="group relative z-10 px-8 py-4 rounded-full border border-white/20 hover:border-gold-400/50 hover:bg-white/5 transition-all duration-500 bg-black/30 backdrop-blur-sm isolate"
+                  className="group relative z-10 px-8 py-4 rounded-full border border-white/40 hover:border-gold-400/50 bg-[#1a1a1a] hover:bg-[#252525] transition-all duration-500 isolate"
                 >
                   <span className="relative z-10 flex items-center gap-2 font-semibold text-white group-hover:text-gold-400">
                     <Phone className="w-4 h-4" />
