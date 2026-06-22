@@ -781,7 +781,7 @@ const WorkOrders = ({ admin }) => {
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
+                  <h2 className="text-xl font-semibold text-gray-900">Work Order Details </h2>
                   <p className="text-sm text-gray-500 mt-1">{selectedOrder.work_order_id}</p>
                 </div>
                 <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-gray-100 rounded-lg">
