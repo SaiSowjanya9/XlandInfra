@@ -89,7 +89,7 @@ const CookieConsent = () => {
                   <Cookie className="w-6 h-6 text-gold-400" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-display font-bold text-white mb-2">
+                  <h3 className="text-xl font-display font-normal text-white mb-2">
                     We Value Your Privacy
                   </h3>
                   <p className="text-gray-400 text-sm leading-relaxed">
@@ -131,7 +131,7 @@ const CookieConsent = () => {
             <>
               {/* Preferences View */}
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-display font-bold text-white">Cookie Preferences</h3>
+                <h3 className="text-xl font-display font-normal text-white">Cookie Preferences</h3>
                 <button
                   onClick={() => setShowPreferences(false)}
                   className="text-gray-400 hover:text-white transition-colors"

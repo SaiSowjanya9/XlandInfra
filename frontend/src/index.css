@@ -496,7 +496,7 @@ body {
 .section-title {
   font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
   font-size: 2.25rem;
-  font-weight: 500;
+  font-weight: 400;
   color: white;
   letter-spacing: -0.01em;
 }
@@ -913,17 +913,110 @@ img {
   body, .min-h-screen {
     min-height: -webkit-fill-available;
   }
-  
-  /* iOS/Safari font rendering normalization */
+}
+
+/* ============ CROSS-PLATFORM FONT CONSISTENCY (Mac/iOS/Windows) ============ */
+
+/* Force consistent font rendering across ALL browsers and platforms */
+*, *::before, *::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Safari/WebKit specific font rendering to match Windows */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
   body {
     -webkit-font-smoothing: antialiased;
-    -webkit-text-stroke: 0;
+    font-weight: 400;
   }
   
-  /* Ensure consistent font weights on iOS */
-  h1, h2, h3, h4, h5, h6, .font-bold, .font-semibold, .font-medium {
+  /* Make fonts appear similar weight to Windows */
+  .font-light, [class*="font-light"] {
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  .font-normal, [class*="font-normal"] {
+    font-weight: 400;
+  }
+  
+  .font-medium, [class*="font-medium"] {
+    font-weight: 500;
+  }
+  
+  .font-semibold, [class*="font-semibold"] {
+    font-weight: 600;
+  }
+  
+  .font-bold, [class*="font-bold"] {
+    font-weight: 700;
+  }
+  
+  /* Ensure headings use correct font family and weight */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
     -webkit-font-smoothing: antialiased;
     font-synthesis: none;
+  }
+  
+  /* Section titles */
+  .section-title, .font-display {
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Mac-specific rendering (retina displays) */
+@media screen and (-webkit-min-device-pixel-ratio: 2) {
+  body {
+    -webkit-font-smoothing: subpixel-antialiased;
+  }
+}
+
+/* Safari/iOS button and stacking context fixes */
+@supports (-webkit-touch-callout: none) {
+  /* Ensure buttons create proper stacking context on iOS */
+  button, [role="button"], .btn-primary, .btn-premium, .btn-outline {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    isolation: isolate;
+  }
+  
+  /* Fix gradient buttons on Safari */
+  .bg-gradient-to-r {
+    -webkit-background-clip: padding-box;
+    background-clip: padding-box;
+  }
+  
+  /* Ensure consistent font weights on Safari/Mac */
+  h1, h2, h3, h4, h5, h6 {
+    -webkit-font-smoothing: antialiased;
+    font-weight: 400 !important;
+  }
+  
+  .font-display {
+    font-weight: 400 !important;
+  }
+  
+  .font-semibold {
+    font-weight: 600 !important;
+  }
+  
+  .font-bold {
+    font-weight: 700 !important;
+  }
+  
+  .font-medium {
+    font-weight: 500 !important;
+  }
+  
+  /* Fix section title rendering */
+  .section-title {
+    font-weight: 400 !important;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
@@ -933,9 +1026,34 @@ body, html, #root {
   max-width: 100vw;
 }
 
-/* Smooth scrolling with performance */
+/* ============ SMOOTH SCROLLING - ENTIRE WEBSITE ============ */
 html {
   scroll-behavior: smooth;
+  /* Prevent scroll anchoring jumps */
+  overflow-anchor: none;
+}
+
+/* Smooth scroll for all scrollable containers */
+html, body, #root, main, [class*="overflow-auto"], [class*="overflow-y-auto"], [class*="overflow-scroll"] {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure smooth transitions on scroll-linked elements */
+* {
+  scroll-margin-top: 100px;
+}
+
+/* Sections should have smooth reveal */
+section {
+  scroll-snap-align: start;
+  scroll-margin-top: 80px;
+}
+
+/* GPU acceleration for smoother scrolling */
+body {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 @media (prefers-reduced-motion: reduce) {

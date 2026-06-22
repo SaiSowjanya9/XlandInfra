@@ -70,7 +70,7 @@ const DesignConceptualization = () => {
               <span className="text-gold-400/90 text-sm font-medium tracking-wider uppercase">Design & Conceptualization</span>
             </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-8 leading-[1.1] tracking-tight opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.4s_forwards]">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-normal mb-8 leading-[1.1] tracking-tight opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.4s_forwards]">
               <span className="text-white">Transforming Visions</span>
               <br />
               <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Into Architectural</span>
@@ -130,7 +130,7 @@ const DesignConceptualization = () => {
               <span className="text-gold-400 text-sm font-medium tracking-[0.25em] uppercase">Our Process</span>
               <div className="h-px w-16 bg-gradient-to-l from-transparent to-gold-400"></div>
             </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-white mb-5 tracking-tight">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-5 tracking-tight">
               Designing Visions <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Into Reality</span>
             </h2>
             <p className="text-gray-400 text-lg max-w-2xl mx-auto leading-relaxed">
@@ -347,7 +347,7 @@ const DesignConceptualization = () => {
         
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center p-8 md:p-10 bg-gradient-to-b from-zinc-900/50 to-zinc-900/20 border border-gold-500/20 rounded-3xl bg-[#0D0D0D]/80 hover:border-gold-400/40 transition-all duration-500">
-            <h2 className="text-2xl md:text-3xl font-display font-bold text-white mb-3 tracking-tight">
+            <h2 className="text-2xl md:text-3xl font-display font-normal text-white mb-3 tracking-tight">
               Let's Design Your <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Dream Space</span>
             </h2>
             <p className="text-gray-400 mb-6 max-w-xl mx-auto text-sm md:text-base leading-relaxed">
