@@ -914,12 +914,12 @@ const EmployeeWorkOrders = ({ admin }) => {
                               onChange={(e) => handleStatusChange(wo.id, e.target.value)}
                               className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
                             >
-                              <option value="pending">Pending</option>
-                              <option value="assigned">Assigned</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="completed">Completed</option>
-                              <option value="closed">Closed</option>
-                              <option value="cancelled">Cancelled</option>
+                              <option value="pending" className="bg-white text-gray-900">Pending</option>
+                              <option value="assigned" className="bg-white text-gray-900">Assigned</option>
+                              <option value="in_progress" className="bg-white text-gray-900">In Progress</option>
+                              <option value="completed" className="bg-white text-gray-900">Completed</option>
+                              <option value="closed" className="bg-white text-gray-900">Closed</option>
+                              <option value="cancelled" className="bg-white text-gray-900">Cancelled</option>
                             </select>
                             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
                           </div>
