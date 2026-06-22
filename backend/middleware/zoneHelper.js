@@ -91,10 +91,10 @@ function buildPropertyZoneFilter(zones, tableAlias = 'p') {
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // zone_id can store either numeric ID or zone name directly - check both
+  // zone_id stores zone name directly (no separate zones table)
   return {
-    clause: ` AND (${tableAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${tableAlias}.zone_id IN (${placeholders}))`,
-    params: [...zones, ...zones]
+    clause: ` AND ${tableAlias}.zone_id IN (${placeholders})`,
+    params: [...zones]
   };
 }
 
@@ -130,12 +130,10 @@ function buildWorkOrderZoneFilter(zones, propertyAlias = 'p', workOrderAlias = '
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // Work orders link to properties, so we filter by property's zone
-  // work_orders table does NOT have a zone column - use joined tables only
-  // zone_id can store either numeric ID or zone name directly - check both
+  // zone_id stores zone name directly (no separate zones table)
   return {
-    clause: ` AND (${propertyAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${propertyAlias}.zone_id IN (${placeholders}) OR ${onboardedPropertyAlias}.zone IN (${placeholders}))`,
-    params: [...zones, ...zones, ...zones]
+    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${onboardedPropertyAlias}.zone IN (${placeholders}))`,
+    params: [...zones, ...zones]
   };
 }
 
@@ -153,11 +151,10 @@ function buildClientZoneFilter(zones, clientAlias = 'c', propertyAlias = 'p') {
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // Clients may have direct zone or through property relationship
-  // zone_id can store either numeric ID or zone name directly - check both
+  // zone_id stores zone name directly (no separate zones table)
   return {
-    clause: ` AND (${clientAlias}.zone IN (${placeholders}) OR ${propertyAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${propertyAlias}.zone_id IN (${placeholders}))`,
-    params: [...zones, ...zones, ...zones]
+    clause: ` AND (${clientAlias}.zone IN (${placeholders}) OR ${propertyAlias}.zone_id IN (${placeholders}))`,
+    params: [...zones, ...zones]
   };
 }
 
@@ -265,10 +262,10 @@ function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p') {
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // Check zone_id (numeric ID or zone name stored directly) or created_by fallback
+  // zone_id stores zone name directly (no separate zones table)
   return {
-    clause: ` AND (${tableAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${tableAlias}.zone_id IN (${placeholders}) OR ${tableAlias}.created_by = ?)`,
-    params: [...zones, ...zones, createdBy]
+    clause: ` AND (${tableAlias}.zone_id IN (${placeholders}) OR ${tableAlias}.created_by = ?)`,
+    params: [...zones, createdBy]
   };
 }
 
@@ -312,15 +309,15 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // Check zone_id (numeric or name) on properties, zone on onboarded_properties, or created_by fallback
+  // Check zone_id/zone on properties and onboarded_properties, or created_by fallback
+  // zone_id stores zone name directly (no separate zones table)
   return {
     clause: ` AND (
-      ${propertyAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) 
-      OR ${propertyAlias}.zone_id IN (${placeholders}) 
+      ${propertyAlias}.zone_id IN (${placeholders}) 
       OR ${onboardedPropertyAlias}.zone IN (${placeholders}) 
       OR ${workOrderAlias}.created_by = ?
     )`,
-    params: [...zones, ...zones, ...zones, createdBy]
+    params: [...zones, ...zones, createdBy]
   };
 }
 
@@ -341,10 +338,10 @@ function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', pro
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // Check zone_id (numeric ID or zone name) or created_by fallback
+  // zone_id stores zone name directly (no separate zones table)
   return {
-    clause: ` AND (${propertyAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${propertyAlias}.zone_id IN (${placeholders}) OR ${clientAlias}.created_by = ?)`,
-    params: [...zones, ...zones, createdBy]
+    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${clientAlias}.created_by = ?)`,
+    params: [...zones, createdBy]
   };
 }
 
@@ -365,10 +362,10 @@ function buildEstimateZoneOrCreatorFilter(zones, createdBy, estimateAlias = 'e',
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // Check zone_id (numeric ID or zone name) or created_by fallback
+  // zone_id stores zone name directly (no separate zones table)
   return {
-    clause: ` AND (${propertyAlias}.zone_id IN (SELECT id FROM zones WHERE name IN (${placeholders})) OR ${propertyAlias}.zone_id IN (${placeholders}) OR ${estimateAlias}.created_by = ?)`,
-    params: [...zones, ...zones, createdBy]
+    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${estimateAlias}.created_by = ?)`,
+    params: [...zones, createdBy]
   };
 }
 
