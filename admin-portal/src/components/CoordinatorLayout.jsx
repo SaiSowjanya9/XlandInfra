@@ -23,13 +23,16 @@ import {
   Archive,
   Navigation,
   Home,
-  MessageSquare
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const CoordinatorLayout = ({ admin, onLogout, children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({});
 
   // Check if this is an FP Coordinator

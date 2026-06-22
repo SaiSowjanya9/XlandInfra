@@ -382,14 +382,8 @@ function App() {
               ) : <Navigate to="/fp/login" replace />
             } />
             
-            {/* Manager Portal Login */}
-            <Route path="/manager/login" element={
-              user && portal === 'manager' ? (
-                <Navigate to="/manager" replace />
-              ) : (
-                <ManagerLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('manager'); }} onBack={() => { handleBackToPortals(); }} />
-              )
-            } />
+            {/* Manager Portal Login - Redirect to Employee Login */}
+            <Route path="/manager/login" element={<Navigate to="/employee/login" replace />} />
             
             {/* Manager Portal Routes */}
             <Route path="/manager" element={
@@ -397,7 +391,7 @@ function App() {
                 <ManagerLayout admin={user} onLogout={() => { handleLogout(); }}>
                   <ManagerDashboard user={user} />
                 </ManagerLayout>
-              ) : <Navigate to="/manager/login" replace />
+              ) : <Navigate to="/employee/login" replace />
             } />
             <Route path="/manager/*" element={
               user && portal === 'manager' ? (
@@ -421,17 +415,11 @@ function App() {
                     <Route path="*" element={<Navigate to="/manager" replace />} />
                   </Routes>
                 </ManagerLayout>
-              ) : <Navigate to="/manager/login" replace />
+              ) : <Navigate to="/employee/login" replace />
             } />
             
-            {/* Coordinator Portal Login */}
-            <Route path="/coordinator/login" element={
-              user && portal === 'coordinator' ? (
-                <Navigate to="/coordinator" replace />
-              ) : (
-                <CoordinatorLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('coordinator'); }} onBack={() => { handleBackToPortals(); }} />
-              )
-            } />
+            {/* Coordinator Portal Login - Redirect to Employee Login */}
+            <Route path="/coordinator/login" element={<Navigate to="/employee/login" replace />} />
             
             {/* Coordinator Portal Routes */}
             <Route path="/coordinator" element={
@@ -439,7 +427,7 @@ function App() {
                 <CoordinatorLayout admin={user} onLogout={() => { handleLogout(); }}>
                   <CoordinatorDashboard user={user} />
                 </CoordinatorLayout>
-              ) : <Navigate to="/coordinator/login" replace />
+              ) : <Navigate to="/employee/login" replace />
             } />
             <Route path="/coordinator/*" element={
               user && portal === 'coordinator' ? (
@@ -464,17 +452,11 @@ function App() {
                     <Route path="*" element={<Navigate to="/coordinator" replace />} />
                   </Routes>
                 </CoordinatorLayout>
-              ) : <Navigate to="/coordinator/login" replace />
+              ) : <Navigate to="/employee/login" replace />
             } />
             
-            {/* Supervisor Portal Login */}
-            <Route path="/supervisor/login" element={
-              user && portal === 'supervisor' ? (
-                <Navigate to="/supervisor" replace />
-              ) : (
-                <SupervisorLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('supervisor'); }} onBack={() => { handleBackToPortals(); }} />
-              )
-            } />
+            {/* Supervisor Portal Login - Redirect to Employee Login */}
+            <Route path="/supervisor/login" element={<Navigate to="/employee/login" replace />} />
             
             {/* Supervisor Portal Routes */}
             <Route path="/supervisor" element={
@@ -482,7 +464,7 @@ function App() {
                 <SupervisorLayout admin={user} onLogout={() => { handleLogout(); }}>
                   <SupervisorDashboard user={user} />
                 </SupervisorLayout>
-              ) : <Navigate to="/supervisor/login" replace />
+              ) : <Navigate to="/employee/login" replace />
             } />
             <Route path="/supervisor/*" element={
               user && portal === 'supervisor' ? (
@@ -504,17 +486,11 @@ function App() {
                     <Route path="*" element={<Navigate to="/supervisor" replace />} />
                   </Routes>
                 </SupervisorLayout>
-              ) : <Navigate to="/supervisor/login" replace />
+              ) : <Navigate to="/employee/login" replace />
             } />
             
-            {/* Executive Portal Login */}
-            <Route path="/executive/login" element={
-              user && portal === 'executive' ? (
-                <Navigate to="/executive" replace />
-              ) : (
-                <ExecutiveLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('executive'); }} onBack={() => { handleBackToPortals(); }} />
-              )
-            } />
+            {/* Executive Portal Login - Redirect to Employee Login */}
+            <Route path="/executive/login" element={<Navigate to="/employee/login" replace />} />
             
             {/* Executive Portal Routes */}
             <Route path="/executive" element={
@@ -522,7 +498,7 @@ function App() {
                 <ExecutiveLayout admin={user} onLogout={() => { handleLogout(); }}>
                   <ExecutiveDashboard user={user} />
                 </ExecutiveLayout>
-              ) : <Navigate to="/executive/login" replace />
+              ) : <Navigate to="/employee/login" replace />
             } />
             <Route path="/executive/*" element={
               user && portal === 'executive' ? (
@@ -546,7 +522,7 @@ function App() {
                     <Route path="*" element={<Navigate to="/executive" replace />} />
                   </Routes>
                 </ExecutiveLayout>
-              ) : <Navigate to="/executive/login" replace />
+              ) : <Navigate to="/employee/login" replace />
             } />
             
             {/* Fallback - redirect to portal selector */}
