@@ -18,19 +18,23 @@ async function getAssignedZones(employeeId) {
   if (!employeeId) return [];
   
   try {
-    // First try direct lookup by fp_employee_id
+    // First try direct lookup by fp_employee_id - join with zones table to get zone name
     let [zones] = await pool.execute(
-      `SELECT zone_name FROM fp_employee_zones WHERE fp_employee_id = ?`,
+      `SELECT z.name as zone_name 
+       FROM fp_employee_zones fez
+       INNER JOIN zones z ON fez.zone_id = z.id
+       WHERE fez.fp_employee_id = ? AND fez.is_active = TRUE`,
       [employeeId]
     );
     
     // If no zones found, try lookup via user_id in fp_employees table
     if (zones.length === 0) {
       [zones] = await pool.execute(
-        `SELECT fez.zone_name 
+        `SELECT z.name as zone_name 
          FROM fp_employee_zones fez
          INNER JOIN fp_employees fpe ON fez.fp_employee_id = fpe.id
-         WHERE fpe.user_id = ?`,
+         INNER JOIN zones z ON fez.zone_id = z.id
+         WHERE fpe.user_id = ? AND fez.is_active = TRUE`,
         [employeeId]
       );
     }
