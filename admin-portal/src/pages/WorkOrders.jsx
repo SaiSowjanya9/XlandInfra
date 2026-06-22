@@ -712,7 +712,7 @@ const WorkOrders = ({ admin }) => {
                     <td className="px-4 py-4">
                       <div>
                         <p className="text-sm font-medium text-gray-900">{wo.customer_name || wo.title || 'N/A'}</p>
-                        <p className="text-xs text-gray-500">{wo.property_name || ''}</p>
+                        {wo.property_name && <p className="text-xs text-gray-500">{wo.property_name}</p>}
                       </div>
                     </td>
                     <td className="px-4 py-4">
@@ -746,13 +746,10 @@ const WorkOrders = ({ admin }) => {
                     <td className="px-4 py-4">
                       <div>
                         <p className="text-sm font-medium text-gray-900">
-                          {wo.source === 'customer' ? (wo.customer_name || 'Customer') : (wo.created_by || wo.source || 'System')}
+                          {wo.created_by_name || wo.created_by || 'System'}
                         </p>
-                        {wo.source === 'customer' && (
-                          <p className="text-xs text-gray-500">{wo.property_code || wo.property_name}</p>
-                        )}
-                        {wo.source !== 'customer' && wo.source && (
-                          <p className="text-xs text-gray-400 capitalize">{wo.source}</p>
+                        {(wo.property_code || wo.property_id) && (
+                          <p className="text-xs text-gray-500">{wo.property_code || wo.property_id}</p>
                         )}
                       </div>
                     </td>
@@ -779,132 +776,113 @@ const WorkOrders = ({ admin }) => {
       )}
 
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
-              <h2 className="text-base sm:text-lg font-semibold">Work Order Details</h2>
-              <button onClick={() => setSelectedOrder(null)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
-              <div>
-                <p className="text-sm text-gray-500">Order ID</p>
-                <p className="font-mono font-medium">{selectedOrder.work_order_id}</p>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
+                  <p className="text-sm text-gray-500 mt-1">{selectedOrder.work_order_id}</p>
+                </div>
+                <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 uppercase">Status:</span>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
-                    {selectedOrder.status}
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Customer Information */}
+              <div className="grid grid-cols-3 gap-4 bg-gray-50 rounded-lg p-4">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Customer Name</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.customer_name || [selectedOrder.first_name, selectedOrder.last_name].filter(Boolean).join(' ') || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Email</p>
+                  <p className="font-medium text-gray-900 text-sm break-all">{selectedOrder.customer_email || selectedOrder.email || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Phone</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.customer_phone || selectedOrder.phone || 'N/A'}</p>
+                </div>
+              </div>
+
+              {/* Property Details Section */}
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <h4 className="text-sm font-semibold text-blue-800 mb-3">Property Details</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-gray-500">Property Name</p>
+                    <p className="font-medium text-gray-900">{selectedOrder.property_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Property ID</p>
+                    <p className="font-medium text-gray-900 font-mono text-blue-600">{selectedOrder.property_code || selectedOrder.actual_property_id || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Property Type</p>
+                    <p className="font-medium text-gray-900 capitalize">{selectedOrder.property_type?.replace(/_/g, ' ') || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Zone / Division</p>
+                    <p className="font-medium text-gray-900">{selectedOrder.zone || 'N/A'} / {selectedOrder.division || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Work Order Details */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Category</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.category_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Subcategory</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.subcategory_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
+                    {selectedOrder.status?.replace(/_/g, ' ')}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 uppercase">Priority:</span>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                <div>
+                  <p className="text-sm text-gray-500">Priority</p>
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
                     selectedOrder.priority === 'high' || selectedOrder.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                    selectedOrder.priority === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'
+                    selectedOrder.priority === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
                   }`}>
                     {selectedOrder.priority}
                   </span>
                 </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <p className="text-sm text-gray-500">Customer Name</p>
-                  <p className="font-medium">{selectedOrder.customer_name || [selectedOrder.first_name, selectedOrder.last_name].filter(Boolean).join(' ') || 'N/A'}</p>
+                  <p className="text-sm text-gray-500">Created</p>
+                  <p className="font-medium text-gray-900">{new Date(selectedOrder.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="text-sm text-gray-600 break-all">{selectedOrder.customer_email || selectedOrder.email || 'N/A'}</p>
+                  <p className="text-sm text-gray-500">Vendor</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.vendor_name || 'Not Assigned'}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+
+              {selectedOrder.title && (
                 <div>
-                  <p className="text-sm text-gray-500">Phone</p>
-                  <p className="font-medium">{selectedOrder.customer_phone || selectedOrder.phone || 'N/A'}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Property/Community</p>
-                  <p className="font-medium">{selectedOrder.property_name || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Property ID</p>
-                  <p className="font-medium font-mono text-blue-600">{selectedOrder.property_code || selectedOrder.actual_property_id || 'N/A'}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Block</p>
-                  <p className="font-medium">{selectedOrder.block || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Property Type</p>
-                  <p className="font-medium capitalize">{selectedOrder.property_type?.replace(/_/g, ' ') || 'N/A'}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Zone</p>
-                  <p className="font-medium">{selectedOrder.zone || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Division</p>
-                  <p className="font-medium">{selectedOrder.division || 'N/A'}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Address</p>
-                <p className="font-medium">{[selectedOrder.address, selectedOrder.city, selectedOrder.state].filter(Boolean).join(', ') || 'N/A'}</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Contact Person</p>
-                  <p className="font-medium">{selectedOrder.contact_person || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Contact Phone</p>
-                  <p className="font-medium">{selectedOrder.contact_phone || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Contact Email</p>
-                  <p className="font-medium text-sm break-all">{selectedOrder.contact_email || 'N/A'}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Category</p>
-                  <p className="font-medium">{selectedOrder.category_name || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Subcategory</p>
-                  <p className="font-medium">{selectedOrder.subcategory_name || 'N/A'}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Description</p>
-                <p className="mt-1 p-3 bg-gray-50 rounded-lg">{selectedOrder.description || 'No description provided'}</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div className="flex items-center space-x-2">
-                  <span className={`w-3 h-3 rounded-full flex-shrink-0 ${selectedOrder.permission_to_enter === 'yes' ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                  <span className="text-sm">Permission to Enter: {selectedOrder.permission_to_enter}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className={`w-3 h-3 rounded-full flex-shrink-0 ${selectedOrder.has_pet === 'yes' ? 'bg-amber-500' : 'bg-gray-300'}`}></span>
-                  <span className="text-sm">Has Pet: {selectedOrder.has_pet}</span>
-                </div>
-              </div>
-              {selectedOrder.entry_notes && (
-                <div>
-                  <p className="text-sm text-gray-500">Entry Notes</p>
-                  <p className="mt-1 p-3 bg-amber-50 rounded-lg text-sm">{selectedOrder.entry_notes}</p>
+                  <p className="text-sm text-gray-500">Title</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.title}</p>
                 </div>
               )}
-            </div>
-            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
-              <button onClick={() => handleEditWorkOrder(selectedOrder)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Edit</button>
-              <button onClick={() => setSelectedOrder(null)} className="btn-secondary">Close</button>
+
+              {selectedOrder.description && (
+                <div>
+                  <p className="text-sm text-gray-500">Description</p>
+                  <p className="text-gray-700">{selectedOrder.description}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <button onClick={() => handleEditWorkOrder(selectedOrder)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Edit</button>
+                <button onClick={() => setSelectedOrder(null)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Close</button>
+              </div>
             </div>
           </div>
         </div>
