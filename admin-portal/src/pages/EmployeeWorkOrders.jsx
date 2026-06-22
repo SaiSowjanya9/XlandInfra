@@ -851,7 +851,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                     <th className="text-left py-3 px-4 font-semibold text-gray-600 text-sm">Category</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-600 text-sm">Status</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-600 text-sm">Created</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600 text-sm">Actions</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-600 text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -910,13 +910,41 @@ const EmployeeWorkOrders = ({ admin }) => {
                           {new Date(wo.created_at).toLocaleDateString()}
                         </td>
                         <td className="py-3 px-4">
-                          <div className="flex items-center justify-end">
+                          <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => setSelectedOrder(wo)}
-                              className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                               title="View Details"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Eye className="w-4 h-4 text-gray-500" />
+                            </button>
+                            <button
+                              onClick={() => handleEditWorkOrder(wo)}
+                              className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Edit Work Order"
+                            >
+                              <Pencil className="w-4 h-4 text-blue-500" />
+                            </button>
+                            <button
+                              onClick={() => openAssignModal(wo, 'vendor')}
+                              className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
+                              title="Assign Vendor"
+                            >
+                              <Truck className="w-4 h-4 text-purple-500" />
+                            </button>
+                            <button
+                              onClick={() => openAssignModal(wo, 'employee')}
+                              className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Assign Employee"
+                            >
+                              <UserPlus className="w-4 h-4 text-green-500" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteWorkOrder(wo.id)}
+                              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
                             </button>
                           </div>
                         </td>

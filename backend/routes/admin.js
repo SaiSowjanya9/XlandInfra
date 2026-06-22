@@ -1470,8 +1470,13 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
   try {
     const { status } = req.query;
     
+    // Use DISTINCT and proper JOIN conditions to avoid duplicates
     let query = `
-      SELECT wo.*,
+      SELECT DISTINCT wo.id, wo.work_order_id, wo.property_id, wo.category_id, wo.subcategory_id,
+             wo.description, wo.priority, wo.status, wo.customer_name, wo.customer_email,
+             wo.customer_phone, wo.permission_to_enter, wo.has_pet, wo.entry_notes,
+             wo.franchise_partner_id, wo.assigned_vendor_id, wo.assigned_at, wo.completed_at,
+             wo.created_at, wo.updated_at, wo.created_by,
              COALESCE(p.name, op.community_name, wo.property_name) as property_name,
              COALESCE(p.property_id, op.property_id) as property_code,
              COALESCE(c.name, wo.category_name) as category_name,
@@ -1487,8 +1492,8 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
              fp.fp_code, fp.company_name as fp_name,
              v.company_name as vendor_name
       FROM work_orders wo
-      LEFT JOIN properties p ON wo.property_id = p.id OR wo.property_name = p.name
-      LEFT JOIN onboarded_properties op ON wo.property_id = op.id OR wo.property_name = op.community_name
+      LEFT JOIN properties p ON wo.property_id = p.id
+      LEFT JOIN onboarded_properties op ON wo.property_id = op.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN franchise_partners fp ON wo.franchise_partner_id = fp.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
@@ -2672,6 +2677,53 @@ router.post('/migrate-estimate-packages', authenticate, adminOnly, async (req, r
     });
   } catch (error) {
     console.error('Package migration error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Cleanup duplicate work orders
+router.post('/cleanup-duplicate-work-orders', authenticate, adminOnly, async (req, res) => {
+  try {
+    console.log('Starting duplicate work orders cleanup...');
+    
+    // Find duplicates first
+    const [duplicates] = await pool.execute(`
+      SELECT work_order_id, COUNT(*) as count, GROUP_CONCAT(id) as ids
+      FROM work_orders 
+      GROUP BY work_order_id 
+      HAVING COUNT(*) > 1
+    `);
+    
+    if (duplicates.length === 0) {
+      return res.json({ 
+        success: true, 
+        message: 'No duplicate work orders found. Database is clean.',
+        duplicatesFound: 0,
+        recordsRemoved: 0
+      });
+    }
+    
+    console.log(`Found ${duplicates.length} work_order_ids with duplicates`);
+    
+    // Delete duplicates, keeping lowest id for each work_order_id
+    const [result] = await pool.execute(`
+      DELETE wo1 FROM work_orders wo1
+      INNER JOIN work_orders wo2
+      WHERE wo1.work_order_id = wo2.work_order_id
+      AND wo1.id > wo2.id
+    `);
+    
+    console.log(`Removed ${result.affectedRows} duplicate work order records`);
+    
+    res.json({ 
+      success: true, 
+      message: `Cleanup complete. Removed ${result.affectedRows} duplicate records.`,
+      duplicatesFound: duplicates.length,
+      recordsRemoved: result.affectedRows,
+      details: duplicates.map(d => ({ workOrderId: d.work_order_id, count: d.count }))
+    });
+  } catch (error) {
+    console.error('Error cleaning up duplicate work orders:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

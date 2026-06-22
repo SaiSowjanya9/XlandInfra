@@ -1133,7 +1133,7 @@ const FPWorkOrders = ({ user }) => {
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created By</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
+                      <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
