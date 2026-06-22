@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link } from 'lucide-react';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
@@ -49,6 +50,7 @@ const BILLING_DURATIONS = [
 ];
 
 const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(defaultTab);
   
   // Sync activeTab with defaultTab when route changes
@@ -462,19 +464,19 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* Tab Bar */}
       <div className="bg-white rounded-xl border border-gray-200 p-1 flex items-center gap-1">
-        <button onClick={() => window.location.href = '/executive/estimates'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button onClick={() => navigate('/executive/estimates')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           <List className="w-4 h-4" />All Estimates
         </button>
-        <button onClick={() => window.location.href = '/executive/estimates/create'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'create' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button onClick={() => navigate('/executive/estimates/create')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'create' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           <Plus className="w-4 h-4" />Create Estimate
         </button>
-        <button onClick={() => window.location.href = '/executive/estimates/amc'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'amc' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button onClick={() => navigate('/executive/estimates/amc')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'amc' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           <Package className="w-4 h-4" />AMC Packages
         </button>
-        <button onClick={() => window.location.href = '/executive/estimates/addons'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'addons' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button onClick={() => navigate('/executive/estimates/addons')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'addons' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           <PlusCircle className="w-4 h-4" />Add-ons
         </button>
-        <button onClick={() => window.location.href = '/executive/estimates/archived'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'archived' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button onClick={() => navigate('/executive/estimates/archived')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'archived' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           <Archive className="w-4 h-4" />Archived
         </button>
       </div>

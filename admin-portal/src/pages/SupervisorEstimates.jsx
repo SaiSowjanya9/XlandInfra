@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Download, Mail, EyeOff, Calendar, Filter, Home, Building2, FolderOpen, ExternalLink, Link } from 'lucide-react';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 
@@ -49,6 +50,7 @@ const BILLING_DURATIONS = [
 ];
 
 const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [estimates, setEstimates] = useState([]);
   const [archivedEstimates, setArchivedEstimates] = useState([]);
@@ -319,19 +321,19 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* Tab Bar */}
       <div className="bg-white rounded-xl border border-gray-200 p-1 flex items-center gap-1">
-        <button onClick={() => window.location.href = '/supervisor/estimates'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button onClick={() => navigate('/supervisor/estimates')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           <List className="w-4 h-4" />All Estimates
         </button>
-        <button onClick={() => window.location.href = '/supervisor/estimates/create'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'create' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button onClick={() => navigate('/supervisor/estimates/create')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'create' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           <Plus className="w-4 h-4" />Create Estimate
         </button>
-        <button onClick={() => window.location.href = '/supervisor/estimates/amc'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'amc' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button onClick={() => navigate('/supervisor/estimates/amc')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'amc' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           <Package className="w-4 h-4" />AMC Packages
         </button>
-        <button onClick={() => window.location.href = '/supervisor/estimates/addons'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'addons' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button onClick={() => navigate('/supervisor/estimates/addons')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'addons' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           <PlusCircle className="w-4 h-4" />Add-ons
         </button>
-        <button onClick={() => window.location.href = '/supervisor/estimates/archived'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'archived' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button onClick={() => navigate('/supervisor/estimates/archived')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'archived' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           <Archive className="w-4 h-4" />Archived
         </button>
       </div>

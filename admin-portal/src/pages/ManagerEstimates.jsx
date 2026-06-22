@@ -1396,19 +1396,19 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center gap-1 py-3">
-            <button onClick={() => window.location.href = '/manager/estimates'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            <button onClick={() => navigate('/manager/estimates')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
               <List className="w-4 h-4" />All Estimates
             </button>
-            <button onClick={() => window.location.href = '/manager/estimates/create'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'create' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            <button onClick={() => navigate('/manager/estimates/create')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'create' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
               <Plus className="w-4 h-4" />Create Estimate
             </button>
-            <button onClick={() => window.location.href = '/manager/estimates/amc'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'amc' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            <button onClick={() => navigate('/manager/estimates/amc')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'amc' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
               <Package className="w-4 h-4" />AMC Packages
             </button>
-            <button onClick={() => window.location.href = '/manager/estimates/addons'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'addons' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            <button onClick={() => navigate('/manager/estimates/addons')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'addons' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
               <PlusCircle className="w-4 h-4" />Add-ons
             </button>
-            <button onClick={() => window.location.href = '/manager/estimates/archived'} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'archived' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            <button onClick={() => navigate('/manager/estimates/archived')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'archived' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
               <Archive className="w-4 h-4" />Archived
             </button>
           </div>
