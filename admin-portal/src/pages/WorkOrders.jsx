@@ -295,8 +295,12 @@ const WorkOrders = ({ admin }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
+      case 'draft': return 'bg-gray-100 text-gray-700';
       case 'pending': return 'bg-yellow-100 text-yellow-700';
+      case 'requested': return 'bg-orange-100 text-orange-700';
+      case 'under_review': return 'bg-amber-100 text-amber-700';
       case 'assigned': return 'bg-blue-100 text-blue-700';
+      case 'accepted': return 'bg-indigo-100 text-indigo-700';
       case 'in_progress': return 'bg-purple-100 text-purple-700';
       case 'completed': return 'bg-green-100 text-green-700';
       case 'cancelled': return 'bg-red-100 text-red-700';
@@ -658,8 +662,12 @@ const WorkOrders = ({ admin }) => {
             className="px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
           >
             <option value="">All Status</option>
+            <option value="draft">Draft</option>
             <option value="pending">Pending</option>
+            <option value="requested">Requested</option>
+            <option value="under_review">Under Review</option>
             <option value="assigned">Assigned</option>
+            <option value="accepted">Accepted</option>
             <option value="in_progress">In Progress</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
@@ -727,8 +735,12 @@ const WorkOrders = ({ admin }) => {
                           }}
                           className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
                         >
+                          <option value="draft">Draft</option>
                           <option value="pending">Pending</option>
+                          <option value="requested">Requested</option>
+                          <option value="under_review">Under Review</option>
                           <option value="assigned">Assigned</option>
+                          <option value="accepted">Accepted</option>
                           <option value="in_progress">In Progress</option>
                           <option value="completed">Completed</option>
                           <option value="cancelled">Cancelled</option>

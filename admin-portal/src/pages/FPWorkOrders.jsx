@@ -387,8 +387,9 @@ const FPWorkOrders = ({ user }) => {
   const getStatusColor = (status) => {
     const colors = {
       draft: 'bg-gray-100 text-gray-700',
+      pending: 'bg-yellow-100 text-yellow-700',
       requested: 'bg-blue-100 text-blue-700',
-      under_review: 'bg-yellow-100 text-yellow-700',
+      under_review: 'bg-amber-100 text-amber-700',
       assigned: 'bg-purple-100 text-purple-700',
       accepted: 'bg-indigo-100 text-indigo-700',
       in_progress: 'bg-orange-100 text-orange-700',
@@ -1046,7 +1047,7 @@ const FPWorkOrders = ({ user }) => {
       )}
 
       {/* Work Orders List - Only show for pending/completed tabs */}
-      {(activeTab === 'pending' || activeTab === 'completed') && (
+      {(activeTab === 'all' || activeTab === 'completed') && (
         <>
           {/* Search */}
           <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -1075,8 +1076,12 @@ const FPWorkOrders = ({ user }) => {
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Status</option>
+                <option value="draft">Draft</option>
                 <option value="pending">Pending</option>
+                <option value="requested">Requested</option>
+                <option value="under_review">Under Review</option>
                 <option value="assigned">Assigned</option>
+                <option value="accepted">Accepted</option>
                 <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
@@ -1141,8 +1146,12 @@ const FPWorkOrders = ({ user }) => {
                               onChange={(e) => handleStatusChange(wo.id, e.target.value)}
                               className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
                             >
+                              <option value="draft" className="bg-white text-gray-900">Draft</option>
                               <option value="pending" className="bg-white text-gray-900">Pending</option>
+                              <option value="requested" className="bg-white text-gray-900">Requested</option>
+                              <option value="under_review" className="bg-white text-gray-900">Under Review</option>
                               <option value="assigned" className="bg-white text-gray-900">Assigned</option>
+                              <option value="accepted" className="bg-white text-gray-900">Accepted</option>
                               <option value="in_progress" className="bg-white text-gray-900">In Progress</option>
                               <option value="completed" className="bg-white text-gray-900">Completed</option>
                               <option value="cancelled" className="bg-white text-gray-900">Cancelled</option>
