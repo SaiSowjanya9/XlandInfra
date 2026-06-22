@@ -194,7 +194,7 @@ function App() {
     }
   };
 
-  const handleLogout = useCallback((redirectPath = '/') => {
+  const handleLogout = useCallback(() => {
     setUser(null);
     setPortal(null);
     // Clear sessionStorage
@@ -208,8 +208,8 @@ function App() {
     localStorage.removeItem('pm_auth_token');
     localStorage.removeItem('pm_current_user');
     localStorage.removeItem('pm_demo_mode');
-    // Return path for navigation (handled by component)
-    return redirectPath;
+    // Navigate to employee login page
+    window.location.href = '/employee/login';
   }, []);
 
   const handleSelectPortal = useCallback((portalKey) => {
@@ -240,7 +240,7 @@ function App() {
     const navigate = useNavigate();
     const handleLogoutWithNav = () => {
       handleLogout();
-      navigate('/');
+      navigate('/employee/login');
     };
     return children(handleLogoutWithNav);
   };
