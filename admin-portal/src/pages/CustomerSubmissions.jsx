@@ -113,13 +113,14 @@ const CustomerSubmissions = () => {
   const [propertiesLoading, setPropertiesLoading] = useState(false);
 
   // Load properties from FP-specific API or all FPs (Admin mode)
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (showLoading = true) => {
     if (!selectedFp) {
       setProperties([]);
       return;
     }
     
-    setPropertiesLoading(true);
+    // Only show loading spinner on initial load or manual refresh, not background polling
+    if (showLoading) setPropertiesLoading(true);
     try {
       let endpoint;
       if (selectedFp.id === 'all') {
@@ -189,7 +190,7 @@ const CustomerSubmissions = () => {
     } catch (error) {
       console.error('Error loading properties:', error);
     } finally {
-      setPropertiesLoading(false);
+      if (showLoading) setPropertiesLoading(false);
     }
     setNotifications(getNotifications());
   }, [selectedFp, token]);
@@ -208,10 +209,10 @@ const CustomerSubmissions = () => {
       console.log('CustomerSubmissions: Loading data for FP:', selectedFp.id, selectedFp.companyName);
       loadData();
     }
-    // Poll for new entries every 10 seconds
+    // Poll for new entries every 10 seconds (silent background refresh)
     const interval = setInterval(() => {
       if (selectedCategory && selectedFp) {
-        loadData();
+        loadData(false); // Silent refresh - no loading spinner
       }
     }, 10000);
     return () => clearInterval(interval);
