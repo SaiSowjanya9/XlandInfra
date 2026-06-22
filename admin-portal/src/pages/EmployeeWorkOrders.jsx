@@ -184,7 +184,7 @@ const EmployeeWorkOrders = ({ admin }) => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch(`${API_BASE}/work-orders/categories`);
+      const response = await fetch(`${API_BASE}/api/work-orders/categories`);
       const result = await response.json();
       if (result.success) {
         setCategories(result.data || []);
@@ -202,7 +202,7 @@ const EmployeeWorkOrders = ({ admin }) => {
 
   const fetchProperties = async () => {
     try {
-      const response = await fetch(`${API_BASE}/onboarding`);
+      const response = await fetch(`${API_BASE}/api/onboarding`);
       const result = await response.json();
       if (result.success) {
         setProperties(result.data || []);
@@ -268,7 +268,7 @@ const EmployeeWorkOrders = ({ admin }) => {
 
   const updateStatus = async (id, status) => {
     try {
-      const response = await fetch(`${API_BASE}/work-orders/${id}/status`, {
+      const response = await fetch(`${API_BASE}/api/work-orders/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, adminId: admin?.id })
@@ -621,7 +621,7 @@ const EmployeeWorkOrders = ({ admin }) => {
         submitData.append('attachments', attachment.file);
       });
 
-      const response = await fetch(`${API_BASE}/work-orders/admin/create`, {
+      const response = await fetch(`${API_BASE}/api/work-orders/admin/create`, {
         method: 'POST',
         body: submitData
       });
