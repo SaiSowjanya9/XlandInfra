@@ -26,6 +26,7 @@ import {
   UserPlus,
   Trash2,
   Shield,
+  Store,
 } from 'lucide-react';
 import SelectWithAdd from '../components/SelectWithAdd';
 import { getCategories, addCategory, getSubcategories, addSubcategory } from '../utils/fieldOptionsStore';
@@ -555,15 +556,15 @@ const EmployeeWorkOrders = ({ admin }) => {
     }
   };
 
-  // Handle assign
-  const handleAssign = async () => {
-    if (!selectedAssignee || !selectedOrder) return;
+  // Handle assign - accepts assigneeId directly (like FP)
+  const handleAssign = async (assigneeId) => {
+    if (!assigneeId || !selectedOrder) return;
     try {
       const response = await fetch(`${API_BASE}/api/admin/work-orders/${selectedOrder.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
-          assignedTo: selectedAssignee,
+          assignedTo: assigneeId,
           status: 'assigned'
         })
       });
@@ -571,6 +572,7 @@ const EmployeeWorkOrders = ({ admin }) => {
       if (result.success) {
         setSuccess(`${assignType === 'vendor' ? 'Vendor' : 'Employee'} assigned successfully`);
         setShowAssignModal(false);
+        setSelectedOrder(null);
         fetchWorkOrders();
       } else {
         setError(result.message || 'Failed to assign');
@@ -1832,52 +1834,60 @@ const EmployeeWorkOrders = ({ admin }) => {
         </div>
       )}
 
-      {/* Assign Modal */}
+      {/* Assign Modal - matches FP portal design */}
       {showAssignModal && selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
+          <div className="bg-white rounded-xl max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold text-gray-900">
                   Assign {assignType === 'vendor' ? 'Vendor' : 'Employee'}
                 </h2>
-                <button onClick={() => setShowAssignModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <button onClick={() => { setShowAssignModal(false); setSelectedOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Work Order: {selectedOrder.work_order_id}
+              </p>
             </div>
+
             <div className="p-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select {assignType === 'vendor' ? 'Vendor' : 'Employee'}
-              </label>
-              <select
-                value={selectedAssignee}
-                onChange={(e) => setSelectedAssignee(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg"
-              >
-                <option value="">Select...</option>
-                {assignType === 'vendor' ? (
-                  vendors.map(v => (
-                    <option key={v.id} value={v.id}>{v.company_name || v.owner_name || v.name}</option>
-                  ))
-                ) : (
-                  employees.map(e => (
-                    <option key={e.id} value={e.id}>{e.firstName || e.first_name} {e.lastName || e.last_name}</option>
-                  ))
-                )}
-              </select>
-            </div>
-            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-              <button onClick={() => setShowAssignModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                Cancel
-              </button>
-              <button 
-                onClick={handleAssign} 
-                disabled={!selectedAssignee}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-              >
-                Assign
-              </button>
+              {(assignType === 'vendor' ? vendors : employees).length === 0 ? (
+                <p className="text-gray-500 text-center py-4">
+                  No {assignType === 'vendor' ? 'vendors' : 'employees'} available
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {(assignType === 'vendor' ? vendors : employees).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleAssign(item.id)}
+                      className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
+                    >
+                      <div className={`w-10 h-10 ${assignType === 'vendor' ? 'bg-purple-100' : 'bg-green-100'} rounded-full flex items-center justify-center`}>
+                        {assignType === 'vendor' ? (
+                          <Store className="w-5 h-5 text-purple-600" />
+                        ) : (
+                          <User className="w-5 h-5 text-green-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {assignType === 'vendor'
+                            ? (item.ownerName || item.owner_name || item.company_name || 'Unknown Vendor')
+                            : (`${item.first_name || item.firstName || ''} ${item.last_name || item.lastName || ''}`.trim() || item.name || 'Unknown Employee')}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {assignType === 'vendor'
+                            ? (item.serviceType || item.service_type || item.email || '-')
+                            : (item.role || item.email || '-')}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

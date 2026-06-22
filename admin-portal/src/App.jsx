@@ -195,21 +195,19 @@ function App() {
   };
 
   const handleLogout = useCallback(() => {
-    setUser(null);
-    setPortal(null);
-    // Clear sessionStorage
+    // Clear storage FIRST before any state changes
     sessionStorage.removeItem('adminUser');
     sessionStorage.removeItem('activePortal');
     sessionStorage.removeItem('pm_auth_token');
     sessionStorage.removeItem('pm_current_user');
-    // Also clear any legacy localStorage items
     localStorage.removeItem('adminUser');
     localStorage.removeItem('activePortal');
     localStorage.removeItem('pm_auth_token');
     localStorage.removeItem('pm_current_user');
     localStorage.removeItem('pm_demo_mode');
-    // Navigate to employee login page
-    window.location.href = '/employee/login';
+    // Navigate IMMEDIATELY to employee login - use replace to prevent back button issues
+    // Do this BEFORE state updates to avoid React re-rendering intermediate pages
+    window.location.replace('/employee/login');
   }, []);
 
   const handleSelectPortal = useCallback((portalKey) => {
@@ -237,10 +235,8 @@ function App() {
 
   // Wrapper component for logout that handles navigation
   const LogoutWrapper = ({ children, portalPath }) => {
-    const navigate = useNavigate();
     const handleLogoutWithNav = () => {
-      handleLogout();
-      navigate('/employee/login');
+      handleLogout(); // Already navigates to /employee/login
     };
     return children(handleLogoutWithNav);
   };
