@@ -662,12 +662,8 @@ const WorkOrders = ({ admin }) => {
             className="px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
           >
             <option value="">All Status</option>
-            <option value="draft">Draft</option>
             <option value="pending">Pending</option>
-            <option value="requested">Requested</option>
-            <option value="under_review">Under Review</option>
             <option value="assigned">Assigned</option>
-            <option value="accepted">Accepted</option>
             <option value="in_progress">In Progress</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
@@ -735,12 +731,8 @@ const WorkOrders = ({ admin }) => {
                           }}
                           className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
                         >
-                          <option value="draft">Draft</option>
                           <option value="pending">Pending</option>
-                          <option value="requested">Requested</option>
-                          <option value="under_review">Under Review</option>
                           <option value="assigned">Assigned</option>
-                          <option value="accepted">Accepted</option>
                           <option value="in_progress">In Progress</option>
                           <option value="completed">Completed</option>
                           <option value="cancelled">Cancelled</option>
