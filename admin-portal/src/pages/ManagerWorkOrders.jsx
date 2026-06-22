@@ -19,7 +19,8 @@ import {
   Upload,
   FileText,
   Image,
-  Lock
+  Lock,
+  List
 } from 'lucide-react';
 
 const ManagerWorkOrders = ({ user }) => {
@@ -33,7 +34,7 @@ const ManagerWorkOrders = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('all');
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(null);
@@ -123,8 +124,7 @@ const ManagerWorkOrders = ({ user }) => {
 
   // Filter work orders by active tab, status filter, and search term
   const filteredWorkOrders = workOrders.filter(wo => {
-    // Tab filter - Pending shows all except completed, Completed shows only completed
-    if (activeTab === 'pending' && wo.status === 'completed') return false;
+    // Tab filter - All shows everything, Completed shows only completed
     if (activeTab === 'completed' && wo.status !== 'completed') return false;
 
     // Status dropdown filter
@@ -171,7 +171,7 @@ const ManagerWorkOrders = ({ user }) => {
       if (result.success) {
         setMessage({ type: 'success', text: 'Work order created successfully!' });
         resetForm();
-        setActiveTab('pending');
+        setActiveTab('all');
         fetchWorkOrders();
       } else {
         setMessage({ type: 'error', text: result.message || 'Operation failed' });
@@ -340,19 +340,19 @@ const ManagerWorkOrders = ({ user }) => {
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-gray-200">
         <button
-          onClick={() => setActiveTab('pending')}
+          onClick={() => setActiveTab('all')}
           className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'pending'
+            activeTab === 'all'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Clock className="w-4 h-4" />
-          <span>Pending</span>
+          <List className="w-4 h-4" />
+          <span>All</span>
           <span className={`px-2 py-0.5 rounded-full text-xs ${
-            activeTab === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+            activeTab === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
           }`}>
-            {pendingCount}
+            {workOrders.length}
           </span>
         </button>
         <button
@@ -386,7 +386,7 @@ const ManagerWorkOrders = ({ user }) => {
       </div>
 
       {/* Search - shown for pending/completed tabs */}
-      {(activeTab === 'pending' || activeTab === 'completed') && (
+      {(activeTab === 'all' || activeTab === 'completed') && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="flex gap-3">
             <div className="flex-1 relative">
@@ -432,7 +432,7 @@ const ManagerWorkOrders = ({ user }) => {
       )}
 
       {/* Work Orders List - shown for pending/completed tabs */}
-      {(activeTab === 'pending' || activeTab === 'completed') && (
+      {(activeTab === 'all' || activeTab === 'completed') && (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -918,7 +918,7 @@ const ManagerWorkOrders = ({ user }) => {
             <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
               <button
                 type="button"
-                onClick={() => { resetForm(); setActiveTab('pending'); }}
+                onClick={() => { resetForm(); setActiveTab('all'); }}
                 className="px-6 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 font-medium"
               >
                 Cancel

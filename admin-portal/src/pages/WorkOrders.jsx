@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Eye, X, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle2, Pencil, Plus, Building2, User } from 'lucide-react';
+import { Search, Eye, X, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle2, Pencil, Plus, Building2, User, List } from 'lucide-react';
 import { useFP } from '../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -11,7 +11,7 @@ const WorkOrders = ({ admin }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'completed', or 'create'
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'completed', or 'create'
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [success, setSuccess] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
@@ -44,10 +44,11 @@ const WorkOrders = ({ admin }) => {
     
     try {
       let endpoint;
+      const statusParam = activeTab === 'all' ? '' : `?status=${activeTab}`;
       if (selectedFp.id === 'all') {
-        endpoint = `${API_BASE}/api/admin/all-work-orders?status=${activeTab}`;
+        endpoint = `${API_BASE}/api/admin/all-work-orders${statusParam}`;
       } else {
-        endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/work-orders?status=${activeTab}`;
+        endpoint = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/work-orders${statusParam}`;
       }
       
       const response = await fetch(endpoint, {
@@ -200,7 +201,7 @@ const WorkOrders = ({ admin }) => {
         });
         setPropertySearch('');
         setSelectedProperty(null);
-        setActiveTab('pending');
+        setActiveTab('all');
         fetchWorkOrders();
         setTimeout(() => setSuccess(''), 3000);
       }
@@ -313,8 +314,7 @@ const WorkOrders = ({ admin }) => {
 
   // Filter by tab, search and status dropdown
   const filteredOrders = workOrders.filter(wo => {
-    // Tab filter - Pending shows all except completed, Completed shows only completed
-    if (activeTab === 'pending' && wo.status === 'completed') return false;
+    // Tab filter - All shows everything, Completed shows only completed
     if (activeTab === 'completed' && wo.status !== 'completed') return false;
     
     // Status dropdown filter
@@ -429,22 +429,22 @@ const WorkOrders = ({ admin }) => {
         </div>
       )}
 
-      {/* Tabs: Pending / Completed */}
+      {/* Tabs: All / Completed */}
       <div className="flex gap-2">
         <button
-          onClick={() => setActiveTab('pending')}
+          onClick={() => setActiveTab('all')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-colors ${
-            activeTab === 'pending'
+            activeTab === 'all'
               ? 'bg-amber-100 text-amber-700 border border-amber-200'
               : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
           }`}
         >
-          <Clock className="w-4 h-4" />
-          Pending
+          <List className="w-4 h-4" />
+          All
           <span className={`px-2 py-0.5 rounded-full text-xs ${
-            activeTab === 'pending' ? 'bg-amber-200 text-amber-800' : 'bg-gray-100 text-gray-600'
+            activeTab === 'all' ? 'bg-amber-200 text-amber-800' : 'bg-gray-100 text-gray-600'
           }`}>
-            {workOrders.filter(wo => wo.status !== 'completed').length}
+            {workOrders.length}
           </span>
         </button>
         <button

@@ -27,6 +27,7 @@ import {
   Trash2,
   Shield,
   Store,
+  List,
 } from 'lucide-react';
 import SelectWithAdd from '../components/SelectWithAdd';
 import { getCategories, addCategory, getSubcategories, addSubcategory } from '../utils/fieldOptionsStore';
@@ -36,7 +37,7 @@ import { useFP } from '../contexts/FPContext';
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const EmployeeWorkOrders = ({ admin }) => {
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('all');
   const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -152,11 +153,9 @@ const EmployeeWorkOrders = ({ admin }) => {
         const completedCount = allOrders.filter(o => o.status === 'completed').length;
         setCounts({ pending: pendingCount, completed: completedCount, total: allOrders.length });
         
-        // Filter orders based on active tab - Pending shows all except completed
+        // Filter orders based on active tab - All shows everything, Completed shows only completed
         let filteredOrders = allOrders;
-        if (activeTab === 'pending') {
-          filteredOrders = allOrders.filter(o => o.status !== 'completed');
-        } else if (activeTab === 'completed') {
+        if (activeTab === 'completed') {
           filteredOrders = allOrders.filter(o => o.status === 'completed');
         }
         
@@ -652,7 +651,7 @@ const EmployeeWorkOrders = ({ admin }) => {
           priority: 'medium',
           attachments: []
         });
-        setActiveTab('pending');
+        setActiveTab('all');
         fetchWorkOrders();
         setTimeout(() => setSuccess(''), 3000);
       } else {
@@ -668,7 +667,7 @@ const EmployeeWorkOrders = ({ admin }) => {
   };
 
   const allTabs = [
-    { id: 'pending', label: 'Pending', icon: Clock, count: counts.pending },
+    { id: 'all', label: 'All', icon: List, count: counts.total },
     { id: 'completed', label: 'Completed', icon: CheckCircle2, count: counts.completed },
     { id: 'create', label: 'Create New', icon: Plus, count: null },
   ];

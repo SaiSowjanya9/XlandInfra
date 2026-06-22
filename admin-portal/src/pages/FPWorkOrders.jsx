@@ -21,7 +21,8 @@ import {
   RotateCcw,
   Store,
   ChevronDown,
-  Pencil
+  Pencil,
+  List
 } from 'lucide-react';
 
 const FPWorkOrders = ({ user }) => {
@@ -33,7 +34,7 @@ const FPWorkOrders = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -243,7 +244,7 @@ const FPWorkOrders = ({ user }) => {
           if (att.preview) URL.revokeObjectURL(att.preview);
         });
         resetForm();
-        setActiveTab('pending');
+        setActiveTab('all');
         fetchWorkOrders();
       } else {
         setMessage({ type: 'error', text: result.message || 'Operation failed' });
@@ -418,8 +419,7 @@ const FPWorkOrders = ({ user }) => {
 
   // Filter work orders by active tab, status filter, and search term
   const filteredWorkOrders = workOrders.filter(wo => {
-    // Tab filter - Pending shows all except completed, Completed shows only completed
-    if (activeTab === 'pending' && wo.status === 'completed') return false;
+    // Tab filter - All shows everything, Completed shows only completed
     if (activeTab === 'completed' && wo.status !== 'completed') return false;
 
     // Status dropdown filter
@@ -596,19 +596,19 @@ const FPWorkOrders = ({ user }) => {
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-gray-200">
         <button
-          onClick={() => setActiveTab('pending')}
+          onClick={() => setActiveTab('all')}
           className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'pending'
+            activeTab === 'all'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Clock className="w-4 h-4" />
-          <span>Pending</span>
+          <List className="w-4 h-4" />
+          <span>All</span>
           <span className={`px-2 py-0.5 rounded-full text-xs ${
-            activeTab === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+            activeTab === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
           }`}>
-            {pendingCount}
+            {workOrders.length}
           </span>
         </button>
         <button
@@ -1029,7 +1029,7 @@ const FPWorkOrders = ({ user }) => {
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
               <button
                 type="button"
-                onClick={() => { resetForm(); setActiveTab('pending'); }}
+                onClick={() => { resetForm(); setActiveTab('all'); }}
                 className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
               >
                 Cancel
