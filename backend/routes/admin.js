@@ -1470,16 +1470,12 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
   try {
     const { status } = req.query;
     
-    // Use DISTINCT and proper JOIN conditions to avoid duplicates
+    // Match FP endpoint query structure for consistency
     let query = `
-      SELECT DISTINCT wo.id, wo.work_order_id, wo.property_id, wo.category_id, wo.subcategory_id,
-             wo.description, wo.priority, wo.status, wo.customer_name, wo.customer_email,
-             wo.customer_phone, wo.permission_to_enter, wo.has_pet, wo.entry_notes,
-             wo.franchise_partner_id, wo.assigned_vendor_id, wo.assigned_at, wo.completed_at,
-             wo.created_at, wo.updated_at, wo.created_by,
+      SELECT wo.*, 
              COALESCE(p.name, op.community_name, wo.property_name) as property_name,
-             COALESCE(p.property_id, op.property_id) as property_code,
-             COALESCE(c.name, wo.category_name) as category_name,
+             COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
+             COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
              COALESCE(p.zone_id, op.zone) as zone,
              COALESCE(p.division_id, op.division) as division,
              COALESCE(p.address, op.address) as address,
@@ -1488,15 +1484,23 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
              COALESCE(p.contact_person, op.contact_person) as contact_person,
              COALESCE(p.contact_phone, op.contact_phone) as contact_phone,
              COALESCE(p.contact_email, op.contact_email) as contact_email,
-             COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
+             COALESCE(c.name, wo.category_name) as category_name,
+             wo.subcategory_name,
              fp.fp_code, fp.company_name as fp_name,
-             v.company_name as vendor_name
+             v.company_name as vendor_name,
+             COALESCE(
+               CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+               CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
+               wo.created_by, 'System'
+             ) as created_by_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
       LEFT JOIN onboarded_properties op ON wo.property_id = op.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN franchise_partners fp ON wo.franchise_partner_id = fp.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
+      LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username OR CAST(wo.created_by AS UNSIGNED) = fpe.id
+      LEFT JOIN users u ON wo.created_by = u.email OR wo.created_by = u.username OR wo.created_by = u.user_id OR CAST(wo.created_by AS UNSIGNED) = u.id
       WHERE 1=1
     `;
     
@@ -1506,7 +1510,7 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
       query += ` AND wo.status IN ('completed', 'closed')`;
     }
     
-    query += ` ORDER BY wo.created_at DESC`;
+    query += ` ORDER BY wo.created_at DESC LIMIT 500`;
     
     const [workOrders] = await pool.execute(query);
     console.log('Admin all-work-orders: Found', workOrders.length, 'work orders');

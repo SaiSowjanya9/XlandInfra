@@ -447,29 +447,23 @@ const EmployeeWorkOrders = ({ admin }) => {
 
   // Handle edit work order
   const handleEditWorkOrder = (wo) => {
-    // Close view modal first
-    setSelectedOrder(null);
-    
-    // Set edit data
-    setTimeout(() => {
-      setSelectedOrder(wo);
-      setEditFormData({
-        categoryId: wo.category_id || '',
-        subcategoryId: wo.subcategory_id || '',
-        description: wo.description || '',
-        permissionToEnter: wo.permission_to_enter || wo.permissionToEnter || '',
-        hasPet: wo.has_pet || wo.hasPet || '',
-        entryNotes: wo.entry_notes || wo.entryNotes || '',
-        priority: wo.priority || 'medium',
-        status: wo.status || 'pending',
-        customerName: wo.customer_name || [wo.first_name, wo.last_name].filter(Boolean).join(' ') || '',
-        customerPhone: wo.customer_phone || wo.phone || '',
-        customerEmail: wo.customer_email || wo.email || '',
-        block: wo.block || '',
-        flatNumber: wo.flat_number || wo.flatNumber || ''
-      });
-      setShowEditModal(true);
-    }, 100);
+    setSelectedOrder(wo);
+    setEditFormData({
+      categoryId: wo.category_id || '',
+      subcategoryId: wo.subcategory_id || '',
+      description: wo.description || '',
+      permissionToEnter: wo.permission_to_enter || wo.permissionToEnter || '',
+      hasPet: wo.has_pet || wo.hasPet || '',
+      entryNotes: wo.entry_notes || wo.entryNotes || '',
+      priority: wo.priority || 'medium',
+      status: wo.status || 'pending',
+      customerName: wo.customer_name || [wo.first_name, wo.last_name].filter(Boolean).join(' ') || '',
+      customerPhone: wo.customer_phone || wo.phone || '',
+      customerEmail: wo.customer_email || wo.email || '',
+      block: wo.block || '',
+      flatNumber: wo.flat_number || wo.flatNumber || ''
+    });
+    setShowEditModal(true);
   };
 
   // Save edit
@@ -499,6 +493,7 @@ const EmployeeWorkOrders = ({ admin }) => {
       if (result.success) {
         setSuccess('Work order updated successfully');
         setShowEditModal(false);
+        setSelectedOrder(null);
         fetchWorkOrders();
       } else {
         setError(result.message || 'Failed to update work order');
@@ -935,14 +930,9 @@ const EmployeeWorkOrders = ({ admin }) => {
                         <td className="py-4 px-4">
                           <div>
                             <p className="text-sm font-medium text-gray-900">
-                              {wo.source === 'customer' ? (wo.customer_name || 'Customer') : (wo.created_by || wo.source || 'System')}
+                              {wo.source === 'customer' ? (wo.customer_name || 'Customer') : (wo.created_by_name || wo.created_by || 'System')}
                             </p>
-                            {wo.source === 'customer' && (
-                              <p className="text-xs text-gray-500">{wo.property_code || wo.property_name}</p>
-                            )}
-                            {wo.source !== 'customer' && wo.source && (
-                              <p className="text-xs text-gray-400 capitalize">{wo.source}</p>
-                            )}
+                            <p className="text-xs text-gray-500">{wo.property_code || ''}</p>
                           </div>
                         </td>
                         <td className="py-4 px-4">
@@ -1451,7 +1441,7 @@ const EmployeeWorkOrders = ({ admin }) => {
       )}
 
       {/* Work Order Detail Modal */}
-      {selectedOrder && (
+      {selectedOrder && !showEditModal && !showAssignModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-5 border-b border-gray-200">
@@ -1650,7 +1640,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                   <h2 className="text-lg font-semibold text-gray-900">Edit Work Order</h2>
                   <p className="text-sm text-gray-500">{selectedOrder.work_order_id}</p>
                 </div>
-                <button onClick={() => setShowEditModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <button onClick={() => { setShowEditModal(false); setSelectedOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -1813,7 +1803,7 @@ const EmployeeWorkOrders = ({ admin }) => {
             </div>
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
               <button
-                onClick={() => setShowEditModal(false)}
+                onClick={() => { setShowEditModal(false); setSelectedOrder(null); }}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
               >
                 Cancel
