@@ -284,7 +284,6 @@ const EmployeeWorkOrders = ({ admin }) => {
       draft: 'bg-gray-100 text-gray-700',
       requested: 'bg-blue-100 text-blue-700',
       under_review: 'bg-yellow-100 text-yellow-700',
-      pending: 'bg-yellow-100 text-yellow-700',
       assigned: 'bg-purple-100 text-purple-700',
       accepted: 'bg-indigo-100 text-indigo-700',
       in_progress: 'bg-orange-100 text-orange-700',
@@ -781,17 +780,17 @@ const EmployeeWorkOrders = ({ admin }) => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-6 py-4 font-medium text-sm transition-all border-b-2 ${
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.id
-                    ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
                 <Icon className="w-5 h-5" />
                 <span>{tab.label}</span>
                 {tab.count !== null && (
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                    activeTab === tab.id ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'
+                  <span className={`px-2 py-0.5 rounded-full text-xs ${
+                    activeTab === tab.id ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
                   }`}>
                     {tab.count}
                   </span>
@@ -816,12 +815,12 @@ const EmployeeWorkOrders = ({ admin }) => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={handleSearchKeyPress}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <button
                 onClick={handleSearch}
-                className="flex items-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Search className="w-4 h-4" />
                 <span>Search</span>
@@ -829,7 +828,7 @@ const EmployeeWorkOrders = ({ admin }) => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -841,7 +840,7 @@ const EmployeeWorkOrders = ({ admin }) => {
               </select>
               <button
                 onClick={() => { setSearchTerm(''); setStatusFilter('all'); fetchWorkOrders(); }}
-                className="flex items-center space-x-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span>Clear</span>
