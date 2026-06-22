@@ -1004,7 +1004,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1023,7 +1023,10 @@ const CoordinatorWorkOrders = ({ user }) => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="text-sm text-gray-600">{wo.category_name || '-'}</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{wo.category_name || '-'}</p>
+                        {wo.subcategory_name && <p className="text-xs text-gray-500">{wo.subcategory_name}</p>}
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
@@ -1047,7 +1050,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-end">
+                      <div className="flex items-center justify-center">
                         <button
                           onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
                           className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
