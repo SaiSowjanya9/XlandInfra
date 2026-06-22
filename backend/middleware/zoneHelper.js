@@ -211,10 +211,10 @@ function buildVendorAssignmentZoneFilter(zones, vendorAlias = 'v') {
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildVendorZoneOrCreatorFilter(zones, createdBy, tableAlias = 'ov') {
-  // If no zones assigned, deny access (require zone assignment)
+  // If no zones assigned, allow access to own created vendors only
   if (!zones || zones.length === 0) {
-    console.log('[ZoneHelper] No zones assigned - denying vendor access');
-    return { clause: ' AND 1=0', params: [] };
+    console.log('[ZoneHelper] No zones assigned - allowing own created vendors only');
+    return { clause: ` AND (${tableAlias}.created_by = ? OR ${tableAlias}.created_by_id = ?)`, params: [createdBy, createdBy] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -263,10 +263,10 @@ async function hasZoneRestrictions(employeeId) {
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p') {
-  // If no zones assigned, deny access (require zone assignment)
+  // If no zones assigned, allow access to own created properties only
   if (!zones || zones.length === 0) {
-    console.log('[ZoneHelper] No zones assigned - denying property access');
-    return { clause: ' AND 1=0', params: [] };
+    console.log('[ZoneHelper] No zones assigned - allowing own created properties only');
+    return { clause: ` AND ${tableAlias}.created_by = ?`, params: [createdBy] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -286,10 +286,10 @@ function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p') {
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'op') {
-  // If no zones assigned, deny access (require zone assignment)
+  // If no zones assigned, allow access to own created properties only
   if (!zones || zones.length === 0) {
-    console.log('[ZoneHelper] No zones assigned - denying onboarded property access');
-    return { clause: ' AND 1=0', params: [] };
+    console.log('[ZoneHelper] No zones assigned - allowing own created properties only');
+    return { clause: ` AND ${tableAlias}.created_by = ?`, params: [createdBy] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -310,10 +310,10 @@ function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias 
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p', workOrderAlias = 'wo', onboardedPropertyAlias = 'op') {
-  // If no zones assigned, deny access (require zone assignment)
+  // If no zones assigned, allow access to own created work orders only
   if (!zones || zones.length === 0) {
-    console.log('[ZoneHelper] No zones assigned - denying work order access');
-    return { clause: ' AND 1=0', params: [] };
+    console.log('[ZoneHelper] No zones assigned - allowing own created work orders only');
+    return { clause: ` AND ${workOrderAlias}.created_by = ?`, params: [createdBy] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -336,10 +336,10 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', propertyAlias = 'p') {
-  // If no zones assigned, deny access (require zone assignment)
+  // If no zones assigned, allow access to own created clients only
   if (!zones || zones.length === 0) {
-    console.log('[ZoneHelper] No zones assigned - denying client access');
-    return { clause: ' AND 1=0', params: [] };
+    console.log('[ZoneHelper] No zones assigned - allowing own created clients only');
+    return { clause: ` AND ${clientAlias}.created_by = ?`, params: [createdBy] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -360,10 +360,10 @@ function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', pro
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildEstimateZoneOrCreatorFilter(zones, createdBy, estimateAlias = 'e', propertyAlias = 'p') {
-  // If no zones assigned, deny access (require zone assignment)
+  // If no zones assigned, allow access to own created estimates only
   if (!zones || zones.length === 0) {
-    console.log('[ZoneHelper] No zones assigned - denying estimate access');
-    return { clause: ' AND 1=0', params: [] };
+    console.log('[ZoneHelper] No zones assigned - allowing own created estimates only');
+    return { clause: ` AND ${estimateAlias}.created_by = ?`, params: [createdBy] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
