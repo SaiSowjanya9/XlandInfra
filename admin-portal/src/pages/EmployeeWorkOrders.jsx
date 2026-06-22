@@ -702,8 +702,8 @@ const EmployeeWorkOrders = ({ admin }) => {
       {/* Header with FP Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-            <ClipboardList className="w-6 h-6 text-indigo-600" />
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <ClipboardList className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
@@ -1689,13 +1689,13 @@ const EmployeeWorkOrders = ({ admin }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <select
-                  value={editFormData.categoryId}
+                  value={editFormData.categoryId?.toString() || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, categoryId: e.target.value, subcategoryId: '' })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Category</option>
                   {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    <option key={cat.id} value={cat.id.toString()}>{cat.name}</option>
                   ))}
                 </select>
               </div>
@@ -1704,13 +1704,13 @@ const EmployeeWorkOrders = ({ admin }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
                 <select
-                  value={editFormData.subcategoryId}
+                  value={editFormData.subcategoryId?.toString() || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, subcategoryId: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Subcategory</option>
-                  {(categories.find(c => c.id === parseInt(editFormData.categoryId))?.subcategories || []).map(sub => (
-                    <option key={sub.id || sub} value={sub.id || sub}>{sub.name || sub}</option>
+                  {(categories.find(c => c.id.toString() === editFormData.categoryId?.toString())?.subcategories || []).map(sub => (
+                    <option key={sub.id || sub} value={(sub.id || sub).toString()}>{sub.name || sub}</option>
                   ))}
                 </select>
               </div>
@@ -1719,7 +1719,7 @@ const EmployeeWorkOrders = ({ admin }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
-                  value={editFormData.description}
+                  value={editFormData.description || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
