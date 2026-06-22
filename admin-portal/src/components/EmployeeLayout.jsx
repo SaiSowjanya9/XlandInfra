@@ -140,7 +140,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
         className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-4 py-2.5 rounded-xl transition-all duration-200 ${
           isActive
             ? 'bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30'
-            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            : 'text-slate-300 hover:bg-slate-700 hover:text-white'
         }`}
         title={sidebarCollapsed ? item.label : ''}
       >
@@ -176,7 +176,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-slate-900 shadow-xl z-50 transform transition-all duration-300 lg:translate-x-0 ${
+        className={`fixed top-0 left-0 h-full bg-slate-800 shadow-xl z-50 transform transition-all duration-300 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64`}
       >
@@ -198,7 +198,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             ) : (
               <img src="/logo.png" alt="XLAND INFRA" className="h-12 w-auto object-contain" />
             )}
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-xl hover:bg-slate-800 transition-colors">
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-xl hover:bg-slate-700 transition-colors">
               <X className="w-5 h-5 text-slate-400" />
             </button>
           </div>
@@ -219,24 +219,27 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             {/* Vendor Management Section */}
             <div className="mt-3 pt-3 border-t border-slate-700">
               <button
-                onClick={() => setVendorOpen(!vendorOpen)}
-                className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
-                  isVendorSectionActive && !vendorOpen
-                    ? 'bg-slate-800 text-amber-400'
-                    : 'text-slate-300 hover:bg-slate-800'
+                onClick={() => !sidebarCollapsed && setVendorOpen(!vendorOpen)}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
+                  isVendorSectionActive
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    : 'text-slate-300 hover:bg-slate-700'
                 }`}
+                title={sidebarCollapsed ? 'Vendor Management' : ''}
               >
-                <div className="flex items-center space-x-3">
-                  <Store className="w-5 h-5" />
-                  <span className="font-medium">Vendor Management</span>
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Store className="w-5 h-5 flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="font-medium">Vendor Management</span>}
                 </div>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    vendorOpen ? 'rotate-180' : ''
-                  }`}
-                />
+                {!sidebarCollapsed && (
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      vendorOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                )}
               </button>
-              {vendorOpen && (
+              {vendorOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-700 pl-3">
                   {vendorSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
@@ -248,24 +251,27 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             {/* Employee Management Section */}
             <div className="mt-1">
               <button
-                onClick={() => setEmployeeOpen(!employeeOpen)}
-                className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
-                  isEmployeeSectionActive && !employeeOpen
-                    ? 'bg-slate-800 text-amber-400'
-                    : 'text-slate-300 hover:bg-slate-800'
+                onClick={() => !sidebarCollapsed && setEmployeeOpen(!employeeOpen)}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
+                  isEmployeeSectionActive
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    : 'text-slate-300 hover:bg-slate-700'
                 }`}
+                title={sidebarCollapsed ? 'Employee Management' : ''}
               >
-                <div className="flex items-center space-x-3">
-                  <Users className="w-5 h-5" />
-                  <span className="font-medium">Employee Management</span>
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Users className="w-5 h-5 flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="font-medium">Employee Management</span>}
                 </div>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    employeeOpen ? 'rotate-180' : ''
-                  }`}
-                />
+                {!sidebarCollapsed && (
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      employeeOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                )}
               </button>
-              {employeeOpen && (
+              {employeeOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-700 pl-3">
                   {employeeSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
@@ -277,24 +283,27 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             {/* Estimates Section */}
             <div className="mt-1">
               <button
-                onClick={() => setEstimatesOpen(!estimatesOpen)}
-                className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
-                  isEstimatesSectionActive && !estimatesOpen
-                    ? 'bg-slate-800 text-amber-400'
-                    : 'text-slate-300 hover:bg-slate-800'
+                onClick={() => !sidebarCollapsed && setEstimatesOpen(!estimatesOpen)}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
+                  isEstimatesSectionActive
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    : 'text-slate-300 hover:bg-slate-700'
                 }`}
+                title={sidebarCollapsed ? 'Estimates / AMC' : ''}
               >
-                <div className="flex items-center space-x-3">
-                  <FileText className="w-5 h-5" />
-                  <span className="font-medium">Estimates / AMC</span>
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <FileText className="w-5 h-5 flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="font-medium">Estimates / AMC</span>}
                 </div>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    estimatesOpen ? 'rotate-180' : ''
-                  }`}
-                />
+                {!sidebarCollapsed && (
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      estimatesOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                )}
               </button>
-              {estimatesOpen && (
+              {estimatesOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-700 pl-3">
                   {estimatesSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile />
@@ -309,7 +318,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
           <div className="hidden lg:block px-3 py-2 border-t border-slate-700/50">
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-300"
+              className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700 transition-all duration-300"
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}

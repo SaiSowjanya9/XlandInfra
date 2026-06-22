@@ -544,13 +544,16 @@ const EmployeeWorkOrders = ({ admin }) => {
     setAssignType(type);
     setSelectedAssignee('');
     setShowAssignModal(true);
-    // Fetch vendors or employees
+    // Fetch vendors or employees for the specific FP (not seed data)
+    const fpId = wo.franchise_partner_id || wo.fp_id;
     if (type === 'vendor') {
-      fetch(`${API_BASE}/api/admin/vendors`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).then(data => {
+      // Fetch vendors from the FP's onboarded vendors
+      fetch(`${API_BASE}/api/admin/fp-view/${fpId}/vendors`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).then(data => {
         if (data.success) setVendors(data.vendors || data.data || []);
       });
     } else {
-      fetch(`${API_BASE}/api/admin/employees`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).then(data => {
+      // Fetch employees from the FP
+      fetch(`${API_BASE}/api/admin/fp-view/${fpId}/employees`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).then(data => {
         if (data.success) setEmployees(data.employees || data.data || []);
       });
     }

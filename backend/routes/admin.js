@@ -2196,13 +2196,13 @@ router.get('/fp-view/:fpId/employees', authenticate, adminOnly, async (req, res)
       return res.status(400).json({ success: false, message: 'Invalid FP ID' });
     }
     
-    // Get employees first (matching FP portal approach)
+    // Get employees first (matching FP portal approach) - only active employees
     const [employees] = await pool.execute(
       `SELECT e.*, e.employee_code as employee_id,
               CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
-              CASE WHEN e.is_active = 1 THEN 'active' ELSE 'inactive' END as status
+              'active' as status
        FROM fp_employees e
-       WHERE e.franchise_partner_id = ?
+       WHERE e.franchise_partner_id = ? AND e.is_active = 1
        ORDER BY e.created_at DESC`,
       [fpIdNum]
     );
