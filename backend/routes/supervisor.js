@@ -2115,35 +2115,51 @@ router.get('/fp-employee-zones', requireSupervisorScope, async (req, res) => {
       return res.status(403).json({ success: false, message: 'This feature is only available for FP employees' });
     }
 
+    // Get all employees for this FP
     const [employees] = await pool.execute(
       `SELECT e.id, e.first_name, e.last_name, CONCAT(e.first_name, ' ', e.last_name) as name,
-              e.email, e.phone, e.role, e.is_active,
-              GROUP_CONCAT(DISTINCT z.name ORDER BY z.name) as zone_names
+              e.email, e.phone, e.role, e.is_active
        FROM fp_employees e
-       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
-       LEFT JOIN zones z ON ez.zone_id = z.id
        WHERE e.franchise_partner_id = ? AND e.is_active = 1
-       GROUP BY e.id
        ORDER BY e.first_name, e.last_name`,
-      [req.franchisePartnerId, req.franchisePartnerId]
+      [req.franchisePartnerId]
     );
 
-    const [zones] = await pool.execute(
-      `SELECT DISTINCT z.name FROM fp_employee_zones ez 
-       JOIN zones z ON ez.zone_id = z.id
-       WHERE ez.franchise_partner_id = ? ORDER BY z.name`,
+    // Get zone assignments separately (using zone_name directly)
+    const [zoneAssignments] = await pool.execute(
+      `SELECT fp_employee_id, zone_name FROM fp_employee_zones WHERE franchise_partner_id = ?`,
+      [req.franchisePartnerId]
+    );
+
+    // Build a map of employee zones
+    const employeeZonesMap = {};
+    zoneAssignments.forEach(za => {
+      if (!employeeZonesMap[za.fp_employee_id]) {
+        employeeZonesMap[za.fp_employee_id] = [];
+      }
+      if (za.zone_name) {
+        employeeZonesMap[za.fp_employee_id].push(za.zone_name);
+      }
+    });
+
+    // Get all unique zones for reference
+    const [allZones] = await pool.execute(
+      `SELECT DISTINCT zone_name as name FROM fp_employee_zones WHERE franchise_partner_id = ? AND zone_name IS NOT NULL ORDER BY zone_name`,
       [req.franchisePartnerId]
     );
 
     res.json({ 
       success: true, 
       data: {
-        employees: employees.map(emp => ({
-          ...emp,
-          zone_ids: emp.zone_ids ? emp.zone_ids.split(',').map(Number) : [],
-          zone_names: emp.zone_names || 'No zones assigned'
-        })),
-        zones
+        employees: employees.map(emp => {
+          const zones = employeeZonesMap[emp.id] || [];
+          return {
+            ...emp,
+            assigned_zones: zones,
+            zone_names: zones.length > 0 ? zones.join(', ') : 'No zones assigned'
+          };
+        }),
+        zones: allZones
       }
     });
   } catch (error) {
