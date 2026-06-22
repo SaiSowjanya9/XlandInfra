@@ -67,6 +67,7 @@ router.post('/login', async (req, res) => {
     let user = null;
     let userSource = null;
     let franchisePartnerId = null;
+    let fpEmployeeId = null;
 
     // First, try to find in users table (standalone supervisors)
     const [users] = await pool.query(
@@ -81,13 +82,14 @@ router.post('/login', async (req, res) => {
       userSource = 'users';
       franchisePartnerId = user.franchise_partner_id;
       
-      // If franchise_partner_id is null, check fp_employees table
-      if (!franchisePartnerId) {
-        const [fpCheck] = await pool.query(
-          `SELECT franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
-          [user.email, user.username]
-        );
-        if (fpCheck.length > 0 && fpCheck[0].franchise_partner_id) {
+      // Look up corresponding fp_employees record for fpEmployeeId and franchisePartnerId
+      const [fpCheck] = await pool.query(
+        `SELECT id, franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
+        [user.email, user.username]
+      );
+      if (fpCheck.length > 0) {
+        fpEmployeeId = fpCheck[0].id;
+        if (!franchisePartnerId && fpCheck[0].franchise_partner_id) {
           franchisePartnerId = fpCheck[0].franchise_partner_id;
         }
       }
@@ -104,6 +106,7 @@ router.post('/login', async (req, res) => {
 
       if (fpSupervisors.length > 0) {
         const fpSup = fpSupervisors[0];
+        fpEmployeeId = fpSup.employee_id || fpSup.id;
         
         // Check for linked user record
         if (fpSup.user_id) {
@@ -132,7 +135,7 @@ router.post('/login', async (req, res) => {
           };
           userSource = 'fp_employees_direct';
           franchisePartnerId = fpSup.franchise_partner_id;
-          console.log('[Supervisor Login] Using fp_employees direct, FP:', franchisePartnerId);
+          console.log('[Supervisor Login] Using fp_employees direct, FP:', franchisePartnerId, 'fpEmployeeId:', fpEmployeeId);
         }
       }
     }
@@ -160,13 +163,17 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generate JWT token
+    console.log('[Supervisor Login] fpEmployeeId:', fpEmployeeId, 'franchisePartnerId:', franchisePartnerId);
+
+    // Generate JWT token (include fpEmployeeId for zone lookup)
     const token = jwt.sign(
       {
         id: user.id,
         username: user.username,
+        email: user.email,
         role: user.role,
         supervisorId: user.id,
+        fpEmployeeId: fpEmployeeId,
         franchisePartnerId: franchisePartnerId || null
       },
       process.env.JWT_SECRET || 'your-secret-key',
@@ -185,6 +192,7 @@ router.post('/login', async (req, res) => {
           lastName: user.last_name,
           role: user.role,
           supervisorId: user.id,
+          fpEmployeeId: fpEmployeeId,
           franchisePartnerId: franchisePartnerId || null,
           portal: 'supervisor'
         }

@@ -98,25 +98,33 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Get franchise_partner_id - check users table first, then fp_employees table
+    // Get franchise_partner_id and fp_employee_id - needed for zone lookup
     let franchisePartnerId = user.franchise_partner_id || null;
-    if (!franchisePartnerId) {
-      const [fpEmployee] = await pool.query(
-        `SELECT franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
-        [user.email, user.username]
-      );
-      if (fpEmployee.length > 0 && fpEmployee[0].franchise_partner_id) {
+    let fpEmployeeId = null;
+    
+    // Look up corresponding fp_employees record
+    const [fpEmployee] = await pool.query(
+      `SELECT id, franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
+      [user.email, user.username]
+    );
+    if (fpEmployee.length > 0) {
+      fpEmployeeId = fpEmployee[0].id;
+      if (!franchisePartnerId && fpEmployee[0].franchise_partner_id) {
         franchisePartnerId = fpEmployee[0].franchise_partner_id;
       }
     }
+    
+    console.log('[Coordinator Login] fpEmployeeId:', fpEmployeeId, 'franchisePartnerId:', franchisePartnerId);
 
-    // Generate JWT token - include franchisePartnerId for FP-created coordinators
+    // Generate JWT token (include fpEmployeeId for zone lookup)
     const token = jwt.sign(
       {
         id: user.id,
         username: user.username,
+        email: user.email,
         role: user.role,
         coordinatorId: user.id,
+        fpEmployeeId: fpEmployeeId,
         franchisePartnerId: franchisePartnerId
       },
       process.env.JWT_SECRET || 'your-secret-key',
@@ -135,6 +143,7 @@ router.post('/login', async (req, res) => {
           lastName: user.last_name,
           role: user.role,
           coordinatorId: user.id,
+          fpEmployeeId: fpEmployeeId,
           franchisePartnerId: franchisePartnerId,
           portal: 'coordinator'
         }

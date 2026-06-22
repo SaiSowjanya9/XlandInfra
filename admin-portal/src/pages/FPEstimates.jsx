@@ -151,7 +151,17 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   useEffect(() => {
     if (viewPackageId && amcPackages.length > 0) {
       const pkg = amcPackages.find(p => String(p.id) === viewPackageId);
-      if (pkg) setViewAmcPackage(pkg);
+      if (pkg) {
+        // Parse services data
+        let servicesData = pkg.services;
+        if (typeof servicesData === 'string') {
+          try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = null; }
+        }
+        const serviceRows = servicesData?.serviceRows || servicesData || [];
+        const propertyType = servicesData?.property_type || pkg.property_type;
+        const billingDuration = servicesData?.billing_duration || pkg.billing_duration;
+        setViewAmcPackage({ ...pkg, servicesData: serviceRows, propertyType, billingDuration });
+      }
     } else if (!viewPackageId) {
       setViewAmcPackage(null);
     }
@@ -3071,6 +3081,25 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 ) : (
                   <p className="text-sm text-gray-400 italic">No services listed</p>
                 )}
+              </div>
+
+              {/* Price Summary */}
+              <div className="border-t border-gray-100 pt-4">
+                <h4 className="text-sm font-bold text-gray-800 mb-3 text-center uppercase">Price Summary</h4>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Subtotal:</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">GST ({viewAmcPackage.gst_percentage || 0}%):</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                    <span className="font-bold text-gray-800">TOTAL:</span>
+                    <span className="font-bold text-lg text-green-700">{formatCurrency((viewAmcPackage.price || viewAmcPackage.base_price) + (((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100))}</span>
+                  </div>
+                </div>
               </div>
 
               {/* Created Info */}

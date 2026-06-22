@@ -4,7 +4,7 @@
  * This module provides utilities for filtering data based on employee's assigned zones.
  * FP assigns zones to employees (Manager, Coordinator, Supervisor, Executive).
  * Employees can only see data from their assigned zones.
- * If no zones are assigned, they have access to ALL data.
+ * If no zones are assigned, employees see NO data (must have zones assigned).
  */
 
 const { pool } = require('../config/database');
@@ -186,16 +186,17 @@ function buildVendorAssignmentZoneFilter(zones, vendorAlias = 'v') {
 
 /**
  * Build zone filter with "OR created_by" logic for vendors
- * If no zones assigned: allow access to all data
+ * If no zones assigned: deny access (require zone assignment)
  * @param {string[]} zones - Array of zone names
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} tableAlias - Table alias (e.g., 'ov')
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildVendorZoneOrCreatorFilter(zones, createdBy, tableAlias = 'ov') {
-  // If no zones assigned, allow access to all data (no additional filter)
+  // If no zones assigned, deny access (require zone assignment)
   if (!zones || zones.length === 0) {
-    return { clause: '', params: [] };
+    console.log('[ZoneHelper] No zones assigned - denying vendor access');
+    return { clause: ' AND 1=0', params: [] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -212,8 +213,11 @@ function buildVendorZoneOrCreatorFilter(zones, createdBy, tableAlias = 'ov') {
  * @returns {number|null} Employee ID for zone lookup
  */
 function getEmployeeIdForZoneLookup(req) {
-  // Priority: user.id > specific role ID (managerId, coordinatorId, etc.)
-  return req.user?.id || 
+  // Priority: fpEmployeeId (from token) > user.id > specific role ID
+  // fpEmployeeId is the fp_employees.id where zones are assigned
+  return req.user?.fpEmployeeId || 
+         req.fpEmployeeId ||
+         req.user?.id || 
          req.managerId || 
          req.coordinatorId || 
          req.supervisorId || 
@@ -234,16 +238,17 @@ async function hasZoneRestrictions(employeeId) {
 /**
  * Build zone filter with "OR created_by" logic for properties
  * Employees see: zone-centric data + their own created data
- * If no zones assigned: allow access to all data
+ * If no zones assigned: deny access (require zone assignment)
  * @param {string[]} zones - Array of zone names
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} tableAlias - Table alias (e.g., 'p' for properties)
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p') {
-  // If no zones assigned, allow access to all data (no additional filter)
+  // If no zones assigned, deny access (require zone assignment)
   if (!zones || zones.length === 0) {
-    return { clause: '', params: [] };
+    console.log('[ZoneHelper] No zones assigned - denying property access');
+    return { clause: ' AND 1=0', params: [] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -256,16 +261,17 @@ function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p') {
 
 /**
  * Build zone filter with "OR created_by" logic for onboarded_properties
- * If no zones assigned: allow access to all data
+ * If no zones assigned: deny access (require zone assignment)
  * @param {string[]} zones - Array of zone names
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} tableAlias - Table alias (e.g., 'op')
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'op') {
-  // If no zones assigned, allow access to all data (no additional filter)
+  // If no zones assigned, deny access (require zone assignment)
   if (!zones || zones.length === 0) {
-    return { clause: '', params: [] };
+    console.log('[ZoneHelper] No zones assigned - denying onboarded property access');
+    return { clause: ' AND 1=0', params: [] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -277,7 +283,7 @@ function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias 
 
 /**
  * Build zone filter with "OR created_by" logic for work orders
- * If no zones assigned: allow access to all data
+ * If no zones assigned: deny access (require zone assignment)
  * @param {string[]} zones - Array of zone names
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} propertyAlias - Property table alias
@@ -286,9 +292,10 @@ function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias 
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p', workOrderAlias = 'wo', onboardedPropertyAlias = 'op') {
-  // If no zones assigned, allow access to all data (no additional filter)
+  // If no zones assigned, deny access (require zone assignment)
   if (!zones || zones.length === 0) {
-    return { clause: '', params: [] };
+    console.log('[ZoneHelper] No zones assigned - denying work order access');
+    return { clause: ' AND 1=0', params: [] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -303,7 +310,7 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
 
 /**
  * Build zone filter with "OR created_by" logic for clients/customers
- * If no zones assigned: allow access to all data
+ * If no zones assigned: deny access (require zone assignment)
  * @param {string[]} zones - Array of zone names
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} clientAlias - Client table alias
@@ -311,9 +318,10 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', propertyAlias = 'p') {
-  // If no zones assigned, allow access to all data (no additional filter)
+  // If no zones assigned, deny access (require zone assignment)
   if (!zones || zones.length === 0) {
-    return { clause: '', params: [] };
+    console.log('[ZoneHelper] No zones assigned - denying client access');
+    return { clause: ' AND 1=0', params: [] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -326,7 +334,7 @@ function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', pro
 
 /**
  * Build zone filter with "OR created_by" logic for estimates
- * If no zones assigned: allow access to all data
+ * If no zones assigned: deny access (require zone assignment)
  * @param {string[]} zones - Array of zone names
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} estimateAlias - Estimate table alias
@@ -334,9 +342,10 @@ function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', pro
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildEstimateZoneOrCreatorFilter(zones, createdBy, estimateAlias = 'e', propertyAlias = 'p') {
-  // If no zones assigned, allow access to all data (no additional filter)
+  // If no zones assigned, deny access (require zone assignment)
   if (!zones || zones.length === 0) {
-    return { clause: '', params: [] };
+    console.log('[ZoneHelper] No zones assigned - denying estimate access');
+    return { clause: ' AND 1=0', params: [] };
   }
   
   const placeholders = zones.map(() => '?').join(',');
