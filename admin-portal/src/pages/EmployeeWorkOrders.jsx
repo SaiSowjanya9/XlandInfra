@@ -147,20 +147,17 @@ const EmployeeWorkOrders = ({ admin }) => {
       if (result.success) {
         const allOrders = result.data || [];
         
-        // Calculate counts from ALL orders
-        const pendingStatuses = ['pending', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'];
-        const completedStatuses = ['completed', 'closed'];
-        
-        const pendingCount = allOrders.filter(o => pendingStatuses.includes(o.status)).length;
-        const completedCount = allOrders.filter(o => completedStatuses.includes(o.status)).length;
+        // Calculate counts - Pending = all except completed, Completed = only completed
+        const pendingCount = allOrders.filter(o => o.status !== 'completed').length;
+        const completedCount = allOrders.filter(o => o.status === 'completed').length;
         setCounts({ pending: pendingCount, completed: completedCount, total: allOrders.length });
         
-        // Filter orders based on active tab
+        // Filter orders based on active tab - Pending shows all except completed
         let filteredOrders = allOrders;
         if (activeTab === 'pending') {
-          filteredOrders = allOrders.filter(o => pendingStatuses.includes(o.status));
+          filteredOrders = allOrders.filter(o => o.status !== 'completed');
         } else if (activeTab === 'completed') {
-          filteredOrders = allOrders.filter(o => completedStatuses.includes(o.status));
+          filteredOrders = allOrders.filter(o => o.status === 'completed');
         }
         
         setWorkOrders(filteredOrders);
@@ -851,8 +848,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                 <option value="assigned">Assigned</option>
                 <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
-                <option value="closed">Closed</option>
-                <option value="cancelled">Cancelled</option>
+                                <option value="cancelled">Cancelled</option>
               </select>
               <button
                 onClick={() => { setSearchTerm(''); setStatusFilter('all'); fetchWorkOrders(); }}
@@ -933,7 +929,6 @@ const EmployeeWorkOrders = ({ admin }) => {
                               <option value="assigned" className="bg-white text-gray-900">Assigned</option>
                               <option value="in_progress" className="bg-white text-gray-900">In Progress</option>
                               <option value="completed" className="bg-white text-gray-900">Completed</option>
-                              <option value="closed" className="bg-white text-gray-900">Closed</option>
                               <option value="cancelled" className="bg-white text-gray-900">Cancelled</option>
                             </select>
                             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
@@ -1487,8 +1482,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                   <option value="assigned">Assigned</option>
                   <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
-                  <option value="closed">Closed</option>
-                  <option value="cancelled">Cancelled</option>
+                                    <option value="cancelled">Cancelled</option>
                 </select>
               </div>
 
@@ -1773,8 +1767,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                   <option value="assigned">Assigned</option>
                   <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
-                  <option value="closed">Closed</option>
-                  <option value="cancelled">Cancelled</option>
+                                    <option value="cancelled">Cancelled</option>
                 </select>
               </div>
 

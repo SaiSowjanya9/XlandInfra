@@ -65,7 +65,6 @@ const ManagerWorkOrders = ({ user }) => {
     { value: 'assigned', label: 'Assigned', color: 'bg-purple-100 text-purple-700' },
     { value: 'in_progress', label: 'In Progress', color: 'bg-orange-100 text-orange-700' },
     { value: 'completed', label: 'Completed', color: 'bg-green-100 text-green-700' },
-    { value: 'closed', label: 'Closed', color: 'bg-gray-100 text-gray-700' },
     { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-700' }
   ];
 
@@ -118,27 +117,18 @@ const ManagerWorkOrders = ({ user }) => {
     fetchDependencies();
   }, []);
 
-  // Count work orders by status
-  const pendingCount = workOrders.filter(wo => 
-    ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)
-  ).length;
-  const completedCount = workOrders.filter(wo => 
-    ['completed', 'verified', 'closed'].includes(wo.status)
-  ).length;
+  // Count work orders by status - Pending = all except completed, Completed = only completed
+  const pendingCount = workOrders.filter(wo => wo.status !== 'completed').length;
+  const completedCount = workOrders.filter(wo => wo.status === 'completed').length;
 
   // Filter work orders by active tab, status filter, and search term
   const filteredWorkOrders = workOrders.filter(wo => {
-    const isPending = ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status);
-    const isCompleted = ['completed', 'verified', 'closed'].includes(wo.status);
-    
-    // Tab filter
-    if (activeTab === 'pending' && !isPending) return false;
-    if (activeTab === 'completed' && !isCompleted) return false;
+    // Tab filter - Pending shows all except completed, Completed shows only completed
+    if (activeTab === 'pending' && wo.status === 'completed') return false;
+    if (activeTab === 'completed' && wo.status !== 'completed') return false;
 
     // Status dropdown filter
-    if (statusFilter !== 'all') {
-      if (wo.status !== statusFilter) return false;
-    }
+    if (statusFilter !== 'all' && wo.status !== statusFilter) return false;
 
     // Search filter
     if (searchTerm) {
@@ -428,7 +418,6 @@ const ManagerWorkOrders = ({ user }) => {
               <option value="assigned">Assigned</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
-              <option value="closed">Closed</option>
               <option value="cancelled">Cancelled</option>
             </select>
             <button
@@ -465,7 +454,7 @@ const ManagerWorkOrders = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -484,7 +473,10 @@ const ManagerWorkOrders = ({ user }) => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="text-sm text-gray-600">{wo.category_name || '-'}</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{wo.category_name || '-'}</p>
+                        {wo.subcategory_name && <p className="text-xs text-gray-500">{wo.subcategory_name}</p>}
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
@@ -508,7 +500,7 @@ const ManagerWorkOrders = ({ user }) => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-end">
+                      <div className="flex items-center justify-center">
                         <button
                           onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
                           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

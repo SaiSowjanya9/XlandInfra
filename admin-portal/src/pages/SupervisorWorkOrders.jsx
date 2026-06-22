@@ -746,7 +746,7 @@ const SupervisorWorkOrders = ({ user }) => {
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
-                      <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                      <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -757,7 +757,12 @@ const SupervisorWorkOrders = ({ user }) => {
                           <p className="text-sm text-gray-500">{wo.title}</p>
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-600">{wo.customer_name || wo.client_name || '-'}</td>
-                        <td className="py-4 px-4 text-sm text-gray-600">{wo.category_name || '-'}</td>
+                        <td className="py-4 px-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{wo.category_name || '-'}</p>
+                            {wo.subcategory_name && <p className="text-xs text-gray-500">{wo.subcategory_name}</p>}
+                          </div>
+                        </td>
                         <td className="py-4 px-4">
                           <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
                             {wo.status?.replace(/_/g, ' ').toUpperCase()}
@@ -778,7 +783,7 @@ const SupervisorWorkOrders = ({ user }) => {
                           </div>
                         </td>
                         <td className="py-4 px-4">
-                          <div className="flex items-center justify-end">
+                          <div className="flex items-center justify-center">
                             <button
                               onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
                               className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"

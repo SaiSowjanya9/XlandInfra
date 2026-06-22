@@ -897,17 +897,29 @@ router.put('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) =>
       params
     );
 
-    // Update category and subcategory names
+    // Update category and subcategory names using config (subcategories table is empty)
+    const categoriesConfig = require('../config/categories');
     if (category_id) {
-      const [cats] = await pool.execute('SELECT name FROM categories WHERE id = ?', [category_id]);
-      if (cats.length > 0) {
-        await pool.execute('UPDATE work_orders SET category_name = ? WHERE id = ?', [cats[0].name, id]);
+      const category = categoriesConfig.find(c => c.id === parseInt(category_id));
+      if (category) {
+        await pool.execute('UPDATE work_orders SET category_name = ? WHERE id = ?', [category.name, id]);
+        
+        // Also update subcategory name if subcategory_id is provided
+        if (subcategory_id) {
+          const subcategory = category.subcategories?.find(s => s.id === parseInt(subcategory_id));
+          if (subcategory) {
+            await pool.execute('UPDATE work_orders SET subcategory_name = ? WHERE id = ?', [subcategory.name, id]);
+          }
+        }
       }
-    }
-    if (subcategory_id) {
-      const [subs] = await pool.execute('SELECT name FROM subcategories WHERE id = ?', [subcategory_id]);
-      if (subs.length > 0) {
-        await pool.execute('UPDATE work_orders SET subcategory_name = ? WHERE id = ?', [subs[0].name, id]);
+    } else if (subcategory_id) {
+      // If only subcategory_id is provided, find it across all categories
+      for (const category of categoriesConfig) {
+        const subcategory = category.subcategories?.find(s => s.id === parseInt(subcategory_id));
+        if (subcategory) {
+          await pool.execute('UPDATE work_orders SET subcategory_name = ? WHERE id = ?', [subcategory.name, id]);
+          break;
+        }
       }
     }
 

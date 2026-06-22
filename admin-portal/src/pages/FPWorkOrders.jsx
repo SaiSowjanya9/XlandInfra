@@ -412,33 +412,18 @@ const FPWorkOrders = ({ user }) => {
     });
   };
 
-  // Count work orders by status
-  const pendingCount = workOrders.filter(wo => 
-    ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status)
-  ).length;
-  const completedCount = workOrders.filter(wo => 
-    ['completed', 'verified', 'closed'].includes(wo.status)
-  ).length;
+  // Count work orders by status - Pending = all except completed, Completed = only completed
+  const pendingCount = workOrders.filter(wo => wo.status !== 'completed').length;
+  const completedCount = workOrders.filter(wo => wo.status === 'completed').length;
 
   // Filter work orders by active tab, status filter, and search term
   const filteredWorkOrders = workOrders.filter(wo => {
-    // Tab filter
-    const isPending = ['pending', 'draft', 'requested', 'under_review', 'assigned', 'accepted', 'in_progress'].includes(wo.status);
-    const isCompleted = ['completed', 'verified', 'closed'].includes(wo.status);
-    
-    if (activeTab === 'pending' && !isPending) return false;
-    if (activeTab === 'completed' && !isCompleted) return false;
+    // Tab filter - Pending shows all except completed, Completed shows only completed
+    if (activeTab === 'pending' && wo.status === 'completed') return false;
+    if (activeTab === 'completed' && wo.status !== 'completed') return false;
 
-    // Status dropdown filter - "completed" includes completed, verified, closed
-    if (statusFilter !== 'all') {
-      if (statusFilter === 'completed') {
-        if (!['completed', 'verified', 'closed'].includes(wo.status)) return false;
-      } else if (statusFilter === 'pending') {
-        if (!['pending', 'draft', 'requested', 'under_review'].includes(wo.status)) return false;
-      } else if (wo.status !== statusFilter) {
-        return false;
-      }
-    }
+    // Status dropdown filter
+    if (statusFilter !== 'all' && wo.status !== statusFilter) return false;
 
     // Search filter
     if (searchTerm) {
@@ -506,10 +491,6 @@ const FPWorkOrders = ({ user }) => {
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to delete work order' });
     }
-  };
-
-  const handleMarkAsClosed = async (workOrderId) => {
-    await handleStatusChange(workOrderId, 'closed');
   };
 
   const handleRevertToPending = async (workOrderId) => {
@@ -1098,7 +1079,6 @@ const FPWorkOrders = ({ user }) => {
                 <option value="assigned">Assigned</option>
                 <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
-                <option value="closed">Closed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
               <button
@@ -1165,7 +1145,6 @@ const FPWorkOrders = ({ user }) => {
                               <option value="assigned" className="bg-white text-gray-900">Assigned</option>
                               <option value="in_progress" className="bg-white text-gray-900">In Progress</option>
                               <option value="completed" className="bg-white text-gray-900">Completed</option>
-                              <option value="closed" className="bg-white text-gray-900">Closed</option>
                               <option value="cancelled" className="bg-white text-gray-900">Cancelled</option>
                             </select>
                             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
@@ -1225,22 +1204,13 @@ const FPWorkOrders = ({ user }) => {
                               <Trash2 className="w-4 h-4 text-red-500" />
                             </button>
                             {activeTab === 'completed' && (
-                              <>
-                                <button
-                                  onClick={() => handleMarkAsClosed(wo.id)}
-                                  className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
-                                  title="Mark As Closed"
-                                >
-                                  <CheckCircle className="w-4 h-4 text-green-500" />
-                                </button>
-                                <button
-                                  onClick={() => handleRevertToPending(wo.id)}
-                                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                                  title="Revert to Pending"
-                                >
-                                  <RotateCcw className="w-4 h-4 text-gray-500" />
-                                </button>
-                              </>
+                              <button
+                                onClick={() => handleRevertToPending(wo.id)}
+                                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="Revert to Pending"
+                              >
+                                <RotateCcw className="w-4 h-4 text-gray-500" />
+                              </button>
                             )}
                           </div>
                         </td>
@@ -1388,7 +1358,7 @@ const FPWorkOrders = ({ user }) => {
               )}
 
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                {!selectedWorkOrder.assigned_vendor_id && selectedWorkOrder.status !== 'closed' && selectedWorkOrder.status !== 'cancelled' && (
+                {!selectedWorkOrder.assigned_vendor_id && selectedWorkOrder.status !== 'completed' && selectedWorkOrder.status !== 'cancelled' && (
                   <button
                     onClick={() => { setShowDetailModal(false); setShowAssignModal(true); }}
                     className="px-4 py-2 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50"
@@ -1402,21 +1372,8 @@ const FPWorkOrders = ({ user }) => {
                 >
                   Close
                 </button>
-                {/* Mark as Closed - for pending work orders */}
-                {['pending', 'assigned', 'in_progress', 'requested'].includes(selectedWorkOrder.status) && (
-                  <button
-                    onClick={async () => {
-                      await handleStatusChange(selectedWorkOrder.id, 'closed');
-                      setShowDetailModal(false);
-                      setSelectedWorkOrder(null);
-                    }}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                  >
-                    Mark as Closed
-                  </button>
-                )}
-                {/* Revert to Pending - for completed/closed work orders */}
-                {['completed', 'closed', 'verified'].includes(selectedWorkOrder.status) && (
+                {/* Revert to Pending - for completed work orders */}
+                {['completed', 'verified'].includes(selectedWorkOrder.status) && (
                   <button
                     onClick={async () => {
                       await handleStatusChange(selectedWorkOrder.id, 'pending');
@@ -1682,7 +1639,6 @@ const FPWorkOrders = ({ user }) => {
                   <option value="assigned">Assigned</option>
                   <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
-                  <option value="closed">Closed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>

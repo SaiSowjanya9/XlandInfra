@@ -343,7 +343,7 @@ const ExecutiveWorkOrders = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created By</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -359,7 +359,12 @@ const ExecutiveWorkOrders = ({ user }) => {
                         <p className="text-sm text-gray-500">{wo.property_name || wo.property_type || 'SSR'}</p>
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-sm text-gray-600">{wo.category_name || '-'}</td>
+                    <td className="py-4 px-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{wo.category_name || '-'}</p>
+                        {wo.subcategory_name && <p className="text-xs text-gray-500">{wo.subcategory_name}</p>}
+                      </div>
+                    </td>
                     <td className="py-4 px-4">
                       <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium uppercase ${getStatusColor(wo.status)}`}>
                         {wo.status?.replace(/_/g, ' ') || 'Pending'}
@@ -380,13 +385,15 @@ const ExecutiveWorkOrders = ({ user }) => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <button 
-                        onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4 text-gray-500" />
-                      </button>
+                      <div className="flex items-center justify-center">
+                        <button 
+                          onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
+                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4 text-gray-500" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

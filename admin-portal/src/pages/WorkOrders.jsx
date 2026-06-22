@@ -311,9 +311,13 @@ const WorkOrders = ({ admin }) => {
     return `Viewing all work orders (Admin Mode)`;
   };
 
-  // Filter by search and status
+  // Filter by tab, search and status dropdown
   const filteredOrders = workOrders.filter(wo => {
-    // Status filter
+    // Tab filter - Pending shows all except completed, Completed shows only completed
+    if (activeTab === 'pending' && wo.status === 'completed') return false;
+    if (activeTab === 'completed' && wo.status !== 'completed') return false;
+    
+    // Status dropdown filter
     if (statusFilter && wo.status !== statusFilter) return false;
     
     // Search filter
@@ -440,7 +444,7 @@ const WorkOrders = ({ admin }) => {
           <span className={`px-2 py-0.5 rounded-full text-xs ${
             activeTab === 'pending' ? 'bg-amber-200 text-amber-800' : 'bg-gray-100 text-gray-600'
           }`}>
-            {activeTab === 'pending' ? workOrders.length : ''}
+            {workOrders.filter(wo => wo.status !== 'completed').length}
           </span>
         </button>
         <button
@@ -456,7 +460,7 @@ const WorkOrders = ({ admin }) => {
           <span className={`px-2 py-0.5 rounded-full text-xs ${
             activeTab === 'completed' ? 'bg-green-200 text-green-800' : 'bg-gray-100 text-gray-600'
           }`}>
-            {activeTab === 'completed' ? workOrders.length : ''}
+            {workOrders.filter(wo => wo.status === 'completed').length}
           </span>
         </button>
         <button
@@ -658,7 +662,6 @@ const WorkOrders = ({ admin }) => {
             <option value="assigned">Assigned</option>
             <option value="in_progress">In Progress</option>
             <option value="completed">Completed</option>
-            <option value="closed">Closed</option>
             <option value="cancelled">Cancelled</option>
           </select>
           <button 
@@ -728,7 +731,6 @@ const WorkOrders = ({ admin }) => {
                           <option value="assigned">Assigned</option>
                           <option value="in_progress">In Progress</option>
                           <option value="completed">Completed</option>
-                          <option value="closed">Closed</option>
                           <option value="cancelled">Cancelled</option>
                         </select>
                         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-current opacity-70" />
