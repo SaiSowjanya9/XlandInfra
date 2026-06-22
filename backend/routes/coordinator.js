@@ -2109,53 +2109,55 @@ router.get('/fp-employee-zones', requireCoordinatorScope, async (req, res) => {
       }
     }
     
-    console.log('FP Employee Zones - fpId:', fpId, 'userId:', req.user?.id);
-    
     if (!fpId) {
       return res.status(403).json({ success: false, message: 'This feature is only available for FP employees' });
     }
     
-    // Use fpId for queries
-    req.franchisePartnerId = fpId;
-    
-    // Debug: Check how many employees exist for this FP
-    const [countCheck] = await pool.execute(
-      'SELECT COUNT(*) as total, SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active FROM fp_employees WHERE franchise_partner_id = ?',
-      [fpId]
-    );
-    console.log('[Coordinator fp-employee-zones] FP:', fpId, 'Total employees:', countCheck[0]?.total, 'Active:', countCheck[0]?.active);
-
+    // Get all employees for this FP
     const [employees] = await pool.execute(
       `SELECT e.id, e.first_name, e.last_name, CONCAT(e.first_name, ' ', e.last_name) as name,
-              e.email, e.phone, e.role, e.is_active,
-              GROUP_CONCAT(DISTINCT z.name ORDER BY z.name) as zone_names
+              e.email, e.phone, e.role, e.is_active
        FROM fp_employees e
-       LEFT JOIN fp_employee_zones ez ON e.id = ez.fp_employee_id AND ez.franchise_partner_id = ?
-       LEFT JOIN zones z ON ez.zone_id = z.id
        WHERE e.franchise_partner_id = ? AND e.is_active = 1
-       GROUP BY e.id
        ORDER BY e.first_name, e.last_name`,
-      [req.franchisePartnerId, req.franchisePartnerId]
+      [fpId]
     );
-    
-    console.log('[Coordinator fp-employee-zones] Found employees:', employees.length);
 
-    const [zones] = await pool.execute(
-      `SELECT DISTINCT z.name FROM fp_employee_zones ez 
-       JOIN zones z ON ez.zone_id = z.id
-       WHERE ez.franchise_partner_id = ? ORDER BY z.name`,
-      [req.franchisePartnerId]
+    // Get zone assignments separately (using zone_name directly)
+    const [zoneAssignments] = await pool.execute(
+      `SELECT fp_employee_id, zone_name FROM fp_employee_zones WHERE franchise_partner_id = ?`,
+      [fpId]
+    );
+
+    // Build a map of employee zones
+    const employeeZonesMap = {};
+    zoneAssignments.forEach(za => {
+      if (!employeeZonesMap[za.fp_employee_id]) {
+        employeeZonesMap[za.fp_employee_id] = [];
+      }
+      if (za.zone_name) {
+        employeeZonesMap[za.fp_employee_id].push(za.zone_name);
+      }
+    });
+
+    // Get all unique zones for reference
+    const [allZones] = await pool.execute(
+      `SELECT DISTINCT zone_name as name FROM fp_employee_zones WHERE franchise_partner_id = ? AND zone_name IS NOT NULL ORDER BY zone_name`,
+      [fpId]
     );
 
     res.json({ 
       success: true, 
       data: {
-        employees: employees.map(emp => ({
-          ...emp,
-          zone_ids: emp.zone_ids ? emp.zone_ids.split(',').map(Number) : [],
-          zone_names: emp.zone_names || 'No zones assigned'
-        })),
-        zones
+        employees: employees.map(emp => {
+          const zones = employeeZonesMap[emp.id] || [];
+          return {
+            ...emp,
+            assigned_zones: zones,
+            zone_names: zones.length > 0 ? zones.join(', ') : 'No zones assigned'
+          };
+        }),
+        zones: allZones
       }
     });
   } catch (error) {
