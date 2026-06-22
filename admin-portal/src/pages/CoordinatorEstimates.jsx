@@ -1704,7 +1704,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
               {/* Created Info */}
               <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
                 <div className="flex justify-between">
-                  <span>Created: {viewAmcPackage.created_at ? new Date(viewAmcPackage.created_at).toLocaleDateString() : '-'}</span>
+                  <span>Created: {(viewAmcPackage.created_at || viewAmcPackage.createdAt) ? new Date(viewAmcPackage.created_at || viewAmcPackage.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</span>
                   <span>ID: {viewAmcPackage.id}</span>
                 </div>
               </div>
