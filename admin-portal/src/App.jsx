@@ -205,9 +205,9 @@ function App() {
     localStorage.removeItem('pm_auth_token');
     localStorage.removeItem('pm_current_user');
     localStorage.removeItem('pm_demo_mode');
-    // Navigate IMMEDIATELY to employee login - use replace to prevent back button issues
-    // Do this BEFORE state updates to avoid React re-rendering intermediate pages
-    window.location.replace('/employee/login');
+    // Clear state to trigger re-render with unauthenticated state
+    setUser(null);
+    setPortal(null);
   }, []);
 
   const handleSelectPortal = useCallback((portalKey) => {

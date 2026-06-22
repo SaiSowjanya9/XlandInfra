@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Building2, 
   Home, 
@@ -170,6 +170,7 @@ const COUNTRY_CODES = [
 
 const CreateCustomer = ({ admin }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   // Check if user is Operations Manager (view-only access)
   const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
@@ -194,8 +195,50 @@ const CreateCustomer = ({ admin }) => {
     );
   }
   
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedEntryType, setSelectedEntryType] = useState(null);
+  // URL-based step management for browser back/forward support
+  const urlStep = searchParams.get('step');
+  const urlType = searchParams.get('type');
+  const urlCategory = searchParams.get('category');
+  
+  // Initialize state from URL params
+  const [selectedCategory, setSelectedCategory] = useState(() => urlCategory || null);
+  const [selectedEntryType, setSelectedEntryType] = useState(() => urlType || null);
+  
+  // Sync state with URL when browser back/forward is used
+  useEffect(() => {
+    if (urlStep === 'form' && urlType) {
+      setSelectedCategory(urlCategory || 'residential');
+      setSelectedEntryType(urlType);
+    } else if (urlStep === 'type' && urlCategory) {
+      setSelectedCategory(urlCategory);
+      setSelectedEntryType(null);
+    } else if (!urlStep) {
+      setSelectedCategory(null);
+      setSelectedEntryType(null);
+    }
+  }, [urlStep, urlType, urlCategory]);
+  
+  // Navigation helpers that update URL
+  const handleSelectCategory = (categoryId) => {
+    setSelectedCategory(categoryId);
+    navigate(`?step=type&category=${categoryId}`);
+  };
+  
+  const handleSelectEntryType = (typeId) => {
+    setSelectedEntryType(typeId);
+    navigate(`?step=form&category=${selectedCategory}&type=${typeId}`);
+  };
+  
+  const handleBackToCategories = () => {
+    setSelectedCategory(null);
+    setSelectedEntryType(null);
+    navigate('');
+  };
+  
+  const handleBackToEntryTypes = () => {
+    setSelectedEntryType(null);
+    navigate(`?step=type&category=${selectedCategory}`);
+  };
   const [formData, setFormData] = useState({
     zone: '',
     areaName: '',
@@ -414,6 +457,9 @@ const CreateCustomer = ({ admin }) => {
   const handleReset = () => {
     setSelectedCategory(null);
     setSelectedEntryType(null);
+    setSubmitted(false);
+    setCreatedProperty(null);
+    navigate(''); // Navigate to base URL
     setFormData({
       zone: '',
       areaName: '',
@@ -544,7 +590,7 @@ const CreateCustomer = ({ admin }) => {
               ) : (
                 <button
                   key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
+                  onClick={() => handleSelectCategory(category.id)}
                   className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
                 >
                   <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
@@ -570,7 +616,7 @@ const CreateCustomer = ({ admin }) => {
             <p className="text-gray-600 mt-1">Customer Creation Module</p>
           </div>
           <button
-            onClick={() => setSelectedCategory(null)}
+            onClick={handleBackToCategories}
             className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
           >
             ← Back to Categories
@@ -589,7 +635,7 @@ const CreateCustomer = ({ admin }) => {
               return (
                 <button
                   key={type.id}
-                  onClick={() => setSelectedEntryType(type.id)}
+                  onClick={() => handleSelectEntryType(type.id)}
                   className="group relative p-5 bg-white border-2 border-gray-100 rounded-xl hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100/50 transition-all duration-300 text-center"
                 >
                   <div className={`w-14 h-14 ${type.color} rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform duration-300 shadow-md`}>
@@ -1479,7 +1525,7 @@ const CreateCustomer = ({ admin }) => {
           </p>
         </div>
         <button
-          onClick={handleReset}
+          onClick={handleBackToEntryTypes}
           className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md transition-colors text-sm"
         >
           ← Back
