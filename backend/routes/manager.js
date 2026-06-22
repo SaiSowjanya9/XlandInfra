@@ -177,7 +177,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
 
     // Get assigned zones for zone-centric filtering
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
 
     console.log('[Manager Dashboard] scopeId:', scopeId, 'scopeColumn:', scopeColumn, 'fpId:', franchisePartnerId, 'assignedZones:', assignedZones, 'creatorEmail:', creatorEmail);
 
@@ -303,7 +303,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
     
     // Get assigned zones for zone-centric filtering (+ own created data)
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     console.log('[Manager Properties] managerId:', managerId, 'franchisePartnerId:', franchisePartnerId, 'assignedZones:', assignedZones, 'creatorEmail:', creatorEmail);
     
     // Build zone filter (zone-centric + own created)
@@ -619,7 +619,7 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
     
     // Get assigned zones for zone-centric filtering (+ own created data)
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     console.log('[Manager Work Orders] managerId:', managerId, 'franchisePartnerId:', franchisePartnerId, 'assignedZones:', assignedZones, 'creatorEmail:', creatorEmail);
     
     // Build zone filter for properties linked to work orders (zone-centric + own created)
@@ -676,7 +676,7 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
     
     // Get assigned zones for zone-centric filtering (+ own created data)
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
     
     const query = `SELECT wo.*, 
@@ -713,7 +713,7 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
     
     // Get assigned zones for zone-centric filtering (+ own created data)
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
     
     const query = `SELECT wo.*, 
@@ -918,7 +918,7 @@ router.get('/customers', requireManagerScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
     
     // Get assigned zones for zone-centric filtering (+ own created data)
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildClientZoneOrCreatorFilter(assignedZones, creatorEmail, 'c', 'p');
     
     const query = `SELECT c.*, p.name as property_name, p.zone_id as zone 
@@ -1188,7 +1188,7 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
     
     // Get employee's assigned zones
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
 
     // Build zone + creator filter
     let zoneClause = '';
@@ -1247,9 +1247,10 @@ router.get('/vendors/assignments', requireManagerScope, async (req, res) => {
     const scopeId = getScopeId(req);
     const scopeColumn = getScopeColumn(req);
     const employeeId = getEmployeeIdForZoneLookup(req);
+    const creatorEmail = getCreatorIdentifier(req);
     
     // Get assigned zones for zone-centric filtering
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     
     console.log('Manager Vendor Assignments Query:', { scopeId, scopeColumn, assignedZones });
     
@@ -1423,9 +1424,10 @@ router.get('/fp-employee-zones', requireManagerScope, async (req, res) => {
     }
 
     const employeeId = getEmployeeIdForZoneLookup(req);
+    const creatorEmail = getCreatorIdentifier(req);
     
     // Get manager's assigned zones for zone-centric filtering
-    const managerZones = await getAssignedZones(employeeId);
+    const managerZones = await getAssignedZones(employeeId, creatorEmail);
     
     // Build zone filter - if manager has zones, only show employees with overlapping zones
     let employeeZoneFilter = '';
@@ -1507,7 +1509,7 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
     // If manager is linked to an FP, fetch from fp_estimates table
     if (franchisePartnerId) {
       // Get assigned zones
-      const assignedZones = await getAssignedZones(employeeId);
+      const assignedZones = await getAssignedZones(employeeId, creatorEmail);
       
       // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
       let zoneClause = '';

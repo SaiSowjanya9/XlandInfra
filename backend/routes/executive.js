@@ -187,7 +187,7 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
     
     // Get assigned zones for zone-centric filtering
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     
     console.log('[Executive Dashboard] executiveId:', executiveId, 'fpId:', franchisePartnerId, 'assignedZones:', assignedZones, 'creatorEmail:', creatorEmail);
 
@@ -317,7 +317,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
 
     // Get assigned zones for zone-centric filtering (+ own created data)
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'p');
 
     // For FP executives, fetch properties from franchise partner
@@ -536,7 +536,7 @@ router.get('/work-orders', requireExecutiveScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
 
     // Get assigned zones for zone-centric filtering (+ own created data)
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
     // FP employees see FP work orders, standalone executives see their created work orders
@@ -586,7 +586,7 @@ router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
 
     // Get assigned zones for zone-centric filtering (+ own created data)
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
     const query = `SELECT wo.*, 
@@ -628,7 +628,7 @@ router.get('/work-orders/completed', requireExecutiveScope, async (req, res) => 
     const creatorEmail = getCreatorIdentifier(req);
 
     // Get assigned zones for zone-centric filtering (+ own created data)
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
     const query = `SELECT wo.*, 
@@ -812,7 +812,7 @@ router.get('/customers', requireExecutiveScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
 
     // Get assigned zones for zone-centric filtering (+ own created data)
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildClientZoneOrCreatorFilter(assignedZones, creatorEmail, 'c', 'p');
 
     const query = `SELECT c.*, p.name as property_name, p.zone_id as zone
@@ -1078,7 +1078,7 @@ router.get('/vendors', requireExecutiveScope, async (req, res) => {
     // If FP employee, get zone-centric + own created vendors
     if (franchisePartnerId) {
       // Get employee's assigned zones
-      const assignedZones = await getAssignedZones(employeeId);
+      const assignedZones = await getAssignedZones(employeeId, creatorEmail);
 
       // Build zone + creator filter
       let zoneClause = '';
@@ -1217,9 +1217,10 @@ router.get('/vendors/assignments', requireExecutiveScope, async (req, res) => {
   try {
     const executiveId = req.executiveId;
     const employeeId = getEmployeeIdForZoneLookup(req);
+    const creatorEmail = getCreatorIdentifier(req);
     
     // Get assigned zones for zone-centric filtering
-    const assignedZones = await getAssignedZones(employeeId);
+    const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     
     // Build zone filter for vendor's zone
     let zoneClause = '';
@@ -1360,7 +1361,7 @@ router.get('/estimates', requireExecutiveScope, async (req, res) => {
     // If executive is linked to an FP, fetch from fp_estimates table
     if (franchisePartnerId) {
       // Get assigned zones
-      const assignedZones = await getAssignedZones(employeeId);
+      const assignedZones = await getAssignedZones(employeeId, creatorEmail);
       
       // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
       let zoneClause = '';
