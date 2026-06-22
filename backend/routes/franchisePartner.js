@@ -3730,16 +3730,9 @@ router.get('/amc-packages', requireFPScope, async (req, res) => {
     const [packages] = await pool.execute(
       `SELECT p.id, p.franchise_partner_id, p.package_code, p.name, p.description, 
               p.duration_months, p.base_price as price, p.services, p.terms_conditions,
-              p.created_at, p.updated_at, p.created_by,
-              COALESCE(
-                CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
-                CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
-                fp.company_name,
-                p.created_by, 'System'
-              ) as created_by_name
+              p.created_at, p.updated_at,
+              fp.company_name as created_by_name
        FROM fp_amc_packages p
-       LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
-       LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username
        LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
        WHERE p.franchise_partner_id = ? ORDER BY p.created_at DESC`,
       [req.fpId]
