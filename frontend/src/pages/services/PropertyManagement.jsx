@@ -167,7 +167,7 @@ const PropertyManagement = () => {
                 <span className="text-gold-400/90 text-sm font-medium tracking-[0.2em] uppercase">Property Management</span>
               </div>
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-[1.1] tracking-tight opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.4s_forwards]">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-normal mb-6 leading-[1.1] tracking-tight opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.4s_forwards]">
                 <span className="text-white">YOUR PROPERTY.</span>
                 <br />
                 <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">OUR PRIORITY.</span>
@@ -235,7 +235,7 @@ const PropertyManagement = () => {
               <span className="text-gold-400 text-sm font-medium tracking-[0.2em] uppercase">Why Choose Us</span>
               <div className="h-px w-12 bg-gradient-to-l from-transparent to-gold-400"></div>
             </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-4">
               One Partner. <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Better Control. Better Value.</span>
             </h2>
           </div>
@@ -313,7 +313,7 @@ const PropertyManagement = () => {
               <span className="text-gold-400 text-sm font-medium tracking-[0.2em] uppercase">Core Benefits</span>
               <div className="h-px w-12 bg-gradient-to-l from-transparent to-gold-400"></div>
             </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-4">
               We Take Care of Your Property, <br />
               <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">So You Can Focus on What Matters</span>
             </h2>
@@ -330,7 +330,7 @@ const PropertyManagement = () => {
                   <div className="w-16 h-16 mb-6 bg-gradient-to-br from-gold-400/20 to-gold-600/20 border border-gold-500/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <Icon className="w-8 h-8 text-gold-400" />
                   </div>
-                  <h3 className="text-xl font-display font-bold text-white mb-3 group-hover:text-gold-400 transition-colors">{benefit.title}</h3>
+                  <h3 className="text-xl font-display font-normal text-white mb-3 group-hover:text-gold-400 transition-colors">{benefit.title}</h3>
                   <p className="text-gray-400 leading-relaxed">{benefit.desc}</p>
                 </div>
               );
@@ -352,7 +352,7 @@ const PropertyManagement = () => {
               <span className="text-gold-400 text-sm font-medium tracking-[0.2em] uppercase">Cost Comparison</span>
               <div className="h-px w-12 bg-gradient-to-l from-transparent to-gold-400"></div>
             </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-4">
               The Real <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Cost Difference</span>
             </h2>
           </div>
@@ -432,7 +432,7 @@ const PropertyManagement = () => {
               <span className="text-gold-400 text-sm font-medium tracking-[0.2em] uppercase">Return on Investment</span>
               <div className="h-px w-12 bg-gradient-to-l from-transparent to-gold-400"></div>
             </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-4">
               The ROI of <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Smart Property Management</span>
             </h2>
           </div>
@@ -448,7 +448,7 @@ const PropertyManagement = () => {
                   <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-gold-400/20 to-gold-600/20 border border-gold-500/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <Icon className="w-8 h-8 text-gold-400" />
                   </div>
-                  <h3 className="text-lg font-display font-bold text-white mb-3 group-hover:text-gold-400 transition-colors">{item.title}</h3>
+                  <h3 className="text-lg font-display font-normal text-white mb-3 group-hover:text-gold-400 transition-colors">{item.title}</h3>
                   <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
                 </div>
               );
@@ -471,7 +471,7 @@ const PropertyManagement = () => {
               <span className="text-gold-400 text-sm font-medium tracking-[0.2em] uppercase">Trust & Commitment</span>
               <div className="h-px w-12 bg-gradient-to-l from-transparent to-gold-400"></div>
             </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-4">
               Why Owners Choose <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">XLAND INFRA</span>
             </h2>
           </div>
@@ -487,7 +487,7 @@ const PropertyManagement = () => {
                   <div className="w-16 h-16 mb-6 bg-gradient-to-br from-gold-400/20 to-gold-600/20 border border-gold-500/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <Icon className="w-8 h-8 text-gold-400" />
                   </div>
-                  <h3 className="text-2xl font-display font-bold text-white mb-4 group-hover:text-gold-400 transition-colors">{item.title}</h3>
+                  <h3 className="text-2xl font-display font-normal text-white mb-4 group-hover:text-gold-400 transition-colors">{item.title}</h3>
                   <div className="space-y-3">
                     {item.points.map((point, pIndex) => (
                       <div key={pIndex} className="flex items-center gap-3 text-gray-400">
@@ -512,7 +512,7 @@ const PropertyManagement = () => {
 
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           {/* Heading */}
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-white mb-6">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-6">
             One Partner. All Solutions. <br />
             <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Total Peace of Mind.</span>
           </h2>

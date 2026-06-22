@@ -123,7 +123,7 @@ const MainHeader = () => {
                               onClick={() => {
                                 navigate(service.path);
                                 setServicesDropdownOpen(false);
-                                window.scrollTo(0, 0);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
                               }}
                               className={`w-full px-4 py-2.5 text-left text-sm transition-colors duration-150 flex items-center gap-3 ${
                                 location.pathname === service.path 

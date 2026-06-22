@@ -375,7 +375,7 @@ function CorporateLanding() {
                                 onClick={() => {
                                   if (service.path) {
                                     navigate(service.path);
-                                    window.scrollTo(0, 0);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
                                   } else if (service.scrollTo) {
                                     scrollToSection(service.scrollTo);
                                   }
@@ -596,7 +596,7 @@ function CorporateLanding() {
               </div>
 
               {/* Main Title */}
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-8 leading-[1.05] tracking-tight">
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-normal mb-8 leading-[1.05] tracking-tight">
                 <span className="inline-block text-white opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.3s_forwards]">Building</span>
                 <br />
                 <span className="inline-block opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.5s_forwards]">
@@ -612,21 +612,21 @@ function CorporateLanding() {
               </p>
 
               {/* CTA Buttons - Intro Phase */}
-              <div className="flex flex-wrap gap-4 opacity-0 animate-[fadeSlideIn_0.8s_ease-out_1.1s_forwards]">
+              <div className="flex flex-wrap gap-4 opacity-0 animate-[fadeSlideIn_0.8s_ease-out_1.1s_forwards] relative z-20">
                 <button
                   onClick={() => scrollToSection('services')}
-                  className="group relative px-8 py-4 overflow-hidden rounded-full bg-gradient-to-r from-gold-400 to-gold-600 transition-all duration-500 hover:shadow-2xl hover:shadow-gold-500/30"
+                  className="group relative z-10 px-8 py-4 overflow-hidden rounded-full bg-gradient-to-r from-gold-400 to-gold-600 transition-all duration-500 hover:shadow-2xl hover:shadow-gold-500/30 isolate"
                 >
-                  <span className="relative flex items-center gap-2 font-semibold text-[#0D0D0D]">
+                  <span className="relative z-10 flex items-center gap-2 font-semibold text-[#0D0D0D]">
                     Explore Services
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </span>
                 </button>
                 <button
                   onClick={() => scrollToSection('contact')}
-                  className="group px-8 py-4 rounded-full border border-white/20 hover:border-gold-400/50 hover:bg-white/5 transition-all duration-500"
+                  className="group relative z-10 px-8 py-4 rounded-full border border-white/20 hover:border-gold-400/50 hover:bg-white/5 transition-all duration-500 bg-black/30 backdrop-blur-sm isolate"
                 >
-                  <span className="flex items-center gap-2 font-semibold text-white group-hover:text-gold-400">
+                  <span className="relative z-10 flex items-center gap-2 font-semibold text-white group-hover:text-gold-400">
                     <Phone className="w-4 h-4" />
                     Contact Us
                   </span>
@@ -660,7 +660,7 @@ function CorporateLanding() {
                       }`}
                       onClick={() => setActiveHeroService(index)}
                     >
-                      <h2 className={`font-display font-bold leading-[1.1] transition-all duration-500 ${
+                      <h2 className={`font-display font-normal leading-[1.1] transition-all duration-500 ${
                         isActive 
                           ? 'text-3xl md:text-4xl lg:text-5xl text-white' 
                           : 'text-xl md:text-2xl lg:text-3xl text-gray-500'
@@ -680,21 +680,21 @@ function CorporateLanding() {
               </div>
 
               {/* CTA Buttons - Services Phase */}
-              <div className="flex flex-wrap gap-4 mt-8">
+              <div className="flex flex-wrap gap-4 mt-8 relative z-20">
                 <button
                   onClick={() => scrollToSection('services')}
-                  className="group relative px-8 py-4 overflow-hidden rounded-full bg-gradient-to-r from-gold-400 to-gold-600 transition-all duration-500 hover:shadow-2xl hover:shadow-gold-500/30"
+                  className="group relative z-10 px-8 py-4 overflow-hidden rounded-full bg-gradient-to-r from-gold-400 to-gold-600 transition-all duration-500 hover:shadow-2xl hover:shadow-gold-500/30 isolate"
                 >
-                  <span className="relative flex items-center gap-2 font-semibold text-[#0D0D0D]">
+                  <span className="relative z-10 flex items-center gap-2 font-semibold text-[#0D0D0D]">
                     Explore Services
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </span>
                 </button>
                 <button
                   onClick={() => scrollToSection('contact')}
-                  className="group px-8 py-4 rounded-full border border-white/20 hover:border-gold-400/50 hover:bg-white/5 transition-all duration-500"
+                  className="group relative z-10 px-8 py-4 rounded-full border border-white/20 hover:border-gold-400/50 hover:bg-white/5 transition-all duration-500 bg-black/30 backdrop-blur-sm isolate"
                 >
-                  <span className="flex items-center gap-2 font-semibold text-white group-hover:text-gold-400">
+                  <span className="relative z-10 flex items-center gap-2 font-semibold text-white group-hover:text-gold-400">
                     <Phone className="w-4 h-4" />
                     Contact Us
                   </span>
@@ -748,7 +748,7 @@ function CorporateLanding() {
           {/* About Content */}
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
-              <h3 className="text-3xl font-display font-bold text-white">
+              <h3 className="text-3xl font-display font-normal text-white">
                 Your Trusted Partner in <span className="text-gold-400">Property Excellence</span>
               </h3>
               <p className="text-gray-400 leading-relaxed">
@@ -994,7 +994,7 @@ function CorporateLanding() {
                       }`}>
                         {project.status}
                       </span>
-                      <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-gold-400 transition-colors">
+                      <h3 className="text-2xl font-medium text-white mb-2 group-hover:text-gold-400 transition-colors">
                         {project.title}
                       </h3>
                       <div className="flex items-center space-x-4 text-gray-400 text-sm">
@@ -1034,7 +1034,7 @@ function CorporateLanding() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <span className="text-gold-400 text-sm font-semibold tracking-wider uppercase mb-3 block">Investment Opportunities</span>
-              <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">
+              <h2 className="text-4xl md:text-5xl font-display font-normal text-white mb-6">
                 Grow Your Wealth with <span className="text-gold-gradient">Strategic Investments</span>
               </h2>
               <p className="text-gray-400 leading-relaxed mb-8">
@@ -1080,7 +1080,7 @@ function CorporateLanding() {
       <section className="py-14 md:py-16 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-gold-600/20 via-gold-500/10 to-gold-600/20"></div>
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-display font-normal text-white mb-4">
             Already a Customer?
           </h2>
           <p className="text-gray-400 mb-8 max-w-xl mx-auto">
@@ -1103,7 +1103,7 @@ function CorporateLanding() {
             {/* Contact Info */}
             <div>
               <span className="text-gold-400 text-sm font-semibold tracking-wider uppercase mb-3 block">Contact Us</span>
-              <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">
+              <h2 className="text-4xl md:text-5xl font-display font-normal text-white mb-6">
                 Let's Build <span className="text-gold-gradient">Together</span>
               </h2>
               <p className="text-gray-400 leading-relaxed mb-8">
@@ -1163,7 +1163,7 @@ function CorporateLanding() {
 
             {/* Contact Form */}
             <div id="contact-form" className="bg-gradient-to-br from-charcoal-800/80 to-charcoal-900/80 backdrop-blur-xl rounded-2xl border border-gold-500/20 p-8">
-              <h3 className="text-2xl font-bold text-white mb-6">Send us a Message</h3>
+              <h3 className="text-2xl font-medium text-white mb-6">Send us a Message</h3>
               <form onSubmit={handleFormSubmit} className="space-y-5">
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>

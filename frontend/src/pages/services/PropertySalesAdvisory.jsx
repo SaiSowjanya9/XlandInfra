@@ -85,7 +85,7 @@ const PropertySalesAdvisory = () => {
               <span className="text-gold-400/90 text-sm font-medium tracking-[0.2em] uppercase">Property Sales & Advisory</span>
             </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-[1.1] tracking-tight opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.4s_forwards]">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-normal mb-6 leading-[1.1] tracking-tight opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.4s_forwards]">
               <span className="text-white">WE VERIFY, LIST,</span>
               <br />
               <span className="text-white">MARKET AND SELL –</span>
@@ -142,7 +142,7 @@ const PropertySalesAdvisory = () => {
               <span className="text-gold-400 text-sm font-medium tracking-[0.2em] uppercase">Our Services</span>
               <div className="h-px w-12 bg-gradient-to-l from-transparent to-gold-400"></div>
             </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-4">
               Complete <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Property Solutions</span>
             </h2>
             <p className="text-gray-400 text-lg max-w-2xl mx-auto">
@@ -178,7 +178,7 @@ const PropertySalesAdvisory = () => {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-display font-normal text-white mb-4">
               Why <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Choose Us</span>
             </h2>
           </div>
@@ -208,7 +208,7 @@ const PropertySalesAdvisory = () => {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-display font-normal text-white mb-4">
               How It <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Works</span>
             </h2>
           </div>
@@ -242,7 +242,7 @@ const PropertySalesAdvisory = () => {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-display font-normal text-white mb-4">
               Who We <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Help</span>
             </h2>
           </div>
@@ -284,7 +284,7 @@ const PropertySalesAdvisory = () => {
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-10">
           <div className="relative inline-block">
             <div className="absolute inset-0 bg-gold-500/20 blur-2xl rounded-full"></div>
-            <h3 className="relative text-3xl md:text-4xl lg:text-5xl font-display font-bold text-white leading-tight">
+            <h3 className="relative text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white leading-tight">
               RIGHT PROPERTY. RIGHT PRICE.<br />
               <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">RIGHT DECISION.</span>
             </h3>
