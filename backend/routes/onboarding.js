@@ -71,8 +71,11 @@ router.post('/', authenticate, async (req, res) => {
     // Get actual user name from authenticated user
     let creatorName = 'System';
     if (req.user) {
-      // Try to get full name from firstName + lastName
-      if (req.user.firstName && req.user.lastName) {
+      // Check for super_admin/admin role first
+      if (req.user.role === 'super_admin' || req.user.role === 'admin') {
+        creatorName = 'Super Admin';
+      } else if (req.user.firstName && req.user.lastName) {
+        // Try to get full name from firstName + lastName
         creatorName = `${req.user.firstName} ${req.user.lastName}`.trim();
       } else if (req.user.firstName) {
         creatorName = req.user.firstName;
@@ -305,6 +308,7 @@ router.get('/', async (req, res) => {
           `SELECT * FROM property_contacts WHERE property_id IN (${placeholders})`,
           onboardedIds
         );
+        console.log(`Found ${contacts.length} contacts for ${onboardedIds.length} properties`);
         contacts.forEach(c => {
           if (!contactsMap[c.property_id]) contactsMap[c.property_id] = [];
           contactsMap[c.property_id].push({
@@ -314,7 +318,9 @@ router.get('/', async (req, res) => {
             countryCode: c.country_code
           });
         });
-      } catch (e) { /* property_contacts may not exist */ }
+      } catch (e) { 
+        console.log('Error fetching property_contacts:', e.message);
+      }
     }
 
     // Transform onboarded_properties
@@ -430,6 +436,8 @@ router.get('/', async (req, res) => {
           } : null,
           notes: row.notes || '',
           contacts: contacts,
+          watchmanName: row.watchman_name || null,
+          watchmanContact: row.watchman_contact || null,
           status: row.status || 'active',
           createdBy: row.created_by || 'System',
           createdAt: row.created_at,

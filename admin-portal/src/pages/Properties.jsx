@@ -828,14 +828,18 @@ const Properties = () => {
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Area Name</label>
-                        <p className="text-sm text-gray-900">{viewProperty.area || '-'}</p>
+                        <p className="text-sm text-gray-900">{viewProperty.areaName || viewProperty.area || '-'}</p>
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Division</label>
                         <p className="text-sm text-gray-900">{viewProperty.division || '-'}</p>
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Total Units</label>
+                        <label className="block text-xs text-gray-500 mb-1">Property Type</label>
+                        <p className="text-sm text-gray-900">{viewProperty.propertyType || viewProperty.entryType || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Units</label>
                         <p className="text-sm text-gray-900">{viewProperty.totalUnits || 0}</p>
                       </div>
                       <div>
@@ -846,7 +850,7 @@ const Properties = () => {
                   </div>
 
                   {/* Gated Community Block Details */}
-                  {viewProperty.entryType === 'GC' && (
+                  {(viewProperty.entryType === 'GC' || viewProperty.entryType?.toUpperCase() === 'GC') && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Block Details</h3>
                       <div className="mb-3">
@@ -873,7 +877,7 @@ const Properties = () => {
                   )}
 
                   {/* Apartment Details */}
-                  {viewProperty.entryType === 'APT' && (
+                  {(viewProperty.entryType === 'APT' || viewProperty.entryType?.toUpperCase() === 'APT') && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Apartment Details</h3>
                       <div className="grid grid-cols-2 gap-x-8 gap-y-4">
@@ -890,7 +894,7 @@ const Properties = () => {
                   )}
 
                   {/* Villa Details */}
-                  {viewProperty.entryType === 'VILLA' && (
+                  {(viewProperty.entryType === 'VILLA' || viewProperty.entryType?.toUpperCase() === 'VILLA') && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Villa Details</h3>
                       <div>
@@ -901,7 +905,7 @@ const Properties = () => {
                   )}
 
                   {/* Flat Details */}
-                  {viewProperty.entryType === 'FLAT' && (
+                  {(viewProperty.entryType === 'FLAT' || viewProperty.entryType?.toUpperCase() === 'FLAT') && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Flat Details</h3>
                       <div className="grid grid-cols-2 gap-x-8 gap-y-4">
@@ -918,7 +922,7 @@ const Properties = () => {
                   )}
 
                   {/* Plot Details */}
-                  {viewProperty.entryType === 'PLOT' && (
+                  {(viewProperty.entryType === 'PLOT' || viewProperty.entryType?.toUpperCase() === 'PLOT') && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Plot Details</h3>
                       <div>
@@ -952,7 +956,7 @@ const Properties = () => {
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">ZIP/Postal Code</label>
-                        <p className="text-sm text-gray-900">{viewProperty.zip_code || viewProperty.postal_code || '-'}</p>
+                        <p className="text-sm text-gray-900">{viewProperty.postalCode || viewProperty.zip_code || viewProperty.postal_code || '-'}</p>
                       </div>
                       {viewProperty.landmark && (
                         <div className="col-span-2">
@@ -988,11 +992,11 @@ const Properties = () => {
                   )}
 
                   {/* Contacts */}
-                  {viewProperty.contacts && viewProperty.contacts.length > 0 && (
+                  {((viewProperty.contacts && viewProperty.contacts.length > 0) || (viewProperty.associationContacts && viewProperty.associationContacts.length > 0)) && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Contact Information</h3>
                       <div className="space-y-3">
-                        {viewProperty.contacts.map((c, i) => (
+                        {(viewProperty.contacts || viewProperty.associationContacts || []).map((c, i) => (
                           <div key={i} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                               <div className="min-w-0">
