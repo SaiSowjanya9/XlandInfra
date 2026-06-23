@@ -208,6 +208,8 @@ function App() {
     // Clear state to trigger re-render with unauthenticated state
     setUser(null);
     setPortal(null);
+    // Redirect ALL portals to employee login after logout
+    window.location.href = '/employee/login';
   }, []);
 
   const handleSelectPortal = useCallback((portalKey) => {
