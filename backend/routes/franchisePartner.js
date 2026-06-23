@@ -1317,7 +1317,7 @@ router.post('/customers', requireFPScope, async (req, res) => {
     const {
       // Property form data
       zone, areaName, division, propertyType, communityName,
-      associationContacts, numberOfBlocks, unitsPerBlock, blockNames,
+      associationContacts, numberOfBlocks, unitsPerBlock, blockNames, blockUnitTypes,
       numberOfUnits, villaPlotNumber, blockInfo, blockNA,
       address, city, state, postalCode, landmark, mapLocation, notes,
       entryType, category,
@@ -1351,9 +1351,9 @@ router.post('/customers', requireFPScope, async (req, res) => {
           contact_person, contact_phone, contact_email, zone_id, division_id,
           franchise_partner_id, created_by, latitude, longitude, landmark, notes,
           entry_type, category, area_name, number_of_blocks, units_per_block,
-          block_names, number_of_units, villa_plot_number, block_info,
+          block_names, block_unit_types, number_of_units, villa_plot_number, block_info,
           watchman_name, watchman_contact, association_contacts
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           propertyIdGen, communityName, propertyType || 'residential', address, city, state, postalCode || '',
           contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
@@ -1362,7 +1362,8 @@ router.post('/customers', requireFPScope, async (req, res) => {
           mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
           entryType || null, category || null, areaName || '',
           numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}),
-          JSON.stringify(blockNames || {}), numberOfUnits || null, villaPlotNumber || '', blockInfo || '',
+          JSON.stringify(blockNames || {}), JSON.stringify(blockUnitTypes || {}),
+          numberOfUnits || null, villaPlotNumber || '', blockInfo || '',
           watchmanName || null, watchmanContact || null, 
           associationContacts ? JSON.stringify(associationContacts) : null
         ]

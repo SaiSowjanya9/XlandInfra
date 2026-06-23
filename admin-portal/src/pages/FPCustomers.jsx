@@ -156,6 +156,15 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [submitting, setSubmitting] = useState(false);
   
+  // Unit types for block details
+  const UNIT_TYPES = [
+    { key: 'studio', label: 'Studio' },
+    { key: 'oneBed', label: '1 Bed' },
+    { key: 'twoBed', label: '2 Bed' },
+    { key: 'threeBed', label: '3 Bed' },
+    { key: 'fourBed', label: '4 Bed' }
+  ];
+
   const [formData, setFormData] = useState({
     zone: '',
     areaName: '',
@@ -166,6 +175,7 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
     numberOfBlocks: 1,
     unitsPerBlock: {},
     blockNames: {},
+    blockUnitTypes: {},
     numberOfUnits: '',
     villaPlotNumber: '',
     blockInfo: '',
@@ -363,6 +373,7 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
       numberOfBlocks: 1,
       unitsPerBlock: {},
       blockNames: {},
+      blockUnitTypes: {},
       numberOfUnits: '',
       villaPlotNumber: '',
       blockInfo: '',
@@ -401,6 +412,35 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
       ...prev,
       blockNames: { ...prev.blockNames, [blockNum]: name }
     }));
+  };
+
+  // Update unit type for a specific block
+  const updateBlockUnitType = (blockNum, unitType, value) => {
+    setFormData(prev => {
+      const currentBlockUnits = prev.blockUnitTypes[blockNum] || {
+        studio: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourBed: 0
+      };
+      const updatedBlockUnits = {
+        ...currentBlockUnits,
+        [unitType]: parseInt(value) || 0
+      };
+      const newBlockUnitTypes = {
+        ...prev.blockUnitTypes,
+        [blockNum]: updatedBlockUnits
+      };
+      // Auto-calculate total units for this block
+      const totalUnits = Object.values(updatedBlockUnits).reduce((sum, val) => sum + val, 0);
+      return {
+        ...prev,
+        blockUnitTypes: newBlockUnitTypes,
+        unitsPerBlock: { ...prev.unitsPerBlock, [blockNum]: totalUnits }
+      };
+    });
+  };
+
+  // Get unit type value for a block
+  const getBlockUnitTypeValue = (blockNum, unitType) => {
+    return formData.blockUnitTypes[blockNum]?.[unitType] || 0;
   };
 
   const calculateTotalFlats = () => {
@@ -972,33 +1012,54 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
                     />
                   </div>
 
-                  {/* Units per Block */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  {/* Units per Block with Unit Type Breakdown */}
+                  <div className="space-y-6 mt-4">
                     {Array.from({ length: formData.numberOfBlocks }, (_, i) => i + 1).map(blockNum => {
                       const blockError = hasError && (!formData.unitsPerBlock[blockNum] || formData.unitsPerBlock[blockNum] <= 0);
+                      const totalUnits = formData.unitsPerBlock[blockNum] || 0;
                       return (
-                        <div key={blockNum} className="flex gap-3">
-                          <div className="w-32">
-                            <label className="block text-xs text-gray-500 mb-1">Block Name</label>
-                            <input
-                              type="text"
-                              value={formData.blockNames[blockNum] || ''}
-                              onChange={(e) => updateBlockName(blockNum, e.target.value)}
-                              className={inputClass(false)}
-                              placeholder={`Block ${blockNum}`}
-                            />
+                        <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          {/* Block Name and Units Row */}
+                          <div className="flex gap-4 items-start mb-4">
+                            <div className="w-40">
+                              <label className="block text-xs text-gray-500 mb-1">Block Name</label>
+                              <input
+                                type="text"
+                                value={formData.blockNames[blockNum] || ''}
+                                onChange={(e) => updateBlockName(blockNum, e.target.value)}
+                                className={inputClass(false)}
+                                placeholder={`Block ${blockNum}`}
+                              />
+                            </div>
+                            <div className="w-28">
+                              <label className="block text-xs text-gray-500 mb-1">Units <span className="text-red-500">*</span></label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={totalUnits}
+                                readOnly
+                                className={`${inputClass(blockError)} bg-gray-100 cursor-not-allowed`}
+                                placeholder="0"
+                              />
+                              <FieldError show={blockError} message="Add units below" />
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <label className="block text-xs text-gray-500 mb-1">Units <span className="text-red-500">*</span></label>
-                            <input
-                              type="number"
-                              min="1"
-                              value={formData.unitsPerBlock[blockNum] || ''}
-                              onChange={(e) => updateUnitsForBlock(blockNum, e.target.value)}
-                              className={inputClass(blockError)}
-                              placeholder="No. of units"
-                            />
-                            <FieldError show={blockError} message="Required" />
+                          
+                          {/* Unit Types Row */}
+                          <div className="grid grid-cols-5 gap-3">
+                            {UNIT_TYPES.map(unitType => (
+                              <div key={unitType.key}>
+                                <label className="block text-xs text-gray-500 mb-1">{unitType.label}</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={getBlockUnitTypeValue(blockNum, unitType.key)}
+                                  onChange={(e) => updateBlockUnitType(blockNum, unitType.key, e.target.value)}
+                                  className={inputClass(false)}
+                                  placeholder="0"
+                                />
+                              </div>
+                            ))}
                           </div>
                         </div>
                       );

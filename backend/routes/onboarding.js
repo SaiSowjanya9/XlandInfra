@@ -48,6 +48,7 @@ router.post('/', authenticate, async (req, res) => {
       numberOfBlocks,
       blockNames,
       unitsPerBlock,
+      blockUnitTypes,
       blockInfo,
       blockNA,
       numberOfUnits,
@@ -110,11 +111,11 @@ router.post('/', authenticate, async (req, res) => {
     const [result] = await conn.execute(
       `INSERT INTO onboarded_properties
         (property_id, entry_type, category, zone, area_name, division, property_type,
-         community_name, number_of_blocks, block_names, units_per_block, block_info,
+         community_name, number_of_blocks, block_names, units_per_block, block_unit_types, block_info,
          block_na, number_of_units, villa_plot_number, total_units,
          address, address_line1, apt_suite_unit, apt_suite_na, city, state, postal_code,
          landmark, map_lat, map_lng, map_address, notes, created_by, watchman_name, watchman_contact)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         propertyId,
         entryType,
@@ -127,6 +128,7 @@ router.post('/', authenticate, async (req, res) => {
         entryType === 'GC' ? (numberOfBlocks || null) : null,
         entryType === 'GC' && blockNames ? JSON.stringify(blockNames) : null,
         entryType === 'GC' && unitsPerBlock ? JSON.stringify(unitsPerBlock) : null,
+        entryType === 'GC' && blockUnitTypes ? JSON.stringify(blockUnitTypes) : null,
         entryType === 'APT' ? (blockInfo || null) : null,
         entryType === 'APT' ? (blockNA ? 1 : 0) : 0,
         entryType === 'APT' ? (parseInt(numberOfUnits) || null) : null,
@@ -344,6 +346,7 @@ router.get('/', async (req, res) => {
         numberOfBlocks: row.number_of_blocks,
         blockNames: row.block_names ? (typeof row.block_names === 'string' ? JSON.parse(row.block_names) : row.block_names) : null,
         unitsPerBlock: row.units_per_block ? (typeof row.units_per_block === 'string' ? JSON.parse(row.units_per_block) : row.units_per_block) : null,
+        blockUnitTypes: row.block_unit_types ? (typeof row.block_unit_types === 'string' ? JSON.parse(row.block_unit_types) : row.block_unit_types) : null,
         blockInfo: row.block_info,
         blockNA: !!row.block_na,
         numberOfUnits: row.number_of_units,
@@ -422,6 +425,7 @@ router.get('/', async (req, res) => {
           numberOfBlocks: row.number_of_blocks,
           blockNames: row.block_names ? (typeof row.block_names === 'string' ? JSON.parse(row.block_names) : row.block_names) : null,
           unitsPerBlock: row.units_per_block ? (typeof row.units_per_block === 'string' ? JSON.parse(row.units_per_block) : row.units_per_block) : null,
+          blockUnitTypes: row.block_unit_types ? (typeof row.block_unit_types === 'string' ? JSON.parse(row.block_unit_types) : row.block_unit_types) : null,
           blockInfo: row.block_info,
           blockNA: false,
           numberOfUnits: row.number_of_units,
@@ -543,6 +547,7 @@ router.get('/lookup/:propertyId', async (req, res) => {
         numberOfBlocks: row.number_of_blocks,
         blockNames: row.block_names ? (typeof row.block_names === 'string' ? JSON.parse(row.block_names) : row.block_names) : null,
         unitsPerBlock: row.units_per_block ? (typeof row.units_per_block === 'string' ? JSON.parse(row.units_per_block) : row.units_per_block) : null,
+        blockUnitTypes: row.block_unit_types ? (typeof row.block_unit_types === 'string' ? JSON.parse(row.block_unit_types) : row.block_unit_types) : null,
         blockInfo: row.block_info,
         blockNA: !!row.block_na,
         numberOfUnits: row.number_of_units,
