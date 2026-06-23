@@ -543,7 +543,8 @@ const FPProperties = ({ user }) => {
         setMessage({ type: 'error', text: result.message || 'Update failed' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to update property' });
+      console.error('Update property error:', error);
+      setMessage({ type: 'error', text: error.message || 'Failed to update property' });
     }
   };
 
@@ -1062,7 +1063,10 @@ const FPProperties = ({ user }) => {
               </div>
 
               {/* Gated Community Block Details */}
-              {(selectedProperty.property_type === 'gated_community' || selectedProperty.property_type === 'GC') && (
+              {(['gated_community', 'GC', 'Gated Community'].some(t => 
+                selectedProperty.property_type?.toLowerCase() === t.toLowerCase() || 
+                selectedProperty.entry_type === 'GC'
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
                   <div className="mb-4">
