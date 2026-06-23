@@ -4077,6 +4077,11 @@ router.post('/zones', requireFPScope, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Zone name is required' });
     }
     
+    // Safety check: Admin users don't have fpId
+    if (!req.fpId) {
+      return res.status(400).json({ success: false, message: 'Zone creation requires FP scope' });
+    }
+    
     // Check if zone already exists for this FP
     const [existing] = await pool.execute(
       'SELECT id FROM fp_zones WHERE name = ? AND franchise_partner_id = ?',
