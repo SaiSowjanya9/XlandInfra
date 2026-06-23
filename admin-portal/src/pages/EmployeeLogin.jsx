@@ -153,8 +153,8 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
             <div className="flex items-center justify-center mb-4">
               <img src="/logo.png" alt="XLAND INFRA" className="h-14 w-auto object-contain" />
             </div>
-            <h1 className="text-2xl font-semibold text-white">Employee Portal</h1>
-            <p className="text-zinc-400 text-sm mt-2">Sign in to access your dashboard</p>
+            <h1 className="text-2xl font-semibold text-amber-400">Employee Portal</h1>
+            <p className="text-amber-400/70 text-sm mt-2">Sign in to access your dashboard</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
