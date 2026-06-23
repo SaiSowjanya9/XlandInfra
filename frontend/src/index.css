@@ -73,27 +73,36 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
-/* Typography Classes - Using Inter for consistent cross-platform rendering */
-.font-gotham {
+/* Typography Classes - Body text uses Inter */
+.font-body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-weight: 300;
+  font-weight: 400;
+}
+
+/* Premium Display Font - Using Montserrat (Gotham-style) for headlines */
+.font-display {
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Gotham-style font class */
+.font-gotham {
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .font-gotham-medium {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .font-gotham-bold {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-weight: 600;
-}
-
-/* Premium Display Font - Using Playfair Display for headlines */
-.font-display {
-  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
-  font-weight: 400;
-  letter-spacing: 0.02em;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 /* Gold gradient text - Premium */
@@ -497,11 +506,11 @@ body {
 
 /* Typography - Cross-platform consistent */
 .section-title {
-  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 2.25rem;
-  font-weight: 400;
+  font-weight: 600;
   color: white;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 @media (min-width: 768px) {
@@ -956,17 +965,19 @@ img {
     font-weight: 700;
   }
   
-  /* Ensure headings use correct font family and weight */
+  /* Ensure headings use Montserrat (Gotham-style) */
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     font-synthesis: none;
+    letter-spacing: -0.01em;
   }
   
   /* Section titles */
   .section-title, .font-display {
-    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -997,11 +1008,13 @@ img {
   /* Ensure consistent font weights on Safari/Mac */
   h1, h2, h3, h4, h5, h6 {
     -webkit-font-smoothing: antialiased;
-    font-weight: 400 !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em;
   }
   
   .font-display {
-    font-weight: 400 !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em;
   }
   
   .font-semibold {
@@ -1018,8 +1031,9 @@ img {
   
   /* Fix section title rendering */
   .section-title {
-    font-weight: 400 !important;
+    font-weight: 600 !important;
     -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.02em;
   }
 }
 
