@@ -85,6 +85,19 @@ const ManagerProperties = ({ user }) => {
     return colors[normalized] || 'bg-gray-100 text-gray-700';
   };
 
+  // Get type display label
+  const getTypeLabel = (type) => {
+    const normalized = normalizePropertyType(type);
+    const labels = {
+      'gated_community': 'Gated Community',
+      'apartment': 'Apartment',
+      'villa': 'Villa',
+      'plot': 'Plot',
+      'flat': 'Flat'
+    };
+    return labels[normalized] || type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-';
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     propertyType: 'residential',
@@ -499,8 +512,8 @@ const ManagerProperties = ({ user }) => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${getTypeBadgeColor(property.property_type)}`}>
-                        {property.property_type?.replace(/_/g, ' ')}
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getTypeBadgeColor(property.property_type)}`}>
+                        {getTypeLabel(property.property_type)}
                       </span>
                     </td>
                     <td className="py-4 px-4">
