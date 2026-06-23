@@ -29,7 +29,9 @@ import {
   FileText,
   MapPin,
   Calendar,
-  Download
+  Download,
+  Phone,
+  Mail
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -171,25 +173,85 @@ const FPProperties = ({ user }) => {
       const property = properties.find(p => String(p.id) === editPropertyId);
       if (property) {
         setSelectedProperty(property);
-        // Also set edit form data
+        // Parse association_contacts JSON if available
+        let contacts = [];
+        try {
+          if (property.association_contacts) {
+            contacts = typeof property.association_contacts === 'string' 
+              ? JSON.parse(property.association_contacts) 
+              : property.association_contacts;
+          }
+        } catch (e) { contacts = []; }
+        
+        // Fallback to single contact if no association_contacts
+        if (contacts.length === 0 && (property.contact_person || property.contact_email || property.contact_phone)) {
+          contacts = [{
+            name: property.contact_person || '',
+            email: property.contact_email || '',
+            phone: property.contact_phone?.replace(/^\+91\s?/, '') || '',
+            countryCode: '+91'
+          }];
+        }
+        if (contacts.length === 0) {
+          contacts = [{ name: '', email: '', phone: '', countryCode: '+91' }];
+        }
+        
+        // Parse block_names and units_per_block JSON
+        let blockNames = {};
+        let unitsPerBlock = {};
+        try {
+          if (property.block_names) {
+            blockNames = typeof property.block_names === 'string' 
+              ? JSON.parse(property.block_names) : property.block_names;
+          }
+          if (property.units_per_block) {
+            unitsPerBlock = typeof property.units_per_block === 'string' 
+              ? JSON.parse(property.units_per_block) : property.units_per_block;
+          }
+        } catch (e) {}
+        
+        // Also set edit form data with all fields
         setEditFormData({
           id: property.id,
           name: property.name || '',
-          propertyType: property.property_type || 'residential',
+          propertyType: property.property_type || property.entry_type || 'residential',
+          entryType: property.entry_type || '',
           address: property.address || '',
           city: property.city || '',
           state: property.state || '',
-          zipCode: property.zip_code || '',
+          zipCode: property.zip_code || property.postal_code || '',
+          zone: property.zone_name || property.zone_id || property.zone || '',
+          division: property.division_name || property.division || property.division_id || '',
+          area: property.area || property.area_name || '',
+          isActive: property.is_active !== false && property.status !== 'inactive',
+          sourceTable: property.source_table || 'properties',
+          // Contact information
+          contacts: contacts,
           contactPerson: property.contact_person || '',
           contactPhone: property.contact_phone || '',
           contactEmail: property.contact_email || '',
-          zone: property.zone_name || property.zone_id || '',
-          division: property.division || property.division_id || '',
-          area: property.area || property.area_name || '',
-          isActive: property.is_active !== false,
-          sourceTable: property.source_table || 'properties',
+          // Block Details (for GC/APT)
+          numberOfBlocks: property.number_of_blocks || 1,
+          blockNames: blockNames,
+          unitsPerBlock: unitsPerBlock,
+          // APT specific
+          blockInfo: property.block_info || '',
+          blockNA: property.block_na || false,
+          numberOfUnits: property.number_of_units || '',
+          // Villa/Plot/Flat specific
+          villaPlotNumber: property.villa_plot_number || '',
+          flatBlockInfo: property.flat_block_info || '',
+          flatBlockNA: property.flat_block_na || false,
+          plotNA: property.plot_na || false,
+          // Location
+          latitude: property.latitude || property.map_lat || '',
+          longitude: property.longitude || property.map_lng || '',
+          landmark: property.landmark || '',
+          // Watchman Info
           watchmanName: property.watchman_name || '',
-          watchmanContact: property.watchman_contact || ''
+          watchmanContact: property.watchman_contact?.replace(/^\+91\s?/, '') || '',
+          // Notes
+          notes: property.notes || ''
         });
       }
     } else if (!viewPropertyId && !editPropertyId) {
@@ -292,31 +354,138 @@ const FPProperties = ({ user }) => {
   };
 
   const openEditModal = (property) => {
+    // Parse association_contacts JSON if available
+    let contacts = [];
+    try {
+      if (property.association_contacts) {
+        contacts = typeof property.association_contacts === 'string' 
+          ? JSON.parse(property.association_contacts) 
+          : property.association_contacts;
+      }
+    } catch (e) { contacts = []; }
+    
+    // Fallback to single contact if no association_contacts
+    if (contacts.length === 0 && (property.contact_person || property.contact_email || property.contact_phone)) {
+      contacts = [{
+        name: property.contact_person || '',
+        email: property.contact_email || '',
+        phone: property.contact_phone?.replace(/^\+91\s?/, '') || '',
+        countryCode: '+91'
+      }];
+    }
+    if (contacts.length === 0) {
+      contacts = [{ name: '', email: '', phone: '', countryCode: '+91' }];
+    }
+    
+    // Parse block_names and units_per_block JSON
+    let blockNames = {};
+    let unitsPerBlock = {};
+    try {
+      if (property.block_names) {
+        blockNames = typeof property.block_names === 'string' 
+          ? JSON.parse(property.block_names) : property.block_names;
+      }
+      if (property.units_per_block) {
+        unitsPerBlock = typeof property.units_per_block === 'string' 
+          ? JSON.parse(property.units_per_block) : property.units_per_block;
+      }
+    } catch (e) {}
+    
     setEditFormData({
       id: property.id,
       name: property.name || '',
-      propertyType: property.property_type || 'residential',
+      propertyType: property.property_type || property.entry_type || 'residential',
+      entryType: property.entry_type || '',
       address: property.address || '',
       city: property.city || '',
       state: property.state || '',
-      zipCode: property.zip_code || '',
+      zipCode: property.zip_code || property.postal_code || '',
+      zone: property.zone_name || property.zone_id || property.zone || '',
+      division: property.division_name || property.division || property.division_id || '',
+      area: property.area || property.area_name || '',
+      isActive: property.is_active !== false && property.status !== 'inactive',
+      sourceTable: property.source_table || 'properties',
+      // Contact information
+      contacts: contacts,
       contactPerson: property.contact_person || '',
       contactPhone: property.contact_phone || '',
       contactEmail: property.contact_email || '',
-      zone: property.zone_name || property.zone_id || '',
-      division: property.division || property.division_id || '',
-      area: property.area || property.area_name || '',
-      isActive: property.is_active !== false,
-      sourceTable: property.source_table || 'properties',
+      // Block Details (for GC/APT)
+      numberOfBlocks: property.number_of_blocks || 1,
+      blockNames: blockNames,
+      unitsPerBlock: unitsPerBlock,
+      // APT specific
+      blockInfo: property.block_info || '',
+      blockNA: property.block_na || false,
+      numberOfUnits: property.number_of_units || '',
+      // Villa/Plot/Flat specific
+      villaPlotNumber: property.villa_plot_number || '',
+      flatBlockInfo: property.flat_block_info || '',
+      flatBlockNA: property.flat_block_na || false,
+      plotNA: property.plot_na || false,
+      // Location
+      latitude: property.latitude || property.map_lat || '',
+      longitude: property.longitude || property.map_lng || '',
+      landmark: property.landmark || '',
+      // Watchman Info
       watchmanName: property.watchman_name || '',
-      watchmanContact: property.watchman_contact || ''
+      watchmanContact: property.watchman_contact?.replace(/^\+91\s?/, '') || '',
+      // Notes
+      notes: property.notes || ''
     });
     // Use URL-based modal
     openEditModalUrl(property);
   };
+  
+  // Helper functions for edit form contacts
+  const addEditContact = () => {
+    setEditFormData(prev => ({
+      ...prev,
+      contacts: [...(prev.contacts || []), { name: '', email: '', phone: '', countryCode: '+91' }]
+    }));
+  };
+
+  const removeEditContact = (index) => {
+    if (editFormData.contacts?.length > 1) {
+      setEditFormData(prev => ({
+        ...prev,
+        contacts: prev.contacts.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const updateEditContact = (index, field, value) => {
+    setEditFormData(prev => ({
+      ...prev,
+      contacts: prev.contacts.map((contact, i) => 
+        i === index ? { ...contact, [field]: value } : contact
+      )
+    }));
+  };
+  
+  // Helper functions for edit form block details
+  const updateEditBlockName = (blockNum, name) => {
+    setEditFormData(prev => ({
+      ...prev,
+      blockNames: { ...prev.blockNames, [blockNum]: name }
+    }));
+  };
+
+  const updateEditUnitsPerBlock = (blockNum, units) => {
+    setEditFormData(prev => ({
+      ...prev,
+      unitsPerBlock: { ...prev.unitsPerBlock, [blockNum]: parseInt(units) || 0 }
+    }));
+  };
 
   const handleSaveEdit = async () => {
     try {
+      // Build contact info from first contact or use direct fields
+      const primaryContact = editFormData.contacts?.[0] || {};
+      const contactPerson = primaryContact.name || editFormData.contactPerson || '';
+      const contactPhone = primaryContact.phone ? `${primaryContact.countryCode || '+91'}${primaryContact.phone}` : editFormData.contactPhone || '';
+      const contactEmail = primaryContact.email || editFormData.contactEmail || '';
+      
       const response = await fetch(`/api/fp/properties/${editFormData.id}`, {
         method: 'PUT',
         headers: {
@@ -330,16 +499,37 @@ const FPProperties = ({ user }) => {
           city: editFormData.city,
           state: editFormData.state,
           zipCode: editFormData.zipCode,
-          contactPerson: editFormData.contactPerson,
-          contactPhone: editFormData.contactPhone,
-          contactEmail: editFormData.contactEmail,
+          contactPerson: contactPerson,
+          contactPhone: contactPhone,
+          contactEmail: contactEmail,
           zoneId: editFormData.zone,
           divisionId: editFormData.division,
           areaName: editFormData.area,
           isActive: editFormData.isActive,
           sourceTable: editFormData.sourceTable,
+          // Additional fields
+          notes: editFormData.notes,
+          landmark: editFormData.landmark,
+          latitude: editFormData.latitude || null,
+          longitude: editFormData.longitude || null,
+          // Block details
+          numberOfBlocks: editFormData.numberOfBlocks,
+          blockNames: editFormData.blockNames,
+          unitsPerBlock: editFormData.unitsPerBlock,
+          // APT specific
+          blockInfo: editFormData.blockInfo,
+          blockNA: editFormData.blockNA,
+          numberOfUnits: editFormData.numberOfUnits,
+          // Villa/Plot/Flat
+          villaPlotNumber: editFormData.villaPlotNumber,
+          flatBlockInfo: editFormData.flatBlockInfo,
+          flatBlockNA: editFormData.flatBlockNA,
+          plotNA: editFormData.plotNA,
+          // Watchman
           watchmanName: editFormData.watchmanName,
-          watchmanContact: editFormData.watchmanContact
+          watchmanContact: editFormData.watchmanContact ? `+91${editFormData.watchmanContact.replace(/^\+91\s?/, '')}` : '',
+          // Multiple contacts as JSON
+          associationContacts: editFormData.contacts
         })
       });
 
@@ -1108,6 +1298,16 @@ const FPProperties = ({ user }) => {
                 </div>
               )}
 
+              {/* Additional Notes */}
+              {selectedProperty.notes && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Additional Notes</h3>
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedProperty.notes}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Estimates Section */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
@@ -1213,112 +1413,254 @@ const FPProperties = ({ user }) => {
         </div>
       )}
 
-      {/* Edit Property Modal */}
+      {/* Edit Property Modal - Comprehensive */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900">Edit Property</h2>
-              <button onClick={closeEditModal} className="p-2 hover:bg-gray-100 rounded-lg">
+          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Edit Property</h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {editFormData.propertyType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Property'}
+                </p>
+              </div>
+              <button onClick={closeEditModal} className="p-2 hover:bg-gray-200 rounded-lg">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Name *</label>
-                  <input type="text" value={editFormData.name || ''} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                  <input type="text" value={editFormData.zone || ''} onChange={(e) => setEditFormData({ ...editFormData, zone: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Area</label>
-                  <input type="text" value={editFormData.area || ''} onChange={(e) => setEditFormData({ ...editFormData, area: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Division</label>
-                  <input type="text" value={editFormData.division || ''} onChange={(e) => setEditFormData({ ...editFormData, division: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
-                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
-                    {editFormData.propertyType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}
+            
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              {/* Property Information */}
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Property/Community Name *</label>
+                    <input type="text" value={editFormData.name || ''} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                    <input type="text" value={editFormData.zone || ''} onChange={(e) => setEditFormData({ ...editFormData, zone: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Area Name</label>
+                    <input type="text" value={editFormData.area || ''} onChange={(e) => setEditFormData({ ...editFormData, area: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Division</label>
+                    <input type="text" value={editFormData.division || ''} onChange={(e) => setEditFormData({ ...editFormData, division: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
+                    <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                      {editFormData.propertyType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}
+                    </div>
                   </div>
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                  <textarea value={editFormData.address || ''} onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" rows={2} />
+              </div>
+
+              {/* Contact Information - Multiple Contacts */}
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-semibold text-gray-900">Contact Information</h3>
+                  <button type="button" onClick={addEditContact} className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium">
+                    <Plus className="w-4 h-4" /> Add Contact
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                  <input type="text" value={editFormData.city || ''} onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                  <input type="text" value={editFormData.state || ''} onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                  <input type="text" value={editFormData.zipCode || ''} onChange={(e) => setEditFormData({ ...editFormData, zipCode: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-                  <input type="text" value={editFormData.contactPerson || ''} onChange={(e) => setEditFormData({ ...editFormData, contactPerson: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
-                  <input type="tel" value={editFormData.contactPhone || ''} onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
-                  <input type="email" value={editFormData.contactEmail || ''} onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                <div className="space-y-4">
+                  {(editFormData.contacts || []).map((contact, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-4 relative">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-medium text-blue-600">{index + 1}</span>
+                        </div>
+                        <span className="text-sm text-gray-600">Contact {index + 1}</span>
+                        {editFormData.contacts.length > 1 && (
+                          <button type="button" onClick={() => removeEditContact(index)} className="ml-auto p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Name *</label>
+                          <input type="text" value={contact.name || ''} onChange={(e) => updateEditContact(index, 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="Contact name" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Email *</label>
+                          <input type="email" value={contact.email || ''} onChange={(e) => updateEditContact(index, 'email', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="email@example.com" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Phone *</label>
+                          <div className="flex gap-1">
+                            <div className="w-12 flex-shrink-0 px-2 py-2 border border-gray-200 rounded-lg text-xs bg-gray-100 text-gray-600 flex items-center justify-center">+91</div>
+                            <input type="tel" inputMode="numeric" maxLength={10} value={contact.phone || ''} onChange={(e) => updateEditContact(index, 'phone', e.target.value.replace(/\D/g, '').slice(0, 10))} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="10-digit" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              
-              {/* Watchman Fields - Only for GC and APT */}
-              {(editFormData.propertyType === 'gated_community' || editFormData.propertyType === 'apartment') && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3">Watchman Information</h3>
+
+              {/* Watchman Information - Only for GC and APT */}
+              {(['gated_community', 'apartment', 'GC', 'APT', 'Gated Community', 'Apartment'].some(t => 
+                editFormData.propertyType?.toLowerCase().includes(t.toLowerCase()) || 
+                editFormData.entryType?.toLowerCase().includes(t.toLowerCase())
+              )) && (
+                <div className="pt-4 border-t border-gray-200">
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Watchman Information <span className="text-gray-400 text-sm font-normal">(Optional)</span></h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Watchman Name</label>
-                      <input 
-                        type="text" 
-                        value={editFormData.watchmanName || ''} 
-                        onChange={(e) => setEditFormData({ ...editFormData, watchmanName: e.target.value })} 
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
-                        placeholder="Enter watchman name"
-                      />
+                      <input type="text" value={editFormData.watchmanName || ''} onChange={(e) => setEditFormData({ ...editFormData, watchmanName: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter watchman name" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Watchman Contact</label>
                       <div className="flex gap-2">
-                        <div className="w-14 flex-shrink-0 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-600 flex items-center justify-center">
-                          +91
-                        </div>
-                        <input 
-                          type="tel" 
-                          inputMode="numeric"
-                          maxLength={10}
-                          value={editFormData.watchmanContact || ''} 
-                          onChange={(e) => {
-                            const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
-                            setEditFormData({ ...editFormData, watchmanContact: digits });
-                          }} 
-                          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
-                          placeholder="10-digit number"
-                        />
+                        <div className="w-14 flex-shrink-0 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-600 flex items-center justify-center">+91</div>
+                        <input type="tel" inputMode="numeric" maxLength={10} value={editFormData.watchmanContact || ''} onChange={(e) => setEditFormData({ ...editFormData, watchmanContact: e.target.value.replace(/\D/g, '').slice(0, 10) })} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="10-digit number" />
                       </div>
                     </div>
                   </div>
                 </div>
               )}
+
+              {/* Block Details - Only for GC */}
+              {(['gated_community', 'GC', 'Gated Community'].some(t => 
+                editFormData.propertyType?.toLowerCase().includes(t.toLowerCase()) || 
+                editFormData.entryType === 'GC'
+              )) && (
+                <div className="pt-4 border-t border-gray-200">
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Number of Blocks</label>
+                    <input type="number" min="1" max="50" value={editFormData.numberOfBlocks || 1} onChange={(e) => setEditFormData({ ...editFormData, numberOfBlocks: parseInt(e.target.value) || 1 })} className="w-32 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  {editFormData.numberOfBlocks > 0 && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {Array.from({ length: editFormData.numberOfBlocks }, (_, i) => i + 1).map(blockNum => (
+                        <div key={blockNum} className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="block text-xs text-gray-500 mb-1">Block {blockNum} Name</label>
+                            <input type="text" value={editFormData.blockNames?.[blockNum] || `Block ${blockNum}`} onChange={(e) => updateEditBlockName(blockNum, e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                          </div>
+                          <div className="w-24">
+                            <label className="block text-xs text-gray-500 mb-1">Units</label>
+                            <input type="number" min="0" value={editFormData.unitsPerBlock?.[blockNum] || ''} onChange={(e) => updateEditUnitsPerBlock(blockNum, e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="0" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Apartment Specific */}
+              {(['apartment', 'APT', 'Apartment'].some(t => 
+                editFormData.propertyType?.toLowerCase().includes(t.toLowerCase()) || 
+                editFormData.entryType === 'APT'
+              )) && (
+                <div className="pt-4 border-t border-gray-200">
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Block Information</label>
+                      <div className="flex items-center gap-3">
+                        <input type="text" value={editFormData.blockInfo || ''} disabled={editFormData.blockNA} onChange={(e) => setEditFormData({ ...editFormData, blockInfo: e.target.value })} className={`flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 ${editFormData.blockNA ? 'bg-gray-100' : ''}`} placeholder="Enter block info" />
+                        <label className="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap">
+                          <input type="checkbox" checked={editFormData.blockNA || false} onChange={(e) => setEditFormData({ ...editFormData, blockNA: e.target.checked, blockInfo: e.target.checked ? '' : editFormData.blockInfo })} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                          N/A
+                        </label>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Number of Units</label>
+                      <input type="number" min="1" value={editFormData.numberOfUnits || ''} onChange={(e) => setEditFormData({ ...editFormData, numberOfUnits: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Total units" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Villa/Flat/Plot Specific */}
+              {(['villa', 'flat', 'plot', 'VILLA', 'FLAT', 'PLOT'].some(t => 
+                editFormData.propertyType?.toLowerCase().includes(t.toLowerCase()) || 
+                ['VILLA', 'FLAT', 'PLOT'].includes(editFormData.entryType)
+              )) && (
+                <div className="pt-4 border-t border-gray-200">
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">
+                    {editFormData.entryType === 'VILLA' || editFormData.propertyType?.toLowerCase().includes('villa') ? 'Villa' : 
+                     editFormData.entryType === 'FLAT' || editFormData.propertyType?.toLowerCase().includes('flat') ? 'Flat' : 'Plot'} Details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {editFormData.entryType === 'VILLA' || editFormData.propertyType?.toLowerCase().includes('villa') ? 'Villa Number' : 
+                         editFormData.entryType === 'FLAT' || editFormData.propertyType?.toLowerCase().includes('flat') ? 'Flat Number' : 'Plot Number'}
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input type="text" value={editFormData.villaPlotNumber || ''} disabled={editFormData.plotNA} onChange={(e) => setEditFormData({ ...editFormData, villaPlotNumber: e.target.value })} className={`flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 ${editFormData.plotNA ? 'bg-gray-100' : ''}`} />
+                        {(editFormData.entryType === 'PLOT' || editFormData.propertyType?.toLowerCase().includes('plot')) && (
+                          <label className="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap">
+                            <input type="checkbox" checked={editFormData.plotNA || false} onChange={(e) => setEditFormData({ ...editFormData, plotNA: e.target.checked })} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            N/A
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                    {(editFormData.entryType === 'FLAT' || editFormData.propertyType?.toLowerCase().includes('flat')) && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Block Information</label>
+                        <div className="flex items-center gap-3">
+                          <input type="text" value={editFormData.flatBlockInfo || ''} disabled={editFormData.flatBlockNA} onChange={(e) => setEditFormData({ ...editFormData, flatBlockInfo: e.target.value })} className={`flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 ${editFormData.flatBlockNA ? 'bg-gray-100' : ''}`} />
+                          <label className="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap">
+                            <input type="checkbox" checked={editFormData.flatBlockNA || false} onChange={(e) => setEditFormData({ ...editFormData, flatBlockNA: e.target.checked })} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            N/A
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Address */}
+              <div className="pt-4 border-t border-gray-200">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Address</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                    <textarea value={editFormData.address || ''} onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" rows={2} placeholder="Enter street address" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                    <input type="text" value={editFormData.city || ''} onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                    <input type="text" value={editFormData.state || ''} onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">ZIP/Postal Code</label>
+                    <input type="text" value={editFormData.zipCode || ''} onChange={(e) => setEditFormData({ ...editFormData, zipCode: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Landmark</label>
+                    <input type="text" value={editFormData.landmark || ''} onChange={(e) => setEditFormData({ ...editFormData, landmark: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Near landmark" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Notes */}
+              <div className="pt-4 border-t border-gray-200">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Additional Notes <span className="text-gray-400 text-sm font-normal">(Optional)</span></h3>
+                <textarea value={editFormData.notes || ''} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" rows={3} placeholder="Enter any additional notes or comments..." />
+              </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-              <button onClick={closeEditModal} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
-              <button onClick={handleSaveEdit} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><Save className="w-4 h-4" />Save Changes</button>
+            
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+              <button onClick={closeEditModal} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button onClick={handleSaveEdit} className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><Save className="w-4 h-4" />Save Changes</button>
             </div>
           </div>
         </div>
