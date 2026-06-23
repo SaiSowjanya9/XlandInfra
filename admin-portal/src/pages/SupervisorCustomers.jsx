@@ -173,7 +173,12 @@ const SupervisorCustomers = ({ user, defaultTab = 'list' }) => {
       setSelectedCategory(null);
       setSelectedEntryType(null);
       setActiveView('add');
-    } else if (urlStep === 'list' || !urlStep) {
+    } else if (urlStep === 'list') {
+      setSelectedCategory(null);
+      setSelectedEntryType(null);
+      setActiveView('list');
+    } else if (!urlStep && defaultTab !== 'add') {
+      // Only default to list if defaultTab is not 'add'
       setSelectedCategory(null);
       setSelectedEntryType(null);
       setActiveView('list');
