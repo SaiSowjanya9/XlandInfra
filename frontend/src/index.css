@@ -2,8 +2,32 @@
 
 /* Cross-platform font normalization - ensures consistent rendering on Mac/iOS/Windows */
 @font-face {
-  font-family: 'Gotham Light';
-  src: local('Gotham Light'), local('GothamLight'), local('Gotham-Light');
+  font-family: 'Gotham';
+  src: local('Gotham'), local('Gotham Book'), local('Gotham-Book'), local('GothamBook');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gotham';
+  src: local('Gotham Medium'), local('Gotham-Medium'), local('GothamMedium');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gotham';
+  src: local('Gotham Bold'), local('Gotham-Bold'), local('GothamBold');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gotham';
+  src: local('Gotham Light'), local('Gotham-Light'), local('GothamLight');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
@@ -79,28 +103,28 @@ body {
   font-weight: 400;
 }
 
-/* Premium Display Font - Using Montserrat (Gotham-style) for headlines */
+/* Premium Display Font - Using Gotham for headlines */
 .font-display {
-  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-/* Gotham-style font class */
-.font-gotham {
-  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Gotham', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 500;
   letter-spacing: -0.01em;
 }
 
+/* Gotham font classes */
+.font-gotham {
+  font-family: 'Gotham', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
 .font-gotham-medium {
-  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Gotham', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 500;
   letter-spacing: -0.01em;
 }
 
 .font-gotham-bold {
-  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Gotham', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -506,9 +530,9 @@ body {
 
 /* Typography - Cross-platform consistent */
 .section-title {
-  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Gotham', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 2.25rem;
-  font-weight: 600;
+  font-weight: 500;
   color: white;
   letter-spacing: -0.02em;
 }
@@ -965,9 +989,9 @@ img {
     font-weight: 700;
   }
   
-  /* Ensure headings use Montserrat (Gotham-style) */
+  /* Ensure headings use Gotham */
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Gotham', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     font-synthesis: none;
     letter-spacing: -0.01em;
@@ -975,7 +999,7 @@ img {
   
   /* Section titles */
   .section-title, .font-display {
-    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Gotham', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     letter-spacing: -0.02em;
   }

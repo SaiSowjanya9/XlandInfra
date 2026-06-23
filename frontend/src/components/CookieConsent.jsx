@@ -67,17 +67,16 @@ const CookieConsent = () => {
 
   return (
     <>
-      {/* Backdrop - separate fixed layer */}
+      {/* Backdrop */}
       <div className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm" />
       
-      {/* Cookie Banner Container */}
-      <div className="fixed inset-x-0 bottom-0 z-[9999] flex justify-center p-4 pb-6">
-        {/* Cookie Banner */}
-        <div className="w-full max-w-2xl bg-gradient-to-br from-charcoal-900 to-[#0a0a0a] border border-charcoal-700/50 rounded-2xl shadow-2xl shadow-black/50 transform transition-all duration-500 animate-[fadeSlideIn_0.5s_ease-out_forwards]">
-        {/* Gold accent line */}
-        <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-gold-500/50 to-transparent" />
-        
-        <div className="p-6">
+      {/* Cookie Banner */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] w-full max-w-2xl mx-4 px-4">
+        <div className="relative bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] border border-[#333] rounded-2xl shadow-2xl">
+          {/* Gold accent line */}
+          <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent" />
+          
+          <div className="p-6">
           {!showPreferences ? (
             <>
               {/* Main Content */}
@@ -183,9 +182,9 @@ const CookieConsent = () => {
               </div>
             </>
           )}
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 };
