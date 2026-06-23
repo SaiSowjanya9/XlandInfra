@@ -1,7 +1,7 @@
 # Customer Portal - Project Documentation
 
-> **Last Updated:** June 16, 2026 at 11:30 AM (UTC-05:00)
-> **Version:** 3.2.0
+> **Last Updated:** June 23, 2026 at 2:30 PM (UTC-05:00)
+> **Version:** 3.3.0
 > **Status:** In Development
 
 ---
@@ -1323,6 +1323,93 @@ npm run dev
 ---
 
 ## 14. Change Log
+
+### Version 3.3.0 (June 23, 2026)
+
+#### Unit Type Fields for GC and Apartments
+
+**1. Block Details Enhancement**
+- Added unit type breakdown fields: Studio, 1 Bed, 2 Bed, 3 Bed, 4 Bed
+- Implemented for both Gated Community (GC) and Apartment (APT) property types
+- Total Units auto-calculated from sum of unit type counts
+- Leading zero issue fixed for unit type inputs
+
+**2. All Portals Updated**
+- FP Portal: Add Customer form, Edit modal, View modal
+- Manager Portal: View modal with unit types
+- Coordinator Portal: View modal with unit types
+- Supervisor Portal: View modal with unit types
+- Executive Portal: View modal with unit types
+- Super Admin Portal: Comprehensive edit modal with contacts, block details, unit types
+
+**Database Migration:**
+- Added `block_unit_types` column to `onboarded_properties` table
+- JSON storage for unit type breakdown per block
+
+---
+
+#### Property View/Edit Modal Improvements
+
+**1. Multiple Contacts Support**
+- Contact 1 and Contact 2 labels with proper spacing
+- Always show Contact Information section
+- Contact field fallbacks for various data formats
+
+**2. Block Details for GC**
+- Block Name, Number of Units displayed per block
+- Unit type breakdown (Studio, 1-4 Bed) per block
+- Total Units calculation from all blocks
+
+**3. Watchman Information**
+- Watchman Name and Phone fields
+- Displayed based on property type
+- Added to properties table view
+
+**4. Entry Type Display**
+- Case-insensitive entry type checks
+- Added to modal display
+
+---
+
+#### Navigation & UX Fixes
+
+**1. Browser Back/Forward Navigation**
+- URL-based step management for Create Customer
+- Initial URL history entry on page load
+- Fixed for all Customer pages
+
+**2. Logout Redirect Fixes**
+- Immediate redirect before state changes
+- All portals now redirect to employee login
+- Fixed logout flash issue
+
+**3. Add Customer Flow**
+- After creating customer, redirect to category selection page
+- Fixed double-click showing customer list issue
+- Keep category selection for defaultTab=add
+
+**4. Safari/Mac UI Compatibility**
+- Solid color buttons with increased opacity
+- Background fallbacks for Safari
+
+---
+
+#### Authentication & Zone Fixes
+
+**1. Auth Token Fixes**
+- Added auth token to propertyStore API calls
+- Fixed 401 error on property operations
+
+**2. Zone Filtering**
+- Reverted zone filter changes - enforce zone-based access control
+- Added detailed logging for coordinator zone lookup
+- Skip zone auto-save for admin users
+- Added residents table migration
+
+**3. FP ID Safety**
+- Added safety check for fpId in zone creation
+
+---
 
 ### Version 3.2.0 (June 16, 2026)
 
