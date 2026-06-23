@@ -118,24 +118,10 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
         } ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64`}
       >
         <div className="flex flex-col h-full">
-          {/* Logo Header with Role Badge */}
-          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} px-3 h-24 border-b border-slate-700/50`}>
-            {!sidebarCollapsed ? (
-              <div className="flex items-center gap-3">
-                <img src="/logo.png" alt="XLAND INFRA" className="h-16 w-auto object-contain" />
-                <div className="flex flex-col">
-                  <span className="text-base font-semibold text-white">
-                    {admin?.firstName} {admin?.lastName}
-                  </span>
-                  <span className="text-sm text-amber-400 font-medium">
-                    Supervisor
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <img src="/logo.png" alt="XLAND INFRA" className="h-12 w-auto object-contain" />
-            )}
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-xl hover:bg-slate-700 transition-colors">
+          {/* Logo Header */}
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-start'} px-3 h-24 border-b border-slate-700/50`}>
+            <img src="/logo.png" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-12' : 'h-16'} w-auto object-contain`} />
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden ml-auto p-2 rounded-xl hover:bg-slate-700 transition-colors">
               <X className="w-5 h-5 text-slate-400" />
             </button>
           </div>
@@ -230,16 +216,20 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
             </div>
           </nav>
 
-          {/* Collapse Toggle Button */}
-          <div className="hidden lg:block px-3 py-2 border-t border-slate-700/50">
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700 transition-all duration-300"
-              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-              {!sidebarCollapsed && <span className="text-sm">Collapse</span>}
-            </button>
+          {/* User Info */}
+          <div className="px-3 py-3 border-t border-slate-700/50">
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+              {!sidebarCollapsed && (
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-white">
+                    {admin?.firstName} {admin?.lastName}
+                  </span>
+                  <span className="text-xs text-amber-400 font-medium">
+                    Supervisor
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Logout Button at Bottom */}
@@ -256,6 +246,17 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
           </div>
         </div>
       </aside>
+
+      {/* Collapse Toggle Button - Outside Sidebar */}
+      <button
+        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+        className={`hidden lg:flex fixed top-1/2 -translate-y-1/2 z-50 items-center justify-center w-6 h-12 bg-slate-700 hover:bg-slate-600 text-slate-400 hover:text-white rounded-r-lg border border-l-0 border-slate-600 transition-all duration-300 shadow-md ${
+          sidebarCollapsed ? 'left-20' : 'left-64'
+        }`}
+        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+      </button>
 
       {/* Main Content */}
       <main className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} min-h-screen transition-all duration-300`}>
