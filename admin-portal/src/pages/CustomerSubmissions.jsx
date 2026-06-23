@@ -195,6 +195,13 @@ const CustomerSubmissions = () => {
     setNotifications(getNotifications());
   }, [selectedFp, token]);
 
+  // Auto-select "Admin (All FPs)" if no FP is selected
+  useEffect(() => {
+    if (!selectedFp && !fpLoading) {
+      selectFp({ id: 'all', fpId: 'ADMIN', companyName: 'All Franchise Partners', displayName: 'Admin (All FPs)' });
+    }
+  }, [selectedFp, fpLoading, selectFp]);
+
   // Auto-select residential category when FP is selected (for seamless FP switching)
   useEffect(() => {
     if (selectedFp && !selectedCategory) {

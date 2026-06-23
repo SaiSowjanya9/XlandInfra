@@ -113,6 +113,14 @@ const EmployeeWorkOrders = ({ admin }) => {
   // Check if user is Operations Manager (view-only access)
   const currentUser = JSON.parse(sessionStorage.getItem('pm_current_user') || '{}');
   const isOpsManager = currentUser?.role === 'operations_manager';
+  const { loading: fpLoading } = useFP();
+
+  // Auto-select "Admin (All FPs)" if no FP is selected
+  useEffect(() => {
+    if (!selectedFp && !fpLoading) {
+      selectFp({ id: 'all', fpId: 'ADMIN', companyName: 'All Franchise Partners', displayName: 'Admin (All FPs)' });
+    }
+  }, [selectedFp, fpLoading, selectFp]);
 
   useEffect(() => {
     if (selectedFp) {
