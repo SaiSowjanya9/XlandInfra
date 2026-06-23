@@ -754,7 +754,10 @@ const SupervisorProperties = ({ user }) => {
               </div>
 
               {/* Gated Community Block Details */}
-              {(selectedProperty.property_type === 'gated_community' || selectedProperty.property_type === 'GC') && (
+              {(['gated_community', 'GC', 'Gated Community'].some(t => 
+                selectedProperty.property_type?.toLowerCase() === t.toLowerCase() || 
+                selectedProperty.entry_type === 'GC'
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
                   <div className="mb-4">
@@ -765,22 +768,37 @@ const SupervisorProperties = ({ user }) => {
                     try {
                       const blockNames = typeof selectedProperty.block_names === 'string' ? JSON.parse(selectedProperty.block_names) : selectedProperty.block_names || {};
                       const unitsPerBlock = typeof selectedProperty.units_per_block === 'string' ? JSON.parse(selectedProperty.units_per_block) : selectedProperty.units_per_block || {};
+                      const blockUnitTypes = typeof selectedProperty.block_unit_types === 'string' ? JSON.parse(selectedProperty.block_unit_types) : selectedProperty.block_unit_types || {};
                       const numBlocks = selectedProperty.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
                       if (Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0) {
                         return (
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
-                              <React.Fragment key={blockNum}>
-                                <div className="p-3 bg-gray-50 rounded-lg">
-                                  <p className="text-xs text-gray-500 mb-1">Block Name</p>
-                                  <p className="text-sm font-medium text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</p>
+                          <div className="space-y-4">
+                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
+                              const unitTypes = blockUnitTypes[blockNum] || {};
+                              return (
+                                <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                  <div className="flex gap-4 mb-3">
+                                    <div>
+                                      <p className="text-xs text-gray-500 mb-1">Block Name</p>
+                                      <p className="text-sm font-medium text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                                      <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || 0}</p>
+                                    </div>
+                                  </div>
+                                  {Object.keys(unitTypes).length > 0 && (
+                                    <div className="grid grid-cols-5 gap-2 pt-2 border-t border-gray-200">
+                                      <div><p className="text-xs text-gray-500">Studio</p><p className="text-sm font-medium">{unitTypes.studio || 0}</p></div>
+                                      <div><p className="text-xs text-gray-500">1 Bed</p><p className="text-sm font-medium">{unitTypes.oneBed || 0}</p></div>
+                                      <div><p className="text-xs text-gray-500">2 Bed</p><p className="text-sm font-medium">{unitTypes.twoBed || 0}</p></div>
+                                      <div><p className="text-xs text-gray-500">3 Bed</p><p className="text-sm font-medium">{unitTypes.threeBed || 0}</p></div>
+                                      <div><p className="text-xs text-gray-500">4 Bed</p><p className="text-sm font-medium">{unitTypes.fourBed || 0}</p></div>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="p-3 bg-gray-50 rounded-lg">
-                                  <p className="text-xs text-gray-500 mb-1">Units</p>
-                                  <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || 0}</p>
-                                </div>
-                              </React.Fragment>
-                            ))}
+                              );
+                            })}
                           </div>
                         );
                       }
@@ -791,10 +809,13 @@ const SupervisorProperties = ({ user }) => {
               )}
 
               {/* Apartment Details */}
-              {(selectedProperty.property_type === 'apartment' || selectedProperty.property_type === 'APT') && (
+              {(['apartment', 'APT', 'Apartment'].some(t => 
+                selectedProperty.property_type?.toLowerCase() === t.toLowerCase() || 
+                selectedProperty.entry_type === 'APT'
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Block Information</p>
                       <p className="text-sm font-medium text-gray-900">{selectedProperty.block_na ? 'N/A' : (selectedProperty.block_info || '-')}</p>
@@ -804,6 +825,27 @@ const SupervisorProperties = ({ user }) => {
                       <p className="text-sm font-medium text-gray-900">{selectedProperty.number_of_units || '-'}</p>
                     </div>
                   </div>
+                  {(() => {
+                    try {
+                      const blockUnitTypes = typeof selectedProperty.block_unit_types === 'string' ? JSON.parse(selectedProperty.block_unit_types) : selectedProperty.block_unit_types || {};
+                      const unitTypes = blockUnitTypes['apt'] || {};
+                      if (Object.keys(unitTypes).length > 0 && Object.values(unitTypes).some(v => v > 0)) {
+                        return (
+                          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <p className="text-xs text-gray-500 mb-2 font-medium">Unit Types</p>
+                            <div className="grid grid-cols-5 gap-2">
+                              <div><p className="text-xs text-gray-500">Studio</p><p className="text-sm font-medium">{unitTypes.studio || 0}</p></div>
+                              <div><p className="text-xs text-gray-500">1 Bed</p><p className="text-sm font-medium">{unitTypes.oneBed || 0}</p></div>
+                              <div><p className="text-xs text-gray-500">2 Bed</p><p className="text-sm font-medium">{unitTypes.twoBed || 0}</p></div>
+                              <div><p className="text-xs text-gray-500">3 Bed</p><p className="text-sm font-medium">{unitTypes.threeBed || 0}</p></div>
+                              <div><p className="text-xs text-gray-500">4 Bed</p><p className="text-sm font-medium">{unitTypes.fourBed || 0}</p></div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    } catch { return null; }
+                  })()}
                 </div>
               )}
 
