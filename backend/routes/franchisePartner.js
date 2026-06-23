@@ -557,6 +557,7 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
 
     for (const [key, value] of Object.entries(updates)) {
       if (key === 'sourceTable' || key === 'source_table') continue;
+      if (value === undefined) continue; // Skip undefined values
       
       // Convert camelCase to snake_case
       let dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
@@ -575,9 +576,21 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
         finalValue = value ? 'active' : 'inactive';
       }
       
+      // Handle boolean fields - convert to 0/1 for MySQL
+      if (typeof finalValue === 'boolean') {
+        finalValue = finalValue ? 1 : 0;
+      }
+      
       // Handle JSON fields - serialize if needed
       if (jsonFields.includes(dbKey) && typeof finalValue === 'object' && finalValue !== null) {
         finalValue = JSON.stringify(finalValue);
+      }
+      
+      // Handle null values for optional fields
+      if (finalValue === null || finalValue === '') {
+        if (['latitude', 'longitude', 'number_of_units', 'number_of_blocks'].includes(dbKey)) {
+          finalValue = null;
+        }
       }
       
       if (allowedFields.includes(dbKey)) {
@@ -595,20 +608,22 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
 
     values.push(id, req.fpId);
 
-    await pool.execute(
-      `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE id = ? AND franchise_partner_id = ?`,
-      values
-    );
+    const sql = `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE id = ? AND franchise_partner_id = ?`;
+    console.log('📋 [FP] Update property SQL:', sql);
+    console.log('📋 [FP] Update property values:', values);
+    
+    await pool.execute(sql, values);
 
     res.json({
       success: true,
       message: 'Property updated successfully'
     });
   } catch (error) {
-    console.error('Update property error:', error);
+    console.error('❌ [FP] Update property error:', error);
+    console.error('❌ [FP] Error details:', error.message, error.sql || '');
     res.status(500).json({
       success: false,
-      message: 'Failed to update property',
+      message: 'Failed to update property: ' + error.message,
       error: error.message
     });
   }
