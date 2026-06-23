@@ -489,15 +489,27 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
       }
     }
 
-    // Define allowed fields for each table
+    // Define allowed fields for each table - expanded to include all editable fields
     const allowedFieldsMap = {
       properties: [
         'name', 'property_type', 'address', 'city', 'state', 'zip_code',
-        'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active'
+        'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active',
+        // Additional fields for full edit support
+        'notes', 'landmark', 'latitude', 'longitude',
+        'number_of_blocks', 'block_names', 'units_per_block', 
+        'number_of_units', 'villa_plot_number', 'block_info', 'block_na',
+        'flat_block_info', 'flat_block_na', 'plot_na',
+        'watchman_name', 'watchman_contact', 'association_contacts', 'total_units'
       ],
       onboarded_properties: [
         'community_name', 'property_type', 'address', 'city', 'state', 'postal_code',
-        'zone', 'division', 'area_name', 'status', 'number_of_units', 'total_units'
+        'zone', 'division', 'area_name', 'status', 'number_of_units', 'total_units',
+        // Additional fields for full edit support
+        'notes', 'landmark', 'map_lat', 'map_lng', 'map_address',
+        'number_of_blocks', 'block_names', 'units_per_block',
+        'villa_plot_number', 'block_info', 'block_na',
+        'flat_block_info', 'flat_block_na', 'plot_na',
+        'watchman_name', 'watchman_contact', 'association_contacts'
       ]
     };
 
@@ -511,8 +523,33 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
       divisionId: tableName === 'onboarded_properties' ? 'division' : 'division_id',
       division_id: tableName === 'onboarded_properties' ? 'division' : 'division_id',
       isActive: 'status',
-      is_active: 'status'
+      is_active: 'status',
+      // Latitude/longitude mapping for onboarded_properties
+      latitude: tableName === 'onboarded_properties' ? 'map_lat' : 'latitude',
+      longitude: tableName === 'onboarded_properties' ? 'map_lng' : 'longitude',
+      // Consistent field mappings
+      numberOfBlocks: 'number_of_blocks',
+      blockNames: 'block_names',
+      unitsPerBlock: 'units_per_block',
+      numberOfUnits: 'number_of_units',
+      villaPlotNumber: 'villa_plot_number',
+      blockInfo: 'block_info',
+      blockNA: 'block_na',
+      flatBlockInfo: 'flat_block_info',
+      flatBlockNA: 'flat_block_na',
+      plotNA: 'plot_na',
+      watchmanName: 'watchman_name',
+      watchmanContact: 'watchman_contact',
+      associationContacts: 'association_contacts',
+      totalUnits: 'total_units',
+      areaName: 'area_name',
+      contactPerson: 'contact_person',
+      contactPhone: 'contact_phone',
+      contactEmail: 'contact_email'
     };
+
+    // Fields that need JSON serialization
+    const jsonFields = ['block_names', 'units_per_block', 'association_contacts'];
 
     const allowedFields = allowedFieldsMap[tableName];
     const setClauses = [];
@@ -536,6 +573,11 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
       if (tableName === 'onboarded_properties' && (key === 'isActive' || key === 'is_active')) {
         dbKey = 'status';
         finalValue = value ? 'active' : 'inactive';
+      }
+      
+      // Handle JSON fields - serialize if needed
+      if (jsonFields.includes(dbKey) && typeof finalValue === 'object' && finalValue !== null) {
+        finalValue = JSON.stringify(finalValue);
       }
       
       if (allowedFields.includes(dbKey)) {
@@ -1283,6 +1325,9 @@ router.post('/customers', requireFPScope, async (req, res) => {
       const contactEmail = contact.email || '';
       const contactPhone = contact.phone || '';
       const contactCountryCode = contact.countryCode || '+91';
+      
+      // Extract watchman info from request body
+      const { watchmanName, watchmanContact } = req.body;
 
       // Create property first (zone_id and division_id store names as VARCHAR)
       const [propertyResult] = await pool.execute(
@@ -1291,8 +1336,9 @@ router.post('/customers', requireFPScope, async (req, res) => {
           contact_person, contact_phone, contact_email, zone_id, division_id,
           franchise_partner_id, created_by, latitude, longitude, landmark, notes,
           entry_type, category, area_name, number_of_blocks, units_per_block,
-          block_names, number_of_units, villa_plot_number, block_info
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          block_names, number_of_units, villa_plot_number, block_info,
+          watchman_name, watchman_contact, association_contacts
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           propertyIdGen, communityName, propertyType || 'residential', address, city, state, postalCode || '',
           contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
@@ -1301,7 +1347,9 @@ router.post('/customers', requireFPScope, async (req, res) => {
           mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
           entryType || null, category || null, areaName || '',
           numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}),
-          JSON.stringify(blockNames || {}), numberOfUnits || null, villaPlotNumber || '', blockInfo || ''
+          JSON.stringify(blockNames || {}), numberOfUnits || null, villaPlotNumber || '', blockInfo || '',
+          watchmanName || null, watchmanContact || null, 
+          associationContacts ? JSON.stringify(associationContacts) : null
         ]
       );
 
