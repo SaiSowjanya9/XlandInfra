@@ -836,7 +836,11 @@ const Properties = () => {
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Property Type</label>
-                        <p className="text-sm text-gray-900">{viewProperty.propertyType || viewProperty.entryType || '-'}</p>
+                        <p className="text-sm text-gray-900">{viewProperty.propertyType || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Entry Type</label>
+                        <p className="text-sm text-gray-900">{viewProperty.entryType || viewProperty.entry_type || '-'}</p>
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Units</label>

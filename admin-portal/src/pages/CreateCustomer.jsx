@@ -345,6 +345,8 @@ const CreateCustomer = ({ admin }) => {
   };
 
   const autoSaveZone = async (zoneName) => {
+    // Skip zone auto-save for admin users (they don't have FP scope)
+    if (currentUser?.role === 'super_admin' || currentUser?.role === 'admin') return;
     if (!zoneName?.trim()) return;
     const exists = zoneSuggestions.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
     if (!exists) {

@@ -68,6 +68,8 @@ router.post('/', authenticate, async (req, res) => {
       watchmanContact
     } = req.body;
 
+    console.log('📝 Onboarding request - entryType:', entryType, 'propertyType:', propertyType, 'numberOfBlocks:', numberOfBlocks);
+
     // Get actual user name from authenticated user
     let creatorName = 'System';
     if (req.user) {
