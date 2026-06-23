@@ -53,8 +53,8 @@ export default {
         }
       },
       fontFamily: {
-        display: ['Montserrat', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
-        gotham: ['Montserrat', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        display: ['Gotham', 'Gotham Book', 'Gotham Medium', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        gotham: ['Gotham', 'Gotham Book', 'Gotham Medium', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
         body: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
       },
