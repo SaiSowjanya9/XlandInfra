@@ -854,28 +854,33 @@ const Properties = () => {
                   </div>
 
                   {/* Gated Community Block Details */}
-                  {(viewProperty.entryType === 'GC' || viewProperty.entryType?.toUpperCase() === 'GC') && (
+                  {(viewProperty.entryType === 'GC' || viewProperty.entryType?.toUpperCase() === 'GC' || 
+                    viewProperty.propertyType?.toLowerCase().includes('gated') || viewProperty.propertyType?.toLowerCase().includes('community')) && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Block Details</h3>
-                      <div className="mb-3">
-                        <label className="block text-xs text-gray-500 mb-1">Number of Blocks</label>
-                        <p className="text-sm text-gray-900">{viewProperty.numberOfBlocks || 1}</p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                        <div className="p-3 bg-blue-50 rounded-lg">
+                          <label className="block text-xs text-gray-500 mb-1">Number of Blocks</label>
+                          <p className="text-sm font-medium text-gray-900">{viewProperty.numberOfBlocks || viewProperty.number_of_blocks || 1}</p>
+                        </div>
+                        <div className="p-3 bg-blue-50 rounded-lg">
+                          <label className="block text-xs text-gray-500 mb-1">Total Units</label>
+                          <p className="text-sm font-medium text-gray-900">{viewProperty.totalUnits || viewProperty.total_units || 0}</p>
+                        </div>
                       </div>
-                      {viewProperty.unitsPerBlock && Object.keys(viewProperty.unitsPerBlock).length > 0 && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {viewProperty.unitsPerBlock && Object.keys(viewProperty.unitsPerBlock).length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           {Object.entries(viewProperty.unitsPerBlock).map(([blockNum, units]) => (
-                            <React.Fragment key={blockNum}>
-                              <div className="p-3 bg-gray-50 rounded-lg">
-                                <label className="block text-xs text-gray-500 mb-1">Block Name</label>
-                                <p className="text-sm text-gray-900">{viewProperty.blockNames?.[blockNum] || `Block ${blockNum}`}</p>
-                              </div>
-                              <div className="p-3 bg-gray-50 rounded-lg">
-                                <label className="block text-xs text-gray-500 mb-1">Units</label>
-                                <p className="text-sm text-gray-900">{units}</p>
-                              </div>
-                            </React.Fragment>
+                            <div key={blockNum} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                              <label className="block text-xs text-gray-500 mb-1">
+                                {viewProperty.blockNames?.[blockNum] || `Block ${blockNum}`}
+                              </label>
+                              <p className="text-sm font-medium text-gray-900">{units} units</p>
+                            </div>
                           ))}
                         </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">Block details not available</p>
                       )}
                     </div>
                   )}
@@ -947,7 +952,7 @@ const Properties = () => {
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Apt/Suite</label>
                         <p className="text-sm text-gray-900">
-                          {viewProperty.aptSuiteNA ? 'N/A' : (viewProperty.aptSuiteUnit || '-')}
+                          {(viewProperty.aptSuiteNA || viewProperty.apt_suite_na) ? 'N/A' : (viewProperty.aptSuiteUnit || viewProperty.apt_suite_unit || '-')}
                         </p>
                       </div>
                       <div>
@@ -1030,22 +1035,25 @@ const Properties = () => {
                   )}
 
                   {/* Watchman Information - Only for GC and APT */}
-                  {(['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((viewProperty.entryType || '').toLowerCase()) || 
-                    ['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((viewProperty.propertyType || '').toLowerCase())) && (
+                  {(viewProperty.entryType === 'GC' || viewProperty.entryType === 'APT' ||
+                    viewProperty.entryType?.toUpperCase() === 'GC' || viewProperty.entryType?.toUpperCase() === 'APT' ||
+                    viewProperty.propertyType?.toLowerCase().includes('gated') || 
+                    viewProperty.propertyType?.toLowerCase().includes('community') ||
+                    viewProperty.propertyType?.toLowerCase().includes('apartment')) && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Watchman Information</h3>
                       <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">Watchman Name</label>
-                            <p className="text-sm font-medium text-gray-900">{viewProperty.watchmanName || viewProperty.watchman_name || 'N/A'}</p>
+                            <p className="text-sm font-medium text-gray-900">{viewProperty.watchmanName || viewProperty.watchman_name || 'Not provided'}</p>
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">Watchman Contact</label>
                             <p className="text-sm text-gray-900">
                               {(() => {
                                 const contact = viewProperty.watchmanContact || viewProperty.watchman_contact;
-                                if (!contact) return 'N/A';
+                                if (!contact) return 'Not provided';
                                 return contact.startsWith('+') ? contact : `+91 ${contact}`;
                               })()}
                             </p>
