@@ -514,14 +514,32 @@ const ManagerProperties = ({ user }) => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="space-y-1">
-                        {property.contact_person && (
-                          <p className="text-sm text-gray-600">{property.contact_person}</p>
-                        )}
-                        {property.contact_phone && (
-                          <p className="text-xs text-gray-400 flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {property.contact_phone}
-                          </p>
-                        )}
+                        {(() => {
+                          // Try to get contact from association_contacts first
+                          let contactName = property.contact_person;
+                          let contactPhone = property.contact_phone;
+                          try {
+                            if (property.association_contacts) {
+                              const contacts = typeof property.association_contacts === 'string' 
+                                ? JSON.parse(property.association_contacts) 
+                                : property.association_contacts;
+                              if (contacts.length > 0) {
+                                contactName = contacts[0].name || contactName;
+                                contactPhone = contacts[0].phone || contactPhone;
+                              }
+                            }
+                          } catch {}
+                          return (
+                            <>
+                              {contactName && <p className="text-sm text-gray-600">{contactName}</p>}
+                              {contactPhone && (
+                                <p className="text-xs text-gray-400 flex items-center gap-1">
+                                  <Phone className="w-3 h-3" /> {contactPhone.startsWith('+') ? contactPhone : `+91${contactPhone}`}
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td className="py-4 px-4">

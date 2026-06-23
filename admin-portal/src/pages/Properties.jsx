@@ -114,7 +114,27 @@ const Properties = () => {
       });
       const result = await response.json();
       if (result.success) {
-        setProperties(result.data || []);
+        // Map properties and parse association_contacts
+        const mappedProps = (result.data || []).map(p => {
+          let contacts = [];
+          try {
+            if (p.association_contacts) {
+              contacts = typeof p.association_contacts === 'string' 
+                ? JSON.parse(p.association_contacts) 
+                : p.association_contacts;
+            }
+          } catch {}
+          if (contacts.length === 0 && (p.contact_person || p.contact_email || p.contact_phone)) {
+            contacts = [{
+              name: p.contact_person || '',
+              email: p.contact_email || '',
+              phone: p.contact_phone || '',
+              countryCode: '+91'
+            }];
+          }
+          return { ...p, contacts };
+        });
+        setProperties(mappedProps);
       }
       setNotifications([]);
     } catch (error) {
@@ -796,8 +816,15 @@ const Properties = () => {
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         {property.city || '-'}
                       </td>
-                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
-                        {property.contacts?.length || 0}
+                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                        {(() => {
+                          const contacts = property.contacts || [];
+                          if (contacts.length > 0 && contacts[0].phone) {
+                            const phone = contacts[0].phone;
+                            return phone.startsWith('+') ? phone : `+91${phone}`;
+                          }
+                          return property.contact_phone || '-';
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         {property.createdBy || 'System'}

@@ -141,8 +141,15 @@ const CustomerSubmissions = () => {
       if (result.success) {
         // Map API response to expected format and filter by property type
         let props = result.data.map(p => {
-          // Build contacts array from inline fields if not already present
+          // Build contacts array from association_contacts or inline fields
           let contacts = p.contacts || [];
+          if (contacts.length === 0 && p.association_contacts) {
+            try {
+              contacts = typeof p.association_contacts === 'string' 
+                ? JSON.parse(p.association_contacts) 
+                : p.association_contacts;
+            } catch { contacts = []; }
+          }
           if (contacts.length === 0 && (p.contact_person || p.contact_email || p.contact_phone)) {
             contacts = [{
               name: p.contact_person || '',
