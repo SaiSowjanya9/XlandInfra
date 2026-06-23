@@ -93,6 +93,13 @@ const Dashboard = () => {
     }
   };
 
+  // Auto-select "Admin (All FPs)" if no FP is selected - skip the selection page
+  useEffect(() => {
+    if (!selectedFp && !fpLoading) {
+      selectFp({ id: 'all', fpId: 'ADMIN', companyName: 'All Franchise Partners', displayName: 'Admin (All FPs)' });
+    }
+  }, [selectedFp, fpLoading, selectFp]);
+
   // Load dashboard data when FP changes
   useEffect(() => {
     if (selectedFp) {

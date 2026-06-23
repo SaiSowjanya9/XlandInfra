@@ -63,6 +63,13 @@ const WorkOrders = ({ admin }) => {
     }
   }, [selectedFp, activeTab, token]);
 
+  // Auto-select "Admin (All FPs)" if no FP is selected
+  useEffect(() => {
+    if (!selectedFp && !fpLoading) {
+      selectFp({ id: 'all', fpId: 'ADMIN', companyName: 'All Franchise Partners', displayName: 'Admin (All FPs)' });
+    }
+  }, [selectedFp, fpLoading, selectFp]);
+
   useEffect(() => {
     if (selectedFp) {
       fetchWorkOrders();

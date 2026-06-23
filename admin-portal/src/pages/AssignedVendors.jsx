@@ -137,6 +137,15 @@ const AssignedVendors = ({ user }) => {
     }
   }, [isAdmin, selectedFp, apiPrefix, statusFilter, token]);
 
+  const { loading: fpLoading } = useFP();
+
+  // Auto-select "Admin (All FPs)" if no FP is selected (for admin users)
+  useEffect(() => {
+    if (isAdmin && !selectedFp && !fpLoading) {
+      selectFp({ id: 'all', fpId: 'ADMIN', companyName: 'All Franchise Partners', displayName: 'Admin (All FPs)' });
+    }
+  }, [isAdmin, selectedFp, fpLoading, selectFp]);
+
   useEffect(() => {
     if (isAdmin && selectedFp) {
       loadData();

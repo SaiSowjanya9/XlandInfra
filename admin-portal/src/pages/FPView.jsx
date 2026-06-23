@@ -39,6 +39,13 @@ const FPView = ({ admin }) => {
     fetchFpList();
   }, []);
 
+  // Auto-select first FP after list is loaded
+  useEffect(() => {
+    if (!selectedFp && !fpLoading && fpList.length > 0) {
+      setSelectedFp(fpList[0]);
+    }
+  }, [fpList, fpLoading, selectedFp]);
+
   // Fetch data when FP or tab changes
   useEffect(() => {
     if (selectedFp) {
