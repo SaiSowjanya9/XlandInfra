@@ -615,7 +615,7 @@ const CreateCustomer = ({ admin }) => {
         </div>
 
         {/* Category Selection Card */}
-        <div className="bg-gray-50 rounded-2xl p-12">
+        <div className="bg-white border border-gray-200 rounded-2xl p-12 shadow-sm">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
             <p className="text-gray-500 mt-2">Choose the customer category to proceed</p>
