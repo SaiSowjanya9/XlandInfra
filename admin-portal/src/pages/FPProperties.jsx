@@ -1288,10 +1288,6 @@ const FPProperties = ({ user }) => {
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.address || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Apt/Suite</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.villa_plot_number || 'N/A'}</p>
-                  </div>
-                  <div>
                     <p className="text-xs text-gray-500 mb-1">City</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.city || '-'}</p>
                   </div>
@@ -1414,6 +1410,10 @@ const FPProperties = ({ user }) => {
                           {(() => {
                             const contact = selectedProperty.watchman_contact || selectedProperty.watchmanContact;
                             if (!contact) return 'N/A';
+                            // Format: +91 followed by space and number
+                            if (contact.startsWith('+91') && !contact.startsWith('+91 ')) {
+                              return `+91 ${contact.slice(3)}`;
+                            }
                             return contact.startsWith('+') ? contact : `+91 ${contact}`;
                           })()}
                         </p>
