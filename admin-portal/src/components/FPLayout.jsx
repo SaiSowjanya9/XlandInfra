@@ -215,28 +215,10 @@ const FPLayout = ({ admin, onLogout, children }) => {
         <div className="flex flex-col h-full">
           {/* Logo Header */}
           <div 
-            className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-start'} px-3 h-20`}
+            className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-center'} px-3 h-20`}
             style={{ borderBottom: `1px solid ${colors.divider}` }}
           >
-            <img src="/logo-optimized.webp" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-12' : 'h-14'} w-auto object-contain`} />
-            {!sidebarCollapsed && (
-              <div className="flex flex-col ml-3">
-                <span 
-                  className="text-xl font-bold tracking-wide"
-                  style={{ 
-                    background: 'linear-gradient(135deg, #D4AF37 0%, #F4D03F 50%, #C9A227 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text'
-                  }}
-                >XLAND INFRA</span>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <div className="flex-1 h-[1px]" style={{ background: 'linear-gradient(90deg, transparent, #C9A227)' }}></div>
-                  <span className="text-[10px] tracking-[0.15em] font-medium" style={{ color: colors.richGold }}>PVT LTD</span>
-                  <div className="flex-1 h-[1px]" style={{ background: 'linear-gradient(90deg, #C9A227, transparent)' }}></div>
-                </div>
-              </div>
-            )}
+            <img src="/logo.webp" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-10' : 'h-14'} w-auto object-contain`} />
             <button 
               onClick={() => setSidebarOpen(false)} 
               className="lg:hidden ml-auto p-2 rounded-xl transition-colors"
