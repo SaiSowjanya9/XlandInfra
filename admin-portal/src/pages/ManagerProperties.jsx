@@ -484,6 +484,7 @@ const ManagerProperties = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Type</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Location</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Created Date</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Created By</th>
                   <th className="text-right py-3 px-4 text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -522,6 +523,11 @@ const ManagerProperties = ({ user }) => {
                           </p>
                         )}
                       </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-sm text-gray-600">
+                        {property.created_at ? new Date(property.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      </span>
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-600">{property.created_by_name || '-'}</span>
