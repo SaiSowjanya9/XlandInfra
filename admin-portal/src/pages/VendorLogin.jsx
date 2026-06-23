@@ -62,8 +62,8 @@ const VendorLogin = ({ onLogin, onBack }) => {
             <div className="flex items-center justify-center mb-4">
               <img src="/logo.png" alt="XLAND INFRA" className="h-14 w-auto object-contain" />
             </div>
-            <h1 className="text-2xl font-semibold text-white">Vendor Portal</h1>
-            <p className="text-zinc-400 text-sm mt-2">Partner access to business services</p>
+            <h1 className="text-2xl font-semibold text-amber-400">Vendor Portal</h1>
+            <p className="text-amber-400/70 text-sm mt-2">Partner access to business services</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
