@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Users,
   Plus,
@@ -119,6 +120,14 @@ const INDIAN_STATES = [
 ];
 
 const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  // URL-based step management
+  const urlStep = searchParams.get('step');
+  const urlType = searchParams.get('type');
+  const urlCategory = searchParams.get('category');
+  
   const [customers, setCustomers] = useState([]);
   const [properties, setProperties] = useState([]);
   const [zones, setZones] = useState([]);
@@ -128,10 +137,49 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
   
   // View states - 'list' or 'add'
   const [activeView, setActiveView] = useState(defaultTab);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedEntryType, setSelectedEntryType] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(() => urlCategory || null);
+  const [selectedEntryType, setSelectedEntryType] = useState(() => urlType || null);
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Push initial history entry when page first loads
+  useEffect(() => {
+    if (!urlStep) {
+      navigate('?step=list', { replace: true });
+    }
+  }, []); // Only run once on mount
+  
+  // Sync state with URL when browser back/forward is used
+  useEffect(() => {
+    if (urlStep === 'form' && urlType) {
+      setSelectedCategory(urlCategory || 'residential');
+      setSelectedEntryType(urlType);
+      setActiveView('add');
+    } else if (urlStep === 'type' && urlCategory) {
+      setSelectedCategory(urlCategory);
+      setSelectedEntryType(null);
+      setActiveView('add');
+    } else if (urlStep === 'category') {
+      setSelectedCategory(null);
+      setSelectedEntryType(null);
+      setActiveView('add');
+    } else if (urlStep === 'list' || !urlStep) {
+      setSelectedCategory(null);
+      setSelectedEntryType(null);
+      setActiveView('list');
+    }
+  }, [urlStep, urlType, urlCategory]);
+  
+  // Navigation helpers
+  const handleSelectCategory = (categoryId) => {
+    setSelectedCategory(categoryId);
+    navigate(`?step=type&category=${categoryId}`);
+  };
+  
+  const handleSelectEntryType = (typeId) => {
+    setSelectedEntryType(typeId);
+    navigate(`?step=form&category=${selectedCategory}&type=${typeId}`);
+  };
   
   const [formData, setFormData] = useState({
     zone: '',
@@ -274,6 +322,8 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
         resetForm();
         setSelectedEntryType(null);
         setSelectedCategory(null);
+        setActiveView('list');
+        navigate('');
         fetchCustomers();
       } else {
         setMessage({ type: 'error', text: result.message || 'Operation failed' });
@@ -413,8 +463,10 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
     if (selectedEntryType) {
       setSelectedEntryType(null);
       resetForm();
+      navigate(`?step=type&category=${selectedCategory}`);
     } else if (selectedCategory) {
       setSelectedCategory(null);
+      navigate('?step=category');
     }
   };
 
@@ -564,7 +616,7 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
               ) : (
                 <button
                   key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
+                  onClick={() => handleSelectCategory(category.id)}
                   className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
                 >
                   <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
@@ -612,7 +664,7 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
               return (
                 <button
                   key={entry.id}
-                  onClick={() => setSelectedEntryType(entry.id)}
+                  onClick={() => handleSelectEntryType(entry.id)}
                   className="flex flex-col items-center p-6 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-md transition-all min-w-[140px]"
                 >
                   <div className={`w-12 h-12 ${entry.color} rounded-xl flex items-center justify-center mb-3`}>
