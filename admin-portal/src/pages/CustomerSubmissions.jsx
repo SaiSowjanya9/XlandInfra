@@ -499,7 +499,7 @@ const CustomerSubmissions = () => {
       );
     }
     return true;
-  });
+  }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sort by latest first
 
   // Stats per type
   const statsByType = TABS.filter(t => t.id !== 'all').map(tab => ({

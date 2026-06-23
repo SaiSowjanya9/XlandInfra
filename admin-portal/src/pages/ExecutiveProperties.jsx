@@ -377,7 +377,7 @@ const ExecutiveProperties = ({ user }) => {
     if (statusFilter === 'inactive' && p.is_active !== false) return false;
     
     return true;
-  });
+  }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sort by latest first
 
   // Count properties by type
   const getTypeCount = (type) => {
