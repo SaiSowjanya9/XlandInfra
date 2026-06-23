@@ -2,7 +2,7 @@
 
 A comprehensive full-stack web application for property management, work orders, vendor management, and AMC (Annual Maintenance Contract) packages, built with React, Node.js, and MySQL.
 
-> **Last Updated:** June 16, 2026
+> **Last Updated:** June 23, 2026
 
 ## Features
 
@@ -248,7 +248,34 @@ The application is fully responsive and works on:
 - Tablets
 - Mobile phones
 
-## Recent Updates (June 16, 2026)
+## Recent Updates (June 23, 2026)
+
+### Unit Type Fields for Properties
+- **Block Details Enhancement**: Added unit type breakdown (Studio, 1-4 Bed) for GC and Apartment properties
+- **Total Units Auto-Calculation**: Sum of all unit types calculated automatically
+- **All Portals Updated**: Unit types visible in FP, Manager, Coordinator, Supervisor, Executive, and Super Admin portals
+- **Database Migration**: Added `block_unit_types` JSON column for storing unit breakdowns per block
+
+### Property View/Edit Modal Improvements
+- **Multiple Contacts**: Contact 1 and Contact 2 with proper labels and spacing
+- **Block Details for GC**: Block Name, Number of Units, and unit type breakdown per block
+- **Watchman Information**: Watchman Name and Phone fields based on property type
+- **Entry Type Display**: Case-insensitive entry type handling with modal display
+
+### Navigation & UX Fixes
+- **Browser Back/Forward**: URL-based step management for Create Customer, fixed for all Customer pages
+- **Logout Redirect**: Immediate redirect before state changes, all portals redirect to employee login
+- **Add Customer Flow**: Redirect to category selection after creating customer, fixed double-click issue
+- **Safari/Mac Compatibility**: Solid color buttons, increased opacity, background fallbacks
+
+### Authentication & Zone Fixes
+- **Auth Token**: Fixed 401 error by adding auth token to propertyStore API calls
+- **Zone Filtering**: Enforced zone-based access control, added coordinator zone lookup logging
+- **FP ID Safety**: Added safety check for fpId in zone creation
+
+---
+
+## Previous Updates (June 16, 2026)
 
 ### Work Order Email Notifications
 - **Responsive Email Templates**: Fixed text wrapping for mobile/tablet devices
@@ -472,6 +499,11 @@ Implemented throughout Create Estimate and Create Work Order sections:
 
 ## Completed Features
 
+- ✅ **Unit Type Fields**: Studio, 1-4 Bed breakdown for GC and Apartment properties
+- ✅ **Multiple Contacts**: Contact 1 and Contact 2 support with proper display
+- ✅ **Watchman Information**: Watchman Name and Phone fields for properties
+- ✅ **Browser Navigation**: URL-based step management with proper back/forward support
+- ✅ **Safari/Mac Support**: Solid color buttons and background fallbacks
 - ✅ **PDF Export**: Export estimates to PDF with branded header and status badges
 - ✅ **Email Integration**: Work order email notifications to customers, FP, and zone employees
 - ✅ **QR Code Tracking**: Real-time scan analytics with geo data
