@@ -389,7 +389,11 @@ const CoordinatorProperties = ({ user }) => {
     if (statusFilter === 'inactive' && p.is_active !== false) return false;
     
     return true;
-  }).sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)); // Sort by latest first
+  }).sort((a, b) => {
+    const dateA = new Date(a.createdAt || a.created_at || 0);
+    const dateB = new Date(b.createdAt || b.created_at || 0);
+    return dateB.getTime() - dateA.getTime(); // Sort by latest first
+  });
 
   // Count properties by type
   const getTypeCount = (type) => {
