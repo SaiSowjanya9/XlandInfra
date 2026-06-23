@@ -700,19 +700,19 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
             <p className="text-gray-500 mt-1">Choose the type of customer data you want to enter</p>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 max-w-3xl mx-auto">
             {ENTRY_TYPES.map((entry) => {
               const Icon = entry.icon;
               return (
                 <button
                   key={entry.id}
                   onClick={() => handleSelectEntryType(entry.id)}
-                  className="flex flex-col items-center p-6 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-md transition-all min-w-[140px]"
+                  className="flex flex-col items-center p-4 md:p-5 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-md transition-all"
                 >
-                  <div className={`w-12 h-12 ${entry.color} rounded-xl flex items-center justify-center mb-3`}>
-                    <Icon className="w-6 h-6 text-white" />
+                  <div className={`w-11 h-11 md:w-12 md:h-12 ${entry.color} rounded-xl flex items-center justify-center mb-2 md:mb-3`}>
+                    <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                   </div>
-                  <p className="font-medium text-gray-900 text-sm">{entry.name}</p>
+                  <p className="font-medium text-gray-900 text-xs md:text-sm text-center leading-tight">{entry.name}</p>
                 </button>
               );
             })}

@@ -735,7 +735,7 @@ function CorporateLanding() {
       </section>
 
       {/* ============ ABOUT SECTION ============ */}
-      <section id="about" className="py-16 md:py-20 relative">
+      <section id="about" className="pt-16 pb-8 md:pt-20 md:pb-10 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Section Header */}
           <div className="text-center mb-12">
@@ -789,7 +789,7 @@ function CorporateLanding() {
       </section>
 
       {/* ============ PREMIUM SERVICES SECTION - CONNECTED FLOW LAYOUT ============ */}
-      <section id="services" className="pt-28 pb-16 md:pt-32 md:pb-20 relative bg-[#0D0D0D] overflow-hidden z-10">
+      <section id="services" className="pt-12 pb-16 md:pt-16 md:pb-20 relative bg-[#0D0D0D] overflow-hidden z-10">
         {/* Background Elements */}
         <div className="absolute inset-0">
           {/* Subtle dot pattern */}

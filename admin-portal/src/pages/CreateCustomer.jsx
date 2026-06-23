@@ -680,19 +680,19 @@ const CreateCustomer = ({ admin }) => {
             <p className="text-gray-500">Choose the type of customer data you want to enter</p>
           </div>
 
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {ENTRY_TYPES.map((type) => {
               const Icon = type.icon;
               return (
                 <button
                   key={type.id}
                   onClick={() => handleSelectEntryType(type.id)}
-                  className="group relative p-5 bg-white border-2 border-gray-100 rounded-xl hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100/50 transition-all duration-300 text-center"
+                  className="group relative p-4 md:p-5 bg-white border-2 border-gray-100 rounded-xl hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100/50 transition-all duration-300 text-center"
                 >
-                  <div className={`w-14 h-14 ${type.color} rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform duration-300 shadow-md`}>
-                    <Icon className="w-7 h-7 text-white" />
+                  <div className={`w-12 h-12 md:w-14 md:h-14 ${type.color} rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform duration-300 shadow-md`}>
+                    <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
                   </div>
-                  <h3 className="text-sm font-semibold text-gray-800 whitespace-nowrap">{type.name}</h3>
+                  <h3 className="text-xs md:text-sm font-medium text-gray-800 leading-tight">{type.name}</h3>
                 </button>
               );
             })}
