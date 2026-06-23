@@ -192,6 +192,7 @@ export const saveProperty = async (formData, entryType, category, createdBy = 's
         numberOfBlocks: formData.numberOfBlocks,
         blockNames: formData.blockNames,
         unitsPerBlock: formData.unitsPerBlock,
+        blockUnitTypes: formData.blockUnitTypes,
         blockInfo: formData.blockInfo,
         blockNA: formData.blockNA,
         numberOfUnits: formData.numberOfUnits,
