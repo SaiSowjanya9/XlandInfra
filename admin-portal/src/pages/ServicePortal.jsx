@@ -803,20 +803,20 @@ const Onboarding = ({ admin }) => {
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Entry Type</h2>
           <p className="text-gray-600 mb-8">Choose the type of property data you want to enter</p>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {ENTRY_TYPES.map((type) => {
               const Icon = type.icon;
               return (
                 <button
                   key={type.id}
                   onClick={() => setSelectedEntryType(type.id)}
-                  className="group p-6 bg-white border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-lg transition-all duration-200 text-left"
+                  className="group p-4 md:p-6 bg-white border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-lg transition-all duration-200 text-left"
                 >
-                  <div className={`w-14 h-14 ${type.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                    <Icon className="w-7 h-7 text-white" />
+                  <div className={`w-12 h-12 md:w-14 md:h-14 ${type.color} rounded-xl flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform`}>
+                    <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{type.name}</h3>
-                  <p className="text-sm text-gray-600">{type.description}</p>
+                  <h3 className="text-sm md:text-lg font-semibold text-gray-900 mb-1 md:mb-2 leading-tight">{type.name}</h3>
+                  <p className="text-xs md:text-sm text-gray-600 leading-snug">{type.description}</p>
                 </button>
               );
             })}
