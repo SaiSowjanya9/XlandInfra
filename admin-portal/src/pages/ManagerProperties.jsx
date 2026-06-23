@@ -314,7 +314,7 @@ const ManagerProperties = ({ user }) => {
     const matchesDivision = divisionFilter === 'all' || p.division_id?.toString() === divisionFilter;
     
     return matchesSearch && matchesTab && matchesZone && matchesDivision;
-  }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sort by latest first
+  }).sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)); // Sort by latest first
 
   // Get counts for each tab
   const getTabCount = (tabId) => {
