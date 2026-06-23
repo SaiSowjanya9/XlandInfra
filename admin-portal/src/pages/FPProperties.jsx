@@ -1176,7 +1176,10 @@ const FPProperties = ({ user }) => {
               )}
 
               {/* Apartment Details */}
-              {(selectedProperty.property_type === 'apartment' || selectedProperty.property_type === 'APT') && (
+              {(['apartment', 'APT', 'Apartment'].some(t => 
+                selectedProperty.property_type?.toLowerCase() === t.toLowerCase() || 
+                selectedProperty.entry_type === 'APT'
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h3>
                   <div className="grid grid-cols-2 gap-4 mb-4">
@@ -1229,7 +1232,10 @@ const FPProperties = ({ user }) => {
               )}
 
               {/* Villa Details */}
-              {(selectedProperty.property_type === 'villa' || selectedProperty.property_type === 'VILLA') && (
+              {(['villa', 'VILLA', 'Villa'].some(t => 
+                selectedProperty.property_type?.toLowerCase() === t.toLowerCase() || 
+                selectedProperty.entry_type === 'VILLA'
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Villa Details</h3>
                   <div>
@@ -1240,7 +1246,10 @@ const FPProperties = ({ user }) => {
               )}
 
               {/* Flat Details */}
-              {(selectedProperty.property_type === 'flat' || selectedProperty.property_type === 'FLAT') && (
+              {(['flat', 'FLAT', 'Flat'].some(t => 
+                selectedProperty.property_type?.toLowerCase() === t.toLowerCase() || 
+                selectedProperty.entry_type === 'FLAT'
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Flat Details</h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -1257,7 +1266,10 @@ const FPProperties = ({ user }) => {
               )}
 
               {/* Plot Details */}
-              {(selectedProperty.property_type === 'plot' || selectedProperty.property_type === 'PLOT') && (
+              {(['plot', 'PLOT', 'Plot'].some(t => 
+                selectedProperty.property_type?.toLowerCase() === t.toLowerCase() || 
+                selectedProperty.entry_type === 'PLOT'
+              )) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Plot Details</h3>
                   <div>
