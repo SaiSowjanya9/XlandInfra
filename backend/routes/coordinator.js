@@ -304,13 +304,12 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     const employeeId = getEmployeeIdForZoneLookup(req);
     const creatorEmail = getCreatorIdentifier(req);
 
-    // Get assigned zones for zone-centric filtering (+ own created data)
+    // Get assigned zones for zone-centric filtering
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'p');
 
     console.log(`[Coordinator Properties] employeeId: ${employeeId}, coordinatorId: ${coordinatorId}, fpId: ${franchisePartnerId}, isFPCoordinator: ${isFPCoordinator}`);
     console.log(`[Coordinator Properties] assignedZones: ${JSON.stringify(assignedZones)}, creatorEmail: ${creatorEmail}`);
-    console.log(`[Coordinator Properties] zoneFilter: ${JSON.stringify(zoneFilter)}`);
 
     // For FP Coordinators: primarily filter by franchise_partner_id
     // For standalone Coordinators: filter by coordinator_id
@@ -373,7 +372,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
       const onbZoneFilter = buildOnboardedPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'op');
       let onbQuery, onbParams;
       if (isFPCoordinator) {
-        // FP Coordinators see: zone-centric onboarded properties + their own created
+        // FP Coordinators see: ALL FP properties (if no zones) or zone-centric
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type, op.entry_type,
                   op.zone as zone_name, op.area_name as area, 
                   COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
