@@ -80,125 +80,118 @@ const SupervisorLogin = ({ onLogin, onBack }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-900 via-orange-900 to-slate-900 flex items-center justify-center p-4">
-      {/* Background Effects */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-amber-500/20 rounded-full blur-[100px]" />
-        <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] bg-orange-500/20 rounded-full blur-[100px]" />
+    <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated Background Effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-amber-500/20 via-yellow-400/10 to-transparent rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-amber-600/15 via-orange-400/10 to-transparent rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-[40%] left-[50%] w-[400px] h-[400px] bg-gradient-to-br from-yellow-500/10 to-transparent rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '2s' }} />
+        
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `linear-gradient(rgba(212,175,55,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(212,175,55,0.3) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px'
+        }} />
       </div>
-
+      
       <div className="w-full max-w-md relative z-10">
         {/* Back Button */}
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-amber-300 hover:text-white mb-6 transition-colors"
+          className="flex items-center gap-2 text-zinc-400 hover:text-amber-400 mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Portal Selection</span>
+          <span className="text-sm">Back to Portal Selection</span>
         </button>
 
         {/* Login Card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-8">
+        <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-700/50 rounded-2xl p-8 shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/30">
-              <EyeIcon className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-white">Supervisor Portal</h1>
-            <p className="text-amber-200 mt-2">Sign in to manage field operations</p>
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-red-400" />
-              <span className="text-red-200 text-sm">{error}</span>
-            </div>
-          )}
-
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-amber-200 text-sm font-medium mb-2">
-                Username or Email
-              </label>
-              <div className="relative">
-                <EyeIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-400" />
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-amber-300/50 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-transparent"
-                  placeholder="Enter your username"
-                  required
-                />
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <img src="/logo.png" alt="XLAND INFRA" className="h-14 w-auto object-contain" />
+              <div className="flex flex-col text-left">
+                <span className="text-xl font-bold text-amber-400 tracking-wide">XLAND INFRA</span>
+                <span className="text-[10px] text-amber-400/80 tracking-[0.2em]">PVT LTD</span>
               </div>
             </div>
+            <h1 className="text-2xl font-semibold text-white">Supervisor Portal</h1>
+            <p className="text-zinc-400 text-sm mt-2">Sign in to manage field operations</p>
+          </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-amber-200 text-sm font-medium">
-                  Password
-                </label>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Username Field */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-zinc-300">Username or Email</label>
+              <input
+                type="text"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                className="w-full px-4 py-3.5 bg-zinc-800/60 border border-zinc-600/50 rounded-xl text-white placeholder-zinc-500 focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/50 outline-none transition-all"
+                placeholder="Enter your username or email"
+                required
+              />
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-zinc-300">Password</label>
                 <button
                   type="button"
                   onClick={() => setShowForgotPassword(true)}
-                  className="text-sm text-amber-300 hover:text-amber-200 font-medium"
+                  className="text-sm text-amber-400 hover:text-amber-300 font-medium"
                 >
                   Forgot Password?
                 </button>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-400" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full pl-11 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-amber-300/50 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-transparent"
+                  className="w-full px-4 py-3.5 bg-zinc-800/60 border border-zinc-600/50 rounded-xl text-white placeholder-zinc-500 focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/50 outline-none transition-all pr-12"
                   placeholder="Enter your password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-400 hover:text-white transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-amber-400 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                 </button>
               </div>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/20 p-3 rounded-xl">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-black font-semibold py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg shadow-amber-600/20 hover:shadow-amber-600/30"
             >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Signing in...
-                </span>
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                  <span>Signing in...</span>
+                </div>
               ) : (
-                'Sign In'
+                <span>Sign In</span>
               )}
             </button>
           </form>
 
-          {/* Footer */}
-          <div className="mt-6 text-center">
-            <p className="text-amber-300/60 text-sm">
-              Supervisor access only. Contact admin for credentials.
-            </p>
-          </div>
-        </div>
-
-        {/* Brand */}
-        <div className="mt-8 text-center">
-          <p className="text-amber-400/60 text-sm">
-            &copy; 2026 XLand Infra. All rights reserved.
+          {/* Footer note */}
+          <p className="text-center text-zinc-500 text-xs mt-6">
+            Supervisor access only. Contact admin for credentials.
           </p>
         </div>
       </div>
