@@ -323,8 +323,9 @@ const SupervisorCustomers = ({ user, defaultTab = 'list' }) => {
         resetForm();
         setSelectedEntryType(null);
         setSelectedCategory(null);
-        setActiveView('list');
-        navigate('');
+        // Redirect back to category selection for adding another customer
+        setActiveView('add');
+        navigate('?step=category');
         fetchCustomers();
       } else {
         setMessage({ type: 'error', text: result.message || 'Operation failed' });
