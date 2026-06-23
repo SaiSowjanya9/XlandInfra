@@ -196,9 +196,10 @@ const FPProperties = ({ user }) => {
           contacts = [{ name: '', email: '', phone: '', countryCode: '+91' }];
         }
         
-        // Parse block_names and units_per_block JSON
+        // Parse block_names, units_per_block and block_unit_types JSON
         let blockNames = {};
         let unitsPerBlock = {};
+        let blockUnitTypes = {};
         try {
           if (property.block_names) {
             blockNames = typeof property.block_names === 'string' 
@@ -207,6 +208,10 @@ const FPProperties = ({ user }) => {
           if (property.units_per_block) {
             unitsPerBlock = typeof property.units_per_block === 'string' 
               ? JSON.parse(property.units_per_block) : property.units_per_block;
+          }
+          if (property.block_unit_types) {
+            blockUnitTypes = typeof property.block_unit_types === 'string' 
+              ? JSON.parse(property.block_unit_types) : property.block_unit_types;
           }
         } catch (e) {}
         
@@ -234,6 +239,7 @@ const FPProperties = ({ user }) => {
           numberOfBlocks: property.number_of_blocks || 1,
           blockNames: blockNames,
           unitsPerBlock: unitsPerBlock,
+          blockUnitTypes: blockUnitTypes,
           // APT specific
           blockInfo: property.block_info || '',
           blockNA: property.block_na || false,
@@ -377,9 +383,10 @@ const FPProperties = ({ user }) => {
       contacts = [{ name: '', email: '', phone: '', countryCode: '+91' }];
     }
     
-    // Parse block_names and units_per_block JSON
+    // Parse block_names, units_per_block and block_unit_types JSON
     let blockNames = {};
     let unitsPerBlock = {};
+    let blockUnitTypes = {};
     try {
       if (property.block_names) {
         blockNames = typeof property.block_names === 'string' 
@@ -388,6 +395,10 @@ const FPProperties = ({ user }) => {
       if (property.units_per_block) {
         unitsPerBlock = typeof property.units_per_block === 'string' 
           ? JSON.parse(property.units_per_block) : property.units_per_block;
+      }
+      if (property.block_unit_types) {
+        blockUnitTypes = typeof property.block_unit_types === 'string' 
+          ? JSON.parse(property.block_unit_types) : property.block_unit_types;
       }
     } catch (e) {}
     
@@ -414,6 +425,7 @@ const FPProperties = ({ user }) => {
       numberOfBlocks: property.number_of_blocks || 1,
       blockNames: blockNames,
       unitsPerBlock: unitsPerBlock,
+      blockUnitTypes: blockUnitTypes,
       // APT specific
       blockInfo: property.block_info || '',
       blockNA: property.block_na || false,
@@ -478,6 +490,36 @@ const FPProperties = ({ user }) => {
     }));
   };
 
+  // Update unit type for a specific block in edit form
+  const updateEditBlockUnitType = (blockNum, unitType, value) => {
+    setEditFormData(prev => {
+      const currentBlockUnits = prev.blockUnitTypes?.[blockNum] || {
+        studio: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourBed: 0
+      };
+      const updatedBlockUnits = {
+        ...currentBlockUnits,
+        [unitType]: parseInt(value) || 0
+      };
+      const newBlockUnitTypes = {
+        ...prev.blockUnitTypes,
+        [blockNum]: updatedBlockUnits
+      };
+      // Auto-calculate total units for this block
+      const totalUnits = Object.values(updatedBlockUnits).reduce((sum, val) => sum + val, 0);
+      return {
+        ...prev,
+        blockUnitTypes: newBlockUnitTypes,
+        unitsPerBlock: { ...prev.unitsPerBlock, [blockNum]: totalUnits }
+      };
+    });
+  };
+
+  // Get unit type value for a block in edit form
+  const getEditBlockUnitTypeValue = (blockNum, unitType) => {
+    const val = editFormData.blockUnitTypes?.[blockNum]?.[unitType];
+    return val === undefined || val === null || val === 0 ? '' : val;
+  };
+
   const handleSaveEdit = async () => {
     try {
       // Build contact info from first contact or use direct fields
@@ -516,6 +558,7 @@ const FPProperties = ({ user }) => {
           numberOfBlocks: editFormData.numberOfBlocks,
           blockNames: editFormData.blockNames,
           unitsPerBlock: editFormData.unitsPerBlock,
+          blockUnitTypes: editFormData.blockUnitTypes,
           // APT specific
           blockInfo: editFormData.blockInfo,
           blockNA: editFormData.blockNA,
@@ -1077,22 +1120,52 @@ const FPProperties = ({ user }) => {
                     try {
                       const blockNames = typeof selectedProperty.block_names === 'string' ? JSON.parse(selectedProperty.block_names) : selectedProperty.block_names || {};
                       const unitsPerBlock = typeof selectedProperty.units_per_block === 'string' ? JSON.parse(selectedProperty.units_per_block) : selectedProperty.units_per_block || {};
+                      const blockUnitTypes = typeof selectedProperty.block_unit_types === 'string' ? JSON.parse(selectedProperty.block_unit_types) : selectedProperty.block_unit_types || {};
                       const numBlocks = selectedProperty.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
                       if (Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0) {
                         return (
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
-                              <React.Fragment key={blockNum}>
-                                <div className="p-3 bg-gray-50 rounded-lg">
-                                  <p className="text-xs text-gray-500 mb-1">Block Name</p>
-                                  <p className="text-sm font-medium text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</p>
+                          <div className="space-y-4">
+                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
+                              const unitTypes = blockUnitTypes[blockNum] || {};
+                              return (
+                                <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                  <div className="flex gap-4 mb-3">
+                                    <div>
+                                      <p className="text-xs text-gray-500 mb-1">Block Name</p>
+                                      <p className="text-sm font-medium text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                                      <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || 0}</p>
+                                    </div>
+                                  </div>
+                                  {Object.keys(unitTypes).length > 0 && (
+                                    <div className="grid grid-cols-5 gap-2 pt-2 border-t border-gray-200">
+                                      <div>
+                                        <p className="text-xs text-gray-500">Studio</p>
+                                        <p className="text-sm font-medium">{unitTypes.studio || 0}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs text-gray-500">1 Bed</p>
+                                        <p className="text-sm font-medium">{unitTypes.oneBed || 0}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs text-gray-500">2 Bed</p>
+                                        <p className="text-sm font-medium">{unitTypes.twoBed || 0}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs text-gray-500">3 Bed</p>
+                                        <p className="text-sm font-medium">{unitTypes.threeBed || 0}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs text-gray-500">4 Bed</p>
+                                        <p className="text-sm font-medium">{unitTypes.fourBed || 0}</p>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="p-3 bg-gray-50 rounded-lg">
-                                  <p className="text-xs text-gray-500 mb-1">Units</p>
-                                  <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || 0}</p>
-                                </div>
-                              </React.Fragment>
-                            ))}
+                              );
+                            })}
                           </div>
                         );
                       }
@@ -1542,16 +1615,40 @@ const FPProperties = ({ user }) => {
                     <input type="number" min="1" max="50" value={editFormData.numberOfBlocks || 1} onChange={(e) => setEditFormData({ ...editFormData, numberOfBlocks: parseInt(e.target.value) || 1 })} className="w-32 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
                   </div>
                   {editFormData.numberOfBlocks > 0 && (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-4">
                       {Array.from({ length: editFormData.numberOfBlocks }, (_, i) => i + 1).map(blockNum => (
-                        <div key={blockNum} className="flex gap-2">
-                          <div className="flex-1">
-                            <label className="block text-xs text-gray-500 mb-1">Block {blockNum} Name</label>
-                            <input type="text" value={editFormData.blockNames?.[blockNum] || `Block ${blockNum}`} onChange={(e) => updateEditBlockName(blockNum, e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                        <div key={blockNum} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex gap-2 mb-3">
+                            <div className="flex-1">
+                              <label className="block text-xs text-gray-500 mb-1">Block {blockNum} Name</label>
+                              <input type="text" value={editFormData.blockNames?.[blockNum] || ''} onChange={(e) => updateEditBlockName(blockNum, e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder={`Block ${blockNum}`} />
+                            </div>
+                            <div className="w-20">
+                              <label className="block text-xs text-gray-500 mb-1">Units</label>
+                              <input type="number" min="0" value={editFormData.unitsPerBlock?.[blockNum] || 0} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 cursor-not-allowed" />
+                            </div>
                           </div>
-                          <div className="w-24">
-                            <label className="block text-xs text-gray-500 mb-1">Units</label>
-                            <input type="number" min="0" value={editFormData.unitsPerBlock?.[blockNum] || ''} onChange={(e) => updateEditUnitsPerBlock(blockNum, e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="0" />
+                          <div className="grid grid-cols-5 gap-2">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Studio</label>
+                              <input type="number" min="0" value={getEditBlockUnitTypeValue(blockNum, 'studio')} onChange={(e) => updateEditBlockUnitType(blockNum, 'studio', e.target.value)} className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-blue-500" placeholder="0" />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">1 Bed</label>
+                              <input type="number" min="0" value={getEditBlockUnitTypeValue(blockNum, 'oneBed')} onChange={(e) => updateEditBlockUnitType(blockNum, 'oneBed', e.target.value)} className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-blue-500" placeholder="0" />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">2 Bed</label>
+                              <input type="number" min="0" value={getEditBlockUnitTypeValue(blockNum, 'twoBed')} onChange={(e) => updateEditBlockUnitType(blockNum, 'twoBed', e.target.value)} className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-blue-500" placeholder="0" />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">3 Bed</label>
+                              <input type="number" min="0" value={getEditBlockUnitTypeValue(blockNum, 'threeBed')} onChange={(e) => updateEditBlockUnitType(blockNum, 'threeBed', e.target.value)} className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-blue-500" placeholder="0" />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">4 Bed</label>
+                              <input type="number" min="0" value={getEditBlockUnitTypeValue(blockNum, 'fourBed')} onChange={(e) => updateEditBlockUnitType(blockNum, 'fourBed', e.target.value)} className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-blue-500" placeholder="0" />
+                            </div>
                           </div>
                         </div>
                       ))}

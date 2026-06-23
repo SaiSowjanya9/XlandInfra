@@ -460,7 +460,8 @@ const CreateCustomer = ({ admin }) => {
 
   // Get unit type value for a block
   const getBlockUnitTypeValue = (blockNum, unitType) => {
-    return formData.blockUnitTypes[blockNum]?.[unitType] || 0;
+    const val = formData.blockUnitTypes[blockNum]?.[unitType];
+    return val === undefined || val === null || val === 0 ? '' : val;
   };
 
   const getBlockLabel = (blockNum) => {
