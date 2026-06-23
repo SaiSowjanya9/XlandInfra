@@ -65,17 +65,45 @@ const CookieConsent = () => {
 
   if (!isVisible) return null;
 
+  // Using inline styles to guarantee rendering
+  const backdropStyle = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backdropFilter: 'blur(4px)',
+    zIndex: 9998
+  };
+
+  const bannerContainerStyle = {
+    position: 'fixed',
+    bottom: '24px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '100%',
+    maxWidth: '672px',
+    padding: '0 16px',
+    zIndex: 9999
+  };
+
+  const bannerStyle = {
+    background: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)',
+    border: '1px solid #333',
+    borderRadius: '16px',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+    position: 'relative'
+  };
+
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm" />
+      <div style={backdropStyle} />
       
       {/* Cookie Banner */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] w-full max-w-2xl mx-4 px-4">
-        <div className="relative bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] border border-[#333] rounded-2xl shadow-2xl">
-          {/* Gold accent line */}
-          <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent" />
-          
+      <div style={bannerContainerStyle}>
+        <div style={bannerStyle}>
           <div className="p-6">
           {!showPreferences ? (
             <>
