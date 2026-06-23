@@ -496,7 +496,7 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
         'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active',
         // Additional fields for full edit support
         'notes', 'landmark', 'latitude', 'longitude',
-        'number_of_blocks', 'block_names', 'units_per_block', 
+        'number_of_blocks', 'block_names', 'units_per_block', 'block_unit_types',
         'number_of_units', 'villa_plot_number', 'block_info', 'block_na',
         'flat_block_info', 'flat_block_na', 'plot_na',
         'watchman_name', 'watchman_contact', 'association_contacts', 'total_units'
@@ -506,7 +506,7 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
         'zone', 'division', 'area_name', 'status', 'number_of_units', 'total_units',
         // Additional fields for full edit support
         'notes', 'landmark', 'map_lat', 'map_lng', 'map_address',
-        'number_of_blocks', 'block_names', 'units_per_block',
+        'number_of_blocks', 'block_names', 'units_per_block', 'block_unit_types',
         'villa_plot_number', 'block_info', 'block_na',
         'flat_block_info', 'flat_block_na', 'plot_na',
         'watchman_name', 'watchman_contact', 'association_contacts'
@@ -531,6 +531,7 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
       numberOfBlocks: 'number_of_blocks',
       blockNames: 'block_names',
       unitsPerBlock: 'units_per_block',
+      blockUnitTypes: 'block_unit_types',
       numberOfUnits: 'number_of_units',
       villaPlotNumber: 'villa_plot_number',
       blockInfo: 'block_info',
@@ -549,7 +550,7 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
     };
 
     // Fields that need JSON serialization
-    const jsonFields = ['block_names', 'units_per_block', 'association_contacts'];
+    const jsonFields = ['block_names', 'units_per_block', 'block_unit_types', 'association_contacts'];
 
     const allowedFields = allowedFieldsMap[tableName];
     const setClauses = [];
