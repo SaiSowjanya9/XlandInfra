@@ -151,7 +151,7 @@ const EmployeeLogin = ({ onLogin, onBack }) => {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center mb-4">
-              <img src="/logo.png" alt="XLAND INFRA" className="h-14 w-auto object-contain" />
+              <img src="/logo.png" alt="XLAND INFRA" className="h-20 w-auto object-contain" />
             </div>
             <h1 className="text-2xl text-amber-400">Employee Portal</h1>
             <p className="text-amber-400/70 text-sm mt-2">Sign in to access your dashboard</p>
