@@ -631,16 +631,46 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
 });
 
 // Delete property - cascades to clients and customer_accounts
-router.delete('/properties/:id', requireFPScope, validateOwnership('properties'), async (req, res) => {
+// Handles both 'properties' and 'onboarded_properties' tables
+router.delete('/properties/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
+    const sourceTable = req.query.source || 'properties';
     
-    // Get contact email before deleting (for customer_accounts cleanup)
+    // Validate ownership - check both tables
+    let hasOwnership = false;
+    let tableName = 'properties';
     let contactEmail = null;
-    try {
-      const [prop] = await pool.query('SELECT contact_email FROM properties WHERE id = ?', [id]);
-      if (prop.length > 0) contactEmail = prop[0].contact_email;
-    } catch (e) {}
+    
+    // Check properties table first
+    const [propRows] = await pool.execute(
+      'SELECT id, contact_email FROM properties WHERE id = ? AND franchise_partner_id = ?',
+      [id, req.fpId]
+    );
+    if (propRows.length > 0) {
+      hasOwnership = true;
+      tableName = 'properties';
+      contactEmail = propRows[0].contact_email;
+    }
+    
+    // Check onboarded_properties table if not found
+    if (!hasOwnership) {
+      const [onboardedRows] = await pool.execute(
+        'SELECT id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?',
+        [id, req.fpId]
+      );
+      if (onboardedRows.length > 0) {
+        hasOwnership = true;
+        tableName = 'onboarded_properties';
+      }
+    }
+    
+    if (!hasOwnership) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only delete your own properties.'
+      });
+    }
 
     // Delete customer_accounts by email (so email can be reused)
     if (contactEmail) {
@@ -660,11 +690,18 @@ router.delete('/properties/:id', requireFPScope, validateOwnership('properties')
       console.log('📋 [FP] Deleted clients for property_id:', id);
     } catch (e) {}
 
-    // Delete the property
-    await pool.execute(
-      `DELETE FROM properties WHERE id = ? AND franchise_partner_id = ?`,
-      [id, req.fpId]
-    );
+    // Delete the property from the correct table
+    if (tableName === 'onboarded_properties') {
+      await pool.execute(
+        `DELETE FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+    } else {
+      await pool.execute(
+        `DELETE FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+    }
     
     res.json({ success: true, message: 'Property and associated customer accounts deleted. Email can now be reused.' });
   } catch (error) {
