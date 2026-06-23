@@ -84,8 +84,8 @@ const COUNTRY_CODES = [
   { code: '+971', flag: '🇦🇪', label: 'UAE' }
 ];
 
-// Initial Division options
-const INITIAL_DIVISIONS = ['Division A', 'Division B', 'Division C', 'Division D', 'Division E'];
+// Import division functions from fieldOptionsStore
+import { getDivisions, addDivision as addDivisionToStore } from '../utils/fieldOptionsStore';
 
 // Indian States in alphabetical order
 const INDIAN_STATES = [
@@ -243,7 +243,7 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
   const [zoneSuggestions, setZoneSuggestions] = useState([]);
   const [areaSuggestions, setAreaSuggestions] = useState([]);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
-  const [divisions, setDivisions] = useState(INITIAL_DIVISIONS);
+  const [divisions, setDivisions] = useState(() => getDivisions());
   const [showAddDivisionModal, setShowAddDivisionModal] = useState(false);
   const [newDivision, setNewDivision] = useState('');
   const formRef = useRef(null);
@@ -1550,7 +1550,8 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
               <button
                 onClick={() => {
                   if (newDivision.trim() && !divisions.includes(newDivision.trim())) {
-                    setDivisions([...divisions, newDivision.trim()]);
+                    addDivisionToStore(newDivision.trim()); // Persist to store
+                    setDivisions(getDivisions()); // Refresh from store
                     updateFormData('division', newDivision.trim());
                     setNewDivision('');
                     setShowAddDivisionModal(false);
