@@ -1120,11 +1120,43 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
                       type="number"
                       min="1"
                       value={formData.numberOfUnits}
-                      onChange={(e) => updateFormData('numberOfUnits', e.target.value)}
-                      className={inputClass(hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0))}
-                      placeholder="Total number of units"
+                      readOnly
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 cursor-not-allowed"
+                      placeholder="Auto-calculated"
                     />
-                    <FieldError show={hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0)} message="Number of units is required" />
+                    <FieldError show={hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0)} message="Add unit types below" />
+                  </div>
+                </div>
+
+                {/* Unit Types for Apartment */}
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Unit Types</label>
+                  <div className="grid grid-cols-5 gap-4">
+                    {UNIT_TYPES.map(unitType => (
+                      <div key={unitType.key}>
+                        <label className="block text-xs text-gray-500 mb-1">{unitType.label}</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={getBlockUnitTypeValue('apt', unitType.key)}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            setFormData(prev => {
+                              const currentUnits = prev.blockUnitTypes['apt'] || { studio: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourBed: 0 };
+                              const updatedUnits = { ...currentUnits, [unitType.key]: val };
+                              const totalUnits = Object.values(updatedUnits).reduce((sum, v) => sum + v, 0);
+                              return {
+                                ...prev,
+                                blockUnitTypes: { ...prev.blockUnitTypes, apt: updatedUnits },
+                                numberOfUnits: totalUnits
+                              };
+                            });
+                          }}
+                          className={inputClass(false)}
+                          placeholder="0"
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
