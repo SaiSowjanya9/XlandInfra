@@ -204,6 +204,14 @@ const CreateCustomer = ({ admin }) => {
   const [selectedCategory, setSelectedCategory] = useState(() => urlCategory || null);
   const [selectedEntryType, setSelectedEntryType] = useState(() => urlType || null);
   
+  // Push initial history entry when page first loads without step param
+  useEffect(() => {
+    if (!urlStep && !urlCategory && !urlType) {
+      // Replace current URL with step=category to create proper history
+      navigate('?step=category', { replace: true });
+    }
+  }, []); // Only run once on mount
+  
   // Sync state with URL when browser back/forward is used
   useEffect(() => {
     if (urlStep === 'form' && urlType) {
@@ -212,7 +220,7 @@ const CreateCustomer = ({ admin }) => {
     } else if (urlStep === 'type' && urlCategory) {
       setSelectedCategory(urlCategory);
       setSelectedEntryType(null);
-    } else if (!urlStep) {
+    } else if (urlStep === 'category' || !urlStep) {
       setSelectedCategory(null);
       setSelectedEntryType(null);
     }
