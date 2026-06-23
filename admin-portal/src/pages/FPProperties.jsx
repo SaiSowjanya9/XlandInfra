@@ -1094,7 +1094,21 @@ const FPProperties = ({ user }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Total Units</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.units || selectedProperty.number_of_units || selectedProperty.number_of_blocks || '1'}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {(() => {
+                        // For GC, calculate from units_per_block
+                        if (selectedProperty.units_per_block) {
+                          try {
+                            const unitsPerBlock = typeof selectedProperty.units_per_block === 'string' 
+                              ? JSON.parse(selectedProperty.units_per_block) 
+                              : selectedProperty.units_per_block;
+                            const total = Object.values(unitsPerBlock).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+                            if (total > 0) return total;
+                          } catch {}
+                        }
+                        return selectedProperty.total_units || selectedProperty.units || selectedProperty.number_of_units || '-';
+                      })()}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Created Date</p>

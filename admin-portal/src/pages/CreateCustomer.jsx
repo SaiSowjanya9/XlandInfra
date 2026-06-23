@@ -1132,17 +1132,25 @@ const CreateCustomer = ({ admin }) => {
                 <input
                   type="number"
                   min="1"
-                  value={formData.numberOfBlocks}
-                  onChange={(e) => updateFormData('numberOfBlocks', parseInt(e.target.value) || 1)}
+                  value={formData.numberOfBlocks || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    updateFormData('numberOfBlocks', val === '' ? '' : Math.max(1, parseInt(val) || 1));
+                  }}
+                  onBlur={(e) => {
+                    if (!formData.numberOfBlocks || formData.numberOfBlocks < 1) {
+                      updateFormData('numberOfBlocks', 1);
+                    }
+                  }}
                   className={inputClass(hasError && formData.numberOfBlocks < 1)}
-                  placeholder="Enter number of blocks"
+                  placeholder="1"
                 />
                 <FieldError show={hasError && formData.numberOfBlocks < 1} message="Number of blocks is required" />
               </div>
 
               {/* Units per Block with Unit Type Breakdown */}
               <div className="space-y-6 mt-4">
-                {Array.from({ length: formData.numberOfBlocks }, (_, i) => i + 1).map(blockNum => {
+                {Array.from({ length: formData.numberOfBlocks || 1 }, (_, i) => i + 1).map(blockNum => {
                   const blockError = hasError && (!formData.unitsPerBlock[blockNum] || formData.unitsPerBlock[blockNum] <= 0);
                   const totalUnits = formData.unitsPerBlock[blockNum] || 0;
                   return (
