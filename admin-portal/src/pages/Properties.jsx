@@ -48,6 +48,15 @@ const TYPE_STYLES = {
 
 const TYPE_LABELS = { GC: 'Gated Community', APT: 'Apartment', VILLA: 'Villa', PLOT: 'Plot', FLAT: 'Flat' };
 
+// Unit types for block breakdown
+const UNIT_TYPES = [
+  { key: 'studio', label: 'Studio' },
+  { key: 'oneBed', label: '1 Bed' },
+  { key: 'twoBed', label: '2 Bed' },
+  { key: 'threeBed', label: '3 Bed' },
+  { key: 'fourBed', label: '4 Bed' }
+];
+
 // Helper to normalize property type for consistent filtering
 const normalizePropertyType = (type) => {
   if (!type) return '';
@@ -155,6 +164,12 @@ const Properties = () => {
 
   // Open edit modal
   const openEditModal = (property) => {
+    // Parse block unit types if string
+    let blockUnitTypes = property.blockUnitTypes || property.block_unit_types || {};
+    if (typeof blockUnitTypes === 'string') {
+      try { blockUnitTypes = JSON.parse(blockUnitTypes); } catch { blockUnitTypes = {}; }
+    }
+    
     setEditFormData({
       id: property.id,
       name: property.name || property.community_name || '',
@@ -169,7 +184,16 @@ const Properties = () => {
       contactEmail: property.contactEmail || property.contact_email || '',
       entryType: property.entryType || '',
       watchmanName: property.watchmanName || '',
-      watchmanContact: property.watchmanContact || ''
+      watchmanContact: property.watchmanContact || '',
+      // GC fields
+      numberOfBlocks: property.numberOfBlocks || property.number_of_blocks || 1,
+      unitsPerBlock: property.unitsPerBlock || property.units_per_block || {},
+      blockNames: property.blockNames || property.block_names || {},
+      blockUnitTypes: blockUnitTypes,
+      // APT fields
+      numberOfUnits: property.numberOfUnits || property.number_of_units || 0,
+      blockInfo: property.blockInfo || property.block_info || '',
+      blockNA: property.blockNA || property.block_na || false
     });
     setShowEditModal(true);
   };
@@ -865,19 +889,55 @@ const Properties = () => {
                         </div>
                         <div className="p-3 bg-blue-50 rounded-lg">
                           <label className="block text-xs text-gray-500 mb-1">Total Units</label>
-                          <p className="text-sm font-medium text-gray-900">{viewProperty.totalUnits || viewProperty.total_units || 0}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {(() => {
+                              // Calculate from units_per_block if available
+                              const unitsPerBlock = viewProperty.unitsPerBlock || viewProperty.units_per_block;
+                              if (unitsPerBlock && typeof unitsPerBlock === 'object') {
+                                const total = Object.values(unitsPerBlock).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+                                if (total > 0) return total;
+                              }
+                              return viewProperty.totalUnits || viewProperty.total_units || 0;
+                            })()}
+                          </p>
                         </div>
                       </div>
                       {viewProperty.unitsPerBlock && Object.keys(viewProperty.unitsPerBlock).length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          {Object.entries(viewProperty.unitsPerBlock).map(([blockNum, units]) => (
-                            <div key={blockNum} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                              <label className="block text-xs text-gray-500 mb-1">
-                                {viewProperty.blockNames?.[blockNum] || `Block ${blockNum}`}
-                              </label>
-                              <p className="text-sm font-medium text-gray-900">{units} units</p>
-                            </div>
-                          ))}
+                        <div className="space-y-4">
+                          {Object.entries(viewProperty.unitsPerBlock).map(([blockNum, units]) => {
+                            // Get unit types for this block
+                            const blockUnitTypes = viewProperty.blockUnitTypes || viewProperty.block_unit_types || {};
+                            const unitTypes = blockUnitTypes[blockNum] || {};
+                            const hasUnitTypes = Object.keys(unitTypes).length > 0 && Object.values(unitTypes).some(v => v > 0);
+                            
+                            return (
+                              <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <div className="flex justify-between items-center mb-3">
+                                  <div>
+                                    <p className="text-xs text-gray-500">Block Name</p>
+                                    <p className="text-sm font-semibold text-gray-900">{viewProperty.blockNames?.[blockNum] || `Block ${blockNum}`}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xs text-gray-500">Total Units</p>
+                                    <p className="text-sm font-semibold text-gray-900">{units}</p>
+                                  </div>
+                                </div>
+                                {hasUnitTypes && (
+                                  <div className="pt-3 border-t border-gray-200">
+                                    <p className="text-xs text-gray-500 mb-2">Unit Types</p>
+                                    <div className="grid grid-cols-5 gap-2">
+                                      {UNIT_TYPES.map(ut => (
+                                        <div key={ut.key} className="text-center">
+                                          <p className="text-xs text-gray-500">{ut.label}</p>
+                                          <p className="text-sm font-medium">{unitTypes[ut.key] || 0}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       ) : (
                         <p className="text-sm text-gray-500 italic">Block details not available</p>
@@ -889,16 +949,37 @@ const Properties = () => {
                   {(viewProperty.entryType === 'APT' || viewProperty.entryType?.toUpperCase() === 'APT') && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Apartment Details</h3>
-                      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-4">
                         <div>
                           <label className="block text-xs text-gray-500 mb-1">Block Information</label>
-                          <p className="text-sm text-gray-900">{viewProperty.blockNA ? 'N/A' : (viewProperty.blockInfo || '-')}</p>
+                          <p className="text-sm text-gray-900">{viewProperty.blockNA ? 'N/A' : (viewProperty.blockInfo || viewProperty.block_info || '-')}</p>
                         </div>
                         <div>
                           <label className="block text-xs text-gray-500 mb-1">Number of Units</label>
-                          <p className="text-sm text-gray-900">{viewProperty.numberOfUnits || '-'}</p>
+                          <p className="text-sm text-gray-900">{viewProperty.numberOfUnits || viewProperty.number_of_units || '-'}</p>
                         </div>
                       </div>
+                      {/* Unit Types for Apartment */}
+                      {(() => {
+                        const blockUnitTypes = viewProperty.blockUnitTypes || viewProperty.block_unit_types || {};
+                        const unitTypes = blockUnitTypes['apt'] || {};
+                        if (Object.keys(unitTypes).length > 0 && Object.values(unitTypes).some(v => v > 0)) {
+                          return (
+                            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                              <p className="text-xs text-gray-500 mb-2 font-medium">Unit Types</p>
+                              <div className="grid grid-cols-5 gap-2">
+                                {UNIT_TYPES.map(ut => (
+                                  <div key={ut.key} className="text-center">
+                                    <p className="text-xs text-gray-500">{ut.label}</p>
+                                    <p className="text-sm font-medium">{unitTypes[ut.key] || 0}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   )}
 
@@ -1559,6 +1640,131 @@ const Properties = () => {
                           placeholder="10-digit number"
                         />
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* GC Block Details with Unit Types */}
+              {editFormData.entryType === 'GC' && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3">Block Details</h3>
+                  <div className="space-y-4">
+                    {Array.from({ length: editFormData.numberOfBlocks || 1 }, (_, i) => i + 1).map(blockNum => {
+                      const blockUnitTypes = editFormData.blockUnitTypes || {};
+                      const unitTypes = blockUnitTypes[blockNum] || { studio: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourBed: 0 };
+                      const totalUnits = Object.values(unitTypes).reduce((sum, v) => sum + (parseInt(v) || 0), 0);
+                      
+                      return (
+                        <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex gap-4 items-start mb-3">
+                            <div className="flex-1">
+                              <label className="block text-xs text-gray-500 mb-1">Block Name</label>
+                              <input
+                                type="text"
+                                value={editFormData.blockNames?.[blockNum] || ''}
+                                onChange={(e) => {
+                                  const newBlockNames = { ...editFormData.blockNames, [blockNum]: e.target.value };
+                                  setEditFormData({ ...editFormData, blockNames: newBlockNames });
+                                }}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                placeholder={`Block ${blockNum}`}
+                              />
+                            </div>
+                            <div className="w-24">
+                              <label className="block text-xs text-gray-500 mb-1">Total Units</label>
+                              <input
+                                type="number"
+                                value={totalUnits}
+                                readOnly
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 cursor-not-allowed"
+                              />
+                            </div>
+                          </div>
+                          <div className="pt-3 border-t border-gray-200">
+                            <label className="block text-xs text-gray-500 mb-2">Unit Types</label>
+                            <div className="grid grid-cols-5 gap-2">
+                              {UNIT_TYPES.map(ut => (
+                                <div key={ut.key}>
+                                  <label className="block text-xs text-gray-500 mb-1">{ut.label}</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={unitTypes[ut.key] || ''}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value) || 0;
+                                      const newUnitTypes = { ...unitTypes, [ut.key]: val };
+                                      const newTotal = Object.values(newUnitTypes).reduce((sum, v) => sum + v, 0);
+                                      const newBlockUnitTypes = { ...editFormData.blockUnitTypes, [blockNum]: newUnitTypes };
+                                      const newUnitsPerBlock = { ...editFormData.unitsPerBlock, [blockNum]: newTotal };
+                                      setEditFormData({ ...editFormData, blockUnitTypes: newBlockUnitTypes, unitsPerBlock: newUnitsPerBlock });
+                                    }}
+                                    className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                    placeholder="0"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* APT Details with Unit Types */}
+              {editFormData.entryType === 'APT' && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3">Apartment Details</h3>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Block Information</label>
+                      <input
+                        type="text"
+                        value={editFormData.blockInfo || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, blockInfo: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Block A, Tower 1, etc."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Number of Units</label>
+                      <input
+                        type="number"
+                        value={editFormData.numberOfUnits || 0}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 cursor-not-allowed"
+                        placeholder="Auto-calculated"
+                      />
+                    </div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Unit Types</label>
+                    <div className="grid grid-cols-5 gap-2">
+                      {UNIT_TYPES.map(ut => {
+                        const aptUnitTypes = editFormData.blockUnitTypes?.['apt'] || { studio: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourBed: 0 };
+                        return (
+                          <div key={ut.key}>
+                            <label className="block text-xs text-gray-500 mb-1">{ut.label}</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={aptUnitTypes[ut.key] || ''}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value) || 0;
+                                const currentAptTypes = editFormData.blockUnitTypes?.['apt'] || { studio: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourBed: 0 };
+                                const newAptTypes = { ...currentAptTypes, [ut.key]: val };
+                                const newTotal = Object.values(newAptTypes).reduce((sum, v) => sum + v, 0);
+                                const newBlockUnitTypes = { ...editFormData.blockUnitTypes, apt: newAptTypes };
+                                setEditFormData({ ...editFormData, blockUnitTypes: newBlockUnitTypes, numberOfUnits: newTotal });
+                              }}
+                              className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                              placeholder="0"
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
