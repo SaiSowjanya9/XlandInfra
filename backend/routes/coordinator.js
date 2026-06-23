@@ -308,7 +308,9 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'p');
 
-    console.log(`Coordinator properties fetch - coordinatorId: ${coordinatorId}, franchisePartnerId: ${franchisePartnerId}, isFPCoordinator: ${isFPCoordinator}, assignedZones: ${assignedZones}, creatorEmail: ${creatorEmail}`);
+    console.log(`[Coordinator Properties] employeeId: ${employeeId}, coordinatorId: ${coordinatorId}, fpId: ${franchisePartnerId}, isFPCoordinator: ${isFPCoordinator}`);
+    console.log(`[Coordinator Properties] assignedZones: ${JSON.stringify(assignedZones)}, creatorEmail: ${creatorEmail}`);
+    console.log(`[Coordinator Properties] zoneFilter: ${JSON.stringify(zoneFilter)}`);
 
     // For FP Coordinators: primarily filter by franchise_partner_id
     // For standalone Coordinators: filter by coordinator_id
