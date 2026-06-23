@@ -25,7 +25,7 @@ const ConstructionDelivery = lazy(() => import('./pages/services/ConstructionDel
 const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/legal/TermsOfService'));
 const CookiePolicy = lazy(() => import('./pages/legal/CookiePolicy'));
-const CookieConsent = lazy(() => import('./components/CookieConsent'));
+import CookieConsent from './components/CookieConsent';
 
 // Loading fallback component
 const PageLoader = () => (
