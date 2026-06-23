@@ -154,8 +154,10 @@ router.post('/', authenticate, async (req, res) => {
 
     // Insert contacts
     if (associationContacts && associationContacts.length > 0) {
+      console.log(`📇 Inserting ${associationContacts.length} contacts for property ${insertedId}`);
       for (const contact of associationContacts) {
         if (contact.name && contact.name.trim()) {
+          console.log(`📇 Inserting contact: ${contact.name}, ${contact.email}, ${contact.phone}`);
           await conn.execute(
             `INSERT INTO property_contacts (property_id, name, email, phone, country_code)
              VALUES (?, ?, ?, ?, ?)`,
@@ -169,6 +171,8 @@ router.post('/', authenticate, async (req, res) => {
           );
         }
       }
+    } else {
+      console.log('📇 No contacts to insert');
     }
 
     await conn.commit();
