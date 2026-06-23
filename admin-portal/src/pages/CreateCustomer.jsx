@@ -615,7 +615,7 @@ const CreateCustomer = ({ admin }) => {
         </div>
 
         {/* Category Selection Card */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-12 shadow-sm">
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-2xl p-12 shadow-sm">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold text-gray-900">Select Category</h2>
             <p className="text-gray-500 mt-2">Choose the customer category to proceed</p>
@@ -627,7 +627,7 @@ const CreateCustomer = ({ admin }) => {
               return category.locked ? (
                 <div
                   key={category.id}
-                  className="w-72 h-52 p-8 border border-gray-200 rounded-2xl bg-white relative cursor-not-allowed flex flex-col items-start justify-center"
+                  className="w-72 h-52 p-8 border border-gray-200 rounded-2xl bg-white relative cursor-not-allowed flex flex-col items-start justify-center shadow-sm"
                 >
                   <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
                     <Lock className="w-3.5 h-3.5 text-gray-400" />
@@ -642,7 +642,7 @@ const CreateCustomer = ({ admin }) => {
                 <button
                   key={category.id}
                   onClick={() => handleSelectCategory(category.id)}
-                  className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-teal-50/50 group flex flex-col items-start justify-center"
+                  className="w-72 h-52 p-8 border-2 border-teal-400 rounded-2xl hover:shadow-xl transition-all duration-200 bg-white shadow-sm group flex flex-col items-start justify-center"
                 >
                   <div className="w-14 h-14 bg-teal-500 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
                     <Icon className="w-7 h-7 text-white" />
@@ -674,7 +674,7 @@ const CreateCustomer = ({ admin }) => {
           </button>
         </div>
 
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-100 p-10">
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl shadow-sm border border-slate-200 p-10">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Entry Type</h2>
             <p className="text-gray-500">Choose the type of customer data you want to enter</p>

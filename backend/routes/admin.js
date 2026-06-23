@@ -327,7 +327,7 @@ router.get('/properties', authenticate, dataEntryRoles, async (req, res) => {
               'properties' as source_table
        FROM properties p 
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR p.created_by = u.id
-       ORDER BY p.name`
+       ORDER BY p.created_at DESC`
     );
 
     let onboardedProperties = [];
@@ -343,15 +343,16 @@ router.get('/properties', authenticate, dataEntryRoles, async (req, res) => {
          FROM onboarded_properties op
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
          WHERE op.status = 'active'
-         ORDER BY op.community_name`
+         ORDER BY op.created_at DESC`
       );
       onboardedProperties = rows;
     } catch (e) {
       console.log('onboarded_properties fetch error:', e.message);
     }
 
-    // Combine both sources
-    const allProperties = [...regularProperties, ...onboardedProperties];
+    // Combine both sources and sort by created_at DESC
+    const allProperties = [...regularProperties, ...onboardedProperties]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     res.json({
       success: true,

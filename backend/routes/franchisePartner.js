@@ -223,13 +223,21 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       // Work orders by role - simplified without JOIN
       Promise.resolve({ managers: 0, coordinators: 0, supervisors: 0, executives: 0 }),
       
-      // Recent work orders - simplified without fp_employees JOIN
+      // Recent work orders with creator name lookup
       pool.execute(
         `SELECT wo.*, p.name as property_name, c.name as category_name,
-                wo.created_by as created_by_name
+                COALESCE(
+                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                  CONCAT(pma.first_name, ' ', COALESCE(pma.last_name, '')),
+                  CASE WHEN wo.created_by REGEXP '^[0-9]+$' THEN NULL ELSE wo.created_by END,
+                  'System'
+                ) as created_by_name,
+                COALESCE(fpe.role, pma.role, wo.created_by_role) as created_by_role
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN categories c ON wo.category_id = c.id
+         LEFT JOIN fp_employees fpe ON wo.created_by = fpe.id OR wo.created_by = fpe.email
+         LEFT JOIN pm_admins pma ON wo.created_by = pma.id OR wo.created_by = pma.email
          WHERE wo.franchise_partner_id = ?
          ORDER BY wo.created_at DESC LIMIT 5`,
         [fpId]
@@ -339,7 +347,9 @@ router.get('/properties', requireFPScope, async (req, res) => {
       console.log('onboarded_properties fetch error:', e.message);
     }
 
-    const allProperties = [...regularProperties, ...onboardedProperties];
+    // Combine both sources and sort by created_at DESC
+    const allProperties = [...regularProperties, ...onboardedProperties]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     res.json({
       success: true,

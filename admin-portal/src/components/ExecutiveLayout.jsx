@@ -159,7 +159,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
         <div className="flex flex-col h-full">
           {/* Logo Header */}
           <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-start'} px-3 h-20`} style={{ borderBottom: `1px solid ${colors.divider}` }}>
-            <img src="/logo.png" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-12' : 'h-14'} w-auto object-contain`} />
+            <img src="/logo-optimized.webp" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-12' : 'h-14'} w-auto object-contain`} />
             {!sidebarCollapsed && (
               <div className="flex flex-col ml-3">
                 <span className="text-xl font-bold tracking-wide" style={{ background: 'linear-gradient(135deg, #D4AF37 0%, #F4D03F 50%, #C9A227 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>XLAND INFRA</span>
