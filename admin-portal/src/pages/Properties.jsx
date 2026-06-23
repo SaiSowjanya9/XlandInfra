@@ -1000,39 +1000,47 @@ const Properties = () => {
                     </div>
                   )}
 
-                  {/* Contacts */}
-                  {((viewProperty.contacts && viewProperty.contacts.length > 0) || (viewProperty.associationContacts && viewProperty.associationContacts.length > 0)) && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Contact Information</h3>
-                      <div className="space-y-3">
-                        {(viewProperty.contacts || viewProperty.associationContacts || []).map((c, i) => (
-                          <div key={i} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                              <div className="min-w-0">
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
-                                <p className="text-sm font-medium text-gray-900">{c.name || 'N/A'}</p>
+                  {/* Contacts - Always show for all properties */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Contact Information</h3>
+                    {(() => {
+                      const contacts = viewProperty.contacts || viewProperty.associationContacts || [];
+                      if (contacts.length === 0) {
+                        return <p className="text-sm text-gray-500 italic">No contact information available</p>;
+                      }
+                      return (
+                        <div className="space-y-3">
+                          {contacts.map((c, i) => (
+                            <div key={i} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Contact {i + 1}</span>
                               </div>
-                              <div className="min-w-0 sm:col-span-2">
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
-                                <p className="text-sm text-gray-900 break-all" title={c.email}>{c.email || 'N/A'}</p>
-                              </div>
-                              <div className="min-w-0">
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
-                                <p className="text-sm text-gray-900 whitespace-nowrap">{(() => {
-                                  if (!c.phone) return 'N/A';
-                                  const phone = c.phone.toString().trim();
-                                  const cc = (c.countryCode || '+91').replace(/\s/g, '');
-                                  // If phone already starts with + or country code, show as-is
-                                  if (phone.startsWith('+') || phone.startsWith(cc.replace('+', ''))) return phone.startsWith('+') ? phone : `+${phone}`;
-                                  return `${cc} ${phone}`;
-                                })()}</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="min-w-0">
+                                  <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                                  <p className="text-sm font-medium text-gray-900">{c.name || 'N/A'}</p>
+                                </div>
+                                <div className="min-w-0">
+                                  <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                                  <p className="text-sm text-gray-900 break-all" title={c.email}>{c.email || 'N/A'}</p>
+                                </div>
+                                <div className="min-w-0">
+                                  <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
+                                  <p className="text-sm text-gray-900 whitespace-nowrap">{(() => {
+                                    if (!c.phone) return 'N/A';
+                                    const phone = c.phone.toString().trim();
+                                    const cc = (c.countryCode || c.country_code || '+91').replace(/\s/g, '');
+                                    if (phone.startsWith('+') || phone.startsWith(cc.replace('+', ''))) return phone.startsWith('+') ? phone : `+${phone}`;
+                                    return `${cc} ${phone}`;
+                                  })()}</p>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
 
                   {/* Watchman Information - Only for GC and APT */}
                   {(viewProperty.entryType === 'GC' || viewProperty.entryType === 'APT' ||
