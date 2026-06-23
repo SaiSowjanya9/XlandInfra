@@ -1130,7 +1130,7 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
                       value={formData.numberOfUnits}
                       readOnly
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 cursor-not-allowed"
-                      placeholder="Auto-calculated"
+                      placeholder=""
                     />
                     <FieldError show={hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0)} message="Add unit types below" />
                   </div>
