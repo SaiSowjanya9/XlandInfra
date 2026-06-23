@@ -173,10 +173,20 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
         <div className="flex flex-col h-full">
           {/* Logo Header */}
           <div 
-            className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-center'} px-3 h-20`}
+            className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-start'} px-3 h-20`}
             style={{ borderBottom: `1px solid ${colors.divider}` }}
           >
-            <img src="/logo.webp" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-10' : 'h-14'} w-auto object-contain`} />
+            <img src="/logo.webp" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-10' : 'h-12'} w-auto object-contain`} />
+            {!sidebarCollapsed && (
+              <div className="flex flex-col ml-2">
+                <span className="text-lg font-bold tracking-wider" style={{ background: 'linear-gradient(180deg, #D4AF37 0%, #C9A227 50%, #B8960F 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>XLAND INFRA</span>
+                <div className="flex items-center gap-1.5 -mt-0.5">
+                  <div className="w-6 h-[1px]" style={{ background: 'linear-gradient(90deg, transparent, #C9A227)' }}></div>
+                  <span className="text-[9px] tracking-[0.2em] font-medium" style={{ color: '#A08520' }}>PVT LTD</span>
+                  <div className="w-6 h-[1px]" style={{ background: 'linear-gradient(90deg, #C9A227, transparent)' }}></div>
+                </div>
+              </div>
+            )}
             <button 
               onClick={() => setSidebarOpen(false)} 
               className="lg:hidden ml-auto p-2 rounded-xl transition-colors"
