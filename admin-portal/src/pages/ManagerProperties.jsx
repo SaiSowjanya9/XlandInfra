@@ -21,7 +21,8 @@ import {
   ArrowLeft,
   FileText,
   Eye,
-  Users
+  Users,
+  ExternalLink
 } from 'lucide-react';
 
 const ManagerProperties = ({ user }) => {
@@ -751,304 +752,354 @@ const ManagerProperties = ({ user }) => {
       {/* View Property Modal */}
       {showViewModal && viewingProperty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Property Details</h2>
-                <button onClick={() => { setShowViewModal(false); setViewingProperty(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-gray-900">{viewingProperty.name}</h2>
+                  <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                    {viewingProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Property'}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">{viewingProperty.property_id}</p>
               </div>
+              <button onClick={() => { setShowViewModal(false); setViewingProperty(null); }} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
             </div>
 
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
-                  <p className="text-sm text-gray-500 mb-1">Property Name</p>
-                  <p className="text-gray-900 font-medium">{viewingProperty.name || '-'}</p>
+            <div className="p-6 space-y-6 overflow-y-auto">
+              {/* Property Information */}
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Zone</p>
+                    <p className="text-sm font-medium text-gray-900">{viewingProperty.zone_name || zones.find(z => z.id == viewingProperty.zone_id)?.name || viewingProperty.zone || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Area Name</p>
+                    <p className="text-sm font-medium text-gray-900">{viewingProperty.area || viewingProperty.area_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Division</p>
+                    <p className="text-sm font-medium text-gray-900">{viewingProperty.division_name || divisions.find(d => d.id == viewingProperty.division_id)?.name || viewingProperty.division || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Property Type</p>
+                    <p className="text-sm font-medium text-gray-900">{viewingProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {(() => {
+                        if (viewingProperty.units_per_block) {
+                          try {
+                            const unitsPerBlock = typeof viewingProperty.units_per_block === 'string' 
+                              ? JSON.parse(viewingProperty.units_per_block) 
+                              : viewingProperty.units_per_block;
+                            const total = Object.values(unitsPerBlock).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+                            if (total > 0) return total;
+                          } catch {}
+                        }
+                        return viewingProperty.total_units || viewingProperty.units || viewingProperty.number_of_units || '-';
+                      })()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Created Date</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {viewingProperty.created_at ? new Date(viewingProperty.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                    </p>
+                  </div>
                 </div>
+              </div>
 
+              {/* Gated Community Block Details */}
+              {(['gated_community', 'GC', 'Gated Community'].some(t => 
+                viewingProperty.property_type?.toLowerCase() === t.toLowerCase() || 
+                viewingProperty.entry_type === 'GC'
+              )) && (
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">Property Type</p>
-                  <p className="text-gray-900 capitalize">{viewingProperty.property_type || '-'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Zone</p>
-                  <p className="text-gray-900">{viewingProperty.zone_name || zones.find(z => z.id == viewingProperty.zone_id)?.name || viewingProperty.zone || '-'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Area Name</p>
-                  <p className="text-gray-900">{viewingProperty.area || viewingProperty.area_name || '-'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Division</p>
-                  <p className="text-gray-900">{viewingProperty.division_name || divisions.find(d => d.id == viewingProperty.division_id)?.name || viewingProperty.division || '-'}</p>
-                </div>
-
-                <div className="md:col-span-2">
-                  <p className="text-sm text-gray-500 mb-1">Address</p>
-                  <p className="text-gray-900">{viewingProperty.address || '-'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">City</p>
-                  <p className="text-gray-900">{viewingProperty.city || '-'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">State</p>
-                  <p className="text-gray-900">{viewingProperty.state || '-'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">ZIP Code</p>
-                  <p className="text-gray-900">{viewingProperty.zip_code || '-'}</p>
-                </div>
-
-                {/* Gated Community Block Details */}
-                {(['gated_community', 'GC', 'Gated Community'].some(t => 
-                  viewingProperty.property_type?.toLowerCase() === t.toLowerCase() || 
-                  viewingProperty.entry_type === 'GC'
-                )) && (
-                  <div className="md:col-span-2 mt-4">
-                    <h4 className="text-base font-semibold text-gray-900 mb-4">Block Details</h4>
-                    <div className="mb-4">
-                      <p className="text-xs text-gray-500 mb-1">Number of Blocks</p>
-                      <p className="text-sm font-medium text-gray-900">{viewingProperty.number_of_blocks || 1}</p>
-                    </div>
-                    {(() => {
-                      try {
-                        const blockNames = typeof viewingProperty.block_names === 'string' ? JSON.parse(viewingProperty.block_names) : viewingProperty.block_names || {};
-                        const unitsPerBlock = typeof viewingProperty.units_per_block === 'string' ? JSON.parse(viewingProperty.units_per_block) : viewingProperty.units_per_block || {};
-                        const blockUnitTypes = typeof viewingProperty.block_unit_types === 'string' ? JSON.parse(viewingProperty.block_unit_types) : viewingProperty.block_unit_types || {};
-                        const numBlocks = viewingProperty.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
-                        if (Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0) {
-                          return (
-                            <div className="space-y-4">
-                              {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
-                                const unitTypes = blockUnitTypes[blockNum] || {};
-                                return (
-                                  <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div className="flex gap-4 mb-3">
-                                      <div>
-                                        <p className="text-xs text-gray-500 mb-1">Block Name</p>
-                                        <p className="text-sm font-medium text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-xs text-gray-500 mb-1">Total Units</p>
-                                        <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || 0}</p>
-                                      </div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
+                  <div className="mb-4">
+                    <p className="text-xs text-gray-500 mb-1">Number of Blocks</p>
+                    <p className="text-sm font-medium text-gray-900">{viewingProperty.number_of_blocks || 1}</p>
+                  </div>
+                  {(() => {
+                    try {
+                      const blockNames = typeof viewingProperty.block_names === 'string' ? JSON.parse(viewingProperty.block_names) : viewingProperty.block_names || {};
+                      const unitsPerBlock = typeof viewingProperty.units_per_block === 'string' ? JSON.parse(viewingProperty.units_per_block) : viewingProperty.units_per_block || {};
+                      const blockUnitTypes = typeof viewingProperty.block_unit_types === 'string' ? JSON.parse(viewingProperty.block_unit_types) : viewingProperty.block_unit_types || {};
+                      const numBlocks = viewingProperty.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
+                      if (Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0) {
+                        return (
+                          <div className="space-y-4">
+                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
+                              const unitTypes = blockUnitTypes[blockNum] || {};
+                              return (
+                                <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                  <div className="flex gap-4 mb-3">
+                                    <div>
+                                      <p className="text-xs text-gray-500 mb-1">Block Name</p>
+                                      <p className="text-sm font-medium text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</p>
                                     </div>
-                                    {Object.keys(unitTypes).length > 0 && (
-                                      <div className="grid grid-cols-5 gap-2 pt-2 border-t border-gray-200">
-                                        <div><p className="text-xs text-gray-500">Studio</p><p className="text-sm font-medium">{unitTypes.studio || 0}</p></div>
-                                        <div><p className="text-xs text-gray-500">1 Bed</p><p className="text-sm font-medium">{unitTypes.oneBed || 0}</p></div>
-                                        <div><p className="text-xs text-gray-500">2 Bed</p><p className="text-sm font-medium">{unitTypes.twoBed || 0}</p></div>
-                                        <div><p className="text-xs text-gray-500">3 Bed</p><p className="text-sm font-medium">{unitTypes.threeBed || 0}</p></div>
-                                        <div><p className="text-xs text-gray-500">4 Bed</p><p className="text-sm font-medium">{unitTypes.fourBed || 0}</p></div>
-                                      </div>
-                                    )}
+                                    <div>
+                                      <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                                      <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || 0}</p>
+                                    </div>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        }
-                        return null;
-                      } catch { return null; }
-                    })()}
-                  </div>
-                )}
+                                  {Object.keys(unitTypes).length > 0 && (
+                                    <div className="grid grid-cols-5 gap-2 pt-2 border-t border-gray-200">
+                                      <div><p className="text-xs text-gray-500">Studio</p><p className="text-sm font-medium">{unitTypes.studio || 0}</p></div>
+                                      <div><p className="text-xs text-gray-500">1 Bed</p><p className="text-sm font-medium">{unitTypes.oneBed || 0}</p></div>
+                                      <div><p className="text-xs text-gray-500">2 Bed</p><p className="text-sm font-medium">{unitTypes.twoBed || 0}</p></div>
+                                      <div><p className="text-xs text-gray-500">3 Bed</p><p className="text-sm font-medium">{unitTypes.threeBed || 0}</p></div>
+                                      <div><p className="text-xs text-gray-500">4 Bed</p><p className="text-sm font-medium">{unitTypes.fourBed || 0}</p></div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+                      return null;
+                    } catch { return null; }
+                  })()}
+                </div>
+              )}
 
-                {/* Apartment Details */}
-                {(['apartment', 'APT', 'Apartment'].some(t => 
-                  viewingProperty.property_type?.toLowerCase() === t.toLowerCase() || 
-                  viewingProperty.entry_type === 'APT'
-                )) && (
-                  <div className="md:col-span-2 mt-4">
-                    <h4 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h4>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Block Information</p>
-                        <p className="text-sm font-medium text-gray-900">{viewingProperty.block_na ? 'N/A' : (viewingProperty.block_info || '-')}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Number of Units</p>
-                        <p className="text-sm font-medium text-gray-900">{viewingProperty.number_of_units || '-'}</p>
-                      </div>
-                    </div>
-                    {(() => {
-                      try {
-                        const blockUnitTypes = typeof viewingProperty.block_unit_types === 'string' ? JSON.parse(viewingProperty.block_unit_types) : viewingProperty.block_unit_types || {};
-                        const unitTypes = blockUnitTypes['apt'] || {};
-                        if (Object.keys(unitTypes).length > 0 && Object.values(unitTypes).some(v => v > 0)) {
-                          return (
-                            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                              <p className="text-xs text-gray-500 mb-2 font-medium">Unit Types</p>
-                              <div className="grid grid-cols-5 gap-2">
-                                <div><p className="text-xs text-gray-500">Studio</p><p className="text-sm font-medium">{unitTypes.studio || 0}</p></div>
-                                <div><p className="text-xs text-gray-500">1 Bed</p><p className="text-sm font-medium">{unitTypes.oneBed || 0}</p></div>
-                                <div><p className="text-xs text-gray-500">2 Bed</p><p className="text-sm font-medium">{unitTypes.twoBed || 0}</p></div>
-                                <div><p className="text-xs text-gray-500">3 Bed</p><p className="text-sm font-medium">{unitTypes.threeBed || 0}</p></div>
-                                <div><p className="text-xs text-gray-500">4 Bed</p><p className="text-sm font-medium">{unitTypes.fourBed || 0}</p></div>
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      } catch { return null; }
-                    })()}
-                  </div>
-                )}
-
-                {/* Villa Details */}
-                {(viewingProperty.property_type === 'villa' || viewingProperty.property_type === 'VILLA') && (
-                  <div className="md:col-span-2 mt-4 p-4 bg-purple-50 rounded-lg">
-                    <h4 className="text-sm font-semibold text-purple-800 mb-3">Villa Details</h4>
+              {/* Apartment Details */}
+              {(['apartment', 'APT', 'Apartment'].some(t => 
+                viewingProperty.property_type?.toLowerCase() === t.toLowerCase() || 
+                viewingProperty.entry_type === 'APT'
+              )) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h3>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                      <p className="text-sm text-gray-500 mb-1">Villa Number</p>
-                      <p className="text-gray-900">{viewingProperty.villa_plot_number || '-'}</p>
+                      <p className="text-xs text-gray-500 mb-1">Block Information</p>
+                      <p className="text-sm font-medium text-gray-900">{viewingProperty.block_na ? 'N/A' : (viewingProperty.block_info || '-')}</p>
                     </div>
-                  </div>
-                )}
-
-                {/* Flat Details */}
-                {(viewingProperty.property_type === 'flat' || viewingProperty.property_type === 'FLAT') && (
-                  <div className="md:col-span-2 mt-4 p-4 bg-orange-50 rounded-lg">
-                    <h4 className="text-sm font-semibold text-orange-800 mb-3">Flat Details</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">Flat Number</p>
-                        <p className="text-gray-900">{viewingProperty.villa_plot_number || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">Block Information</p>
-                        <p className="text-gray-900">{viewingProperty.flat_block_na ? 'N/A' : (viewingProperty.flat_block_info || '-')}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Plot Details */}
-                {(viewingProperty.property_type === 'plot' || viewingProperty.property_type === 'PLOT') && (
-                  <div className="md:col-span-2 mt-4 p-4 bg-amber-50 rounded-lg">
-                    <h4 className="text-sm font-semibold text-amber-800 mb-3">Plot Details</h4>
                     <div>
-                      <p className="text-sm text-gray-500 mb-1">Plot Number</p>
-                      <p className="text-gray-900">{viewingProperty.plot_na ? 'N/A' : (viewingProperty.villa_plot_number || '-')}</p>
+                      <p className="text-xs text-gray-500 mb-1">Number of Units</p>
+                      <p className="text-sm font-medium text-gray-900">{viewingProperty.number_of_units || '-'}</p>
                     </div>
                   </div>
-                )}
+                  {(() => {
+                    try {
+                      const blockUnitTypes = typeof viewingProperty.block_unit_types === 'string' ? JSON.parse(viewingProperty.block_unit_types) : viewingProperty.block_unit_types || {};
+                      const unitTypes = blockUnitTypes['apt'] || {};
+                      if (Object.keys(unitTypes).length > 0 && Object.values(unitTypes).some(v => v > 0)) {
+                        return (
+                          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <p className="text-xs text-gray-500 mb-2 font-medium">Unit Types</p>
+                            <div className="grid grid-cols-5 gap-2">
+                              <div><p className="text-xs text-gray-500">Studio</p><p className="text-sm font-medium">{unitTypes.studio || 0}</p></div>
+                              <div><p className="text-xs text-gray-500">1 Bed</p><p className="text-sm font-medium">{unitTypes.oneBed || 0}</p></div>
+                              <div><p className="text-xs text-gray-500">2 Bed</p><p className="text-sm font-medium">{unitTypes.twoBed || 0}</p></div>
+                              <div><p className="text-xs text-gray-500">3 Bed</p><p className="text-sm font-medium">{unitTypes.threeBed || 0}</p></div>
+                              <div><p className="text-xs text-gray-500">4 Bed</p><p className="text-sm font-medium">{unitTypes.fourBed || 0}</p></div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    } catch { return null; }
+                  })()}
+                </div>
+              )}
 
-                {/* Contact Information */}
-                {(() => {
-                  let contacts = [];
-                  try {
-                    if (viewingProperty.association_contacts) {
-                      contacts = typeof viewingProperty.association_contacts === 'string' 
-                        ? JSON.parse(viewingProperty.association_contacts) 
-                        : viewingProperty.association_contacts;
-                    }
-                  } catch { contacts = []; }
-                  
-                  if (contacts.length === 0 && (viewingProperty.contact_person || viewingProperty.contact_email || viewingProperty.contact_phone)) {
-                    contacts = [{
-                      name: viewingProperty.contact_person,
-                      email: viewingProperty.contact_email,
-                      phone: viewingProperty.contact_phone
-                    }];
+              {/* Villa Details */}
+              {(['villa', 'VILLA', 'Villa'].some(t => 
+                viewingProperty.property_type?.toLowerCase() === t.toLowerCase() || 
+                viewingProperty.entry_type === 'VILLA'
+              )) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Villa Details</h3>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Villa Number</p>
+                    <p className="text-sm font-medium text-gray-900">{viewingProperty.villa_plot_number || '-'}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Flat Details */}
+              {(['flat', 'FLAT', 'Flat'].some(t => 
+                viewingProperty.property_type?.toLowerCase() === t.toLowerCase() || 
+                viewingProperty.entry_type === 'FLAT'
+              )) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Flat Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Flat Number</p>
+                      <p className="text-sm font-medium text-gray-900">{viewingProperty.villa_plot_number || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Block Information</p>
+                      <p className="text-sm font-medium text-gray-900">{viewingProperty.flat_block_na ? 'N/A' : (viewingProperty.flat_block_info || '-')}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Plot Details */}
+              {(['plot', 'PLOT', 'Plot'].some(t => 
+                viewingProperty.property_type?.toLowerCase() === t.toLowerCase() || 
+                viewingProperty.entry_type === 'PLOT'
+              )) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Plot Details</h3>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Plot Number</p>
+                    <p className="text-sm font-medium text-gray-900">{viewingProperty.plot_na ? 'N/A' : (viewingProperty.villa_plot_number || '-')}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Address */}
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Address</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <p className="text-xs text-gray-500 mb-1">Street Address</p>
+                    <p className="text-sm font-medium text-gray-900">{viewingProperty.address || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">City</p>
+                    <p className="text-sm font-medium text-gray-900">{viewingProperty.city || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">State/Province</p>
+                    <p className="text-sm font-medium text-gray-900">{viewingProperty.state || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">ZIP/Postal Code</p>
+                    <p className="text-sm font-medium text-gray-900">{viewingProperty.zip_code || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Map Location */}
+              {(viewingProperty.latitude || viewingProperty.longitude || viewingProperty.landmark) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Map Location</h3>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-700 mb-3">
+                      {viewingProperty.landmark || `${viewingProperty.address || ''}, ${viewingProperty.city || ''}, ${viewingProperty.state || ''}, ${viewingProperty.zip_code || ''}`}
+                    </p>
+                    {(viewingProperty.latitude && viewingProperty.longitude) && (
+                      <>
+                        <a
+                          href={`https://www.google.com/maps?q=${viewingProperty.latitude},${viewingProperty.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          Open in Maps
+                        </a>
+                        <p className="text-xs text-blue-600 mt-3 font-mono">
+                          {viewingProperty.latitude}, {viewingProperty.longitude}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Contact Information */}
+              {(() => {
+                let contacts = [];
+                try {
+                  if (viewingProperty.association_contacts) {
+                    contacts = typeof viewingProperty.association_contacts === 'string' 
+                      ? JSON.parse(viewingProperty.association_contacts) 
+                      : viewingProperty.association_contacts;
                   }
-                  
-                  if (contacts.length === 0) return null;
-                  
-                  return (
-                    <div className="md:col-span-2 mt-4">
-                      <h4 className="text-sm font-semibold text-gray-800 mb-3">Contact Information</h4>
-                      <div className="space-y-3">
-                        {contacts.map((contact, index) => (
-                          <div key={index} className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                                <span className="text-xs font-medium text-blue-600">{index + 1}</span>
-                              </div>
-                              <span className="text-xs text-gray-500">Contact {index + 1}</span>
+                } catch { contacts = []; }
+                
+                if (contacts.length === 0 && (viewingProperty.contact_person || viewingProperty.contact_email || viewingProperty.contact_phone)) {
+                  contacts = [{
+                    name: viewingProperty.contact_person,
+                    email: viewingProperty.contact_email,
+                    phone: viewingProperty.contact_phone
+                  }];
+                }
+                
+                if (contacts.length === 0) return null;
+                
+                return (
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-900 mb-4">Contact Information</h3>
+                    <div className="space-y-3">
+                      {contacts.map((contact, index) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-blue-600">{index + 1}</span>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_2.5fr_1fr] gap-4">
-                              <div className="min-w-0">
-                                <p className="text-xs text-gray-500 mb-1">Name</p>
-                                <p className="text-sm text-gray-900">{contact.name || '-'}</p>
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs text-gray-500 mb-1">Email</p>
-                                <p className="text-sm text-gray-900 break-all">{contact.email || '-'}</p>
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs text-gray-500 mb-1">Phone</p>
-                                <p className="text-sm text-gray-900 whitespace-nowrap">{(() => {
+                            <span className="text-xs text-gray-500">Contact {index + 1}</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_2.5fr_1fr] gap-4">
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-500 mb-1">Name</p>
+                              <p className="text-sm font-medium text-gray-900">{contact.name || '-'}</p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-500 mb-1">Email</p>
+                              <p className="text-sm font-medium text-gray-900 break-all">{contact.email || '-'}</p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-500 mb-1">Phone</p>
+                              <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                                {(() => {
                                   if (!contact.phone) return '-';
                                   const phone = contact.phone.toString().trim();
                                   if (phone.startsWith('+')) return phone;
                                   return `+91 ${phone}`;
-                                })()}</p>
-                              </div>
+                                })()}
+                              </p>
                             </div>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })()}
+                  </div>
+                );
+              })()}
 
-                {/* Watchman Information - Only for GC and APT */}
-                {(['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((viewingProperty.property_type || '').toLowerCase()) ||
-                 ['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((viewingProperty.entry_type || '').toLowerCase())) && (
-                  <div className="md:col-span-2 mt-4">
-                    <h4 className="text-sm font-semibold text-gray-800 mb-3">Watchman Information</h4>
-                    <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Watchman Name</p>
-                          <p className="text-sm text-gray-900">{viewingProperty.watchman_name || viewingProperty.watchmanName || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Watchman Contact</p>
-                          <p className="text-sm text-gray-900">
-                            {(() => {
-                              const contact = viewingProperty.watchman_contact || viewingProperty.watchmanContact;
-                              if (!contact) return 'N/A';
-                              return contact.startsWith('+') ? contact : `+91 ${contact}`;
-                            })()}
-                          </p>
-                        </div>
+              {/* Watchman Information - Only for GC and APT */}
+              {(['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((viewingProperty.property_type || '').toLowerCase()) ||
+               ['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((viewingProperty.entry_type || '').toLowerCase())) && (
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">Watchman Information</h3>
+                  <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Watchman Name</p>
+                        <p className="text-sm font-medium text-gray-900">{viewingProperty.watchman_name || viewingProperty.watchmanName || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Watchman Contact</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {(() => {
+                            const contact = viewingProperty.watchman_contact || viewingProperty.watchmanContact;
+                            if (!contact) return 'N/A';
+                            if (contact.startsWith('+91') && !contact.startsWith('+91 ')) {
+                              return `+91 ${contact.slice(3)}`;
+                            }
+                            return contact.startsWith('+') ? contact : `+91 ${contact}`;
+                          })()}
+                        </p>
                       </div>
                     </div>
                   </div>
-                )}
-
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Created By</p>
-                  <p className="text-gray-900">{viewingProperty.created_by_name || '-'}</p>
                 </div>
-
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Status</p>
-                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${viewingProperty.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {viewingProperty.status || 'Active'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-gray-100 flex justify-end">
-              <button
-                onClick={() => { setShowViewModal(false); setViewingProperty(null); }}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              >
-                Close
-              </button>
+              )}
             </div>
           </div>
         </div>
