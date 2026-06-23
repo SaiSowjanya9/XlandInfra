@@ -16,20 +16,26 @@ const { pool } = require('../config/database');
  * @returns {Promise<string[]>} Array of zone names assigned to the employee
  */
 async function getAssignedZones(employeeId, email = null) {
-  if (!employeeId && !email) return [];
+  if (!employeeId && !email) {
+    console.log('[ZoneHelper] No employeeId or email provided');
+    return [];
+  }
   
   try {
     let zones = [];
     
     if (employeeId) {
       // First try direct lookup by fp_employee_id using zone_name directly
+      console.log('[ZoneHelper] Looking up zones for fp_employee_id:', employeeId);
       [zones] = await pool.execute(
         `SELECT zone_name FROM fp_employee_zones WHERE fp_employee_id = ?`,
         [employeeId]
       );
+      console.log('[ZoneHelper] Direct lookup result:', zones.length, 'zones');
       
       // If no zones found, try lookup via user_id in fp_employees table
       if (zones.length === 0) {
+        console.log('[ZoneHelper] Trying user_id lookup for:', employeeId);
         [zones] = await pool.execute(
           `SELECT fez.zone_name 
            FROM fp_employee_zones fez
@@ -37,11 +43,13 @@ async function getAssignedZones(employeeId, email = null) {
            WHERE fpe.user_id = ?`,
           [employeeId]
         );
+        console.log('[ZoneHelper] user_id lookup result:', zones.length, 'zones');
       }
     }
     
     // Final fallback: lookup by email/username in fp_employees table
     if (zones.length === 0 && email) {
+      console.log('[ZoneHelper] Using email fallback for:', email);
       [zones] = await pool.execute(
         `SELECT fez.zone_name 
          FROM fp_employee_zones fez
@@ -49,11 +57,12 @@ async function getAssignedZones(employeeId, email = null) {
          WHERE fpe.email = ? OR fpe.username = ?`,
         [email, email]
       );
-      console.log('[ZoneHelper] Used email fallback for:', email);
+      console.log('[ZoneHelper] Email fallback result:', zones.length, 'zones');
     }
     
-    console.log('[ZoneHelper] employeeId:', employeeId, 'email:', email, 'zones found:', zones.map(z => z.zone_name));
-    return zones.map(z => z.zone_name).filter(Boolean);
+    const zoneNames = zones.map(z => z.zone_name).filter(Boolean);
+    console.log('[ZoneHelper] Final zones for employeeId:', employeeId, 'email:', email, '=> zones:', zoneNames);
+    return zoneNames;
   } catch (e) {
     console.log('[ZoneHelper] Zone fetch error:', e.message);
     return [];
