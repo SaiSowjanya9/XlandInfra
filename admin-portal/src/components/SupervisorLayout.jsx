@@ -76,7 +76,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
         onClick={() => mobile && setSidebarOpen(false)}
         className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-4 py-2.5 rounded-xl transition-all duration-200 ${
           isActive
-            ? 'bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30'
+            ? 'bg-amber-400 text-slate-900 font-semibold'
             : 'text-slate-300 hover:bg-slate-700 hover:text-white'
         }`}
         title={sidebarCollapsed ? item.label : ''}
@@ -119,8 +119,14 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
       >
         <div className="flex flex-col h-full">
           {/* Logo Header */}
-          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-start'} px-3 h-24 border-b border-slate-700/50`}>
-            <img src="/logo.png" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-12' : 'h-16'} w-auto object-contain`} />
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-start gap-3'} px-3 h-20 border-b border-slate-700/50`}>
+            <img src="/logo.png" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-12' : 'h-14'} w-auto object-contain`} />
+            {!sidebarCollapsed && (
+              <div className="flex flex-col">
+                <span className="text-lg font-bold text-amber-400 tracking-wide">XLAND INFRA</span>
+                <span className="text-[10px] text-amber-400/80 tracking-[0.2em]">PVT LTD</span>
+              </div>
+            )}
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden ml-auto p-2 rounded-xl hover:bg-slate-700 transition-colors">
               <X className="w-5 h-5 text-slate-400" />
             </button>
@@ -139,7 +145,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
                 onClick={() => !sidebarCollapsed && setExpandedMenus(prev => ({ ...prev, vendors: !prev.vendors }))}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
                   isVendorActive
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    ? 'bg-amber-400 text-slate-900 font-semibold'
                     : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                 }`}
                 title={sidebarCollapsed ? 'Vendor Management' : ''}
@@ -161,7 +167,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
                         onClick={() => setSidebarOpen(false)}
                         className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 ${
                           location.pathname === item.path
-                            ? 'bg-amber-500/20 text-amber-400 font-semibold'
+                            ? 'bg-amber-400 text-slate-900 font-semibold'
                             : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                         }`}
                       >
@@ -180,7 +186,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
                 onClick={() => !sidebarCollapsed && setExpandedMenus(prev => ({ ...prev, estimates: !prev.estimates }))}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 ${
                       isEstimatesActive
-                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                        ? 'bg-amber-400 text-slate-900 font-semibold'
                         : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                     }`}
                     title={sidebarCollapsed ? 'Estimates / AMC' : ''}
@@ -202,7 +208,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
                             onClick={() => setSidebarOpen(false)}
                             className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 ${
                               location.pathname === item.path
-                                ? 'bg-amber-500/20 text-amber-400 font-semibold'
+                                ? 'bg-amber-400 text-slate-900 font-semibold'
                                 : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                             }`}
                           >
@@ -218,18 +224,16 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
 
           {/* User Info */}
           <div className="px-3 py-3 border-t border-slate-700/50">
-            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-              {!sidebarCollapsed && (
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-white">
-                    {admin?.firstName} {admin?.lastName}
-                  </span>
-                  <span className="text-xs text-amber-400 font-medium">
-                    Supervisor
-                  </span>
-                </div>
-              )}
-            </div>
+            {!sidebarCollapsed && (
+              <div className="flex flex-col items-center text-center">
+                <span className="text-sm font-semibold text-white">
+                  {admin?.firstName} {admin?.lastName}
+                </span>
+                <span className="text-xs text-amber-400 font-medium">
+                  Supervisor
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Logout Button at Bottom */}
