@@ -623,7 +623,22 @@ const CoordinatorProperties = ({ user }) => {
                         <span className="text-sm text-gray-600">{property.city || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-sm text-gray-600">{property.contact_phone || '-'}</span>
+                        <span className="text-sm text-gray-600">
+                          {(() => {
+                            try {
+                              if (property.association_contacts) {
+                                const contacts = typeof property.association_contacts === 'string' 
+                                  ? JSON.parse(property.association_contacts) 
+                                  : property.association_contacts;
+                                if (contacts.length > 0 && contacts[0].phone) {
+                                  const phone = contacts[0].phone;
+                                  return phone.startsWith('+') ? phone : `+91${phone}`;
+                                }
+                              }
+                            } catch {}
+                            return property.contact_phone || '-';
+                          })()}
+                        </span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600">{property.created_by_name || 'System'}</span>
