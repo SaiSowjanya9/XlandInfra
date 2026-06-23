@@ -143,7 +143,8 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
   // Push initial history entry when page first loads
   useEffect(() => {
     if (!urlStep) {
-      navigate('?step=list', { replace: true });
+      // If defaultTab is 'add', go to category selection, otherwise list
+      navigate(defaultTab === 'add' ? '?step=category' : '?step=list', { replace: true });
     }
   }, []); // Only run once on mount
   
