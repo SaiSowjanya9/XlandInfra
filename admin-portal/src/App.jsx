@@ -195,7 +195,7 @@ function App() {
   };
 
   const handleLogout = useCallback(() => {
-    // Clear storage FIRST before any state changes
+    // Clear all storage
     sessionStorage.removeItem('adminUser');
     sessionStorage.removeItem('activePortal');
     sessionStorage.removeItem('pm_auth_token');
@@ -205,11 +205,8 @@ function App() {
     localStorage.removeItem('pm_auth_token');
     localStorage.removeItem('pm_current_user');
     localStorage.removeItem('pm_demo_mode');
-    // Clear state to trigger re-render with unauthenticated state
-    setUser(null);
-    setPortal(null);
-    // Redirect ALL portals to employee login after logout
-    window.location.href = '/employee/login';
+    // Redirect IMMEDIATELY to employee login - BEFORE state changes to prevent flash
+    window.location.replace('/employee/login');
   }, []);
 
   const handleSelectPortal = useCallback((portalKey) => {
