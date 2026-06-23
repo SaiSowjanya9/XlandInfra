@@ -108,12 +108,8 @@ const SupervisorLogin = ({ onLogin, onBack }) => {
         <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-700/50 rounded-2xl p-8 shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="flex items-center justify-center mb-4">
               <img src="/logo.png" alt="XLAND INFRA" className="h-14 w-auto object-contain" />
-              <div className="flex flex-col text-left">
-                <span className="text-xl font-bold text-amber-400 tracking-wide">XLAND INFRA</span>
-                <span className="text-[10px] text-amber-400/80 tracking-[0.2em]">PVT LTD</span>
-              </div>
             </div>
             <h1 className="text-2xl font-semibold text-white">Supervisor Portal</h1>
             <p className="text-zinc-400 text-sm mt-2">Sign in to manage field operations</p>
