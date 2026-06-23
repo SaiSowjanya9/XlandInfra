@@ -249,14 +249,23 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         [franchisePartnerId, creatorEmail, req.user?.username || '', managerId]
       ).then(([r]) => r[0].count).catch(() => 0),
       
-      // Recent work orders (own created)
+      // Recent work orders (own created) with creator name lookup
       pool.execute(
         `SELECT wo.*, p.name as property_name, c.name as category_name, 
-                v.company_name as vendor_name
+                v.company_name as vendor_name,
+                COALESCE(
+                  CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                  CONCAT(pma.first_name, ' ', COALESCE(pma.last_name, '')),
+                  CASE WHEN wo.created_by REGEXP '^[0-9]+$' THEN NULL ELSE wo.created_by END,
+                  'System'
+                ) as created_by_name,
+                COALESCE(fpe.role, pma.role, wo.created_by_role) as created_by_role
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
+         LEFT JOIN fp_employees fpe ON wo.created_by = fpe.id OR wo.created_by = fpe.email
+         LEFT JOIN pm_admins pma ON wo.created_by = pma.id OR wo.created_by = pma.email
          WHERE wo.franchise_partner_id = ? AND (wo.created_by = ? OR wo.created_by = ? OR wo.created_by LIKE ?)
          ORDER BY wo.created_at DESC
          LIMIT 10`,
@@ -375,7 +384,9 @@ router.get('/properties', requireManagerScope, async (req, res) => {
       }
     }
 
-    const allProperties = [...regularProperties, ...onboardedProperties];
+    // Combine both sources and sort by created_at DESC
+    const allProperties = [...regularProperties, ...onboardedProperties]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     res.json({ success: true, data: allProperties });
   } catch (error) {

@@ -163,7 +163,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
             className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-start'} px-3 h-20`}
             style={{ borderBottom: `1px solid ${colors.divider}` }}
           >
-            <img src="/logo.png" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-12' : 'h-14'} w-auto object-contain`} />
+            <img src="/logo-optimized.webp" alt="XLAND INFRA" className={`${sidebarCollapsed ? 'h-12' : 'h-14'} w-auto object-contain`} />
             {!sidebarCollapsed && (
               <div className="flex flex-col ml-3">
                 <span 

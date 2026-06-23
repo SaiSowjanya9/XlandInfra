@@ -259,12 +259,21 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
       [franchisePartnerId]
     );
 
-    // Get recent work orders (own created + zone-centric)
+    // Get recent work orders (own created + zone-centric) with creator name lookup
     const [recentWorkOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, c.name as category_name
+      `SELECT wo.*, p.name as property_name, c.name as category_name,
+              COALESCE(
+                CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
+                CONCAT(pma.first_name, ' ', COALESCE(pma.last_name, '')),
+                CASE WHEN wo.created_by REGEXP '^[0-9]+$' THEN NULL ELSE wo.created_by END,
+                'System'
+              ) as created_by_name,
+              COALESCE(fpe.role, pma.role, wo.created_by_role) as created_by_role
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
+       LEFT JOIN fp_employees fpe ON wo.created_by = fpe.id OR wo.created_by = fpe.email
+       LEFT JOIN pm_admins pma ON wo.created_by = pma.id OR wo.created_by = pma.email
        WHERE wo.franchise_partner_id = ? AND (wo.created_by = ? OR wo.created_by = ? OR wo.coordinator_id = ?)
        ORDER BY wo.created_at DESC
        LIMIT 5`,
@@ -426,7 +435,9 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
       console.log('onboarded_properties fetch error:', e.message);
     }
 
-    const allProperties = [...regularProperties, ...onboardedProperties];
+    // Combine both sources and sort by created_at DESC
+    const allProperties = [...regularProperties, ...onboardedProperties]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     console.log(`Total properties returned: ${allProperties.length}`);
 
     res.json({ success: true, data: allProperties });
