@@ -596,7 +596,7 @@ function CorporateLanding() {
               </div>
 
               {/* Main Title */}
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-semibold mb-8 leading-[1.05] tracking-[-0.02em]">
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-normal mb-8 leading-[1.05] tracking-[-0.02em]">
                 <span className="inline-block text-white opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.3s_forwards]">Building</span>
                 <br />
                 <span className="inline-block opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.5s_forwards]">
@@ -660,7 +660,7 @@ function CorporateLanding() {
                       }`}
                       onClick={() => setActiveHeroService(index)}
                     >
-                      <h2 className={`font-display font-semibold leading-[1.1] tracking-[-0.01em] transition-all duration-500 ${
+                      <h2 className={`font-display font-normal leading-[1.1] tracking-[-0.01em] transition-all duration-500 ${
                         isActive 
                           ? 'text-3xl md:text-4xl lg:text-5xl text-white' 
                           : 'text-xl md:text-2xl lg:text-3xl text-gray-500'
@@ -748,7 +748,7 @@ function CorporateLanding() {
           {/* About Content */}
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
-              <h3 className="text-3xl font-display font-semibold tracking-[-0.01em] text-white">
+              <h3 className="text-3xl font-display font-normal tracking-[-0.01em] text-white">
                 Your Trusted Partner in <span className="text-gold-400">Property Excellence</span>
               </h3>
               <p className="text-gray-400 leading-relaxed">
@@ -1034,7 +1034,7 @@ function CorporateLanding() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <span className="text-gold-400 text-sm font-semibold tracking-wider uppercase mb-3 block">Investment Opportunities</span>
-              <h2 className="text-4xl md:text-5xl font-display font-semibold tracking-[-0.02em] text-white mb-6">
+              <h2 className="text-4xl md:text-5xl font-display font-normal tracking-[-0.02em] text-white mb-6">
                 Grow Your Wealth with <span className="text-gold-gradient">Strategic Investments</span>
               </h2>
               <p className="text-gray-400 leading-relaxed mb-8">
@@ -1080,7 +1080,7 @@ function CorporateLanding() {
       <section className="py-14 md:py-16 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-gold-600/20 via-gold-500/10 to-gold-600/20"></div>
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-display font-semibold tracking-[-0.01em] text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-display font-normal tracking-[-0.01em] text-white mb-4">
             Already a Customer?
           </h2>
           <p className="text-gray-400 mb-8 max-w-xl mx-auto">
@@ -1103,7 +1103,7 @@ function CorporateLanding() {
             {/* Contact Info */}
             <div>
               <span className="text-gold-400 text-sm font-semibold tracking-wider uppercase mb-3 block">Contact Us</span>
-              <h2 className="text-4xl md:text-5xl font-display font-semibold tracking-[-0.02em] text-white mb-6">
+              <h2 className="text-4xl md:text-5xl font-display font-normal tracking-[-0.02em] text-white mb-6">
                 Let's Build <span className="text-gold-gradient">Together</span>
               </h2>
               <p className="text-gray-400 leading-relaxed mb-8">
