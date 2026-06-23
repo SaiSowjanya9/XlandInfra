@@ -124,9 +124,13 @@ const createCustomerAccounts = async (contacts, propertyData, createdBy) => {
     if (contact.email && contact.email.includes('@')) {
       console.log('📧 Valid email found, calling /api/customers/create for:', contact.email);
       try {
+        const token = sessionStorage.getItem('pm_auth_token');
         const res = await fetch('/api/customers/create', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          },
           body: JSON.stringify({
             email: contact.email,
             firstName: contact.name?.split(' ')[0] || '',
@@ -170,9 +174,13 @@ const createCustomerAccounts = async (contacts, propertyData, createdBy) => {
 // Save a new property via backend API
 export const saveProperty = async (formData, entryType, category, createdBy = 'system') => {
   try {
+    const token = sessionStorage.getItem('pm_auth_token');
     const res = await fetch(API_BASE, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
       body: JSON.stringify({
         entryType,
         category: category || 'residential',
