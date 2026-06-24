@@ -265,33 +265,6 @@ const ManagerVendors = ({ user }) => {
         </div>
       )}
 
-      {/* Service Type Tabs */}
-      <div className="flex items-center gap-1 border-b border-gray-200 overflow-x-auto">
-        {serviceTabs.map((tab) => {
-          const Icon = tab.icon;
-          const count = getTabCount(tab.id);
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-              <span className={`px-1.5 py-0.5 rounded text-xs ${
-                activeTab === tab.id ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'
-              }`}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
       {/* Search and Filters Row */}
       <div className="flex flex-col md:flex-row gap-4">
         {/* Search */}
@@ -308,6 +281,16 @@ const ManagerVendors = ({ user }) => {
         
         {/* Filters */}
         <div className="flex gap-2">
+          <select
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Service Types ({getTabCount('all')})</option>
+            {serviceTabs.filter(t => t.id !== 'all').map(tab => (
+              <option key={tab.id} value={tab.id}>{tab.label} ({getTabCount(tab.id)})</option>
+            ))}
+          </select>
           <select
             value={divisionFilter}
             onChange={(e) => setDivisionFilter(e.target.value)}
