@@ -48,6 +48,12 @@ const TYPE_STYLES = {
 
 const TYPE_LABELS = { GC: 'Gated Community', APT: 'Apartment', VILLA: 'Villa', PLOT: 'Plot', FLAT: 'Flat' };
 
+// Helper to get display label for property type (always returns proper label)
+const getTypeLabel = (type) => {
+  const normalized = normalizePropertyType(type);
+  return TYPE_LABELS[normalized] || type || '-';
+};
+
 // Unit types for block breakdown
 const UNIT_TYPES = [
   { key: 'studio', label: 'Studio' },
@@ -393,7 +399,7 @@ const Properties = () => {
     const exportData = [{
       'Property ID': p.propertyId || '',
       'Name': p.name || '',
-      'Type': TYPE_LABELS[p.entryType] || '',
+      'Type': getTypeLabel(p.entryType),
       'Zone': p.zone || '',
       'Area Name': p.areaName || '',
       'Division': p.division || '',
@@ -461,7 +467,7 @@ const Properties = () => {
     const exportData = filteredProperties.map(property => ({
       'Property ID': property.propertyId || '',
       'Name': property.name || '',
-      'Type': TYPE_LABELS[property.entryType] || '',
+      'Type': getTypeLabel(property.entryType),
       'Zone': property.zone || '',
       'Division': property.division || '',
       'Area Name': property.areaName || '',
@@ -788,7 +794,7 @@ const Properties = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredProperties.map((property) => {
-                  const style = TYPE_STYLES[property.entryType] || TYPE_STYLES.GC;
+                  const style = TYPE_STYLES[normalizePropertyType(property.entryType)] || TYPE_STYLES.GC;
                   return (
                     <tr key={property.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
@@ -799,7 +805,7 @@ const Properties = () => {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${style.badge}`}>
-                          {TYPE_LABELS[property.entryType]}
+                          {getTypeLabel(property.entryType)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
