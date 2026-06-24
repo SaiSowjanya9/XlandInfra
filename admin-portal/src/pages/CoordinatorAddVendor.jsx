@@ -86,8 +86,20 @@ const CoordinatorAddVendor = ({ user }) => {
       .then(r => r.json()).then(res => { if (res.success) setZoneSuggestions(res.data || []); }).catch(() => {});
   };
 
+  const fetchServiceTypes = () => {
+    fetch('/api/admin/service-types', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(res => { 
+        if (res.success && res.data?.length > 0) {
+          setServiceTypes(res.data.map(s => s.name));
+        }
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
     fetchZones();
+    fetchServiceTypes();
     fetch('/api/onboarding/suggestions/areas', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(res => { if (res.success) setAreaSuggestions(res.data || []); }).catch(() => {});
     // Fetch divisions
@@ -116,13 +128,33 @@ const CoordinatorAddVendor = ({ user }) => {
     s.toLowerCase().includes((formData.serviceType || '').toLowerCase())
   );
 
-  const handleAddServiceType = () => {
+  const handleAddServiceType = async () => {
     if (!newServiceType.trim()) return;
-    if (serviceTypes.includes(newServiceType.trim())) return;
-    setServiceTypes([...serviceTypes, newServiceType.trim()]);
-    updateField('serviceType', newServiceType.trim());
-    setNewServiceType('');
-    setShowAddServiceModal(false);
+    if (serviceTypes.some(s => s.toLowerCase() === newServiceType.trim().toLowerCase())) return;
+    
+    try {
+      const response = await fetch('/api/admin/service-types', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: newServiceType.trim() })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setServiceTypes([...serviceTypes, newServiceType.trim()]);
+        updateField('serviceType', newServiceType.trim());
+        setNewServiceType('');
+        setShowAddServiceModal(false);
+      }
+    } catch (error) {
+      console.error('Error adding service type:', error);
+      setServiceTypes([...serviceTypes, newServiceType.trim()]);
+      updateField('serviceType', newServiceType.trim());
+      setNewServiceType('');
+      setShowAddServiceModal(false);
+    }
   };
 
   const updateField = (field, value) => {
