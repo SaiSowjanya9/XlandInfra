@@ -49,6 +49,8 @@ const ManagerProperties = ({ user }) => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingProperty, setViewingProperty] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [propertyEstimates, setPropertyEstimates] = useState([]);
+  const [loadingEstimates, setLoadingEstimates] = useState(false);
 
   // Property type tabs config
   const propertyTabs = [
@@ -269,10 +271,33 @@ const ManagerProperties = ({ user }) => {
     setShowModal(true);
   };
 
+  const fetchPropertyEstimates = async (propertyId) => {
+    setLoadingEstimates(true);
+    try {
+      const response = await fetch(`/api/manager/estimates?property_id=${propertyId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setPropertyEstimates(result.data || []);
+      } else {
+        setPropertyEstimates([]);
+      }
+    } catch (error) {
+      console.error('Fetch property estimates error:', error);
+      setPropertyEstimates([]);
+    } finally {
+      setLoadingEstimates(false);
+    }
+  };
+
   const openAssignModal = (property, type) => {
     setSelectedProperty(property);
     setAssignType(type);
     setShowAssignModal(true);
+    if (type === 'vendor') {
+      fetchPropertyEstimates(property.id);
+    }
   };
 
   const resetForm = () => {
@@ -1155,7 +1180,7 @@ const ManagerProperties = ({ user }) => {
                 <h2 className="text-xl font-semibold text-gray-900">
                   Assign {assignType === 'vendor' ? 'Vendor' : 'Employee'}
                 </h2>
-                <button onClick={() => { setShowAssignModal(false); setSelectedProperty(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                <button onClick={() => { setShowAssignModal(false); setSelectedProperty(null); setPropertyEstimates([]); }} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -1163,7 +1188,28 @@ const ManagerProperties = ({ user }) => {
             </div>
 
             <div className="p-6">
-              {(assignType === 'vendor' ? vendors : employees).length === 0 ? (
+              {loadingEstimates ? (
+                <div className="text-center py-8">
+                  <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-3" />
+                  <p className="text-gray-500">Checking estimates...</p>
+                </div>
+              ) : assignType === 'vendor' && propertyEstimates.length === 0 ? (
+                <div className="text-center py-6">
+                  <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-amber-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">No Estimate Linked</h3>
+                  <p className="text-gray-600 text-sm mb-4">
+                    No estimate is linked to this property yet. Please create an estimate first to assign vendors.
+                  </p>
+                  <button
+                    onClick={() => { setShowAssignModal(false); setSelectedProperty(null); }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+                  >
+                    Close
+                  </button>
+                </div>
+              ) : (assignType === 'vendor' ? vendors : employees).length === 0 ? (
                 <p className="text-gray-500 text-center py-4">
                   No {assignType === 'vendor' ? 'vendors' : 'employees'} available
                 </p>
