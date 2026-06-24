@@ -331,7 +331,7 @@ const ManagerAddVendor = ({ user }) => {
                       {filteredServices.map(s => (
                         <div key={s.id || s.name} className={`flex items-center justify-between px-3 py-2 hover:bg-amber-50 transition-colors cursor-pointer ${formData.serviceType === s.name ? 'bg-amber-50 text-amber-700 font-medium' : 'text-gray-700'}`}>
                           <span onMouseDown={() => { updateField('serviceType', s.name); setShowServiceDropdown(false); }} className="flex-1 text-sm">{s.name}</span>
-                          {!s.is_global && s.id && (
+                          {s.id && (
                             <button type="button" onMouseDown={(e) => handleDeleteServiceType(s.id, s.name, e)} className="ml-2 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete service type">
                               <X className="w-4 h-4" />
                             </button>

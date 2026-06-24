@@ -364,7 +364,7 @@ const AddVendor = ({ admin }) => {
                           >
                             {s.name}
                           </span>
-                          {!s.is_global && s.id && (
+                          {s.id && (
                             <button
                               type="button"
                               onMouseDown={(e) => { e.stopPropagation(); handleDeleteServiceType(s.id, s.name); }}
