@@ -75,9 +75,9 @@ const VendorDetails = () => {
       let url;
       // Use Admin endpoint for "all" mode, otherwise FP-specific endpoint
       if (selectedFp.id === 'all') {
-        url = `${API_BASE}/api/admin/all-vendors`;
+        url = `${API_BASE}/api/admin/all-vendors?include_deleted=true`;
       } else {
-        url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/vendors`;
+        url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/vendors?include_deleted=true`;
       }
       
       const response = await fetch(url, {
@@ -254,6 +254,11 @@ const VendorDetails = () => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredVendors = vendors.filter(v => {
+    // Status filter
+    const isDeleted = v.status === 'deleted' || v.is_active === 0 || v.is_active === false;
+    if (statusFilter === 'active' && isDeleted) return false;
+    if (statusFilter === 'deleted' && !isDeleted) return false;
+    
     const serviceType = v.serviceType || v.service_type;
     if (activeTab !== 'all' && serviceType !== activeTab) return false;
     if (divisionFilter && v.division !== divisionFilter) return false;

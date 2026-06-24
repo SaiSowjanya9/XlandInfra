@@ -1908,6 +1908,9 @@ router.get('/all-vendor-assignments', authenticate, adminOnly, async (req, res) 
 // Get ALL vendors from ALL FPs (Admin mode)
 router.get('/all-vendors', authenticate, adminOnly, async (req, res) => {
   try {
+    const includeDeleted = req.query.include_deleted === 'true';
+    const statusCondition = includeDeleted ? "ov.status IN ('active', 'deleted')" : "ov.status = 'active'";
+    
     const [vendors] = await pool.execute(
       `SELECT ov.*, ov.owner_name as vendor_name, ov.owner_mobile as phone, ov.owner_email as email,
               ov.franchise_partner_id as fp_id, fp.fp_code, fp.company_name as fp_name,
@@ -1918,11 +1921,11 @@ router.get('/all-vendors', authenticate, adminOnly, async (req, res) => {
        FROM onboarded_vendors ov
        LEFT JOIN franchise_partners fp ON ov.franchise_partner_id = fp.id
        LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
-       WHERE ov.status = 'active' AND ov.vendor_id NOT LIKE '%SEED%'
+       WHERE ${statusCondition} AND ov.vendor_id NOT LIKE '%SEED%'
        ORDER BY ov.created_at DESC`
     );
     
-    console.log('Admin all-vendors: Found', vendors.length, 'vendors');
+    console.log('Admin all-vendors: Found', vendors.length, 'vendors (include_deleted:', includeDeleted, ')');
     res.json({ success: true, data: vendors || [] });
   } catch (error) {
     console.error('Error fetching all vendors:', error);
@@ -2142,6 +2145,9 @@ router.get('/fp-view/:fpId/vendors', authenticate, adminOnly, async (req, res) =
       return res.status(400).json({ success: false, message: 'Invalid FP ID' });
     }
     
+    const includeDeleted = req.query.include_deleted === 'true';
+    const statusCondition = includeDeleted ? "ov.status IN ('active', 'deleted')" : "ov.status = 'active'";
+    
     const [vendors] = await pool.execute(
       `SELECT ov.*, ov.owner_name as vendor_name, ov.owner_mobile as phone, ov.owner_email as email,
               COALESCE(
@@ -2151,7 +2157,7 @@ router.get('/fp-view/:fpId/vendors', authenticate, adminOnly, async (req, res) =
        FROM onboarded_vendors ov
        LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
        WHERE ov.franchise_partner_id = ?
-         AND ov.status = 'active' AND ov.vendor_id NOT LIKE '%SEED%'
+         AND ${statusCondition} AND ov.vendor_id NOT LIKE '%SEED%'
        ORDER BY ov.created_at DESC`,
       [fpIdNum]
     );

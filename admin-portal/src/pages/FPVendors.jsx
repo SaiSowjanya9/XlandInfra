@@ -42,6 +42,7 @@ const FPVendors = ({ user }) => {
   const [selectedServiceType, setSelectedServiceType] = useState('all');
   const [divisionFilter, setDivisionFilter] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [viewVendor, setViewVendor] = useState(null);
   const [editVendor, setEditVendor] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -53,7 +54,7 @@ const FPVendors = ({ user }) => {
   const fetchVendors = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/fp/vendors', {
+      const response = await fetch('/api/fp/vendors?include_deleted=true', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -92,6 +93,11 @@ const FPVendors = ({ user }) => {
 
   // Filter vendors
   const filteredVendors = vendors.filter(v => {
+    // Status filter
+    const isInactive = v.status === 'deleted' || v.is_active === 0 || v.is_active === false;
+    if (statusFilter === 'active' && isInactive) return false;
+    if (statusFilter === 'inactive' && !isInactive) return false;
+    
     // Service type filter
     if (selectedServiceType !== 'all' && (v.serviceType || v.service_type) !== selectedServiceType) return false;
     
@@ -201,6 +207,20 @@ const FPVendors = ({ user }) => {
                   >
                     <option value="">All Zones</option>
                     {zones.map(z => <option key={z} value={z}>{z}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                </div>
+                <div className="relative">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className={`appearance-none pl-3 pr-8 py-2 border rounded-md text-sm focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none ${
+                      statusFilter === 'inactive' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-300 bg-white'
+                    }`}
+                  >
+                    <option value="active">Active Vendors</option>
+                    <option value="inactive">Inactive Vendors</option>
+                    <option value="all">All Vendors</option>
                   </select>
                   <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                 </div>
