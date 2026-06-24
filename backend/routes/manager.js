@@ -386,7 +386,34 @@ router.get('/properties', requireManagerScope, async (req, res) => {
 
     // Combine both sources and sort by created_at DESC
     const allProperties = [...regularProperties, ...onboardedProperties]
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .map(prop => {
+        // Extract Contact 1 from association_contacts JSON as primary contact
+        let contact_person = prop.contact_person || '';
+        let contact_phone = prop.contact_phone || '';
+        let contact_email = prop.contact_email || prop.email || '';
+        
+        if (prop.association_contacts) {
+          try {
+            const contacts = typeof prop.association_contacts === 'string' 
+              ? JSON.parse(prop.association_contacts) 
+              : prop.association_contacts;
+            if (Array.isArray(contacts) && contacts.length > 0) {
+              // Contact 1 is the primary contact
+              contact_person = contacts[0].name || contact_person;
+              contact_phone = contacts[0].phone || contact_phone;
+              contact_email = contacts[0].email || contact_email;
+            }
+          } catch (e) { /* ignore parse errors */ }
+        }
+        
+        return {
+          ...prop,
+          contact_person,
+          contact_phone,
+          contact_email
+        };
+      });
 
     res.json({ success: true, data: allProperties });
   } catch (error) {

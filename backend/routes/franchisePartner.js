@@ -322,6 +322,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 op.landmark, op.latitude, op.longitude,
                 op.association_contacts,
+                op.contact_person, op.contact_phone, op.contact_email,
                 op.number_of_blocks, op.block_names, op.units_per_block,
                 op.block_info, op.block_na, op.flat_block_info, op.flat_block_na,
                 op.villa_plot_number, op.plot_na,
@@ -349,7 +350,34 @@ router.get('/properties', requireFPScope, async (req, res) => {
 
     // Combine both sources and sort by created_at DESC
     const allProperties = [...regularProperties, ...onboardedProperties]
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .map(prop => {
+        // Extract Contact 1 from association_contacts JSON as primary contact
+        let contact_person = prop.contact_person || '';
+        let contact_phone = prop.contact_phone || '';
+        let contact_email = prop.contact_email || '';
+        
+        if (prop.association_contacts) {
+          try {
+            const contacts = typeof prop.association_contacts === 'string' 
+              ? JSON.parse(prop.association_contacts) 
+              : prop.association_contacts;
+            if (Array.isArray(contacts) && contacts.length > 0) {
+              // Contact 1 is the primary contact
+              contact_person = contacts[0].name || contact_person;
+              contact_phone = contacts[0].phone || contact_phone;
+              contact_email = contacts[0].email || contact_email;
+            }
+          } catch (e) { /* ignore parse errors */ }
+        }
+        
+        return {
+          ...prop,
+          contact_person,
+          contact_phone,
+          contact_email
+        };
+      });
 
     res.json({
       success: true,
