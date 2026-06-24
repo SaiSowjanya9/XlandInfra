@@ -355,7 +355,7 @@ const FPAddVendor = ({ user }) => {
                           >
                             {s.name}
                           </span>
-                          {!s.is_global && s.id && (
+                          {s.id && (
                             <button
                               type="button"
                               onMouseDown={(e) => handleDeleteServiceType(s.id, s.name, e)}
