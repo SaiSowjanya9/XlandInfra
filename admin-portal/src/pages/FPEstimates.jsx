@@ -1754,7 +1754,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </td>
                     <td className="px-4 py-4">
                       <div className="font-medium text-gray-900">{est.client_name}</div>
-                      {est.property_id && <div className="text-xs text-gray-400">{est.property_id}</div>}
+                      {est.property_code && <div className="text-xs text-gray-400">{est.property_code}</div>}
                     </td>
                     <td className="px-4 py-4 text-gray-600">
                       <div className="flex items-center gap-1.5">
