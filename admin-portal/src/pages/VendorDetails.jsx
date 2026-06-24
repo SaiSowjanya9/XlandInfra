@@ -580,7 +580,7 @@ const VendorDetails = () => {
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">Owner</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden lg:table-cell">Zone</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden xl:table-cell">Area</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden md:table-cell">Rate</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 whitespace-nowrap hidden md:table-cell">Rate</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden lg:table-cell">Coverage</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden xl:table-cell">Created By</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap hidden sm:table-cell">Created</th>
@@ -609,7 +609,7 @@ const VendorDetails = () => {
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden xl:table-cell">
                       {vendor.areaName || vendor.area_name || vendor.area || '-'}
                     </td>
-                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden md:table-cell">
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap hidden md:table-cell text-center">
                       ₹{vendor.ratePerVisit || vendor.rate_per_visit || 0}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap text-center hidden lg:table-cell">
