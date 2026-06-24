@@ -167,7 +167,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
           ...estimate,
           estimateId: estimate.estimateId || estimate.estimate_id,
           estimateType: estimate.estimateType || estimate.estimate_type,
-          propertyId: estimate.propertyId || estimate.property_code || estimate.property_id,
+          propertyId: estimate.property_code || estimate.propertyId,
           propertyType: estimate.propertyType || estimate.property_type,
           propertyName: estimate.propertyName || estimate.property_name,
           communityName: estimate.communityName || estimate.property_name,
