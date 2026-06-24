@@ -88,6 +88,8 @@ const ManagerAddVendor = ({ user }) => {
       .then(r => r.json()).then(res => { if (res.success) setZoneSuggestions(res.data || []); }).catch(() => {});
   };
 
+  const [currentUserId, setCurrentUserId] = useState(null);
+
   const fetchServiceTypes = () => {
     fetch('/api/admin/service-types', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json())
@@ -95,6 +97,7 @@ const ManagerAddVendor = ({ user }) => {
         if (res.success && res.data?.length > 0) {
           setServiceTypeData(res.data);
           setServiceTypes(res.data.map(s => s.name));
+          if (res.currentUserId) setCurrentUserId(res.currentUserId);
         }
       })
       .catch(() => {});
@@ -331,7 +334,7 @@ const ManagerAddVendor = ({ user }) => {
                       {filteredServices.map(s => (
                         <div key={s.id || s.name} className={`flex items-center justify-between px-3 py-2 hover:bg-amber-50 transition-colors cursor-pointer ${formData.serviceType === s.name ? 'bg-amber-50 text-amber-700 font-medium' : 'text-gray-700'}`}>
                           <span onMouseDown={() => { updateField('serviceType', s.name); setShowServiceDropdown(false); }} className="flex-1 text-sm">{s.name}</span>
-                          {s.id && (
+                          {s.id && s.created_by_user_id && s.created_by_user_id === currentUserId && (
                             <button type="button" onMouseDown={(e) => handleDeleteServiceType(s.id, s.name, e)} className="ml-2 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete service type">
                               <X className="w-4 h-4" />
                             </button>

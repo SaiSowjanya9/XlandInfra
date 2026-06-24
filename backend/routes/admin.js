@@ -2771,7 +2771,7 @@ router.get('/service-types', authenticate, async (req, res) => {
     }
 
     // Fetch global service types + FP-specific if employee belongs to an FP
-    let query = `SELECT id, name, is_global, franchise_partner_id, created_at 
+    let query = `SELECT id, name, is_global, franchise_partner_id, created_by_user_id, created_at 
        FROM service_types 
        WHERE is_active = 1 AND (is_global = 1 OR franchise_partner_id IS NULL`;
     
@@ -2783,7 +2783,7 @@ router.get('/service-types', authenticate, async (req, res) => {
     query += `) ORDER BY name ASC`;
 
     const [rows] = await pool.execute(query, params);
-    res.json({ success: true, data: rows });
+    res.json({ success: true, data: rows, currentUserId: userId });
   } catch (error) {
     console.error('Get service types error:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -2808,9 +2808,10 @@ router.post('/service-types', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Service type already exists' });
     }
 
+    const userId = req.user?.id || req.user?.userId;
     const [result] = await pool.execute(
-      `INSERT INTO service_types (name, is_global, created_by) VALUES (?, TRUE, ?)`,
-      [name.trim(), req.user?.username || req.user?.email || 'Admin']
+      `INSERT INTO service_types (name, is_global, created_by, created_by_user_id) VALUES (?, TRUE, ?, ?)`,
+      [name.trim(), req.user?.username || req.user?.email || 'Admin', userId]
     );
 
     res.json({ 
@@ -2824,16 +2825,18 @@ router.post('/service-types', authenticate, async (req, res) => {
   }
 });
 
-// Delete service type (admin can delete any, employees can only delete FP-specific)
+// Delete service type (admin/FP can delete any, employees can only delete their own created ones)
 router.delete('/service-types/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id || req.user?.userId;
-    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+    const userRole = req.user?.role;
+    const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+    const isFP = userRole === 'franchise_partner' || userRole === 'fp';
 
     // Get the service type to check ownership
     const [serviceType] = await pool.execute(
-      'SELECT id, is_global, franchise_partner_id FROM service_types WHERE id = ? AND is_active = 1',
+      'SELECT id, is_global, franchise_partner_id, created_by_user_id FROM service_types WHERE id = ? AND is_active = 1',
       [id]
     );
 
@@ -2849,24 +2852,19 @@ router.delete('/service-types/:id', authenticate, async (req, res) => {
       return res.json({ success: true, message: 'Service type deleted' });
     }
 
-    // Non-admins can only delete non-global, FP-specific service types
-    if (st.is_global) {
-      return res.status(403).json({ success: false, message: 'Cannot delete global service types' });
+    // FP can delete any service type they created or belongs to their FP
+    if (isFP) {
+      await pool.execute('UPDATE service_types SET is_active = 0 WHERE id = ?', [id]);
+      return res.json({ success: true, message: 'Service type deleted' });
     }
 
-    // Check if user belongs to the FP that owns this service type
-    if (st.franchise_partner_id && userId) {
-      const [userRows] = await pool.execute(
-        'SELECT franchise_partner_id FROM users WHERE id = ?',
-        [userId]
-      );
-      if (userRows.length > 0 && userRows[0].franchise_partner_id === st.franchise_partner_id) {
-        await pool.execute('UPDATE service_types SET is_active = 0 WHERE id = ?', [id]);
-        return res.json({ success: true, message: 'Service type deleted' });
-      }
+    // Employees can ONLY delete service types they themselves created
+    if (st.created_by_user_id && st.created_by_user_id === userId) {
+      await pool.execute('UPDATE service_types SET is_active = 0 WHERE id = ?', [id]);
+      return res.json({ success: true, message: 'Service type deleted' });
     }
 
-    res.status(403).json({ success: false, message: 'Not authorized to delete this service type' });
+    res.status(403).json({ success: false, message: 'You can only delete service types you created' });
   } catch (error) {
     console.error('Delete service type error:', error);
     res.status(500).json({ success: false, message: error.message });
