@@ -78,12 +78,23 @@ const FPAddVendor = ({ user }) => {
   const [areaSuggestions, setAreaSuggestions] = useState([]);
   const [showZoneDropdown, setShowZoneDropdown] = useState(false);
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
+  
+  // Division
+  const [divisionSuggestions, setDivisionSuggestions] = useState([]);
+  const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
+  const [showAddDivisionModal, setShowAddDivisionModal] = useState(false);
+  const [newDivision, setNewDivision] = useState('');
 
   const token = sessionStorage.getItem('pm_auth_token');
 
   const fetchZones = () => {
     fetch('/api/fp/zones', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(res => { if (res.success) setZoneSuggestions(res.data || []); }).catch(() => {});
+  };
+
+  const fetchDivisions = () => {
+    fetch('/api/fp/divisions', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json()).then(res => { if (res.success) setDivisionSuggestions(res.data || []); }).catch(() => {});
   };
 
   const fetchServiceTypes = () => {
@@ -119,6 +130,7 @@ const FPAddVendor = ({ user }) => {
 
   useEffect(() => {
     fetchZones();
+    fetchDivisions();
     fetchServiceTypes();
     fetch('/api/onboarding/suggestions/areas', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(res => { if (res.success) setAreaSuggestions(res.data || []); }).catch(() => {});
@@ -137,7 +149,31 @@ const FPAddVendor = ({ user }) => {
     try { const res = await fetch(`/api/fp/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchZones(); } catch (e) {}
   };
 
+  const handleAddDivision = async () => {
+    if (!newDivision.trim()) return;
+    if (divisionSuggestions.some(d => d.name?.toLowerCase() === newDivision.trim().toLowerCase())) return;
+    try {
+      const res = await fetch('/api/fp/divisions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newDivision.trim() })
+      });
+      if ((await res.json()).success) {
+        fetchDivisions();
+        updateField('division', newDivision.trim());
+        setNewDivision('');
+        setShowAddDivisionModal(false);
+      }
+    } catch (e) { console.error('Error adding division:', e); }
+  };
+
+  const handleDeleteDivision = async (divisionId, e) => {
+    e.stopPropagation(); if (!window.confirm('Delete this division?')) return;
+    try { const res = await fetch(`/api/fp/divisions/${divisionId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchDivisions(); } catch (e) {}
+  };
+
   const filteredZones = zoneSuggestions.filter(z => z.name?.toLowerCase().includes((formData.zone || '').toLowerCase()));
+  const filteredDivisions = divisionSuggestions.filter(d => d.name?.toLowerCase().includes((formData.division || '').toLowerCase()));
   const filteredAreas = areaSuggestions.filter(a =>
     a.toLowerCase().includes((formData.areaName || '').toLowerCase())
   );
@@ -460,6 +496,34 @@ const FPAddVendor = ({ user }) => {
                 </div>
               )}
               {errors.areaName && <p className="text-xs text-red-500 mt-1">{errors.areaName}</p>}
+            </div>
+
+            {/* Division */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Division</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input type="text" value={formData.division}
+                    onChange={(e) => { updateField('division', e.target.value); setShowDivisionDropdown(true); }}
+                    onFocus={() => setShowDivisionDropdown(true)} onBlur={() => setTimeout(() => setShowDivisionDropdown(false), 200)}
+                    placeholder="Select division..."
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:outline-none" />
+                  {showDivisionDropdown && filteredDivisions.length > 0 && (
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredDivisions.map(d => (
+                        <div key={d.id || d.name} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.division === d.name ? 'bg-blue-50' : ''}`}>
+                          <button type="button" onMouseDown={() => { updateField('division', d.name); setShowDivisionDropdown(false); }}
+                            className={`flex-1 text-left text-sm ${formData.division === d.name ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{d.name}</button>
+                          {d.id && (
+                            <button type="button" onMouseDown={(e) => handleDeleteDivision(d.id, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><X className="w-3 h-3" /></button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button type="button" onClick={() => setShowAddDivisionModal(true)} className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">+ Add</button>
+              </div>
             </div>
           </div>
         </div>
@@ -798,6 +862,32 @@ const FPAddVendor = ({ user }) => {
               >
                 Add Service Type
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Division Modal */}
+      {showAddDivisionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Add New Division</h2>
+                <button onClick={() => { setShowAddDivisionModal(false); setNewDivision(''); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <span className="text-xl">&times;</span>
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Division Name <span className="text-red-500">*</span></label>
+              <input type="text" value={newDivision} onChange={(e) => setNewDivision(e.target.value)}
+                placeholder="Enter division name" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddDivision()} />
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button onClick={() => { setShowAddDivisionModal(false); setNewDivision(''); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
+              <button onClick={handleAddDivision} disabled={!newDivision.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Add Division</button>
             </div>
           </div>
         </div>

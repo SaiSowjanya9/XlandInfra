@@ -21,15 +21,14 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-// Service Type Tabs
-const TABS = [
-  { id: 'all', label: 'All Vendors', icon: Truck },
-  { id: 'Plumbing', label: 'Plumbing', icon: Wrench },
-  { id: 'Electrical', label: 'Electrical', icon: Zap },
-  { id: 'HVAC', label: 'HVAC', icon: Wind },
-  { id: 'Cleaning', label: 'Cleaning', icon: Sparkles },
-  { id: 'Security', label: 'Security', icon: Shield },
-];
+// Service Type Icons mapping
+const SERVICE_ICONS = {
+  'Plumbing': Wrench,
+  'Electrical': Zap,
+  'HVAC': Wind,
+  'Cleaning': Sparkles,
+  'Security': Shield,
+};
 
 const FPVendors = ({ user }) => {
   const navigate = useNavigate();
@@ -40,10 +39,9 @@ const FPVendors = ({ user }) => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
+  const [selectedServiceType, setSelectedServiceType] = useState('all');
   const [divisionFilter, setDivisionFilter] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('active');
   const [viewVendor, setViewVendor] = useState(null);
   const [editVendor, setEditVendor] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -73,7 +71,7 @@ const FPVendors = ({ user }) => {
 
   useEffect(() => {
     fetchVendors();
-  }, [statusFilter]);
+  }, []);
 
   const showToastMessage = (message, type = 'success') => {
     setToast({ message, type });
@@ -87,25 +85,21 @@ const FPVendors = ({ user }) => {
     return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  // Get unique divisions and zones for filters
+  // Get unique service types, divisions and zones from vendors
+  const serviceTypes = [...new Set(vendors.map(v => v.serviceType || v.service_type).filter(Boolean))].sort();
   const divisions = [...new Set(vendors.map(v => v.division).filter(Boolean))];
   const zones = [...new Set(vendors.map(v => v.zone_name || v.zone).filter(Boolean))];
 
   // Filter vendors
   const filteredVendors = vendors.filter(v => {
     // Service type filter
-    if (activeTab !== 'all' && (v.serviceType || v.service_type) !== activeTab) return false;
+    if (selectedServiceType !== 'all' && (v.serviceType || v.service_type) !== selectedServiceType) return false;
     
     // Division filter
     if (divisionFilter && v.division !== divisionFilter) return false;
     
     // Zone filter
     if (zoneFilter && (v.zone_name || v.zone) !== zoneFilter) return false;
-    
-    // Status filter - check both status and is_active
-    const isDeleted = v.status === 'deleted' || v.is_active === 0 || v.is_active === false;
-    if (statusFilter === 'active' && isDeleted) return false;
-    if (statusFilter === 'deleted' && !isDeleted) return false;
     
     // Search filter
     if (searchTerm) {
@@ -120,6 +114,12 @@ const FPVendors = ({ user }) => {
     }
     return true;
   });
+  
+  // Get count for each service type
+  const getServiceTypeCount = (serviceType) => {
+    if (serviceType === 'all') return vendors.length;
+    return vendors.filter(v => (v.serviceType || v.service_type) === serviceType).length;
+  };
 
   return (
     <div className="space-y-6">
@@ -156,87 +156,106 @@ const FPVendors = ({ user }) => {
         </div>
       </div>
 
-      {/* Tabs + Filters Bar */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        {/* Service Type Tab bar */}
-        <div className="border-b border-gray-200 px-4 flex items-center gap-1 overflow-x-auto">
-          {TABS.map(tab => {
-            const TabIcon = tab.icon;
-            const isActive = activeTab === tab.id;
-            const count = tab.id === 'all' ? vendors.length : vendors.filter(v => (v.serviceType || v.service_type) === tab.id).length;
-            return (
+      {/* Main Content with Sidebar */}
+      <div className="flex gap-6">
+        {/* Vertical Service Type Sidebar */}
+        <div className="w-56 flex-shrink-0">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-sm font-semibold text-gray-700">Service Types</h3>
+            </div>
+            <div className="p-2">
+              {/* All Vendors option */}
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  isActive
-                    ? 'border-amber-600 text-amber-700'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                onClick={() => setSelectedServiceType('all')}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  selectedServiceType === 'all'
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                <TabIcon className="w-4 h-4" />
-                {tab.label}
-                <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+                <div className="flex items-center gap-2">
+                  <Truck className="w-4 h-4" />
+                  <span>All Vendors</span>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  selectedServiceType === 'all' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
                 }`}>
-                  {count}
+                  {getServiceTypeCount('all')}
                 </span>
               </button>
-            );
-          })}
+              
+              {/* Dynamic Service Types from vendors */}
+              {serviceTypes.map(serviceType => {
+                const IconComponent = SERVICE_ICONS[serviceType] || Store;
+                const isSelected = selectedServiceType === serviceType;
+                const count = getServiceTypeCount(serviceType);
+                return (
+                  <button
+                    key={serviceType}
+                    onClick={() => setSelectedServiceType(serviceType)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mt-1 ${
+                      isSelected
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <IconComponent className="w-4 h-4" />
+                      <span>{serviceType}</span>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      isSelected ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        {/* Search + Filters */}
-        <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name, ID, service, or zone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
-            />
-          </div>
-          <div className="flex gap-2">
-            <div className="relative">
-              <select
-                value={divisionFilter}
-                onChange={(e) => setDivisionFilter(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
-              >
-                <option value="">All Divisions</option>
-                {divisions.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+        {/* Main Content Area */}
+        <div className="flex-1">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            {/* Search + Filters */}
+            <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name, ID, service, or zone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                />
+              </div>
+              <div className="flex gap-2">
+                <div className="relative">
+                  <select
+                    value={divisionFilter}
+                    onChange={(e) => setDivisionFilter(e.target.value)}
+                    className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                  >
+                    <option value="">All Divisions</option>
+                    {divisions.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                </div>
+                <div className="relative">
+                  <select
+                    value={zoneFilter}
+                    onChange={(e) => setZoneFilter(e.target.value)}
+                    className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                  >
+                    <option value="">All Zones</option>
+                    {zones.map(z => <option key={z} value={z}>{z}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
             </div>
-            <div className="relative">
-              <select
-                value={zoneFilter}
-                onChange={(e) => setZoneFilter(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
-              >
-                <option value="">All Zones</option>
-                {zones.map(z => <option key={z} value={z}>{z}</option>)}
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-            </div>
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className={`appearance-none pl-3 pr-8 py-2 border rounded-md text-sm focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none ${
-                  statusFilter === 'deleted' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-300 bg-white'
-                }`}
-              >
-                <option value="active">Active Vendors</option>
-                <option value="deleted">Deleted Vendors</option>
-                <option value="all">All Vendors</option>
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-            </div>
-          </div>
-        </div>
 
         {/* Vendor Table */}
         {loading ? (
@@ -378,6 +397,8 @@ const FPVendors = ({ user }) => {
             </div>
           </div>
         )}
+          </div>
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}

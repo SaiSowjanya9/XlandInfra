@@ -62,6 +62,10 @@ const FPWorkOrders = ({ user }) => {
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newSubcategoryName, setNewSubcategoryName] = useState('');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [subcategorySearch, setSubcategorySearch] = useState('');
   const [formData, setFormData] = useState({
     propertyId: '',
     categoryId: '',
@@ -278,24 +282,78 @@ const FPWorkOrders = ({ user }) => {
     setPropertySearch(property.property_id || '');
   };
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
     
-    const newId = Math.max(...categories.map(c => c.id), 0) + 100;
-    const newCategory = {
-      id: newId,
-      name: newCategoryName.trim(),
-      subcategories: newSubcategoryName.trim() 
-        ? [{ id: newId * 100 + 1, name: newSubcategoryName.trim() }, { id: newId * 100 + 99, name: 'Other' }]
-        : [{ id: newId * 100 + 99, name: 'Other' }]
-    };
-    
-    setCategories([...categories, newCategory]);
-    setNewCategoryName('');
-    setNewSubcategoryName('');
-    setShowAddCategoryModal(false);
-    setMessage({ type: 'success', text: `Category "${newCategory.name}" added successfully` });
+    try {
+      const res = await fetch('/api/fp/categories', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCategoryName.trim(), subcategoryName: newSubcategoryName.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Refresh categories
+        const catRes = await fetch('/api/fp/categories', { headers: { 'Authorization': `Bearer ${token}` } });
+        const catData = await catRes.json();
+        if (catData.success) setCategories(catData.data);
+        setNewCategoryName('');
+        setNewSubcategoryName('');
+        setShowAddCategoryModal(false);
+        setMessage({ type: 'success', text: `Category "${newCategoryName}" added successfully` });
+      }
+    } catch (error) {
+      console.error('Error adding category:', error);
+    }
   };
+
+  const handleDeleteCategory = async (categoryId, e) => {
+    e.stopPropagation();
+    if (!window.confirm('Delete this category?')) return;
+    try {
+      const res = await fetch(`/api/fp/categories/${categoryId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if ((await res.json()).success) {
+        setCategories(categories.filter(c => c.id !== categoryId));
+        if (formData.categoryId === String(categoryId)) {
+          setFormData({ ...formData, categoryId: '', subcategoryId: '' });
+          setCategorySearch('');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error);
+    }
+  };
+
+  const handleDeleteSubcategory = async (subcategoryId, e) => {
+    e.stopPropagation();
+    if (!window.confirm('Delete this subcategory?')) return;
+    try {
+      const res = await fetch(`/api/fp/subcategories/${subcategoryId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if ((await res.json()).success) {
+        setSubcategories(subcategories.filter(s => s.id !== subcategoryId));
+        if (formData.subcategoryId === String(subcategoryId)) {
+          setFormData({ ...formData, subcategoryId: '' });
+          setSubcategorySearch('');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting subcategory:', error);
+    }
+  };
+
+  const filteredCategories = categories.filter(c => 
+    c.name?.toLowerCase().includes((categorySearch || '').toLowerCase())
+  );
+  
+  const filteredSubcategories = subcategories.filter(s => 
+    s.name?.toLowerCase().includes((subcategorySearch || '').toLowerCase())
+  );
 
   const handleStatusUpdate = async (id, newStatus) => {
     try {
@@ -750,24 +808,32 @@ const FPWorkOrders = ({ user }) => {
                   Category <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2">
-                  <select
-                    required
-                    value={formData.categoryId}
-                    onChange={(e) => handleCategoryChange(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddCategoryModal(true)}
-                    className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add</span>
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={categorySearch || categories.find(c => c.id === parseInt(formData.categoryId))?.name || ''}
+                      onChange={(e) => { setCategorySearch(e.target.value); setShowCategoryDropdown(true); }}
+                      onFocus={() => setShowCategoryDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)}
+                      placeholder="Select a category"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                    />
+                    {showCategoryDropdown && (
+                      <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {filteredCategories.map(cat => (
+                          <div key={cat.id} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.categoryId === String(cat.id) ? 'bg-blue-50' : ''}`}>
+                            <button type="button" onMouseDown={() => { handleCategoryChange(cat.id); setCategorySearch(cat.name); setShowCategoryDropdown(false); }}
+                              className={`flex-1 text-left text-sm ${formData.categoryId === String(cat.id) ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{cat.name}</button>
+                            {!cat.isDefault && (
+                              <button type="button" onMouseDown={(e) => handleDeleteCategory(cat.id, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><X className="w-3 h-3" /></button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button type="button" onClick={() => setShowAddCategoryModal(true)} className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                    <Plus className="w-4 h-4" /><span>Add</span>
                   </button>
                 </div>
               </div>
@@ -775,18 +841,31 @@ const FPWorkOrders = ({ user }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Subcategory <span className="text-red-500">*</span>
                 </label>
-                <select
-                  required
-                  value={formData.subcategoryId}
-                  onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
-                  disabled={!formData.categoryId}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  <option value="">{formData.categoryId ? 'Select a subcategory' : 'Select a category first'}</option>
-                  {subcategories.map((sub) => (
-                    <option key={sub.id} value={sub.id}>{sub.name}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={subcategorySearch || subcategories.find(s => s.id === parseInt(formData.subcategoryId))?.name || ''}
+                    onChange={(e) => { setSubcategorySearch(e.target.value); setShowSubcategoryDropdown(true); }}
+                    onFocus={() => setShowSubcategoryDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowSubcategoryDropdown(false), 200)}
+                    placeholder={formData.categoryId ? 'Select a subcategory' : 'Select a category first'}
+                    disabled={!formData.categoryId}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  />
+                  {showSubcategoryDropdown && formData.categoryId && (
+                    <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredSubcategories.map(sub => (
+                        <div key={sub.id} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.subcategoryId === String(sub.id) ? 'bg-blue-50' : ''}`}>
+                          <button type="button" onMouseDown={() => { setFormData({ ...formData, subcategoryId: String(sub.id) }); setSubcategorySearch(sub.name); setShowSubcategoryDropdown(false); }}
+                            className={`flex-1 text-left text-sm ${formData.subcategoryId === String(sub.id) ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{sub.name}</button>
+                          {sub.name !== 'Other' && !categories.find(c => c.id === parseInt(formData.categoryId))?.isDefault && (
+                            <button type="button" onMouseDown={(e) => handleDeleteSubcategory(sub.id, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><X className="w-3 h-3" /></button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
