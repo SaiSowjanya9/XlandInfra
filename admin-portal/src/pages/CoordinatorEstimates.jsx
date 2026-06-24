@@ -1039,9 +1039,8 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                 <h2 className="text-lg font-semibold text-gray-900">Package Configuration</h2>
                 <button
                   onClick={handleAddServiceRow}
-                  className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
+                  className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
                 >
-                  <Plus className="w-4 h-4" />
                   Add Row
                 </button>
               </div>
