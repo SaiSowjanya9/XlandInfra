@@ -276,9 +276,9 @@ const VendorDetails = () => {
 
   const filteredVendors = vendors.filter(v => {
     // Status filter
-    const isDeleted = v.status === 'deleted' || v.is_active === 0 || v.is_active === false;
-    if (statusFilter === 'active' && isDeleted) return false;
-    if (statusFilter === 'deleted' && !isDeleted) return false;
+    const isInactive = v.status === 'deleted' || v.is_active === 0 || v.is_active === false;
+    if (statusFilter === 'active' && isInactive) return false;
+    if (statusFilter === 'inactive' && !isInactive) return false;
     
     const serviceType = v.serviceType || v.service_type;
     if (activeTab !== 'all' && serviceType !== activeTab) return false;
@@ -524,11 +524,11 @@ const VendorDetails = () => {
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className={`appearance-none pl-3 pr-8 py-2 border rounded-md text-sm focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none ${
-                  statusFilter === 'deleted' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-300 bg-white'
+                  statusFilter === 'inactive' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-300 bg-white'
                 }`}
               >
                 <option value="active" className="bg-white text-gray-900">Active Vendors</option>
-                <option value="deleted" className="bg-white text-gray-900">Deleted Vendors</option>
+                <option value="inactive" className="bg-white text-gray-900">Inactive Vendors</option>
                 <option value="all" className="bg-white text-gray-900">All Vendors</option>
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
