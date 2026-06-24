@@ -360,16 +360,6 @@ const CoordinatorAddVendor = ({ user }) => {
                           >
                             {s.name}
                           </span>
-                          {s.id && s.created_by_user_id && s.created_by_user_id === currentUserId && (
-                            <button
-                              type="button"
-                              onMouseDown={(e) => handleDeleteServiceType(s.id, s.name, e)}
-                              className="ml-2 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
-                              title="Delete service type"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          )}
                         </div>
                       ))}
                     </div>
