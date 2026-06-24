@@ -1495,7 +1495,7 @@ router.get('/fp-employee-zones', requireManagerScope, async (req, res) => {
 // Get all manager estimates - Zone-centric + own created
 router.get('/estimates', requireManagerScope, async (req, res) => {
   try {
-    const { archived } = req.query;
+    const { archived, property_id } = req.query;
     const isArchived = archived === 'true';
     const managerId = req.managerId;
     const franchisePartnerId = req.franchisePartnerId;
@@ -1508,6 +1508,31 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
     if (franchisePartnerId) {
       // Get assigned zones
       const assignedZones = await getAssignedZones(employeeId, creatorEmail);
+      
+      // Build property filter clause if property_id is provided
+      let propertyClause = '';
+      let propertyParams = [];
+      if (property_id) {
+        // Get property_code for this property
+        let propertyCode = null;
+        try {
+          const [propResult] = await pool.execute(
+            `SELECT property_code FROM fp_properties WHERE id = ? AND franchise_partner_id = ?`,
+            [property_id, franchisePartnerId]
+          );
+          if (propResult.length > 0) {
+            propertyCode = propResult[0].property_code;
+          }
+        } catch (e) {}
+        
+        if (propertyCode) {
+          propertyClause = ' AND (e.property_id = ? OR e.property_code = ?)';
+          propertyParams = [property_id, propertyCode];
+        } else {
+          propertyClause = ' AND e.property_id = ?';
+          propertyParams = [property_id];
+        }
+      }
       
       // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
       let zoneClause = '';
@@ -1534,9 +1559,9 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
          LEFT JOIN fp_employees fpe ON e.created_by_name = fpe.email OR e.created_by_name = fpe.username
          LEFT JOIN users u ON e.created_by_name = u.email
          LEFT JOIN fp_amc_packages fpamc ON e.package_id = fpamc.id
-         WHERE e.franchise_partner_id = ? AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}${zoneClause}
+         WHERE e.franchise_partner_id = ? AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}${propertyClause}${zoneClause}
          ORDER BY e.created_at DESC`,
-        [franchisePartnerId, ...zoneParams]
+        [franchisePartnerId, ...propertyParams, ...zoneParams]
       );
       
       // Get FP addons for description lookup

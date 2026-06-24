@@ -3289,6 +3289,31 @@ router.get('/estimates', requireFPScope, async (req, res) => {
                  WHERE fe.franchise_partner_id = ?`;
     const params = [req.fpId];
 
+    // Filter by property_id if provided (check both property_id and property_code)
+    const { property_id } = req.query;
+    if (property_id) {
+      // First, get the property_code for this property_id
+      let propertyCode = null;
+      try {
+        const [propResult] = await pool.execute(
+          `SELECT property_code FROM fp_properties WHERE id = ? AND franchise_partner_id = ?`,
+          [property_id, req.fpId]
+        );
+        if (propResult.length > 0) {
+          propertyCode = propResult[0].property_code;
+        }
+      } catch (e) {}
+      
+      // Filter estimates by property_id OR property_code
+      if (propertyCode) {
+        query += ' AND (fe.property_id = ? OR fe.property_code = ?)';
+        params.push(property_id, propertyCode);
+      } else {
+        query += ' AND fe.property_id = ?';
+        params.push(property_id);
+      }
+    }
+
     if (status) {
       query += ' AND fe.status = ?';
       params.push(status);
