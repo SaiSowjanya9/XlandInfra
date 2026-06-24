@@ -1679,7 +1679,10 @@ router.post('/customer-accounts/:id/resend-activation', requireFPScope, async (r
 router.get('/vendors', requireFPScope, async (req, res) => {
   try {
     console.log('[FP Vendors] Fetching vendors for FP ID:', req.fpId);
-    // Fetch vendors for this FP only
+    // Check if include_deleted query param is passed
+    const includeDeleted = req.query.include_deleted === 'true';
+    
+    // Fetch vendors for this FP only - exclude deleted/inactive by default
     const [vendors] = await pool.execute(
       `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
               ov.zone, ov.zone as zone_name, ov.area_name, ov.area_name as area, ov.division,
@@ -1702,6 +1705,7 @@ router.get('/vendors', requireFPScope, async (req, res) => {
        LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
        WHERE ov.franchise_partner_id = ?
          AND ov.vendor_id NOT LIKE '%SEED%'
+         ${includeDeleted ? '' : "AND (ov.status = 'active' OR ov.status IS NULL)"}
        ORDER BY ov.created_at DESC`,
       [req.fpId]
     );
@@ -4234,21 +4238,216 @@ router.delete('/zones/:id', requireFPScope, async (req, res) => {
 });
 
 // ============================================
-// CATEGORIES (Read-only for FP)
+// DIVISIONS (FP-specific divisions)
+// ============================================
+
+router.get('/divisions', requireFPScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.fpId;
+    
+    // Get FP-specific divisions
+    let divisions = [];
+    if (franchisePartnerId) {
+      const [fpDivisions] = await pool.execute(
+        'SELECT id, name FROM fp_divisions WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY name',
+        [franchisePartnerId]
+      );
+      divisions = fpDivisions;
+    }
+    
+    // Also get divisions from existing properties/vendors for this FP
+    const [propertyDivisions] = await pool.execute(
+      `SELECT DISTINCT division as name FROM properties 
+       WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''
+       UNION
+       SELECT DISTINCT division as name FROM onboarded_vendors 
+       WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''`,
+      [franchisePartnerId || 0, franchisePartnerId || 0]
+    );
+    
+    // Combine and deduplicate
+    const allDivisionNames = new Set(divisions.map(d => d.name));
+    propertyDivisions.forEach(d => {
+      if (d.name && !allDivisionNames.has(d.name)) {
+        allDivisionNames.add(d.name);
+        divisions.push({ id: `custom-${d.name}`, name: d.name });
+      }
+    });
+    
+    divisions.sort((a, b) => a.name.localeCompare(b.name));
+    res.json({ success: true, data: divisions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/divisions', requireFPScope, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Division name is required' });
+    }
+    
+    const franchisePartnerId = req.fpId;
+    if (!franchisePartnerId) {
+      return res.status(400).json({ success: false, message: 'FP context required' });
+    }
+    
+    // Check if division already exists
+    const [existing] = await pool.execute(
+      'SELECT id FROM fp_divisions WHERE name = ? AND franchise_partner_id = ?',
+      [name, franchisePartnerId]
+    );
+    
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Division already exists' });
+    }
+    
+    const [result] = await pool.execute(
+      'INSERT INTO fp_divisions (name, franchise_partner_id, created_by, is_active) VALUES (?, ?, ?, 1)',
+      [name, franchisePartnerId, req.user?.email || req.user?.username || '']
+    );
+    
+    res.json({ success: true, message: 'Division created', data: { id: result.insertId, name } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/divisions/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const franchisePartnerId = req.fpId;
+    
+    await pool.execute(
+      'UPDATE fp_divisions SET is_active = 0 WHERE id = ? AND franchise_partner_id = ?',
+      [id, franchisePartnerId]
+    );
+    
+    res.json({ success: true, message: 'Division deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ============================================
+// CATEGORIES (with FP-specific additions)
 // ============================================
 
 router.get('/categories', requireFPScope, async (req, res) => {
   try {
-    // Always use config file for categories (most reliable)
+    // Get default categories from config
     const categoriesConfig = require('../config/categories');
-    return res.json({ success: true, data: categoriesConfig });
+    const defaultCategories = categoriesConfig.map(c => ({ ...c, isDefault: true }));
+    
+    // Get FP-specific categories
+    const [fpCategories] = await pool.execute(
+      'SELECT id, name FROM fp_categories WHERE franchise_partner_id = ? AND is_active = 1 ORDER BY name',
+      [req.fpId]
+    );
+    
+    // Get FP-specific subcategories
+    for (const cat of fpCategories) {
+      const [subs] = await pool.execute(
+        'SELECT id, name FROM fp_subcategories WHERE category_id = ? AND franchise_partner_id = ? AND is_active = 1 ORDER BY name',
+        [cat.id, req.fpId]
+      );
+      cat.subcategories = [...subs, { id: cat.id * 100 + 99, name: 'Other' }];
+      cat.isDefault = false;
+    }
+    
+    // Combine default + FP-specific categories
+    const allCategories = [...defaultCategories, ...fpCategories];
+    return res.json({ success: true, data: allCategories });
   } catch (error) {
     console.error('Get categories error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch categories',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Add new category (FP-specific)
+router.post('/categories', requireFPScope, async (req, res) => {
+  try {
+    const { name, subcategoryName } = req.body;
+    if (!name?.trim()) {
+      return res.status(400).json({ success: false, message: 'Category name is required' });
+    }
+    
+    const [result] = await pool.execute(
+      'INSERT INTO fp_categories (name, franchise_partner_id) VALUES (?, ?)',
+      [name.trim(), req.fpId]
+    );
+    
+    const categoryId = result.insertId;
+    
+    // Add subcategory if provided
+    if (subcategoryName?.trim()) {
+      await pool.execute(
+        'INSERT INTO fp_subcategories (name, category_id, franchise_partner_id) VALUES (?, ?, ?)',
+        [subcategoryName.trim(), categoryId, req.fpId]
+      );
+    }
+    
+    res.json({ success: true, message: 'Category added', data: { id: categoryId, name: name.trim() } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete category (FP-specific only)
+router.delete('/categories/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Delete subcategories first
+    await pool.execute(
+      'UPDATE fp_subcategories SET is_active = 0 WHERE category_id = ? AND franchise_partner_id = ?',
+      [id, req.fpId]
+    );
+    
+    // Delete category
+    await pool.execute(
+      'UPDATE fp_categories SET is_active = 0 WHERE id = ? AND franchise_partner_id = ?',
+      [id, req.fpId]
+    );
+    
+    res.json({ success: true, message: 'Category deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Add subcategory to a category
+router.post('/categories/:categoryId/subcategories', requireFPScope, async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { name } = req.body;
+    if (!name?.trim()) {
+      return res.status(400).json({ success: false, message: 'Subcategory name is required' });
+    }
+    
+    const [result] = await pool.execute(
+      'INSERT INTO fp_subcategories (name, category_id, franchise_partner_id) VALUES (?, ?, ?)',
+      [name.trim(), categoryId, req.fpId]
+    );
+    
+    res.json({ success: true, message: 'Subcategory added', data: { id: result.insertId, name: name.trim() } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete subcategory
+router.delete('/subcategories/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute(
+      'UPDATE fp_subcategories SET is_active = 0 WHERE id = ? AND franchise_partner_id = ?',
+      [id, req.fpId]
+    );
+    res.json({ success: true, message: 'Subcategory deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

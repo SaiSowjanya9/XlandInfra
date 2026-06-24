@@ -2893,4 +2893,91 @@ router.delete('/service-types/:id', authenticate, async (req, res) => {
   }
 });
 
+// ============================================
+// ADMIN CATEGORIES (Global categories with admin additions)
+// ============================================
+
+router.get('/categories', authenticate, async (req, res) => {
+  try {
+    // Get default categories from config
+    const categoriesConfig = require('../config/categories');
+    const defaultCategories = categoriesConfig.map(c => ({ ...c, isDefault: true }));
+    
+    // Get admin-created categories (stored in admin_categories table)
+    try {
+      const [adminCategories] = await pool.execute(
+        'SELECT id, name FROM admin_categories WHERE is_active = 1 ORDER BY name'
+      );
+      
+      for (const cat of adminCategories) {
+        const [subs] = await pool.execute(
+          'SELECT id, name FROM admin_subcategories WHERE category_id = ? AND is_active = 1 ORDER BY name',
+          [cat.id]
+        );
+        cat.subcategories = [...subs, { id: cat.id * 100 + 99, name: 'Other' }];
+        cat.isDefault = false;
+      }
+      
+      const allCategories = [...defaultCategories, ...adminCategories];
+      return res.json({ success: true, data: allCategories });
+    } catch (tableError) {
+      // If admin_categories table doesn't exist, just return default categories
+      return res.json({ success: true, data: defaultCategories });
+    }
+  } catch (error) {
+    console.error('Get categories error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/categories', authenticate, async (req, res) => {
+  try {
+    const { name, subcategoryName } = req.body;
+    if (!name?.trim()) {
+      return res.status(400).json({ success: false, message: 'Category name is required' });
+    }
+    
+    const [result] = await pool.execute(
+      'INSERT INTO admin_categories (name) VALUES (?)',
+      [name.trim()]
+    );
+    
+    const categoryId = result.insertId;
+    
+    if (subcategoryName?.trim()) {
+      await pool.execute(
+        'INSERT INTO admin_subcategories (name, category_id) VALUES (?, ?)',
+        [subcategoryName.trim(), categoryId]
+      );
+    }
+    
+    res.json({ success: true, message: 'Category added', data: { id: categoryId, name: name.trim() } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/categories/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await pool.execute('UPDATE admin_subcategories SET is_active = 0 WHERE category_id = ?', [id]);
+    await pool.execute('UPDATE admin_categories SET is_active = 0 WHERE id = ?', [id]);
+    
+    res.json({ success: true, message: 'Category deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/subcategories/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('UPDATE admin_subcategories SET is_active = 0 WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Subcategory deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;

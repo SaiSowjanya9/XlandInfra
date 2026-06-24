@@ -19,6 +19,13 @@ const WorkOrders = ({ admin }) => {
   const [subcategories, setSubcategories] = useState([]);
   const [propertySearch, setPropertySearch] = useState('');
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [subcategorySearch, setSubcategorySearch] = useState('');
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newSubcategoryName, setNewSubcategoryName] = useState('');
   const [formData, setFormData] = useState({
     propertyId: '', categoryId: '', subcategoryId: '',
     customerName: '', customerEmail: '', customerPhone: '',
@@ -162,6 +169,80 @@ const WorkOrders = ({ admin }) => {
     const category = categories.find(c => c.id === parseInt(categoryId));
     setSubcategories(category?.subcategories || []);
   };
+
+  // Add new category
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/categories`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCategoryName.trim(), subcategoryName: newSubcategoryName.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const catRes = await fetch(`${API_BASE}/api/admin/categories`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const catData = await catRes.json();
+        if (catData.success) setCategories(catData.data);
+        setNewCategoryName('');
+        setNewSubcategoryName('');
+        setShowAddCategoryModal(false);
+        setSuccess(`Category "${newCategoryName}" added successfully`);
+      }
+    } catch (error) {
+      console.error('Error adding category:', error);
+    }
+  };
+
+  // Delete category (admin-created only)
+  const handleDeleteCategory = async (categoryId, e) => {
+    e.stopPropagation();
+    if (!window.confirm('Delete this category?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/categories/${categoryId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if ((await res.json()).success) {
+        setCategories(categories.filter(c => c.id !== categoryId));
+        if (formData.categoryId === String(categoryId)) {
+          setFormData({ ...formData, categoryId: '', subcategoryId: '' });
+          setCategorySearch('');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error);
+    }
+  };
+
+  // Delete subcategory
+  const handleDeleteSubcategory = async (subcategoryId, e) => {
+    e.stopPropagation();
+    if (!window.confirm('Delete this subcategory?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/subcategories/${subcategoryId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if ((await res.json()).success) {
+        setSubcategories(subcategories.filter(s => s.id !== subcategoryId));
+        if (formData.subcategoryId === String(subcategoryId)) {
+          setFormData({ ...formData, subcategoryId: '' });
+          setSubcategorySearch('');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting subcategory:', error);
+    }
+  };
+
+  const filteredCategories = categories.filter(c => 
+    c.name?.toLowerCase().includes((categorySearch || '').toLowerCase())
+  );
+  
+  const filteredSubcategories = subcategories.filter(s => 
+    s.name?.toLowerCase().includes((subcategorySearch || '').toLowerCase())
+  );
 
   // Handle create work order submit
   const handleCreateSubmit = async (e) => {
@@ -610,17 +691,59 @@ const WorkOrders = ({ admin }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-500">*</span></label>
-                <select required value={formData.categoryId} onChange={(e) => handleCategoryChange(e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
-                  <option value="">Select a category</option>
-                  {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                </select>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input type="text"
+                      value={categorySearch || categories.find(c => c.id === parseInt(formData.categoryId))?.name || ''}
+                      onChange={(e) => { setCategorySearch(e.target.value); setShowCategoryDropdown(true); }}
+                      onFocus={() => setShowCategoryDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)}
+                      placeholder="Select a category"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" />
+                    {showCategoryDropdown && (
+                      <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {filteredCategories.map(cat => (
+                          <div key={cat.id} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.categoryId === String(cat.id) ? 'bg-blue-50' : ''}`}>
+                            <button type="button" onMouseDown={() => { handleCategoryChange(cat.id); setCategorySearch(cat.name); setShowCategoryDropdown(false); }}
+                              className={`flex-1 text-left text-sm ${formData.categoryId === String(cat.id) ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{cat.name}</button>
+                            {!cat.isDefault && (
+                              <button type="button" onMouseDown={(e) => handleDeleteCategory(cat.id, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><X className="w-3 h-3" /></button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button type="button" onClick={() => setShowAddCategoryModal(true)} className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
-                <select value={formData.subcategoryId} onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })} className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" disabled={!formData.categoryId}>
-                  <option value="">{formData.categoryId ? 'Select a subcategory' : 'Select a category first'}</option>
-                  {subcategories.map(sub => <option key={sub.id} value={sub.id}>{sub.name}</option>)}
-                </select>
+                <div className="relative">
+                  <input type="text"
+                    value={subcategorySearch || subcategories.find(s => s.id === parseInt(formData.subcategoryId))?.name || ''}
+                    onChange={(e) => { setSubcategorySearch(e.target.value); setShowSubcategoryDropdown(true); }}
+                    onFocus={() => setShowSubcategoryDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowSubcategoryDropdown(false), 200)}
+                    placeholder={formData.categoryId ? 'Select a subcategory' : 'Select a category first'}
+                    disabled={!formData.categoryId}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed" />
+                  {showSubcategoryDropdown && formData.categoryId && (
+                    <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredSubcategories.map(sub => (
+                        <div key={sub.id} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.subcategoryId === String(sub.id) ? 'bg-blue-50' : ''}`}>
+                          <button type="button" onMouseDown={() => { setFormData({ ...formData, subcategoryId: String(sub.id) }); setSubcategorySearch(sub.name); setShowSubcategoryDropdown(false); }}
+                            className={`flex-1 text-left text-sm ${formData.subcategoryId === String(sub.id) ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{sub.name}</button>
+                          {sub.name !== 'Other' && !categories.find(c => c.id === parseInt(formData.categoryId))?.isDefault && (
+                            <button type="button" onMouseDown={(e) => handleDeleteSubcategory(sub.id, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><X className="w-3 h-3" /></button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1037,6 +1160,32 @@ const WorkOrders = ({ admin }) => {
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
               <button onClick={() => setShowEditModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
               <button onClick={handleSaveEdit} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Category Modal */}
+      {showAddCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Add New Category</h2>
+              <button onClick={() => { setShowAddCategoryModal(false); setNewCategoryName(''); setNewSubcategoryName(''); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category Name <span className="text-red-500">*</span></label>
+                <input type="text" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="Enter category name" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Initial Subcategory <span className="text-gray-400">(Optional)</span></label>
+                <input type="text" value={newSubcategoryName} onChange={(e) => setNewSubcategoryName(e.target.value)} placeholder="Enter subcategory name" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button onClick={() => { setShowAddCategoryModal(false); setNewCategoryName(''); setNewSubcategoryName(''); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
+              <button onClick={handleAddCategory} disabled={!newCategoryName.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Add Category</button>
             </div>
           </div>
         </div>
