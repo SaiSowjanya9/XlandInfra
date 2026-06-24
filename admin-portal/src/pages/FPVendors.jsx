@@ -256,7 +256,7 @@ const FPVendors = ({ user }) => {
                   {/* Rate/Coverage columns - Hidden for FP Manager */}
                   {!isFPManager && (
                     <>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Rate/Visit</th>
+                      <th className="px-4 py-3 text-center font-medium text-gray-600 whitespace-nowrap">Rate/Visit</th>
                       <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Coverage/Day</th>
                     </>
                   )}
@@ -283,7 +283,7 @@ const FPVendors = ({ user }) => {
                     {/* Rate/Coverage data - Hidden for FP Manager */}
                     {!isFPManager && (
                       <>
-                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
                           ₹{vendor.ratePerVisit || vendor.rate_per_visit || 0}
                         </td>
                         <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
