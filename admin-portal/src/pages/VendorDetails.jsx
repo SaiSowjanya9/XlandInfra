@@ -35,6 +35,7 @@ const VendorDetails = () => {
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [softDeleteConfirm, setSoftDeleteConfirm] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [toast, setToast] = useState(null);
@@ -129,6 +130,26 @@ const VendorDetails = () => {
       showToast('Failed to delete vendor', 'error');
     }
     setDeleteConfirm(null);
+  };
+
+  const handleSoftDelete = async (id) => {
+    try {
+      const response = await fetch(`/api/vendors/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        await loadData();
+        showToast('Vendor moved to inactive');
+      } else {
+        showToast(result.message || 'Failed to delete vendor', 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting vendor:', error);
+      showToast('Failed to delete vendor', 'error');
+    }
+    setSoftDeleteConfirm(null);
   };
 
   const handleMarkAllRead = () => {
@@ -634,38 +655,48 @@ const VendorDetails = () => {
                             >
                               <Download className="w-4 h-4" />
                             </button>
-                            {(vendor.status === 'deleted' || vendor.is_active === 0 || vendor.is_active === false) && (
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const response = await fetch(`/api/vendors/${vendor.id || vendor.vendorId}/restore`, {
-                                      method: 'PUT',
-                                      headers: { 'Authorization': `Bearer ${token}` }
-                                    });
-                                    const result = await response.json();
-                                    if (result.success) {
-                                      showToast('Vendor restored successfully');
-                                      loadData();
-                                    } else {
-                                      showToast(result.message || 'Failed to restore vendor', 'error');
+                            {(vendor.status === 'deleted' || vendor.is_active === 0 || vendor.is_active === false) ? (
+                              <>
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const response = await fetch(`/api/vendors/${vendor.id || vendor.vendorId}/restore`, {
+                                        method: 'PUT',
+                                        headers: { 'Authorization': `Bearer ${token}` }
+                                      });
+                                      const result = await response.json();
+                                      if (result.success) {
+                                        showToast('Vendor restored successfully');
+                                        loadData();
+                                      } else {
+                                        showToast(result.message || 'Failed to restore vendor', 'error');
+                                      }
+                                    } catch (error) {
+                                      showToast('Failed to restore vendor', 'error');
                                     }
-                                  } catch (error) {
-                                    showToast('Failed to restore vendor', 'error');
-                                  }
-                                }}
-                                className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                                title="Restore Vendor"
+                                  }}
+                                  className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                                  title="Restore Vendor"
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => setDeleteConfirm(vendor)}
+                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  title="Delete Permanently"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => setSoftDeleteConfirm(vendor)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete (Move to Inactive)"
                               >
-                                <RefreshCw className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             )}
-                            <button
-                              onClick={() => setDeleteConfirm(vendor)}
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                              title="Delete Permanently"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
                           </>
                         )}
                       </div>
@@ -789,7 +820,35 @@ const VendorDetails = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Soft Delete Confirmation Modal */}
+      {softDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Vendor</h3>
+            <p className="text-gray-600 text-sm mb-6">
+              Are you sure you want to delete <strong>{softDeleteConfirm.ownerName || softDeleteConfirm.owner_name}</strong> ({softDeleteConfirm.vendorId || softDeleteConfirm.vendor_id})? 
+              <br/><br/>
+              <span className="text-amber-600 font-medium">The vendor will be moved to inactive and can be restored later.</span>
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setSoftDeleteConfirm(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSoftDelete(softDeleteConfirm.id)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Permanent Delete Confirmation Modal */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -797,7 +856,7 @@ const VendorDetails = () => {
             <p className="text-gray-600 text-sm mb-6">
               Are you sure you want to <strong className="text-red-600">permanently delete</strong> <strong>{deleteConfirm.ownerName || deleteConfirm.owner_name}</strong> ({deleteConfirm.vendorId || deleteConfirm.vendor_id})? 
               <br/><br/>
-              <span className="text-red-500 font-medium">This action cannot be undone. All vendor data and assignments will be removed.</span>
+              <span className="text-red-500 font-medium">This action cannot be undone. All vendor data will be lost forever.</span>
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -810,7 +869,7 @@ const VendorDetails = () => {
                 onClick={() => handleDelete(deleteConfirm.id)}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
               >
-                Delete
+                Delete Forever
               </button>
             </div>
           </div>

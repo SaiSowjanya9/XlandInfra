@@ -2078,6 +2078,47 @@ router.put('/vendors/:id/restore', requireFPScope, async (req, res) => {
   }
 });
 
+// Permanently delete vendor (hard delete - only for inactive/deleted vendors)
+router.delete('/vendors/:id/permanent', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verify vendor belongs to this FP and is already deleted/inactive
+    const [existing] = await pool.execute(
+      `SELECT id, vendor_id, owner_name FROM onboarded_vendors 
+       WHERE id = ? AND franchise_partner_id = ? AND (status = 'deleted' OR is_active = 0)`,
+      [id, req.fpId]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found, access denied, or vendor is not inactive'
+      });
+    }
+
+    // Permanently delete the vendor
+    await pool.execute(
+      'DELETE FROM onboarded_vendors WHERE id = ? AND franchise_partner_id = ?',
+      [id, req.fpId]
+    );
+
+    console.log(`🗑️ Vendor permanently deleted: ${existing[0].vendor_id} - ${existing[0].owner_name} by FP ${req.fpId}`);
+
+    res.json({
+      success: true,
+      message: 'Vendor permanently deleted'
+    });
+  } catch (error) {
+    console.error('Permanent delete vendor error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to permanently delete vendor',
+      error: error.message
+    });
+  }
+});
+
 // ============================================
 // EMPLOYEE MANAGEMENT
 // ============================================
