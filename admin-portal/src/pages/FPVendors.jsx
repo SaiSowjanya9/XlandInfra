@@ -666,6 +666,10 @@ const FPVendors = ({ user }) => {
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Location</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
+                    <p className="text-xs text-gray-500">Division</p>
+                    <p className="font-medium">{viewVendor.division || '-'}</p>
+                  </div>
+                  <div>
                     <p className="text-xs text-gray-500">Zone</p>
                     <p className="font-medium">{viewVendor.zone_name || viewVendor.zone || '-'}</p>
                   </div>

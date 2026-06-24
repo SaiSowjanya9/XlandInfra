@@ -276,7 +276,7 @@ const VendorDetails = () => {
 
   const filteredVendors = vendors.filter(v => {
     // Status filter
-    const isInactive = v.status === 'deleted' || v.is_active === 0 || v.is_active === false;
+    const isInactive = v.status === 'deleted' || v.status === 'inactive' || v.is_active === 0 || v.is_active === false;
     if (statusFilter === 'active' && isInactive) return false;
     if (statusFilter === 'inactive' && !isInactive) return false;
     
@@ -750,7 +750,8 @@ const VendorDetails = () => {
               {/* Location */}
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Location</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div><span className="text-xs text-gray-400">Division</span><p className="text-sm font-medium text-gray-900">{viewVendor.division || '-'}</p></div>
                   <div><span className="text-xs text-gray-400">Zone</span><p className="text-sm font-medium text-gray-900">{viewVendor.zone || viewVendor.zone_name || '-'}</p></div>
                   <div><span className="text-xs text-gray-400">Area</span><p className="text-sm font-medium text-gray-900">{viewVendor.areaName || viewVendor.area_name || viewVendor.area || '-'}</p></div>
                 </div>

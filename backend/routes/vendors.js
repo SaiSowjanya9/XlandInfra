@@ -625,7 +625,7 @@ router.delete('/:id', authenticate, managerOrAdmin, async (req, res) => {
     const { id } = req.params;
 
     const [result] = await pool.execute(
-      `UPDATE onboarded_vendors SET is_active = 0, status = 'inactive' WHERE id = ?`,
+      `UPDATE onboarded_vendors SET is_active = 0, status = 'deleted' WHERE id = ?`,
       [id]
     );
 

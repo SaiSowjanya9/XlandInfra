@@ -1909,7 +1909,7 @@ router.get('/all-vendor-assignments', authenticate, adminOnly, async (req, res) 
 router.get('/all-vendors', authenticate, adminOnly, async (req, res) => {
   try {
     const includeDeleted = req.query.include_deleted === 'true';
-    const statusCondition = includeDeleted ? "ov.status IN ('active', 'deleted')" : "ov.status = 'active'";
+    const statusCondition = includeDeleted ? "(ov.status IN ('active', 'deleted', 'inactive') OR ov.is_active = 0)" : "(ov.status = 'active' OR ov.status IS NULL)";
     
     const [vendors] = await pool.execute(
       `SELECT ov.*, ov.owner_name as vendor_name, ov.owner_mobile as phone, ov.owner_email as email,
@@ -2146,7 +2146,7 @@ router.get('/fp-view/:fpId/vendors', authenticate, adminOnly, async (req, res) =
     }
     
     const includeDeleted = req.query.include_deleted === 'true';
-    const statusCondition = includeDeleted ? "ov.status IN ('active', 'deleted')" : "ov.status = 'active'";
+    const statusCondition = includeDeleted ? "(ov.status IN ('active', 'deleted', 'inactive') OR ov.is_active = 0)" : "(ov.status = 'active' OR ov.status IS NULL)";
     
     const [vendors] = await pool.execute(
       `SELECT ov.*, ov.owner_name as vendor_name, ov.owner_mobile as phone, ov.owner_email as email,
