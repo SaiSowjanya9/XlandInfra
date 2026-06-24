@@ -22,7 +22,6 @@ import VendorDetails from './pages/VendorDetails';
 import AddVendor from './pages/AddVendor';
 import AssignedVendors from './pages/AssignedVendors';
 
-import FPLogin from './pages/FPLogin';
 import FPDashboard from './pages/FPDashboard';
 import FPProperties from './pages/FPProperties';
 import FPWorkOrders from './pages/FPWorkOrders';
@@ -333,14 +332,8 @@ function App() {
               ) : <Navigate to="/vendor/login" replace />
             } />
             
-            {/* FP Portal Login */}
-            <Route path="/fp/login" element={
-              user && portal === 'franchise' ? (
-                <Navigate to="/fp" replace />
-              ) : (
-                <FPLogin onLogin={(userData) => { handleLogin(userData); handleSelectPortal('franchise'); }} onBack={() => { handleBackToPortals(); }} />
-              )
-            } />
+            {/* FP Portal Login - Redirect to Employee Login */}
+            <Route path="/fp/login" element={<Navigate to="/employee/login" replace />} />
             
             {/* FP Portal Routes */}
             <Route path="/fp" element={
@@ -348,7 +341,7 @@ function App() {
                 <FPLayout admin={user} onLogout={() => { handleLogout(); }}>
                   <FPDashboard user={user} />
                 </FPLayout>
-              ) : <Navigate to="/fp/login" replace />
+              ) : <Navigate to="/employee/login" replace />
             } />
             <Route path="/fp/*" element={
               user && portal === 'franchise' ? (
@@ -374,7 +367,7 @@ function App() {
                     <Route path="*" element={<Navigate to="/fp" replace />} />
                   </Routes>
                 </FPLayout>
-              ) : <Navigate to="/fp/login" replace />
+              ) : <Navigate to="/employee/login" replace />
             } />
             
             {/* Manager Portal Login - Redirect to Employee Login */}
