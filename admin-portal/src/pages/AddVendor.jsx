@@ -14,7 +14,8 @@ import {
   IndianRupee,
   Loader2,
   ArrowLeft,
-  Building2
+  Building2,
+  X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SelectWithAdd from '../components/SelectWithAdd';
@@ -102,6 +103,8 @@ const AddVendor = ({ admin }) => {
     'Plumbing', 'Electrical', 'Carpentry', 'Painting', 'HVAC', 'Cleaning', 
     'Landscaping', 'Pest Control', 'Security', 'General Maintenance'
   ]);
+  const [serviceTypeData, setServiceTypeData] = useState([]);
+  const [showServiceDropdown, setShowServiceDropdown] = useState(false);
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -124,11 +127,10 @@ const AddVendor = ({ admin }) => {
       });
       const result = await response.json();
       if (result.success) {
-        setServiceTypes(prev => [...prev, newType.trim()]);
+        fetchServiceTypes();
       }
     } catch (error) {
       console.error('Error adding service type:', error);
-      // Still add locally if API fails
       setServiceTypes(prev => [...prev, newType.trim()]);
     }
   };
@@ -138,11 +140,34 @@ const AddVendor = ({ admin }) => {
       .then(r => r.json())
       .then(res => { 
         if (res.success && res.data?.length > 0) {
+          setServiceTypeData(res.data);
           setServiceTypes(res.data.map(s => s.name));
         }
       })
       .catch(() => {});
   };
+
+  const handleDeleteServiceType = async (serviceId, serviceName) => {
+    if (!window.confirm(`Delete "${serviceName}" service type?`)) return;
+    try {
+      const res = await fetch(`/api/admin/service-types/${serviceId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if ((await res.json()).success) {
+        fetchServiceTypes();
+        if (formData.serviceType === serviceName) {
+          updateField('serviceType', '');
+        }
+      }
+    } catch (e) {
+      console.error('Error deleting service type:', e);
+    }
+  };
+
+  const filteredServices = serviceTypeData.filter(s =>
+    s.name?.toLowerCase().includes((formData.serviceType || '').toLowerCase())
+  );
 
   useEffect(() => {
     fetchServiceTypes();
@@ -301,17 +326,72 @@ const AddVendor = ({ admin }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Service Type */}
-            <SelectWithAdd
-              label="Service Type"
-              value={formData.serviceType}
-              onChange={(value) => updateField('serviceType', value)}
-              options={getServiceTypes()}
-              onAddOption={(value) => addServiceType(value)}
-              placeholder="Select service type..."
-              required
-              error={errors.serviceType}
-              addPlaceholder="Enter new service type"
-            />
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Service Type <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={formData.serviceType}
+                    onChange={(e) => {
+                      updateField('serviceType', e.target.value);
+                      setShowServiceDropdown(true);
+                    }}
+                    onFocus={() => setShowServiceDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowServiceDropdown(false), 200)}
+                    placeholder="Select service type..."
+                    className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 focus:outline-none ${
+                      errors.serviceType ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
+                  />
+                  {showServiceDropdown && filteredServices.length > 0 && (
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredServices.map(s => (
+                        <div
+                          key={s.id || s.name}
+                          className={`flex items-center justify-between px-3 py-2 hover:bg-amber-50 transition-colors cursor-pointer ${
+                            formData.serviceType === s.name ? 'bg-amber-50 text-amber-700 font-medium' : 'text-gray-700'
+                          }`}
+                        >
+                          <span
+                            onMouseDown={() => {
+                              updateField('serviceType', s.name);
+                              setShowServiceDropdown(false);
+                            }}
+                            className="flex-1 text-sm"
+                          >
+                            {s.name}
+                          </span>
+                          {!s.is_global && s.id && (
+                            <button
+                              type="button"
+                              onMouseDown={(e) => { e.stopPropagation(); handleDeleteServiceType(s.id, s.name); }}
+                              className="ml-2 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
+                              title="Delete service type"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newType = prompt('Enter new service type:');
+                    if (newType) addServiceType(newType);
+                  }}
+                  className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                >
+                  + Add
+                </button>
+              </div>
+              {errors.serviceType && <p className="text-xs text-red-500 mt-1">{errors.serviceType}</p>}
+            </div>
           </div>
         </div>
 

@@ -2753,15 +2753,36 @@ router.post('/cleanup-duplicate-work-orders', authenticate, adminOnly, async (re
 // SERVICE TYPES (for Vendor Management)
 // ============================================
 
-// Get all service types (global)
+// Get all service types (global + FP-specific for employees)
 router.get('/service-types', authenticate, async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      `SELECT id, name, is_global, created_at 
+    // Get user's franchise_partner_id if they're an employee
+    const userId = req.user?.id || req.user?.userId;
+    let fpId = null;
+    
+    if (userId) {
+      const [userRows] = await pool.execute(
+        'SELECT franchise_partner_id FROM users WHERE id = ?',
+        [userId]
+      );
+      if (userRows.length > 0 && userRows[0].franchise_partner_id) {
+        fpId = userRows[0].franchise_partner_id;
+      }
+    }
+
+    // Fetch global service types + FP-specific if employee belongs to an FP
+    let query = `SELECT id, name, is_global, franchise_partner_id, created_at 
        FROM service_types 
-       WHERE is_active = 1 AND (is_global = 1 OR franchise_partner_id IS NULL)
-       ORDER BY name ASC`
-    );
+       WHERE is_active = 1 AND (is_global = 1 OR franchise_partner_id IS NULL`;
+    
+    const params = [];
+    if (fpId) {
+      query += ` OR franchise_partner_id = ?`;
+      params.push(fpId);
+    }
+    query += `) ORDER BY name ASC`;
+
+    const [rows] = await pool.execute(query, params);
     res.json({ success: true, data: rows });
   } catch (error) {
     console.error('Get service types error:', error);
@@ -2803,12 +2824,49 @@ router.post('/service-types', authenticate, async (req, res) => {
   }
 });
 
-// Delete service type
-router.delete('/service-types/:id', authenticate, adminOnly, async (req, res) => {
+// Delete service type (admin can delete any, employees can only delete FP-specific)
+router.delete('/service-types/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.execute('UPDATE service_types SET is_active = 0 WHERE id = ?', [id]);
-    res.json({ success: true, message: 'Service type deleted' });
+    const userId = req.user?.id || req.user?.userId;
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+
+    // Get the service type to check ownership
+    const [serviceType] = await pool.execute(
+      'SELECT id, is_global, franchise_partner_id FROM service_types WHERE id = ? AND is_active = 1',
+      [id]
+    );
+
+    if (serviceType.length === 0) {
+      return res.status(404).json({ success: false, message: 'Service type not found' });
+    }
+
+    const st = serviceType[0];
+
+    // Admins can delete any service type
+    if (isAdmin) {
+      await pool.execute('UPDATE service_types SET is_active = 0 WHERE id = ?', [id]);
+      return res.json({ success: true, message: 'Service type deleted' });
+    }
+
+    // Non-admins can only delete non-global, FP-specific service types
+    if (st.is_global) {
+      return res.status(403).json({ success: false, message: 'Cannot delete global service types' });
+    }
+
+    // Check if user belongs to the FP that owns this service type
+    if (st.franchise_partner_id && userId) {
+      const [userRows] = await pool.execute(
+        'SELECT franchise_partner_id FROM users WHERE id = ?',
+        [userId]
+      );
+      if (userRows.length > 0 && userRows[0].franchise_partner_id === st.franchise_partner_id) {
+        await pool.execute('UPDATE service_types SET is_active = 0 WHERE id = ?', [id]);
+        return res.json({ success: true, message: 'Service type deleted' });
+      }
+    }
+
+    res.status(403).json({ success: false, message: 'Not authorized to delete this service type' });
   } catch (error) {
     console.error('Delete service type error:', error);
     res.status(500).json({ success: false, message: error.message });

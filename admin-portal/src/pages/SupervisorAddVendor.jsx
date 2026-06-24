@@ -9,7 +9,8 @@ import {
   Loader2,
   ArrowLeft,
   CheckCircle2,
-  FileCheck
+  FileCheck,
+  X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -69,6 +70,7 @@ const SupervisorAddVendor = ({ user }) => {
   const [createdVendor, setCreatedVendor] = useState(null);
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [serviceTypes, setServiceTypes] = useState(SERVICE_TYPES);
+  const [serviceTypeData, setServiceTypeData] = useState([]);
   const [showAddServiceModal, setShowAddServiceModal] = useState(false);
   const [newServiceType, setNewServiceType] = useState('');
 
@@ -91,10 +93,30 @@ const SupervisorAddVendor = ({ user }) => {
       .then(r => r.json())
       .then(res => { 
         if (res.success && res.data?.length > 0) {
+          setServiceTypeData(res.data);
           setServiceTypes(res.data.map(s => s.name));
         }
       })
       .catch(() => {});
+  };
+
+  const handleDeleteServiceType = async (serviceId, serviceName, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Delete "${serviceName}" service type?`)) return;
+    try {
+      const res = await fetch(`/api/admin/service-types/${serviceId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if ((await res.json()).success) {
+        fetchServiceTypes();
+        if (formData.serviceType === serviceName) {
+          updateField('serviceType', '');
+        }
+      }
+    } catch (e) {
+      console.error('Error deleting service type:', e);
+    }
   };
 
   useEffect(() => {
@@ -124,8 +146,8 @@ const SupervisorAddVendor = ({ user }) => {
   const filteredAreas = areaSuggestions.filter(a =>
     a.toLowerCase().includes((formData.areaName || '').toLowerCase())
   );
-  const filteredServices = serviceTypes.filter(s =>
-    s.toLowerCase().includes((formData.serviceType || '').toLowerCase())
+  const filteredServices = serviceTypeData.filter(s =>
+    s.name?.toLowerCase().includes((formData.serviceType || '').toLowerCase())
   );
 
   const handleAddServiceType = async () => {
@@ -320,19 +342,32 @@ const SupervisorAddVendor = ({ user }) => {
                   {showServiceDropdown && filteredServices.length > 0 && (
                     <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                       {filteredServices.map(s => (
-                        <button
-                          key={s}
-                          type="button"
-                          onMouseDown={() => {
-                            updateField('serviceType', s);
-                            setShowServiceDropdown(false);
-                          }}
-                          className={`w-full px-3 py-2 text-left text-sm hover:bg-amber-50 transition-colors ${
-                            formData.serviceType === s ? 'bg-amber-50 text-amber-700 font-medium' : 'text-gray-700'
+                        <div
+                          key={s.id || s.name}
+                          className={`flex items-center justify-between px-3 py-2 hover:bg-amber-50 transition-colors cursor-pointer ${
+                            formData.serviceType === s.name ? 'bg-amber-50 text-amber-700 font-medium' : 'text-gray-700'
                           }`}
                         >
-                          {s}
-                        </button>
+                          <span
+                            onMouseDown={() => {
+                              updateField('serviceType', s.name);
+                              setShowServiceDropdown(false);
+                            }}
+                            className="flex-1 text-sm"
+                          >
+                            {s.name}
+                          </span>
+                          {!s.is_global && s.id && (
+                            <button
+                              type="button"
+                              onMouseDown={(e) => handleDeleteServiceType(s.id, s.name, e)}
+                              className="ml-2 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
+                              title="Delete service type"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}
