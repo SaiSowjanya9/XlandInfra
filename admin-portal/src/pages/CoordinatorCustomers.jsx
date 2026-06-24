@@ -782,7 +782,7 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
                       value={formData.zone}
                       onChange={(e) => updateFormData('zone', e.target.value)}
                       onFocus={() => setShowZoneDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowZoneDropdown(false), 200)}
+                      onBlur={() => setTimeout(() => setShowZoneDropdown(false), 400)}
                       className={inputClass(hasError && !formData.zone.trim())}
                       placeholder="Type or select zone..."
                     />
