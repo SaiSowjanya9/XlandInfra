@@ -458,8 +458,12 @@ router.get('/', async (req, res) => {
       console.log('Properties table fetch skipped:', e.message);
     }
 
-    // Sort by created date descending
-    data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Sort by created date descending (handle null dates)
+    data.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
 
     res.json({ success: true, data });
   } catch (error) {
