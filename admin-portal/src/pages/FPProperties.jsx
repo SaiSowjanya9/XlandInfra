@@ -91,6 +91,8 @@ const FPProperties = ({ user }) => {
   const [vendors, setVendors] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [editFormData, setEditFormData] = useState({});
+  const [propertyEstimates, setPropertyEstimates] = useState([]);
+  const [loadingEstimates, setLoadingEstimates] = useState(false);
   
   // Derived state for modals based on URL
   const showDetailsModal = !!viewPropertyId;
@@ -154,6 +156,26 @@ const FPProperties = ({ user }) => {
       }
     } catch (error) {
       console.error('Fetch employees error:', error);
+    }
+  };
+
+  const fetchPropertyEstimates = async (propertyId) => {
+    setLoadingEstimates(true);
+    try {
+      const response = await fetch(`/api/fp/estimates?property_id=${propertyId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setPropertyEstimates(result.data || []);
+      } else {
+        setPropertyEstimates([]);
+      }
+    } catch (error) {
+      console.error('Fetch property estimates error:', error);
+      setPropertyEstimates([]);
+    } finally {
+      setLoadingEstimates(false);
     }
   };
 
@@ -325,6 +347,10 @@ const FPProperties = ({ user }) => {
     setSelectedProperty(property);
     setAssignType(type);
     setShowAssignModal(true);
+    // Fetch estimates for the property when assigning vendors
+    if (type === 'vendor') {
+      fetchPropertyEstimates(property.id);
+    }
   };
 
   const handleAssign = async (assigneeId) => {
@@ -1505,7 +1531,7 @@ const FPProperties = ({ user }) => {
                 <h2 className="text-xl font-semibold text-gray-900">
                   Assign {assignType === 'vendor' ? 'Vendor' : 'Employee'}
                 </h2>
-                <button onClick={() => { setShowAssignModal(false); setSelectedProperty(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                <button onClick={() => { setShowAssignModal(false); setSelectedProperty(null); setPropertyEstimates([]); }} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -1513,7 +1539,33 @@ const FPProperties = ({ user }) => {
             </div>
 
             <div className="p-6">
-              {(() => {
+              {loadingEstimates ? (
+                <div className="text-center py-8">
+                  <RefreshCw className="w-8 h-8 text-amber-500 animate-spin mx-auto mb-3" />
+                  <p className="text-gray-500">Checking estimates...</p>
+                </div>
+              ) : assignType === 'vendor' && propertyEstimates.length === 0 ? (
+                <div className="text-center py-6">
+                  <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-amber-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">No Estimate Linked</h3>
+                  <p className="text-gray-600 text-sm mb-4">
+                    No estimate is linked to this property yet. Please create an estimate first to assign vendors.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowAssignModal(false);
+                      setSelectedProperty(null);
+                      navigate('/fp/estimates');
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Go to Estimates
+                  </button>
+                </div>
+              ) : (() => {
                 // Filter vendors by property zone - zone is required
                 const propertyZone = (selectedProperty?.zone_name || selectedProperty?.zone || selectedProperty?.zone_id || '').toString().toLowerCase().trim();
                 
