@@ -970,7 +970,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <tr key={idx} className="align-top">
                             <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.service_name}</td>
-                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td>
+                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!(addon.description || addon.services?.[0]?.description) ? 'text-center' : ''}`}>{addon.description || addon.services?.[0]?.description || '-'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
@@ -1312,7 +1312,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <tr key={idx} className="align-top">
                             <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.service_name}</td>
-                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td>
+                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!(addon.description || addon.services?.[0]?.description) ? 'text-center' : ''}`}>{addon.description || addon.services?.[0]?.description || '-'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
