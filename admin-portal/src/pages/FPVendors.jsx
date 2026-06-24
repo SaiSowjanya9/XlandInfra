@@ -46,6 +46,7 @@ const FPVendors = ({ user }) => {
   const [viewVendor, setViewVendor] = useState(null);
   const [editVendor, setEditVendor] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [permanentDeleteConfirm, setPermanentDeleteConfirm] = useState(null);
   const [toast, setToast] = useState(null);
 
   const token = sessionStorage.getItem('pm_auth_token');
@@ -315,29 +316,38 @@ const FPVendors = ({ user }) => {
                           <Eye className="w-4 h-4 text-gray-500" />
                         </button>
                         {!isFPManager && (vendor.status === 'deleted' || vendor.is_active === 0) ? (
-                          <button
-                            onClick={async () => {
-                              try {
-                                const response = await fetch(`/api/fp/vendors/${vendor.id}/restore`, {
-                                  method: 'PUT',
-                                  headers: { 'Authorization': `Bearer ${token}` }
-                                });
-                                const result = await response.json();
-                                if (result.success) {
-                                  showToastMessage('Vendor restored successfully');
-                                  fetchVendors();
-                                } else {
-                                  showToastMessage(result.message || 'Failed to restore vendor', 'error');
+                          <>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const response = await fetch(`/api/fp/vendors/${vendor.id}/restore`, {
+                                    method: 'PUT',
+                                    headers: { 'Authorization': `Bearer ${token}` }
+                                  });
+                                  const result = await response.json();
+                                  if (result.success) {
+                                    showToastMessage('Vendor restored successfully');
+                                    fetchVendors();
+                                  } else {
+                                    showToastMessage(result.message || 'Failed to restore vendor', 'error');
+                                  }
+                                } catch (error) {
+                                  showToastMessage('Failed to restore vendor', 'error');
                                 }
-                              } catch (error) {
-                                showToastMessage('Failed to restore vendor', 'error');
-                              }
-                            }}
-                            className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Restore Vendor"
-                          >
-                            <RefreshCw className="w-4 h-4 text-green-600" />
-                          </button>
+                              }}
+                              className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Restore Vendor"
+                            >
+                              <RefreshCw className="w-4 h-4 text-green-600" />
+                            </button>
+                            <button
+                              onClick={() => setPermanentDeleteConfirm(vendor)}
+                              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete Permanently"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </button>
+                          </>
                         ) : !isFPManager && (
                           <>
                             <button
@@ -369,13 +379,58 @@ const FPVendors = ({ user }) => {
         )}
       </div>
 
+      {/* Permanent Delete Confirmation Modal */}
+      {permanentDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPermanentDeleteConfirm(null)}>
+          <div className="bg-white rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-red-600 mb-2">⚠️ Permanently Delete Vendor</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to <strong className="text-red-600">permanently delete</strong> <strong>{permanentDeleteConfirm.ownerName || permanentDeleteConfirm.owner_name}</strong>?
+              <br /><br />
+              <span className="text-red-500 text-sm">This action is irreversible and all vendor data will be lost forever.</span>
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setPermanentDeleteConfirm(null)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`/api/fp/vendors/${permanentDeleteConfirm.id}/permanent`, {
+                      method: 'DELETE',
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                      showToastMessage('Vendor permanently deleted');
+                      fetchVendors();
+                    } else {
+                      showToastMessage(result.message || 'Failed to delete vendor', 'error');
+                    }
+                  } catch (error) {
+                    showToastMessage('Failed to delete vendor', 'error');
+                  }
+                  setPermanentDeleteConfirm(null);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete Forever
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteConfirm(null)}>
           <div className="bg-white rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Vendor</h3>
             <p className="text-gray-600 mb-4">
-              Are you sure you want to delete <strong>{deleteConfirm.ownerName || deleteConfirm.owner_name}</strong>? This action cannot be undone.
+              Are you sure you want to delete <strong>{deleteConfirm.ownerName || deleteConfirm.owner_name}</strong>? The vendor will be moved to inactive.
             </p>
             <div className="flex justify-end gap-3">
               <button
