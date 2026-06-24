@@ -4481,4 +4481,76 @@ router.delete('/portal-links/:id', requireFPScope, async (req, res) => {
   }
 });
 
+// ============================================
+// SERVICE TYPES (for Vendor Management)
+// ============================================
+
+// Get all service types (global + FP-specific)
+router.get('/service-types', requireFPScope, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT id, name, is_global, franchise_partner_id, created_at 
+       FROM service_types 
+       WHERE is_active = 1 AND (is_global = 1 OR franchise_partner_id = ?)
+       ORDER BY name ASC`,
+      [req.fpId]
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Get service types error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Add new service type (FP-specific)
+router.post('/service-types', requireFPScope, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name?.trim()) {
+      return res.status(400).json({ success: false, message: 'Service type name is required' });
+    }
+
+    // Check if already exists (global or FP-specific)
+    const [existing] = await pool.execute(
+      `SELECT id FROM service_types 
+       WHERE LOWER(name) = LOWER(?) AND is_active = 1 
+       AND (is_global = 1 OR franchise_partner_id = ?)`,
+      [name.trim(), req.fpId]
+    );
+    
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Service type already exists' });
+    }
+
+    const [result] = await pool.execute(
+      `INSERT INTO service_types (name, franchise_partner_id, is_global, created_by) VALUES (?, ?, FALSE, ?)`,
+      [name.trim(), req.fpId, req.user?.username || req.user?.email || 'FP User']
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Service type added successfully',
+      data: { id: result.insertId, name: name.trim() }
+    });
+  } catch (error) {
+    console.error('Add service type error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete service type (FP can only delete their own)
+router.delete('/service-types/:id', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute(
+      'UPDATE service_types SET is_active = 0 WHERE id = ? AND franchise_partner_id = ?', 
+      [id, req.fpId]
+    );
+    res.json({ success: true, message: 'Service type deleted' });
+  } catch (error) {
+    console.error('Delete service type error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;
