@@ -632,6 +632,10 @@ const CoordinatorVendors = ({ user }) => {
                   <p className="font-medium text-gray-900">{selectedVendor.service_type || '-'}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-gray-500">Division</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.division || '-'}</p>
+                </div>
+                <div>
                   <p className="text-sm text-gray-500">Zone</p>
                   <p className="font-medium text-gray-900">{selectedVendor.zone_name || selectedVendor.zone || '-'}</p>
                 </div>

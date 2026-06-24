@@ -212,7 +212,11 @@ const SupervisorVendors = ({ user }) => {
               {/* Location */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Location</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Division</p>
+                    <p className="font-medium text-gray-900">{selectedVendor.division || '-'}</p>
+                  </div>
                   <div>
                     <p className="text-xs text-gray-500">Zone</p>
                     <p className="font-medium text-gray-900">{selectedVendor.zone_name || selectedVendor.zone || '-'}</p>
