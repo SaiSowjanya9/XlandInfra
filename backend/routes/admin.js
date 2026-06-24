@@ -2790,7 +2790,7 @@ router.get('/service-types', authenticate, async (req, res) => {
   }
 });
 
-// Add new service type (global)
+// Add new service type (global for admin, FP-scoped for employees)
 router.post('/service-types', authenticate, async (req, res) => {
   try {
     const { name } = req.body;
@@ -2798,20 +2798,42 @@ router.post('/service-types', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Service type name is required' });
     }
 
-    // Check if already exists
-    const [existing] = await pool.execute(
-      'SELECT id FROM service_types WHERE LOWER(name) = LOWER(?) AND is_active = 1',
-      [name.trim()]
-    );
+    const userId = req.user?.id || req.user?.userId;
+    const userRole = req.user?.role;
+    const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+
+    // Get user's franchise_partner_id if they're an employee
+    let fpId = null;
+    if (!isAdmin && userId) {
+      const [userRows] = await pool.execute(
+        'SELECT franchise_partner_id FROM users WHERE id = ?',
+        [userId]
+      );
+      if (userRows.length > 0 && userRows[0].franchise_partner_id) {
+        fpId = userRows[0].franchise_partner_id;
+      }
+    }
+
+    // Check if already exists (within same scope)
+    let checkQuery = 'SELECT id FROM service_types WHERE LOWER(name) = LOWER(?) AND is_active = 1';
+    const checkParams = [name.trim()];
+    
+    if (fpId) {
+      // For employees, check within their FP's service types
+      checkQuery += ' AND (is_global = 1 OR franchise_partner_id = ?)';
+      checkParams.push(fpId);
+    }
+
+    const [existing] = await pool.execute(checkQuery, checkParams);
     
     if (existing.length > 0) {
       return res.status(400).json({ success: false, message: 'Service type already exists' });
     }
 
-    const userId = req.user?.id || req.user?.userId;
+    // Admin creates global; employees create FP-scoped (visible to all employees in same FP)
     const [result] = await pool.execute(
-      `INSERT INTO service_types (name, is_global, created_by, created_by_user_id) VALUES (?, TRUE, ?, ?)`,
-      [name.trim(), req.user?.username || req.user?.email || 'Admin', userId]
+      `INSERT INTO service_types (name, is_global, franchise_partner_id, created_by, created_by_user_id) VALUES (?, ?, ?, ?, ?)`,
+      [name.trim(), isAdmin ? 1 : 0, fpId, req.user?.username || req.user?.email || 'User', userId]
     );
 
     res.json({ 
