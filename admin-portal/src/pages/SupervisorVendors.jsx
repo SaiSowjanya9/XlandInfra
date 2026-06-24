@@ -90,28 +90,6 @@ const SupervisorVendors = ({ user }) => {
         </div>
       )}
 
-      {/* Service Type Tabs */}
-      <div className="flex items-center gap-4 border-b border-gray-200 overflow-x-auto pb-0">
-        {SERVICE_TYPES.map(type => {
-          const Icon = type.icon;
-          const count = getServiceCount(type.id);
-          const isActive = serviceFilter === type.id;
-          return (
-            <button
-              key={type.id}
-              onClick={() => setServiceFilter(type.id)}
-              className={`flex items-center gap-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                isActive ? 'text-amber-600 border-amber-500' : 'text-gray-500 border-transparent hover:text-gray-700'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {type.label}
-              <span className={`px-1.5 py-0.5 rounded text-xs ${isActive ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>{count}</span>
-            </button>
-          );
-        })}
-      </div>
-
       {/* Search and Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex-1 min-w-[250px] relative">
@@ -124,6 +102,12 @@ const SupervisorVendors = ({ user }) => {
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
           />
         </div>
+        <select value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+          <option value="all">All Service Types ({getServiceCount('all')})</option>
+          {SERVICE_TYPES.filter(t => t.id !== 'all').map(type => (
+            <option key={type.id} value={type.id}>{type.label} ({getServiceCount(type.id)})</option>
+          ))}
+        </select>
         <select value={zoneFilter} onChange={(e) => setZoneFilter(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
           <option value="all">All Zones</option>
           {zones.map(z => <option key={z} value={z}>{z}</option>)}

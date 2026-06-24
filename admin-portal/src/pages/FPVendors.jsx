@@ -156,69 +156,8 @@ const FPVendors = ({ user }) => {
         </div>
       </div>
 
-      {/* Main Content with Sidebar */}
-      <div className="flex gap-6">
-        {/* Vertical Service Type Sidebar */}
-        <div className="w-56 flex-shrink-0">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-sm font-semibold text-gray-700">Service Types</h3>
-            </div>
-            <div className="p-2">
-              {/* All Vendors option */}
-              <button
-                onClick={() => setSelectedServiceType('all')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  selectedServiceType === 'all'
-                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Truck className="w-4 h-4" />
-                  <span>All Vendors</span>
-                </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  selectedServiceType === 'all' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {getServiceTypeCount('all')}
-                </span>
-              </button>
-              
-              {/* Dynamic Service Types from vendors */}
-              {serviceTypes.map(serviceType => {
-                const IconComponent = SERVICE_ICONS[serviceType] || Store;
-                const isSelected = selectedServiceType === serviceType;
-                const count = getServiceTypeCount(serviceType);
-                return (
-                  <button
-                    key={serviceType}
-                    onClick={() => setSelectedServiceType(serviceType)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mt-1 ${
-                      isSelected
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <IconComponent className="w-4 h-4" />
-                      <span>{serviceType}</span>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      isSelected ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content Area */}
-        <div className="flex-1">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      {/* Main Content */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
             {/* Search + Filters */}
             <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
@@ -232,6 +171,17 @@ const FPVendors = ({ user }) => {
                 />
               </div>
               <div className="flex gap-2">
+                <div className="relative">
+                  <select
+                    value={selectedServiceType}
+                    onChange={(e) => setSelectedServiceType(e.target.value)}
+                    className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
+                  >
+                    <option value="all">All Service Types ({getServiceTypeCount('all')})</option>
+                    {serviceTypes.map(st => <option key={st} value={st}>{st} ({getServiceTypeCount(st)})</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                </div>
                 <div className="relative">
                   <select
                     value={divisionFilter}
@@ -397,8 +347,6 @@ const FPVendors = ({ user }) => {
             </div>
           </div>
         )}
-          </div>
-        </div>
       </div>
 
       {/* Delete Confirmation Modal */}
