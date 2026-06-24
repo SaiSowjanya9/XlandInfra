@@ -88,6 +88,8 @@ const SupervisorAddVendor = ({ user }) => {
       .then(r => r.json()).then(res => { if (res.success) setZoneSuggestions(res.data || []); }).catch(() => {});
   };
 
+  const [currentUserId, setCurrentUserId] = useState(null);
+
   const fetchServiceTypes = () => {
     fetch('/api/admin/service-types', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json())
@@ -95,6 +97,7 @@ const SupervisorAddVendor = ({ user }) => {
         if (res.success && res.data?.length > 0) {
           setServiceTypeData(res.data);
           setServiceTypes(res.data.map(s => s.name));
+          if (res.currentUserId) setCurrentUserId(res.currentUserId);
         }
       })
       .catch(() => {});
@@ -357,7 +360,7 @@ const SupervisorAddVendor = ({ user }) => {
                           >
                             {s.name}
                           </span>
-                          {s.id && (
+                          {s.id && s.created_by_user_id && s.created_by_user_id === currentUserId && (
                             <button
                               type="button"
                               onMouseDown={(e) => handleDeleteServiceType(s.id, s.name, e)}
