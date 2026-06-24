@@ -814,7 +814,7 @@ const FPWorkOrders = ({ user }) => {
                       value={categorySearch || categories.find(c => c.id === parseInt(formData.categoryId))?.name || ''}
                       onChange={(e) => { setCategorySearch(e.target.value); setShowCategoryDropdown(true); }}
                       onFocus={() => setShowCategoryDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)}
+                      onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 400)}
                       placeholder="Select a category"
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
                     />
@@ -847,7 +847,7 @@ const FPWorkOrders = ({ user }) => {
                     value={subcategorySearch || subcategories.find(s => s.id === parseInt(formData.subcategoryId))?.name || ''}
                     onChange={(e) => { setSubcategorySearch(e.target.value); setShowSubcategoryDropdown(true); }}
                     onFocus={() => setShowSubcategoryDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowSubcategoryDropdown(false), 200)}
+                    onBlur={() => setTimeout(() => setShowSubcategoryDropdown(false), 400)}
                     placeholder={formData.categoryId ? 'Select a subcategory' : 'Select a category first'}
                     disabled={!formData.categoryId}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"

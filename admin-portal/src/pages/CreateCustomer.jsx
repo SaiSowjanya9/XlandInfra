@@ -863,7 +863,7 @@ const CreateCustomer = ({ admin }) => {
               <label className="block text-sm text-gray-700 mb-1.5">Zone <span className="text-red-500">*</span></label>
               <div className="relative">
                 <input type="text" value={formData.zone} onChange={(e) => { updateFormData('zone', e.target.value); setShowZoneDropdown(true); }}
-                  onFocus={() => setShowZoneDropdown(true)} onBlur={() => setTimeout(() => setShowZoneDropdown(false), 200)}
+                  onFocus={() => setShowZoneDropdown(true)} onBlur={() => setTimeout(() => setShowZoneDropdown(false), 400)}
                   className={inputClass(hasError && !formData.zone.trim())} placeholder="Type or select zone..." />
                 {showZoneDropdown && filteredZoneSuggestions.length > 0 && (
                   <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -896,7 +896,7 @@ const CreateCustomer = ({ admin }) => {
                     setShowAreaDropdown(true);
                   }}
                   onFocus={() => setShowAreaDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowAreaDropdown(false), 200)}
+                  onBlur={() => setTimeout(() => setShowAreaDropdown(false), 400)}
                   className={inputClass(hasError && !formData.areaName.trim())}
                   placeholder="Type or select area name..."
                 />

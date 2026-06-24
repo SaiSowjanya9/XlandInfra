@@ -356,7 +356,7 @@ const SupervisorAddVendor = ({ user }) => {
                       setShowServiceDropdown(true);
                     }}
                     onFocus={() => setShowServiceDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowServiceDropdown(false), 200)}
+                    onBlur={() => setTimeout(() => setShowServiceDropdown(false), 400)}
                     placeholder="Select service type..."
                     className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 focus:outline-none ${
                       errors.serviceType ? 'border-red-300 bg-red-50' : 'border-gray-300'
@@ -417,7 +417,7 @@ const SupervisorAddVendor = ({ user }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Zone <span className="text-red-500">*</span></label>
               <input type="text" value={formData.zone}
                 onChange={(e) => { updateField('zone', e.target.value); setShowZoneDropdown(true); }}
-                onFocus={() => setShowZoneDropdown(true)} onBlur={() => setTimeout(() => setShowZoneDropdown(false), 200)}
+                onFocus={() => setShowZoneDropdown(true)} onBlur={() => setTimeout(() => setShowZoneDropdown(false), 400)}
                 placeholder="Type or select zone..."
                 className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:outline-none ${errors.zone ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} />
               {showZoneDropdown && filteredZones.length > 0 && (
@@ -446,7 +446,7 @@ const SupervisorAddVendor = ({ user }) => {
                   setShowAreaDropdown(true);
                 }}
                 onFocus={() => setShowAreaDropdown(true)}
-                onBlur={() => setTimeout(() => setShowAreaDropdown(false), 200)}
+                onBlur={() => setTimeout(() => setShowAreaDropdown(false), 400)}
                 placeholder="Type or select area name..."
                 className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:outline-none ${
                   errors.areaName ? 'border-red-300 bg-red-50' : 'border-gray-300'
