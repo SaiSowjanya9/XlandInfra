@@ -103,15 +103,49 @@ const AddVendor = ({ admin }) => {
     'Landscaping', 'Pest Control', 'Security', 'General Maintenance'
   ]);
 
+  const token = sessionStorage.getItem('pm_auth_token');
+
   const getServiceTypes = () => serviceTypes;
   
-  const addServiceType = (newType) => {
-    if (newType && !serviceTypes.includes(newType)) {
-      setServiceTypes(prev => [...prev, newType]);
+  const addServiceType = async (newType) => {
+    if (!newType || serviceTypes.some(s => s.toLowerCase() === newType.toLowerCase())) {
+      return;
+    }
+    
+    // Save to database
+    try {
+      const response = await fetch('/api/admin/service-types', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: newType.trim() })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setServiceTypes(prev => [...prev, newType.trim()]);
+      }
+    } catch (error) {
+      console.error('Error adding service type:', error);
+      // Still add locally if API fails
+      setServiceTypes(prev => [...prev, newType.trim()]);
     }
   };
 
+  const fetchServiceTypes = () => {
+    fetch('/api/admin/service-types', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(res => { 
+        if (res.success && res.data?.length > 0) {
+          setServiceTypes(res.data.map(s => s.name));
+        }
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
+    fetchServiceTypes();
     fetch('/api/onboarding/suggestions/zones')
       .then(r => r.json())
       .then(res => { if (res.success) setZoneSuggestions(res.data || []); })
