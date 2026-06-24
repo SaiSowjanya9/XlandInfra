@@ -120,16 +120,19 @@ const Properties = () => {
       });
       const result = await response.json();
       if (result.success) {
-        // Map properties and parse association_contacts
+        // Map properties - backend already sends contacts array
         const mappedProps = (result.data || []).map(p => {
-          let contacts = [];
-          try {
-            if (p.association_contacts) {
-              contacts = typeof p.association_contacts === 'string' 
-                ? JSON.parse(p.association_contacts) 
-                : p.association_contacts;
-            }
-          } catch {}
+          // Use contacts from backend (already parsed) or parse association_contacts
+          let contacts = p.contacts || [];
+          if (contacts.length === 0) {
+            try {
+              if (p.association_contacts) {
+                contacts = typeof p.association_contacts === 'string' 
+                  ? JSON.parse(p.association_contacts) 
+                  : p.association_contacts;
+              }
+            } catch {}
+          }
           if (contacts.length === 0 && (p.contact_person || p.contact_email || p.contact_phone)) {
             contacts = [{
               name: p.contact_person || '',
@@ -914,7 +917,7 @@ const Properties = () => {
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-bold text-gray-900">{viewProperty.name}</h2>
                   <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                    {viewProperty.entryType || viewProperty.propertyType || 'Property'}
+                    {getTypeLabel(viewProperty.entryType || viewProperty.propertyType)}
                   </span>
                 </div>
                 <p className="text-sm text-gray-500 mt-1">{viewProperty.propertyId}</p>
@@ -944,7 +947,7 @@ const Properties = () => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Property Type</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.entryType || viewProperty.propertyType || '-'}</p>
+                    <p className="text-sm font-medium text-gray-900">{getTypeLabel(viewProperty.entryType || viewProperty.propertyType)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Total Units</p>
@@ -967,8 +970,7 @@ const Properties = () => {
               </div>
 
               {/* Block Details - For GC */}
-              {(viewProperty.entryType === 'GC' || viewProperty.entryType?.toUpperCase() === 'GC' || 
-                viewProperty.propertyType?.toLowerCase().includes('gated') || viewProperty.propertyType?.toLowerCase().includes('community')) && (
+              {(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType) === 'GC') && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
                   <div className="mb-4">
@@ -980,30 +982,28 @@ const Properties = () => {
                       const blockNames = viewProperty.blockNames || (typeof viewProperty.block_names === 'string' ? JSON.parse(viewProperty.block_names) : viewProperty.block_names) || {};
                       const unitsPerBlock = viewProperty.unitsPerBlock || (typeof viewProperty.units_per_block === 'string' ? JSON.parse(viewProperty.units_per_block) : viewProperty.units_per_block) || {};
                       const numBlocks = viewProperty.numberOfBlocks || viewProperty.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
-                      if (Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0) {
-                        return (
-                          <div className="bg-blue-50 rounded-lg border border-blue-100 overflow-hidden">
-                            <div className="grid grid-cols-2 gap-4 px-4 py-2 bg-blue-100/50 text-xs font-medium text-blue-700">
-                              <span>Block Name</span>
-                              <span>Total Units</span>
-                            </div>
-                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
-                              <div key={blockNum} className="grid grid-cols-2 gap-4 px-4 py-3 border-t border-blue-100">
-                                <span className="text-sm font-medium text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</span>
-                                <span className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || 0}</span>
-                              </div>
-                            ))}
+                      // Always show block table for GC properties
+                      return (
+                        <div className="bg-blue-50 rounded-lg border border-blue-100 overflow-hidden">
+                          <div className="grid grid-cols-2 gap-4 px-4 py-2 bg-blue-100/50 text-xs font-medium text-blue-700">
+                            <span>Block Name</span>
+                            <span>Total Units</span>
                           </div>
-                        );
-                      }
-                      return null;
+                          {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
+                            <div key={blockNum} className="grid grid-cols-2 gap-4 px-4 py-3 border-t border-blue-100">
+                              <span className="text-sm font-medium text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</span>
+                              <span className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || 0}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
                     } catch { return null; }
                   })()}
                 </div>
               )}
 
               {/* Apartment Details */}
-              {(viewProperty.entryType === 'APT' || viewProperty.entryType?.toUpperCase() === 'APT') && (
+              {(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType) === 'APT') && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -1020,7 +1020,7 @@ const Properties = () => {
               )}
 
               {/* Villa Details */}
-              {(viewProperty.entryType === 'VILLA' || viewProperty.entryType?.toUpperCase() === 'VILLA') && (
+              {(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType) === 'VILLA') && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Villa Details</h3>
                   <div>
@@ -1031,7 +1031,7 @@ const Properties = () => {
               )}
 
               {/* Flat Details */}
-              {(viewProperty.entryType === 'FLAT' || viewProperty.entryType?.toUpperCase() === 'FLAT') && (
+              {(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType) === 'FLAT') && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Flat Details</h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -1048,7 +1048,7 @@ const Properties = () => {
               )}
 
               {/* Plot Details */}
-              {(viewProperty.entryType === 'PLOT' || viewProperty.entryType?.toUpperCase() === 'PLOT') && (
+              {(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType) === 'PLOT') && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Plot Details</h3>
                   <div>
@@ -1161,11 +1161,7 @@ const Properties = () => {
               })()}
 
               {/* Watchman Information - For GC and APT */}
-              {(viewProperty.entryType === 'GC' || viewProperty.entryType === 'APT' ||
-                viewProperty.entryType?.toUpperCase() === 'GC' || viewProperty.entryType?.toUpperCase() === 'APT' ||
-                viewProperty.propertyType?.toLowerCase().includes('gated') || 
-                viewProperty.propertyType?.toLowerCase().includes('community') ||
-                viewProperty.propertyType?.toLowerCase().includes('apartment')) && (
+              {(['GC', 'APT'].includes(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType))) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Watchman Information</h3>
                   <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">

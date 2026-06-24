@@ -366,7 +366,22 @@ router.get('/', async (req, res) => {
           address: row.map_address
         } : null,
         notes: row.notes,
-        contacts: contactsMap[row.id] || [],
+        contacts: (() => {
+          // First try property_contacts table
+          if (contactsMap[row.id] && contactsMap[row.id].length > 0) {
+            return contactsMap[row.id];
+          }
+          // Fallback to association_contacts column
+          if (row.association_contacts) {
+            try {
+              const parsed = typeof row.association_contacts === 'string' 
+                ? JSON.parse(row.association_contacts) 
+                : row.association_contacts;
+              if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            } catch {}
+          }
+          return [];
+        })(),
         watchmanName: row.watchman_name || null,
         watchmanContact: row.watchman_contact || null,
         status: row.status,
