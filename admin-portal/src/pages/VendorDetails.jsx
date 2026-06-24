@@ -443,36 +443,8 @@ const VendorDetails = () => {
         </div>
       </div>
 
-      {/* Tabs + Filters Bar */}
+      {/* Filters Bar */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        {/* Tab bar */}
-        <div className="border-b border-gray-200 px-4 flex items-center gap-1 overflow-x-auto">
-          {TABS.map(tab => {
-            const TabIcon = tab.icon;
-            const isActive = activeTab === tab.id;
-            const count = tab.id === 'all' ? vendors.length : vendors.filter(v => (v.serviceType || v.service_type) === tab.id).length;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  isActive
-                    ? 'border-amber-600 text-amber-700'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <TabIcon className="w-4 h-4" />
-                {tab.label}
-                <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
         {/* Search + Filters */}
         <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -486,6 +458,19 @@ const VendorDetails = () => {
             />
           </div>
           <div className="flex gap-2">
+            <div className="relative">
+              <select
+                value={activeTab}
+                onChange={(e) => setActiveTab(e.target.value)}
+                className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
+              >
+                <option value="all">All Service Types ({vendors.length})</option>
+                {TABS.filter(t => t.id !== 'all').map(tab => (
+                  <option key={tab.id} value={tab.id}>{tab.label} ({vendors.filter(v => (v.serviceType || v.service_type) === tab.id).length})</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            </div>
             <div className="relative">
               <select
                 value={divisionFilter}
