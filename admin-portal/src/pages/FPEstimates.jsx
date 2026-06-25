@@ -468,21 +468,24 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
         description: s.description || ''
       })),
-      // Include addons with descriptions
+      // Include addons with descriptions - match by property_type
       addons: addonsArray.map(a => {
-        // Try to get description from addon data, fallback to addons list lookup
         const addonName = a.name || a.service_name || a.serviceName || '';
-        const addonFromList = addons.find(ad => 
-          ad.id == a.id || 
-          ad.id == a.addon_id ||
-          ad.service_name === addonName ||
-          (ad.service_name && addonName && ad.service_name.toLowerCase() === addonName.toLowerCase())
-        );
+        const estPropertyType = normalizePropertyType(estimate.property_type);
+        // Priority 1: Match by ID
+        let addonFromList = addons.find(ad => ad.id == a.id || ad.id == a.addon_id);
+        // Priority 2: Match by name AND property_type
+        if (!addonFromList || !addonFromList.description) {
+          addonFromList = addons.find(ad => 
+            (ad.service_name === addonName || ad.service_name?.toLowerCase() === addonName?.toLowerCase()) &&
+            normalizePropertyType(ad.property_type) === estPropertyType
+          ) || addonFromList;
+        }
         return {
           name: addonName || 'Add-on',
           frequencyType: a.frequency_type || a.frequencyType || addonFromList?.frequency_type || 'One-time',
           frequencyCount: a.frequency_count || a.frequencyCount || addonFromList?.frequency_count || 1,
-          description: a.description || addonFromList?.description || addonFromList?.services?.[0]?.description || ''
+          description: a.description || addonFromList?.description || ''
         };
       })
     };
