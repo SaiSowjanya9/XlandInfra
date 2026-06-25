@@ -26,8 +26,8 @@ const EstimateAction = () => {
       if (data.success) {
         setEstimate(data.data);
         
-        // If action is in URL and estimate is still in 'Sent' status, auto-process
-        if (action && data.data.status === 'Sent') {
+        // If action is in URL and estimate is still in 'Sent' or 'sent' status, auto-process
+        if (action && ['Sent', 'sent'].includes(data.data.status)) {
           handleAction(action);
         }
       } else {
@@ -87,14 +87,15 @@ const EstimateAction = () => {
     );
   }
 
-  // Already actioned or expired
-  if (estimate && ['Approved', 'Rejected', 'Expired'].includes(estimate.status) && !result) {
+  // Already actioned or expired - handle case insensitivity
+  const normalizedStatus = estimate?.status?.toLowerCase();
+  if (estimate && ['approved', 'rejected', 'expired'].includes(normalizedStatus) && !result) {
     const statusConfig = {
-      Approved: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50', text: 'has been approved' },
-      Rejected: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-50', text: 'has been rejected' },
-      Expired: { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50', text: 'has expired' }
+      approved: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50', text: 'has been approved', label: 'Approved' },
+      rejected: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-50', text: 'has been rejected', label: 'Rejected' },
+      expired: { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50', text: 'has expired', label: 'Expired' }
     };
-    const config = statusConfig[estimate.status];
+    const config = statusConfig[normalizedStatus];
     const Icon = config.icon;
 
     return (
@@ -103,7 +104,7 @@ const EstimateAction = () => {
           <div className={`w-20 h-20 ${config.bg} rounded-full flex items-center justify-center mx-auto mb-6`}>
             <Icon className={`w-12 h-12 ${config.color}`} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Estimate {estimate.status}</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Estimate {config.label}</h1>
           <p className="text-gray-600 mb-4">
             This estimate {config.text}.
           </p>
