@@ -673,6 +673,9 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
                         COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
                         op.total_units, op.number_of_blocks as total_blocks,
                         c.name as category_name, v.company_name as vendor_name,
+                        COALESCE(p.latitude, op.latitude) as property_latitude,
+                        COALESCE(p.longitude, op.longitude) as property_longitude,
+                        COALESCE(p.map_location, op.map_location) as property_map_location,
                         COALESCE(
                           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
                           wo.created_by, 'System'
@@ -725,7 +728,10 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
               COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
               COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
               op.total_units, op.number_of_blocks as total_blocks,
-              c.name as category_name, v.company_name as vendor_name
+              c.name as category_name, v.company_name as vendor_name,
+              COALESCE(p.latitude, op.latitude) as property_latitude,
+              COALESCE(p.longitude, op.longitude) as property_longitude,
+              COALESCE(p.map_location, op.map_location) as property_map_location
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
@@ -762,7 +768,10 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
               COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
               COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
               op.total_units, op.number_of_blocks as total_blocks,
-              c.name as category_name, v.company_name as vendor_name
+              c.name as category_name, v.company_name as vendor_name,
+              COALESCE(p.latitude, op.latitude) as property_latitude,
+              COALESCE(p.longitude, op.longitude) as property_longitude,
+              COALESCE(p.map_location, op.map_location) as property_map_location
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
