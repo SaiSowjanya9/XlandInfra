@@ -168,6 +168,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [directForm, setDirectForm] = useState({
     customerName: '',
     phone: '',
+    countryCode: '+91',
     email: '',
     propertyType: '',
     propertyName: '',
@@ -219,7 +220,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       const payload = estimateType === 'direct' ? {
         estimate_type: 'direct',
         client_name: directForm.customerName,
-        client_phone: directForm.phone,
+        client_phone: `${directForm.countryCode || '+91'} ${directForm.phone}`,
         client_email: directForm.email,
         property_name: directForm.propertyName,
         property_type: directForm.propertyType,
@@ -741,8 +742,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 <div className="min-w-0">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Phone <span className="text-red-500">*</span></label>
                   <div className="flex w-full">
-                    <select className="shrink-0 px-3 py-3 border border-gray-300 rounded-l-lg bg-gray-50 text-sm">
-                      <option>+91</option>
+                    <select value={directForm.countryCode || '+91'} onChange={(e) => setDirectForm({...directForm, countryCode: e.target.value})} className="shrink-0 px-3 py-3 border border-gray-300 rounded-l-lg bg-gray-50 text-sm">
+                      <option value="+91">+91</option>
                     </select>
                     <input type="tel" value={directForm.phone} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setDirectForm({...directForm, phone: val}); }} placeholder="10-digit phone number" className="min-w-0 flex-1 px-4 py-3 border border-l-0 border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-200" />
                   </div>

@@ -205,9 +205,9 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
         estimate_type: estimateForm.estimateType || 'property_based',
         property_id: selectedProperty?.id || propertyIdInput,
         property_code: selectedProperty?.property_id || '',
-        client_name: selectedProperty?.contact_person || selectedProperty?.contact_name || '',
-        client_phone: selectedProperty?.contact_phone || '',
-        client_email: selectedProperty?.contact_email || '',
+        client_name: selectedProperty?.contact_person || selectedProperty?.contact_name || estimateForm.directCustomerName || '',
+        client_phone: selectedProperty?.contact_phone || (estimateForm.directPhone ? `${estimateForm.directCountryCode || '+91'} ${estimateForm.directPhone}` : ''),
+        client_email: selectedProperty?.contact_email || estimateForm.directEmail || '',
         property_name: selectedProperty?.name || selectedProperty?.community_name || '',
         property_type: selectedProperty?.property_type || '',
         zone: selectedProperty?.zone_name || selectedProperty?.zoneName || selectedProperty?.zone || '',
@@ -766,7 +766,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Customer Name <span className="text-red-500">*</span></label><input type="text" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Customer name" /></div>
-                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input type="tel" value={estimateForm.directPhone || ''} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setEstimateForm({...estimateForm, directPhone: val}); }} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="10-digit phone" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label><div className="flex"><select value={estimateForm.directCountryCode || '+91'} onChange={(e) => setEstimateForm({...estimateForm, directCountryCode: e.target.value})} className="shrink-0 px-2 py-2.5 border border-gray-200 border-r-0 rounded-l-lg bg-gray-50 text-sm"><option value="+91">+91</option></select><input type="tel" value={estimateForm.directPhone || ''} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setEstimateForm({...estimateForm, directPhone: val}); }} className="min-w-0 flex-1 px-3 py-2.5 border border-gray-200 rounded-r-lg" placeholder="10-digit phone" /></div></div>
                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Email address" /></div>
                       </div>
                     </div>

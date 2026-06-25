@@ -93,7 +93,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [viewEstimate, setViewEstimate] = useState(null);
   
   // Direct estimate form
-  const [directForm, setDirectForm] = useState({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', numberOfBlocks: '', blockNumber: '', blockName: '', numberOfUnits: '', villaNumber: '', flatNumber: '', plotNumber: '' });
+  const [directForm, setDirectForm] = useState({ customerName: '', phone: '', countryCode: '+91', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', numberOfBlocks: '', blockNumber: '', blockName: '', numberOfUnits: '', villaNumber: '', flatNumber: '', plotNumber: '' });
 
   // Helper functions (must be defined before calculatePriceSummary)
   const formatCurrency = (amt) => { const num = parseFloat(amt); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : Math.round(num)); };
@@ -149,7 +149,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           property_id: propertyIdInput,
           property_code: selectedProperty?.property_id,
           client_name: selectedProperty?.contact_person || selectedProperty?.name || directForm.customerName,
-          client_phone: selectedProperty?.contact_phone || directForm.phone,
+          client_phone: selectedProperty?.contact_phone || `${directForm.countryCode || '+91'} ${directForm.phone}`,
           client_email: selectedProperty?.contact_email || directForm.email,
           property_name: selectedProperty?.name || directForm.propertyName,
           property_type: selectedProperty?.property_type || directForm.propertyType,
@@ -757,7 +757,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Customer Name <span className="text-red-500">*</span></label><input type="text" value={directForm.customerName} onChange={(e) => setDirectForm({...directForm, customerName: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Customer name" /></div>
-                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input type="tel" value={directForm.phone} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setDirectForm({...directForm, phone: val}); }} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="10-digit phone" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label><div className="flex"><select value={directForm.countryCode || '+91'} onChange={(e) => setDirectForm({...directForm, countryCode: e.target.value})} className="shrink-0 px-2 py-2.5 border border-gray-200 border-r-0 rounded-l-lg bg-gray-50 text-sm"><option value="+91">+91</option></select><input type="tel" value={directForm.phone} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setDirectForm({...directForm, phone: val}); }} className="min-w-0 flex-1 px-3 py-2.5 border border-gray-200 rounded-r-lg" placeholder="10-digit phone" /></div></div>
                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" value={directForm.email} onChange={(e) => setDirectForm({...directForm, email: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Email address" /></div>
                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label><select value={directForm.propertyType} onChange={(e) => setDirectForm({...directForm, propertyType: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg"><option value="">Select Type</option>{PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Property Name</label><input type="text" value={directForm.propertyName} onChange={(e) => setDirectForm({...directForm, propertyName: e.target.value})} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="Property name" /></div>
