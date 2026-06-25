@@ -960,18 +960,18 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
               {/* Additional Services (Add-ons) Table - Only show when add-ons selected */}
               {estimateForm.selectedAddons.length > 0 && (
-                <div className="border border-amber-200 rounded-xl overflow-hidden">
-                  <div className="bg-amber-50 px-5 py-2.5 border-b border-amber-200">
-                    <span className="text-sm font-semibold text-amber-700">Additional Services (Add-ons)</span>
+                <div className="border border-blue-200 rounded-xl overflow-hidden">
+                  <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
+                    <span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span>
                   </div>
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-amber-100 bg-white">
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[10%]">Service</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[48%]">Description</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[18%]">Frequency</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[14%]">Visits</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[10%]">Action</th>
+                      <tr className="border-b border-blue-100 bg-white">
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[10%]">Service</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[48%]">Description</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[18%]">Frequency</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[14%]">Visits</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[10%]">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
@@ -992,10 +992,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         );
                       })}
                     </tbody>
-                    <tfoot className="bg-amber-50 border-t border-amber-200">
+                    <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
-                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-amber-700">Total Add-ons Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-amber-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
+                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -1302,18 +1302,18 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
               {/* Additional Services (Add-ons) Table - Only show when add-ons selected */}
               {estimateForm.selectedAddons.length > 0 && (
-                <div className="border border-amber-200 rounded-xl overflow-hidden">
-                  <div className="bg-amber-50 px-5 py-2.5 border-b border-amber-200">
-                    <span className="text-sm font-semibold text-amber-700">Additional Services (Add-ons)</span>
+                <div className="border border-blue-200 rounded-xl overflow-hidden">
+                  <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
+                    <span className="text-sm font-semibold text-blue-700">Additional Services (Add-ons)</span>
                   </div>
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-amber-100 bg-white">
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[10%]">Service</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[48%]">Description</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[18%]">Frequency</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[14%]">Visits</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[10%]">Action</th>
+                      <tr className="border-b border-blue-100 bg-white">
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[10%]">Service</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[48%]">Description</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[18%]">Frequency</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[14%]">Visits</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[10%]">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
@@ -1334,10 +1334,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         );
                       })}
                     </tbody>
-                    <tfoot className="bg-amber-50 border-t border-amber-200">
+                    <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
-                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-amber-700">Total Add-ons Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-amber-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
+                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (addons.find(a => a.id == id)?.price || 0), 0))}</td>
                       </tr>
                     </tfoot>
                   </table>

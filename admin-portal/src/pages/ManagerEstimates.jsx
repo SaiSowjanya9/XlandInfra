@@ -450,7 +450,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 </tbody>
                 <tfoot className="bg-blue-50 border-t border-blue-200">
                   <tr>
-                    <td colSpan={3} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
+                    <td colSpan={4} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
                     <td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0))}</td>
                   </tr>
                 </tfoot>
