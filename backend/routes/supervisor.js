@@ -1640,7 +1640,7 @@ router.post('/estimates', requireSupervisorScope, async (req, res) => {
     const {
       estimate_type, property_id, property_code, client_name, client_phone, client_email,
       property_name, property_type, zone, city, address, package_id, package_name, package_price,
-      amc_package_description, package_services,
+      amc_package_description, package_services, billing_duration,
       addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
       description
     } = req.body;
@@ -1675,21 +1675,24 @@ router.post('/estimates', requireSupervisorScope, async (req, res) => {
     try {
       await pool.query(`ALTER TABLE fp_estimates ADD COLUMN package_services TEXT`);
     } catch (e) { /* Column exists */ }
+    try {
+      await pool.query(`ALTER TABLE fp_estimates ADD COLUMN billing_duration VARCHAR(50) DEFAULT 'yearly'`);
+    } catch (e) { /* Column exists */ }
 
     const [result] = await pool.query(
       `INSERT INTO fp_estimates (
         estimate_id, franchise_partner_id, property_id, estimate_type,
         client_name, client_phone, client_email, property_name, property_code, property_type,
-        zone, city, address, package_id, package_name, package_price, amc_package_description, package_services,
+        zone, city, address, package_id, package_name, package_price, amc_package_description, package_services, billing_duration,
         subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
         addons_data, description, created_by_id, created_by_name, created_by_role, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())`,
       [
         estimateId, franchisePartnerId, propertyIdValue, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
         property_name || '', property_code || property_id || '', property_type || '',
         zone || '', city || '', address || '',
-        package_id || null, package_name || '', package_price || 0, amc_package_description || '', package_services ? JSON.stringify(package_services) : null,
+        package_id || null, package_name || '', package_price || 0, amc_package_description || '', package_services ? JSON.stringify(package_services) : null, billing_duration || 'yearly',
         subtotal || 0, discount_percent || 0, discount_amount || 0,
         gst_percent || 0, gst_amount || 0, total_amount || 0,
         JSON.stringify(addons || []), description || '', supervisorId, creatorName, 'supervisor'
