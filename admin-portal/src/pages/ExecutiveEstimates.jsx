@@ -1054,7 +1054,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="text-xs text-indigo-600">Yearly Billing</p>
+                          <p className="text-xs text-indigo-600">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
                         </div>
                         <p className="text-lg font-bold text-indigo-700">{formatCurrency(viewEstimate.package_price)}</p>
                       </div>

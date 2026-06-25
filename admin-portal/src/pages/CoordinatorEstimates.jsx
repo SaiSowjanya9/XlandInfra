@@ -235,6 +235,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         package_id: selectedAmcPackage,
         package_name: pkgName,
         package_price: pkgPrice,
+        billing_duration: getPackageBillingDuration(pkg) || 'yearly',
         addons: selectedAddons.map(id => { const a = addons.find(x => getAddonId(x) === id); return a ? { id: getAddonId(a), name: getAddonName(a), price: getAddonPrice(a) } : null; }).filter(Boolean),
         subtotal: priceSummary.subTotal,
         discount_percent: discountPercent,
@@ -265,6 +266,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         package_id: selectedAmcPackage,
         package_name: pkgName,
         package_price: pkgPrice,
+        billing_duration: getPackageBillingDuration(pkg) || 'yearly',
         addons: selectedAddons.map(id => { const a = addons.find(x => getAddonId(x) === id); return a ? { id: getAddonId(a), name: getAddonName(a), price: getAddonPrice(a) } : null; }).filter(Boolean),
         subtotal: priceSummary.subTotal,
         discount_percent: discountPercent,
@@ -1475,7 +1477,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="text-xs text-indigo-600">Yearly Billing</p>
+                          <p className="text-xs text-indigo-600">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
                         </div>
                         <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.package_price || 0).toLocaleString()}</p>
                       </div>
