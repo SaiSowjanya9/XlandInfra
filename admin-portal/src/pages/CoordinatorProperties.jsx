@@ -964,30 +964,51 @@ const CoordinatorProperties = ({ user }) => {
                 </div>
               </div>
 
-              {/* Map Location */}
-              {(selectedProperty.latitude || selectedProperty.longitude || selectedProperty.landmark) && (
+              {/* Map Location with embedded Google Map */}
+              {(selectedProperty.latitude || selectedProperty.longitude || selectedProperty.landmark || selectedProperty.mapLocation?.lat) && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Map Location</h3>
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-700 mb-3">
-                      {selectedProperty.landmark || `${selectedProperty.address}, ${selectedProperty.city}, ${selectedProperty.state}, ${selectedProperty.zip_code}`}
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-700">
+                      {selectedProperty.mapLocation?.address || selectedProperty.landmark || `${selectedProperty.address || ''}, ${selectedProperty.city || ''}, ${selectedProperty.state || ''}, ${selectedProperty.zip_code || ''}`}
                     </p>
-                    {(selectedProperty.latitude && selectedProperty.longitude) && (
-                      <>
-                        <a
-                          href={`https://www.google.com/maps?q=${selectedProperty.latitude},${selectedProperty.longitude}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          Open in Maps
-                        </a>
-                        <p className="text-xs text-blue-600 mt-3 font-mono">
-                          {selectedProperty.latitude}, {selectedProperty.longitude}
-                        </p>
-                      </>
-                    )}
+                    {(() => {
+                      const lat = selectedProperty.mapLocation?.lat || selectedProperty.latitude;
+                      const lng = selectedProperty.mapLocation?.lng || selectedProperty.longitude;
+                      if (lat && lng) {
+                        return (
+                          <>
+                            <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                              <iframe
+                                title="Property Location"
+                                width="100%"
+                                height="200"
+                                style={{ border: 0 }}
+                                loading="lazy"
+                                allowFullScreen
+                                referrerPolicy="no-referrer-when-downgrade"
+                                src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}&q=${lat},${lng}&zoom=16`}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-500 font-mono">
+                                {parseFloat(lat).toFixed(6)}, {parseFloat(lng).toFixed(6)}
+                              </p>
+                              <a
+                                href={`https://www.google.com/maps?q=${lat},${lng}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700 transition-colors"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Open in Google Maps
+                              </a>
+                            </div>
+                          </>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
               )}

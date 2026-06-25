@@ -1220,26 +1220,41 @@ const CustomerSubmissions = () => {
                 </div>
               </div>
 
-              {/* Map Location with clickable link */}
+              {/* Map Location with embedded Google Map */}
               {viewProperty.mapLocation?.lat && viewProperty.mapLocation?.lng && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Map Location</h3>
-                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
+                  <div className="space-y-3">
                     {viewProperty.mapLocation.address && (
-                      <p className="text-sm text-gray-700 mb-3">{viewProperty.mapLocation.address}</p>
+                      <p className="text-sm text-gray-700">{viewProperty.mapLocation.address}</p>
                     )}
-                    <a
-                      href={`https://www.google.com/maps?q=${viewProperty.mapLocation.lat},${viewProperty.mapLocation.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Open in Maps
-                    </a>
-                    <p className="text-xs text-gray-500 mt-2 font-mono">
-                      {viewProperty.mapLocation.lat.toFixed(6)}, {viewProperty.mapLocation.lng.toFixed(6)}
-                    </p>
+                    {/* Embedded Google Map */}
+                    <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                      <iframe
+                        title="Property Location"
+                        width="100%"
+                        height="200"
+                        style={{ border: 0 }}
+                        loading="lazy"
+                        allowFullScreen
+                        referrerPolicy="no-referrer-when-downgrade"
+                        src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}&q=${viewProperty.mapLocation.lat},${viewProperty.mapLocation.lng}&zoom=16`}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-500 font-mono">
+                        {viewProperty.mapLocation.lat.toFixed(6)}, {viewProperty.mapLocation.lng.toFixed(6)}
+                      </p>
+                      <a
+                        href={`https://www.google.com/maps?q=${viewProperty.mapLocation.lat},${viewProperty.mapLocation.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Open in Google Maps
+                      </a>
+                    </div>
                   </div>
                 </div>
               )}
