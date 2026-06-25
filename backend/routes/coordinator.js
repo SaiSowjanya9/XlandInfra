@@ -1564,7 +1564,7 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
       let fpAddons = [];
       try {
         const [addonResults] = await pool.query(
-          `SELECT id, service_name, description FROM fp_addons WHERE franchise_partner_id = ?`,
+          `SELECT id, service_name, description, property_type FROM fp_addons WHERE franchise_partner_id = ?`,
           [franchisePartnerId]
         );
         fpAddons = addonResults;
@@ -1577,11 +1577,20 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
         if (est.addons_data) {
           try { 
             addons = JSON.parse(est.addons_data);
-            // Enrich addons with descriptions
+            // Enrich addons with descriptions - match by property_type
+            const estPropertyType = est.property_type?.toUpperCase();
             addons = addons.map(addon => {
               if (!addon.description) {
-                const foundAddon = fpAddons.find(a => a.id == addon.id || a.service_name === (addon.name || addon.service_name));
-                if (foundAddon) addon.description = foundAddon.description || '';
+                const addonName = addon.name || addon.service_name || '';
+                const addonId = addon.id || addon.addon_id;
+                let foundAddon = fpAddons.find(a => a.id == addonId);
+                if (!foundAddon || !foundAddon.description) {
+                  foundAddon = fpAddons.find(a => 
+                    (a.service_name === addonName || a.service_name?.toLowerCase() === addonName?.toLowerCase()) &&
+                    a.property_type?.toUpperCase() === estPropertyType
+                  );
+                }
+                if (foundAddon && foundAddon.description) addon.description = foundAddon.description;
               }
               return addon;
             });
