@@ -3603,6 +3603,9 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     try {
       await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN package_services TEXT`);
     } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN billing_duration VARCHAR(50) DEFAULT 'yearly'`);
+    } catch (e) { /* Column exists */ }
 
     // Stringify package_services for storage
     const packageServicesJson = package_services ? JSON.stringify(package_services) : null;
