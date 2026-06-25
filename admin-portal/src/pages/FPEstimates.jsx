@@ -328,7 +328,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Estimate form state
   const [estimateForm, setEstimateForm] = useState({
-    customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '',
+    customerName: '', phone: '', countryCode: '+91', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '',
     selectedPackage: '', selectedAddons: [], discount: '', gst: '', description: '',
     numberOfBlocks: '', blockNumber: '', blockName: '', numberOfUnits: '',
     villaNumber: '', flatNumber: '', plotNumber: ''
@@ -568,7 +568,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const handleSaveEstimate = async () => {
     // Validation
     const clientName = selectedProperty?.contact_person || selectedProperty?.contact_name || selectedProperty?.customer_name || estimateForm.customerName;
-    const clientPhone = selectedProperty?.contact_phone || selectedProperty?.phone || estimateForm.phone;
+    const clientPhone = selectedProperty?.contact_phone || selectedProperty?.phone || `${estimateForm.countryCode || '+91'} ${estimateForm.phone}`;
     if (!clientName?.trim()) { showToast('Customer name is required', 'error'); return; }
     if (!clientPhone?.trim()) { showToast('Phone number is required', 'error'); return; }
     if (!estimateForm.selectedPackage) { showToast('Please select an AMC package', 'error'); return; }
@@ -1083,8 +1083,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <div className="min-w-0">
                   <label className="block text-sm font-medium text-slate-600 mb-1.5">Phone <span className="text-red-500">*</span></label>
                   <div className="flex w-full">
-                    <select className="shrink-0 px-2 py-2.5 border border-gray-300 border-r-0 rounded-l-lg text-sm bg-gray-50">
-                      <option>+91</option>
+                    <select value={estimateForm.countryCode || '+91'} onChange={(e) => setEstimateForm({...estimateForm, countryCode: e.target.value})} className="shrink-0 px-2 py-2.5 border border-gray-300 border-r-0 rounded-l-lg text-sm bg-gray-50">
+                      <option value="+91">+91</option>
                     </select>
                     <input type="tel" placeholder="10-digit phone number" value={estimateForm.phone} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setEstimateForm({...estimateForm, phone: val}); }} className="min-w-0 flex-1 px-3 py-2.5 border border-gray-300 rounded-r-lg text-sm" />
                   </div>
