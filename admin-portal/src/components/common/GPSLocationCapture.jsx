@@ -149,7 +149,7 @@ const GPSLocationCapture = ({
         type="button"
         onClick={handleCaptureLocation}
         disabled={capturing}
-        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-base font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gray-100 border border-gray-200 text-gray-700 rounded-xl text-base font-medium hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {capturing ? (
           <>
@@ -165,25 +165,25 @@ const GPSLocationCapture = ({
       </button>
 
       <p className="text-xs text-gray-500 text-center">
-        Click the button above to capture your device's GPS coordinates (like WhatsApp location sharing)
+        Click the button above to capture your device's GPS coordinates
       </p>
 
       {/* Location Captured Info */}
       {hasLocation && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-4">
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-4">
           {/* Success Header */}
-          <div className="flex items-center gap-2 text-green-700">
+          <div className="flex items-center gap-2 text-gray-700">
             <CheckCircle className="w-5 h-5" />
             <span className="font-semibold">Location Captured Successfully</span>
           </div>
 
           {/* Location Details */}
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="bg-white rounded-lg p-3 border border-green-100">
+            <div className="bg-white rounded-lg p-3 border border-gray-100">
               <p className="text-xs text-gray-500 mb-1">Latitude</p>
               <p className="font-mono font-medium text-gray-800">{value.lat?.toFixed(6)}</p>
             </div>
-            <div className="bg-white rounded-lg p-3 border border-green-100">
+            <div className="bg-white rounded-lg p-3 border border-gray-100">
               <p className="text-xs text-gray-500 mb-1">Longitude</p>
               <p className="font-mono font-medium text-gray-800">{value.lng?.toFixed(6)}</p>
             </div>
@@ -191,14 +191,14 @@ const GPSLocationCapture = ({
 
           {/* Address (if captured) */}
           {value.address && (
-            <div className="bg-white rounded-lg p-3 border border-green-100">
+            <div className="bg-white rounded-lg p-3 border border-gray-100">
               <p className="text-xs text-gray-500 mb-1">Approximate Address</p>
               <p className="text-sm text-gray-800">{value.address}</p>
             </div>
           )}
 
           {/* Google Maps Link */}
-          <div className="bg-white rounded-lg p-3 border border-green-100">
+          <div className="bg-white rounded-lg p-3 border border-gray-100">
             <p className="text-xs text-gray-500 mb-1">Google Maps Link</p>
             <div className="flex items-center gap-2">
               <p className="text-xs font-mono text-blue-600 truncate flex-1">{value.googleMapsLink}</p>
@@ -240,7 +240,7 @@ const GPSLocationCapture = ({
             <button
               type="button"
               onClick={handleOpenInMaps}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors"
             >
               <ExternalLink className="w-4 h-4" />
               Open in Google Maps
