@@ -1114,12 +1114,14 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="border border-green-100 divide-y divide-green-50">
                       {viewEstimate.addons.map((addon, idx) => {
                         const addonName = addon.name || addon.service_name || '';
-                        const addonFromList = addons.find(a => 
-                          a.id == addon.id || 
-                          a.id == addon.addon_id ||
-                          a.service_name === addonName ||
-                          (a.service_name && addonName && a.service_name.toLowerCase() === addonName.toLowerCase())
-                        );
+                        const estPropertyType = (viewEstimate.property_type || '').toUpperCase();
+                        let addonFromList = addons.find(a => a.id == addon.id || a.id == addon.addon_id);
+                        if (!addonFromList || !addonFromList.description) {
+                          addonFromList = addons.find(a => 
+                            (a.service_name === addonName || a.service_name?.toLowerCase() === addonName?.toLowerCase()) &&
+                            (a.property_type || '').toUpperCase() === estPropertyType
+                          ) || addonFromList;
+                        }
                         const addonDescription = addon.description || addonFromList?.description || '';
                         const frequencyCount = addon.frequency_count || addon.frequencyCount || addonFromList?.frequency_count || 1;
                         const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';

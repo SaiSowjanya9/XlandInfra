@@ -1650,11 +1650,11 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
       new Date(b.created_at) - new Date(a.created_at)
     );
     
-    // Enrich estimates with missing division from property tables
+    // Enrich estimates with missing division and addon descriptions
     allEstimates = await Promise.all(allEstimates.map(async (est) => {
+      // Enrich division
       if (!est.division && (est.property_name || est.property_code || est.property_id)) {
         try {
-          // Try to get division from properties table
           let [props] = await pool.execute(
             `SELECT division, division_id FROM properties WHERE 
              (name = ? OR property_id = ? OR id = ?) AND franchise_partner_id = ? LIMIT 1`,
@@ -1663,8 +1663,6 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
           if (props.length > 0 && (props[0].division || props[0].division_id)) {
             est.division = props[0].division || props[0].division_id;
           }
-          
-          // If still not found, try onboarded_properties
           if (!est.division) {
             [props] = await pool.execute(
               `SELECT division FROM onboarded_properties WHERE 
@@ -1676,6 +1674,36 @@ router.get('/all-estimates', authenticate, adminOnly, async (req, res) => {
             }
           }
         } catch (e) { /* ignore lookup errors */ }
+      }
+      
+      // Enrich addons with descriptions - match by property_type
+      if (est.addons_data && est.franchise_partner_id) {
+        try {
+          let addons = typeof est.addons_data === 'string' ? JSON.parse(est.addons_data) : est.addons_data;
+          const [fpAddons] = await pool.execute(
+            `SELECT id, service_name, description, property_type FROM fp_addons WHERE franchise_partner_id = ?`,
+            [est.franchise_partner_id]
+          );
+          const estPropertyType = est.property_type?.toUpperCase();
+          addons = addons.map(addon => {
+            if (!addon.description) {
+              const addonName = addon.name || addon.service_name || '';
+              const addonId = addon.id || addon.addon_id;
+              let foundAddon = fpAddons.find(a => a.id == addonId);
+              if (!foundAddon || !foundAddon.description) {
+                foundAddon = fpAddons.find(a => 
+                  (a.service_name === addonName || a.service_name?.toLowerCase() === addonName?.toLowerCase()) &&
+                  a.property_type?.toUpperCase() === estPropertyType
+                );
+              }
+              if (foundAddon && foundAddon.description) {
+                addon.description = foundAddon.description;
+              }
+            }
+            return addon;
+          });
+          est.addons = addons;
+        } catch (e) { /* ignore addon parse errors */ }
       }
       return est;
     }));
@@ -1762,9 +1790,42 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
     }
     
     // Combine and sort by created_at
-    const allEstimates = [...mainEstimates, ...fpEstimates].sort((a, b) => 
+    let allEstimates = [...mainEstimates, ...fpEstimates].sort((a, b) => 
       new Date(b.created_at) - new Date(a.created_at)
     );
+    
+    // Enrich addons with descriptions - match by property_type
+    const [fpAddons] = await pool.execute(
+      `SELECT id, service_name, description, property_type FROM fp_addons WHERE franchise_partner_id = ?`,
+      [fpIdNum]
+    );
+    allEstimates = allEstimates.map(est => {
+      if (est.addons_data) {
+        try {
+          let addons = typeof est.addons_data === 'string' ? JSON.parse(est.addons_data) : est.addons_data;
+          const estPropertyType = est.property_type?.toUpperCase();
+          addons = addons.map(addon => {
+            if (!addon.description) {
+              const addonName = addon.name || addon.service_name || '';
+              const addonId = addon.id || addon.addon_id;
+              let foundAddon = fpAddons.find(a => a.id == addonId);
+              if (!foundAddon || !foundAddon.description) {
+                foundAddon = fpAddons.find(a => 
+                  (a.service_name === addonName || a.service_name?.toLowerCase() === addonName?.toLowerCase()) &&
+                  a.property_type?.toUpperCase() === estPropertyType
+                );
+              }
+              if (foundAddon && foundAddon.description) {
+                addon.description = foundAddon.description;
+              }
+            }
+            return addon;
+          });
+          est.addons = addons;
+        } catch (e) { /* ignore */ }
+      }
+      return est;
+    });
     
     console.log('Admin fp-view estimates: Total', allEstimates.length, 'for FP', fpIdNum);
     res.json({ success: true, data: allEstimates || [] });

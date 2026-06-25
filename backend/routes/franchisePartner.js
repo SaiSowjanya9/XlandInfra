@@ -3373,7 +3373,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     let fpAddons = [];
     try {
       const [addonResults] = await pool.execute(
-        `SELECT id, service_name, description FROM fp_addons WHERE franchise_partner_id = ?`,
+        `SELECT id, service_name, description, property_type FROM fp_addons WHERE franchise_partner_id = ?`,
         [req.fpId]
       );
       fpAddons = addonResults;
@@ -3388,18 +3388,30 @@ router.get('/estimates', requireFPScope, async (req, res) => {
           addons = typeof est.addons_data === 'string' ? JSON.parse(est.addons_data) : est.addons_data;
           console.log('Parsed addons for', est.estimate_id, ':', addons);
           // Enrich addons with descriptions from fp_addons if not already present
+          // Use estimate's property_type to match correct addon
+          const estPropertyType = est.property_type?.toUpperCase();
           addons = addons.map(addon => {
             if (!addon.description) {
               const addonName = addon.name || addon.serviceName || addon.service_name || '';
               const addonId = addon.id || addon.addon_id;
-              const foundAddon = fpAddons.find(a => 
-                a.id == addonId || 
-                a.service_name === addonName ||
-                a.service_name.toLowerCase() === addonName.toLowerCase()
-              );
+              // Priority 1: Match by exact ID
+              let foundAddon = fpAddons.find(a => a.id == addonId);
+              // Priority 2: Match by name AND property_type
+              if (!foundAddon || !foundAddon.description) {
+                foundAddon = fpAddons.find(a => 
+                  (a.service_name === addonName || a.service_name?.toLowerCase() === addonName?.toLowerCase()) &&
+                  a.property_type?.toUpperCase() === estPropertyType
+                );
+              }
+              // Priority 3: Fallback to name-only match (last resort)
+              if (!foundAddon || !foundAddon.description) {
+                foundAddon = fpAddons.find(a => 
+                  a.service_name === addonName || a.service_name?.toLowerCase() === addonName?.toLowerCase()
+                );
+              }
               if (foundAddon && foundAddon.description) {
                 addon.description = foundAddon.description;
-                console.log('Enriched addon', addonName, 'with description:', foundAddon.description);
+                console.log('Enriched addon', addonName, 'with description from', foundAddon.property_type, ':', foundAddon.description);
               }
             }
             return addon;
@@ -3717,13 +3729,24 @@ router.post('/estimates/send-email', requireFPScope, async (req, res) => {
           addons = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
           // Fetch addon descriptions from fp_addons table
           const [fpAddons] = await pool.execute(
-            `SELECT id, service_name, description FROM fp_addons WHERE franchise_partner_id = ?`,
+            `SELECT id, service_name, description, property_type FROM fp_addons WHERE franchise_partner_id = ?`,
             [req.fpId]
           );
-          // Enrich addons with descriptions
+          // Enrich addons with descriptions - match by property_type
+          const estPropertyType = estimate.property_type?.toUpperCase();
           addons = addons.map(addon => {
             if (!addon.description) {
-              const foundAddon = fpAddons.find(a => a.id == addon.id || a.id == addon.addon_id || a.service_name === (addon.name || addon.serviceName || addon.service_name));
+              const addonName = addon.name || addon.serviceName || addon.service_name || '';
+              const addonId = addon.id || addon.addon_id;
+              // Priority 1: Match by exact ID
+              let foundAddon = fpAddons.find(a => a.id == addonId);
+              // Priority 2: Match by name AND property_type
+              if (!foundAddon || !foundAddon.description) {
+                foundAddon = fpAddons.find(a => 
+                  (a.service_name === addonName || a.service_name?.toLowerCase() === addonName?.toLowerCase()) &&
+                  a.property_type?.toUpperCase() === estPropertyType
+                );
+              }
               if (foundAddon && foundAddon.description) {
                 addon.description = foundAddon.description;
               }
