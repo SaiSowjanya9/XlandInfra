@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
+import 'leaflet/dist/leaflet.css'
 
 // Error boundary for catching render errors
 class ErrorBoundary extends React.Component {

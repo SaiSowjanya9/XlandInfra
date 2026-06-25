@@ -20,7 +20,10 @@ import {
   FileText,
   Image,
   Lock,
-  List
+  List,
+  MapPin,
+  ExternalLink,
+  Navigation
 } from 'lucide-react';
 
 const ManagerWorkOrders = ({ user }) => {
@@ -1034,6 +1037,40 @@ const ManagerWorkOrders = ({ user }) => {
                     </div>
                   )}
                 </div>
+
+                {/* Property Location - Navigate to Property */}
+                {(selectedWorkOrder.property_latitude || selectedWorkOrder.property_longitude) && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                    <div className="flex items-center gap-2 mb-3">
+                      <MapPin className="w-4 h-4 text-blue-600" />
+                      <p className="text-sm font-medium text-blue-800">Property GPS Location</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={`https://www.google.com/maps?q=${selectedWorkOrder.property_latitude},${selectedWorkOrder.property_longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        <Navigation className="w-4 h-4" />
+                        Open in Google Maps
+                      </a>
+                      <button
+                        onClick={() => {
+                          const url = `https://www.google.com/maps?q=${selectedWorkOrder.property_latitude},${selectedWorkOrder.property_longitude}`;
+                          navigator.clipboard.writeText(url);
+                          alert('Location link copied!');
+                        }}
+                        className="px-4 py-2.5 bg-white border border-blue-200 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
+                      >
+                        Copy Link
+                      </button>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-2 font-mono">
+                      {parseFloat(selectedWorkOrder.property_latitude).toFixed(6)}, {parseFloat(selectedWorkOrder.property_longitude).toFixed(6)}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div>

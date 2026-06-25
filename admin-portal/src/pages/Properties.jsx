@@ -7,6 +7,7 @@ import {
   Edit2, Save, Truck, UserPlus
 } from 'lucide-react';
 import VendorAssignmentModal from '../components/VendorAssignmentModal';
+import StaticMapView from '../components/common/StaticMapView';
 import * as XLSX from 'xlsx';
 
 // Category options for Properties (same as Onboarding)
@@ -1095,33 +1096,7 @@ const Properties = () => {
                       if (lat && lng) {
                         return (
                           <>
-                            {/* Embedded Google Map */}
-                            <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-                              <iframe
-                                title="Property Location"
-                                width="100%"
-                                height="200"
-                                style={{ border: 0 }}
-                                loading="lazy"
-                                allowFullScreen
-                                referrerPolicy="no-referrer-when-downgrade"
-                                src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}&q=${lat},${lng}&zoom=16`}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs text-gray-500 font-mono">
-                                {parseFloat(lat).toFixed(6)}, {parseFloat(lng).toFixed(6)}
-                              </p>
-                              <a
-                                href={`https://www.google.com/maps?q=${lat},${lng}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700 transition-colors"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                Open in Google Maps
-                              </a>
-                            </div>
+                            <StaticMapView lat={lat} lng={lng} height={200} />
                           </>
                         );
                       }

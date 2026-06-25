@@ -28,7 +28,7 @@ import {
   Triangle,
   Map
 } from 'lucide-react';
-import LocationPicker from '../components/common/LocationPicker';
+import GPSLocationCapture from '../components/common/GPSLocationCapture';
 
 // Category options matching Admin Portal
 const CATEGORIES = [
@@ -1459,26 +1459,24 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
                   )}
                 </div>
 
-                {/* Location Picker */}
+                {/* GPS Location Capture */}
                 <div className="pt-4">
-                  <LocationPicker
+                  <GPSLocationCapture
                     value={formData.mapLocation}
-                    onChange={(loc) => updateFormData('mapLocation', loc)}
-                    onAddressComponentsChange={(components) => {
-                      // Auto-populate address fields from location selection
-                      if (components.city && !formData.city) {
-                        updateFormData('city', components.city);
-                      }
-                      if (components.state && !formData.state) {
-                        updateFormData('state', components.state);
-                      }
-                      if (components.postalCode && !formData.postalCode) {
-                        updateFormData('postalCode', components.postalCode);
-                      }
-                      if (components.addressLine1 && !formData.address) {
-                        updateFormData('address', components.addressLine1);
+                    onChange={(loc) => {
+                      updateFormData('mapLocation', loc);
+                      // Auto-populate address fields from captured location
+                      if (loc.address) {
+                        // Parse address components from Nominatim response
+                        const parts = loc.address.split(', ');
+                        if (parts.length >= 3 && !formData.city) {
+                          // Try to extract city (usually in the middle)
+                          updateFormData('city', parts[Math.floor(parts.length / 2)] || '');
+                        }
                       }
                     }}
+                    savedBy={user?.name || user?.email || 'Manager'}
+                    showShareOption={false}
                   />
                 </div>
               </div>
