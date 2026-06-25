@@ -179,7 +179,8 @@ const generatePDF = (data, type, filename) => {
       doc.setTextColor(...slate);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text('Yearly Billing', pageWidth - margin - 6, y + 8, { align: 'right' });
+      const billingLabel = (data.billing_duration || data.billingDuration || 'yearly').charAt(0).toUpperCase() + (data.billing_duration || data.billingDuration || 'yearly').slice(1).replace('-', ' ') + ' Billing';
+      doc.text(billingLabel, pageWidth - margin - 6, y + 8, { align: 'right' });
       y += 16;
     }
 

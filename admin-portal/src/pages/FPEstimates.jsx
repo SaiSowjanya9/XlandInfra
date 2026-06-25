@@ -600,6 +600,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         package_name: pkg?.name || '',
         package_price: pkg?.price || 0,
         amc_package_description: pkg?.description || '',
+        billing_duration: pkg?.billing_duration || pkg?.billingDuration || getPackageBillingDuration(pkg) || 'yearly',
         package_services: pkgServices.map(s => ({ 
           name: s.service || s.name, 
           frequencyCount: s.frequencyCount || s.frequency_count || 1, 
@@ -2871,7 +2872,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="text-xs text-indigo-600">Yearly Billing</p>
+                          <p className="text-xs text-indigo-600">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
                         </div>
                         <p className="text-lg font-bold text-indigo-700">{formatCurrency(viewEstimate.package_price)}</p>
                       </div>

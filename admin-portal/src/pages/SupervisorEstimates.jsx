@@ -216,6 +216,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
         package_id: selectedAmcPackage,
         package_name: pkg?.name || '',
         package_price: pkgPrice,
+        billing_duration: getPackageBillingDuration(pkg) || 'yearly',
         addons: selectedAddons.map(id => {
           const addon = addons.find(a => getAddonId(a) === id);
           return addon ? { id: getAddonId(addon), name: getAddonName(addon), price: getAddonPrice(addon) } : null;
@@ -1149,7 +1150,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="text-xs text-indigo-600">Yearly Billing</p>
+                          <p className="text-xs text-indigo-600">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
                         </div>
                         <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.package_price || 0).toLocaleString()}</p>
                       </div>

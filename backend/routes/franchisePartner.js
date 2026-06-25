@@ -3465,7 +3465,7 @@ router.post('/estimates', requireFPScope, async (req, res) => {
       property_type, property_name, zone, division, city, address,
       number_of_blocks, units_per_block, block_names, total_units,
       tower_name, block_number, villa_plot_number,
-      package_id, package_name, package_price, amc_package_description, package_services,
+      package_id, package_name, package_price, amc_package_description, package_services, billing_duration,
       addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
       description
     } = req.body;
@@ -3603,18 +3603,18 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         property_name, property_code, property_type, zone, division, city, address,
         number_of_blocks, units_per_block, block_names, total_units,
         tower_name, block_number, villa_plot_number,
-        package_id, package_name, package_price, amc_package_description, package_services,
+        package_id, package_name, package_price, amc_package_description, package_services, billing_duration,
         subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
         addons_data, description, status,
         created_by_id, created_by_name, created_by_role
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
       [
         estimateId, req.fpId, property_id || null, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
         property_name || '', property_code || '', property_type || '', zone || '', division || '', city || '', address || '',
         safeNum(number_of_blocks, 1), unitsPerBlockJson, blockNamesJson, safeNum(total_units, 0),
         tower_name || '', block_number || '', villa_plot_number || '',
-        package_id || null, package_name || '', safeNum(package_price, 0), amc_package_description || '', packageServicesJson,
+        package_id || null, package_name || '', safeNum(package_price, 0), amc_package_description || '', packageServicesJson, billing_duration || 'yearly',
         finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,
         addonsJson, description || '', 
         creatorId, creatorName, creatorRole

@@ -316,7 +316,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="font-semibold text-indigo-900">{viewEstimate.packageName || viewEstimate.package_name}</p>
-                        <p className="text-xs text-indigo-600">Yearly Billing</p>
+                        <p className="text-xs text-indigo-600">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
                       </div>
                       <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.packagePrice || viewEstimate.package_price || 0).toLocaleString()}</p>
                     </div>
