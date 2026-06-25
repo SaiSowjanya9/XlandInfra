@@ -207,6 +207,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const value = isNaN(num) ? 0 : Math.round(num);
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(value);
   };
+  
+  const getPackageBillingDuration = (pkg) => {
+    let servicesData = pkg?.services || pkg?.services_data;
+    if (typeof servicesData === 'string') {
+      try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = {}; }
+    }
+    return servicesData?.billing_duration || pkg?.billing_duration || pkg?.billingDuration || 'monthly';
+  };
 
   // Portal Links Handlers
   const validateUrl = (url) => {
