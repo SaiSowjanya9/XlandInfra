@@ -176,20 +176,13 @@ const PropertyLocationDisplay = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
               <button
                 onClick={handleOpenInMaps}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
               >
                 <ExternalLink className="w-4 h-4" />
                 Open in Google Maps
-              </button>
-              <button
-                onClick={handleCopyLink}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
-              >
-                {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copied!' : 'Copy Link'}
               </button>
             </div>
           </div>
