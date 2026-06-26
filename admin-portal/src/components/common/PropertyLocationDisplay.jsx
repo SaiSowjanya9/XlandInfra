@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { 
   MapPin, 
   ExternalLink, 
-  Share2, 
   Eye, 
   Copy, 
   Check,
@@ -27,9 +26,7 @@ const customIcon = new L.Icon({
 
 const PropertyLocationDisplay = ({ 
   location, 
-  propertyName = 'Property',
-  showShareWithVendor = false,
-  onShareWithVendor = null 
+  propertyName = 'Property'
 }) => {
   const [showMapModal, setShowMapModal] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -57,30 +54,6 @@ const PropertyLocationDisplay = ({
   // Open in Google Maps
   const handleOpenInMaps = () => {
     window.open(googleMapsLink, '_blank');
-  };
-
-  // Share location with vendor
-  const handleShareWithVendor = () => {
-    if (onShareWithVendor) {
-      onShareWithVendor(location);
-    }
-  };
-
-  // Native share (if supported)
-  const handleNativeShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${propertyName} Location`,
-          text: `Location for ${propertyName}: ${location.address || 'View on Google Maps'}`,
-          url: googleMapsLink
-        });
-      } catch (e) {
-        // User cancelled or error
-      }
-    } else {
-      handleCopyLink();
-    }
   };
 
   return (
@@ -150,26 +123,15 @@ const PropertyLocationDisplay = ({
               <span className="hidden sm:inline">Open in</span> Maps
             </button>
 
-            {/* Share / Share with Vendor */}
-            {showShareWithVendor && onShareWithVendor ? (
-              <button
-                type="button"
-                onClick={handleShareWithVendor}
-                className="flex items-center justify-center gap-2 px-3 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-              >
-                <Share2 className="w-4 h-4" />
-                Share with Vendor
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleNativeShare}
-                className="flex items-center justify-center gap-2 px-3 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-              >
-                {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copied!' : 'Copy Link'}
-              </button>
-            )}
+            {/* Copy Link */}
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="flex items-center justify-center gap-2 px-3 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copied ? 'Copied!' : 'Copy Link'}
+            </button>
           </div>
         </div>
       </div>
