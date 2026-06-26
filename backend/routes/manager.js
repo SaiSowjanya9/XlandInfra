@@ -358,7 +358,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
                   op.block_info, op.block_na, op.flat_block_info, op.flat_block_na,
                   op.villa_plot_number, op.plot_na,
                   op.address, op.city, op.state, op.postal_code as zip_code,
-                  op.landmark, op.latitude, op.longitude,
+                  op.landmark, COALESCE(op.latitude, op.map_lat) as latitude, COALESCE(op.longitude, op.map_lng) as longitude, op.map_address,
                   op.association_contacts,
                   op.watchman_name, op.watchman_contact,
                   op.notes,
@@ -673,8 +673,8 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
                         COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
                         op.total_units, op.number_of_blocks as total_blocks,
                         c.name as category_name, v.company_name as vendor_name,
-                        COALESCE(p.latitude, op.latitude) as property_latitude,
-                        COALESCE(p.longitude, op.longitude) as property_longitude,
+                        COALESCE(p.latitude, op.latitude, op.map_lat) as property_latitude,
+                        COALESCE(p.longitude, op.longitude, op.map_lng) as property_longitude,
                         COALESCE(p.map_location, op.map_location) as property_map_location,
                         COALESCE(
                           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
@@ -729,8 +729,8 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
               COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
               op.total_units, op.number_of_blocks as total_blocks,
               c.name as category_name, v.company_name as vendor_name,
-              COALESCE(p.latitude, op.latitude) as property_latitude,
-              COALESCE(p.longitude, op.longitude) as property_longitude,
+              COALESCE(p.latitude, op.latitude, op.map_lat) as property_latitude,
+              COALESCE(p.longitude, op.longitude, op.map_lng) as property_longitude,
               COALESCE(p.map_location, op.map_location) as property_map_location
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
@@ -769,8 +769,8 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
               COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
               op.total_units, op.number_of_blocks as total_blocks,
               c.name as category_name, v.company_name as vendor_name,
-              COALESCE(p.latitude, op.latitude) as property_latitude,
-              COALESCE(p.longitude, op.longitude) as property_longitude,
+              COALESCE(p.latitude, op.latitude, op.map_lat) as property_latitude,
+              COALESCE(p.longitude, op.longitude, op.map_lng) as property_longitude,
               COALESCE(p.map_location, op.map_location) as property_map_location
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
