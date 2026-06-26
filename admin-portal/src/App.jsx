@@ -190,6 +190,8 @@ function App() {
     // Store token if provided
     if (userData.token) {
       sessionStorage.setItem('pm_auth_token', userData.token);
+      // Dispatch event to trigger FP list refresh
+      window.dispatchEvent(new Event('fp-refresh'));
     }
   };
 
