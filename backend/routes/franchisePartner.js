@@ -181,8 +181,11 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       workOrdersByRole,
       recentWorkOrders
     ] = await Promise.all([
-      // Properties count
-      safeCount('SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ? AND (status IS NULL OR status != \'deleted\')', [fpId]),
+      // Properties count (from both properties and onboarded_properties tables)
+      Promise.all([
+        safeCount('SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ? AND (status IS NULL OR status != \'deleted\')', [fpId]),
+        safeCount('SELECT COUNT(*) as count FROM onboarded_properties WHERE franchise_partner_id = ? AND status = \'active\'', [fpId])
+      ]).then(([p1, p2]) => p1 + p2),
       
       // Vendors count - only this FP's vendors
       safeCount('SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND vendor_id NOT LIKE \'%SEED%\'', [fpId]),
