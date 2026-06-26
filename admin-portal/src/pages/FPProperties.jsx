@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import StaticMapView from '../components/common/StaticMapView';
+import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
 
 const FPProperties = ({ user }) => {
   // Check if user is FP Manager (restricted access - view only)
@@ -1375,29 +1376,18 @@ const FPProperties = ({ user }) => {
                 </div>
               </div>
 
-              {/* Map Location with embedded Google Map */}
-              {(selectedProperty.latitude || selectedProperty.longitude || selectedProperty.landmark || selectedProperty.mapLocation?.lat) && (
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Map Location</h3>
-                  <div className="space-y-3">
-                    <p className="text-sm text-gray-700">
-                      {selectedProperty.mapLocation?.address || selectedProperty.landmark || `${selectedProperty.address || ''}, ${selectedProperty.city || ''}, ${selectedProperty.state || ''}, ${selectedProperty.zip_code || ''}`}
-                    </p>
-                    {(() => {
-                      const lat = selectedProperty.mapLocation?.lat || selectedProperty.latitude;
-                      const lng = selectedProperty.mapLocation?.lng || selectedProperty.longitude;
-                      if (lat && lng) {
-                        return (
-                          <>
-                            <StaticMapView lat={lat} lng={lng} height={200} />
-                          </>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-                </div>
-              )}
+              {/* Property Location */}
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Location</h3>
+                <PropertyLocationDisplay 
+                  location={{
+                    lat: selectedProperty.mapLocation?.lat || selectedProperty.latitude,
+                    lng: selectedProperty.mapLocation?.lng || selectedProperty.longitude,
+                    address: selectedProperty.mapLocation?.address || selectedProperty.landmark || `${selectedProperty.address || ''}, ${selectedProperty.city || ''}, ${selectedProperty.state || ''}, ${selectedProperty.zip_code || ''}`
+                  }}
+                  propertyName={selectedProperty.name || selectedProperty.community_name || 'Property'}
+                />
+              </div>
 
               {/* Contact Information */}
               {(() => {
