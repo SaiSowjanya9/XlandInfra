@@ -28,8 +28,10 @@ const FPDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
+  const fetchDashboardData = async (isInitialLoad = false) => {
+    if (isInitialLoad) {
+      setLoading(true);
+    }
     setError(null);
     
     try {
@@ -58,7 +60,14 @@ const FPDashboard = ({ user }) => {
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchDashboardData(true); // Initial load with loading spinner
+    
+    // Auto-refresh every 30 seconds (silent, no loading spinner)
+    const interval = setInterval(() => {
+      fetchDashboardData(false);
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const statCards = [

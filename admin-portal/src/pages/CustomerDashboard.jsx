@@ -24,11 +24,10 @@ const CustomerDashboard = ({ user }) => {
   const [stats, setStats] = useState({ pending: 0, completed: 0 });
   const [customerData, setCustomerData] = useState(null);
 
-  useEffect(() => {
-    fetchCustomerDashboard();
-  }, []);
-
-  const fetchCustomerDashboard = async () => {
+  const fetchCustomerDashboard = async (isInitialLoad = false) => {
+    if (isInitialLoad) {
+      setLoading(true);
+    }
     try {
       const token = localStorage.getItem('customer_token') || sessionStorage.getItem('pm_auth_token');
       const response = await fetch(`${API_BASE}/customers/dashboard`, {
@@ -49,6 +48,17 @@ const CustomerDashboard = ({ user }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCustomerDashboard(true); // Initial load with loading spinner
+    
+    // Auto-refresh every 30 seconds (silent, no loading spinner)
+    const interval = setInterval(() => {
+      fetchCustomerDashboard(false);
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const quickAccess = [
     { title: 'Work Orders', icon: ClipboardList, path: '/customer/work-order', gradient: 'from-blue-500 to-indigo-600' },

@@ -21,8 +21,10 @@ const ExecutiveDashboard = ({ user }) => {
 
   const token = sessionStorage.getItem('pm_auth_token');
 
-  const fetchDashboard = async () => {
-    setLoading(true);
+  const fetchDashboard = async (isInitialLoad = false) => {
+    if (isInitialLoad) {
+      setLoading(true);
+    }
     try {
       const response = await fetch('/api/executive/dashboard', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -41,7 +43,14 @@ const ExecutiveDashboard = ({ user }) => {
   };
 
   useEffect(() => {
-    fetchDashboard();
+    fetchDashboard(true); // Initial load with loading spinner
+    
+    // Auto-refresh every 30 seconds (silent, no loading spinner)
+    const interval = setInterval(() => {
+      fetchDashboard(false);
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const statCards = [

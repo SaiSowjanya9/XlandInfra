@@ -9,11 +9,10 @@ const VendorDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchVendorDashboard();
-  }, []);
-
-  const fetchVendorDashboard = async () => {
+  const fetchVendorDashboard = async (isInitialLoad = false) => {
+    if (isInitialLoad) {
+      setLoading(true);
+    }
     try {
       const token = sessionStorage.getItem('pm_auth_token') || localStorage.getItem('pm_auth_token');
       const response = await fetch('/api/vendors/dashboard', {
@@ -34,6 +33,17 @@ const VendorDashboard = ({ user }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchVendorDashboard(true); // Initial load with loading spinner
+    
+    // Auto-refresh every 30 seconds (silent, no loading spinner)
+    const interval = setInterval(() => {
+      fetchVendorDashboard(false);
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const statCards = [
     { 
