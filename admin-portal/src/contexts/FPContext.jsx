@@ -119,6 +119,50 @@ export const FPProvider = ({ children }) => {
     fetchFpList();
   }, [fetchFpList]);
 
+  // Listen for storage changes (login/logout) to refresh FP list
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'pm_auth_token') {
+        // Token was added or removed - refresh FP list
+        fetchFpList();
+      }
+    };
+    
+    // Also listen for custom login event (for same-tab login)
+    const handleLoginEvent = () => {
+      fetchFpList();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('fp-refresh', handleLoginEvent);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('fp-refresh', handleLoginEvent);
+    };
+  }, [fetchFpList]);
+
+  // Check for token on interval for same-tab login detection
+  useEffect(() => {
+    let lastToken = sessionStorage.getItem('pm_auth_token');
+    
+    const checkTokenChange = () => {
+      const currentToken = sessionStorage.getItem('pm_auth_token');
+      if (currentToken !== lastToken) {
+        lastToken = currentToken;
+        if (currentToken) {
+          // Token was just added - fetch FP list
+          fetchFpList();
+        }
+      }
+    };
+    
+    // Check every 500ms for token changes (handles same-tab login)
+    const interval = setInterval(checkTokenChange, 500);
+    
+    return () => clearInterval(interval);
+  }, [fetchFpList]);
+
   const selectFp = useCallback((fp) => {
     if (fp && fp.id) {
       setSelectedFp(fp);
