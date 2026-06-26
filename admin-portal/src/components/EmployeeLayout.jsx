@@ -27,7 +27,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFP } from '../contexts/FPContext';
 
 const EmployeeLayout = ({ admin, onLogout, children }) => {
@@ -38,6 +38,17 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   
   // FP Context for selecting franchise partner
   const { fpList, selectedFp, selectFp, selectedPropertyType, setSelectedPropertyType, loading: fpLoading, refreshFpList } = useFP();
+  
+  // Ensure FP list is loaded when layout mounts with a valid session
+  useEffect(() => {
+    const token = sessionStorage.getItem('pm_auth_token');
+    const isAdmin = admin?.role === 'admin' || admin?.role === 'operations_manager' || admin?.isSuperAdmin;
+    
+    // If we have a token, admin role, but no FP list - trigger refresh
+    if (token && isAdmin && fpList.length === 0 && !fpLoading) {
+      refreshFpList();
+    }
+  }, [admin, fpList.length, fpLoading, refreshFpList]);
   
   // Check if user is Operations Manager (restricted access - view only)
   const isOpsManager = admin?.role === 'operations_manager';
