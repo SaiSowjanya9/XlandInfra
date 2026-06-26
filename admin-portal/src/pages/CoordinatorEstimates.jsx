@@ -355,7 +355,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                   <thead><tr className="border-y border-blue-100"><th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[12%]">Service</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[53%]">Description</th><th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[20%]">Frequency</th><th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[15%]">Visits</th></tr></thead>
                   <tbody className="divide-y divide-gray-100">{services.length > 0 ? services.map((svc, idx) => { const freqType = svc.frequencyType || svc.frequency_type || 'Monthly'; const hasDesc = svc.description && svc.description.trim() && svc.description.trim() !== '-'; return (<tr key={idx}><td className="px-3 py-2.5 text-gray-800">{svc.service || svc.name || '-'}</td><td className={`px-3 py-2.5 text-gray-600 ${!hasDesc ? 'text-center' : ''}`}>{svc.description?.trim() || '-'}</td><td className="px-3 py-2.5 text-gray-600">{freqType}</td><td className="px-3 py-2.5 text-center text-gray-600">{svc.frequencyCount || svc.frequency_count || getFrequencyVisits(freqType)}</td></tr>); }) : <tr><td colSpan={4} className="px-5 py-3 text-center text-gray-400">No services in package</td></tr>}</tbody>
                 </table>
-                <div className="px-5 py-3 bg-blue-50 border-t border-blue-100"><div className="flex justify-between items-center"><span className="text-sm font-semibold text-blue-700">Total Package Price</span><span className="text-lg font-bold text-gray-900">{formatCurrency(getPackagePrice(pkg))}</span></div><div className="text-xs text-blue-600 mt-1">Service Period: <span className="capitalize">{getPackageBillingDuration(pkg)}</span></div></div>
+                <div className="px-5 py-3 bg-blue-50 border-t border-blue-100"><div className="flex justify-between items-center"><span className="text-sm font-semibold text-blue-700">Total Package Price</span><span className="text-lg font-bold text-gray-900">{formatCurrency(getPackagePrice(pkg))}</span></div><div className="text-xs text-blue-600 mt-1">Service Period: <span className="capitalize whitespace-nowrap">{getPackageBillingDuration(pkg)?.replace('-', ' ')}</span></div></div>
               </div>
             );
           })()}
@@ -978,7 +978,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getBillingBadgeColor(billingDuration)}`}>
+                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full border whitespace-nowrap ${getBillingBadgeColor(billingDuration)}`}>
                             {BILLING_DURATIONS.find(d => d.value === billingDuration)?.label || 'Monthly'}
                           </span>
                         </td>
@@ -1631,8 +1631,8 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                   <p className="font-semibold text-sm">{getPropertyTypeLabel(viewAmcPackage.propertyType)}</p>
                 </div>
                 <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500">Billing Duration</p>
-                  <p className="font-semibold text-sm capitalize">{viewAmcPackage.billingDuration || 'Monthly'}</p>
+                  <p className="text-xs text-gray-500">Billing</p>
+                  <p className="font-semibold text-sm capitalize whitespace-nowrap">{viewAmcPackage.billingDuration?.replace('-', ' ') || 'Monthly'}</p>
                 </div>
                 <div className="bg-green-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-500">Total Price</p>

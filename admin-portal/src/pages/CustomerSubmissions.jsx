@@ -1568,8 +1568,8 @@ const CustomerSubmissions = () => {
                       <p className="font-mono text-sm font-medium text-indigo-900">{viewAMCDetails.amcPackage.packageId}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-indigo-600 mb-1">Billing Duration</p>
-                      <p className="font-medium text-indigo-900 capitalize">{viewAMCDetails.amcPackage.billingDuration || 'Monthly'}</p>
+                      <p className="text-xs text-indigo-600 mb-1">Billing</p>
+                      <p className="font-medium text-indigo-900 capitalize whitespace-nowrap">{viewAMCDetails.amcPackage.billingDuration?.replace('-', ' ') || 'Monthly'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-indigo-600 mb-1">Status</p>
