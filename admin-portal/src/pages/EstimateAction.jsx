@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader2, AlertTriangle, FileText } from 'lucide-react';
 
+// API base URL for production
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 const EstimateAction = () => {
   const { estimateId } = useParams();
   const [searchParams] = useSearchParams();
@@ -20,7 +23,7 @@ const EstimateAction = () => {
 
   const fetchEstimateStatus = async () => {
     try {
-      const response = await fetch(`/api/estimates-sync/${estimateId}/status?token=${token}`);
+      const response = await fetch(`${API_URL}/api/estimates-sync/${estimateId}/status?token=${token}`);
       const data = await response.json();
       
       if (data.success) {
@@ -43,7 +46,7 @@ const EstimateAction = () => {
   const handleAction = async (actionType) => {
     setProcessing(true);
     try {
-      const response = await fetch(`/api/estimates-sync/${estimateId}/action`, {
+      const response = await fetch(`${API_URL}/api/estimates-sync/${estimateId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: actionType, token })
