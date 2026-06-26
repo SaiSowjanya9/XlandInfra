@@ -1094,8 +1094,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                   <p className="font-semibold text-sm capitalize">{viewAmcPackage.propertyType || 'N/A'}</p>
                 </div>
                 <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500">Billing Duration</p>
-                  <p className="font-semibold text-sm capitalize">{viewAmcPackage.billingDuration || viewAmcPackage.billingCycle || 'Yearly'}</p>
+                  <p className="text-xs text-gray-500">Billing</p>
+                  <p className="font-semibold text-sm capitalize whitespace-nowrap">{(viewAmcPackage.billingDuration || viewAmcPackage.billingCycle || 'Yearly')?.replace('-', ' ')}</p>
                 </div>
                 <div className="bg-green-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-500">Total Price</p>

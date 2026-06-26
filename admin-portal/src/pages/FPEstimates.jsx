@@ -931,7 +931,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <span className="text-sm font-semibold text-amber-700">Total Package Price</span>
                         <span className="text-lg font-bold text-gray-900">{formatCurrency(pkg.price)}</span>
                       </div>
-                      <div className="text-xs text-amber-600 mt-1">Service Period: <span className="capitalize">{billingDuration}</span></div>
+                      <div className="text-xs text-amber-600 mt-1">Service Period: <span className="capitalize whitespace-nowrap">{billingDuration?.replace('-', ' ')}</span></div>
                     </div>
                   </div>
                 );
@@ -1273,7 +1273,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <span className="text-sm font-semibold text-amber-700">Total Package Price</span>
                         <span className="text-lg font-bold text-gray-900">{formatCurrency(pkg.price)}</span>
                       </div>
-                      <div className="text-xs text-amber-600 mt-1">Service Period: <span className="capitalize">{billingDuration}</span></div>
+                      <div className="text-xs text-amber-600 mt-1">Service Period: <span className="capitalize whitespace-nowrap">{billingDuration?.replace('-', ' ')}</span></div>
                     </div>
                   </div>
                 );
@@ -1978,7 +1978,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getBillingBadgeColor(billingDuration)}`}>
+                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full border whitespace-nowrap ${getBillingBadgeColor(billingDuration)}`}>
                             {BILLING_DURATIONS.find(d => d.value === billingDuration)?.label || 'Monthly'}
                           </span>
                         </td>
@@ -3043,8 +3043,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <p className="font-semibold text-sm">{getPropertyTypeLabel(viewAmcPackage.propertyType)}</p>
                 </div>
                 <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500">Billing Duration</p>
-                  <p className="font-semibold text-sm capitalize">{viewAmcPackage.billingDuration || 'Monthly'}</p>
+                  <p className="text-xs text-gray-500">Billing</p>
+                  <p className="font-semibold text-sm capitalize whitespace-nowrap">{viewAmcPackage.billingDuration?.replace('-', ' ') || 'Monthly'}</p>
                 </div>
                 <div className="bg-green-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-500">Total Price</p>

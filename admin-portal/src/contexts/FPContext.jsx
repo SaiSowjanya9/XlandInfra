@@ -40,6 +40,25 @@ export const FPProvider = ({ children }) => {
       return;
     }
     
+    // Check user role - only admin/operations_manager should fetch FP list
+    // FP users and other employees should use their own portal endpoints
+    try {
+      const savedUser = sessionStorage.getItem('adminUser');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        const isAdmin = user?.role === 'admin' || user?.role === 'operations_manager';
+        if (!isAdmin) {
+          // Non-admin users don't need FP list - they use their own portal
+          setFpList([]);
+          setSelectedFp(null);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (e) {
+      // If parsing fails, continue with fetch attempt
+    }
+    
     setLoading(true);
     setError(null);
     
