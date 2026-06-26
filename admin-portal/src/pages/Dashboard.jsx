@@ -23,12 +23,18 @@ const Dashboard = () => {
   
   // Get FP list and selected FP from context
   const { fpList, selectedFp, selectFp, loading: fpLoading, refreshFpList } = useFP();
-  const token = sessionStorage.getItem('pm_auth_token');
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
 
   const fetchDashboardData = useCallback(async (isInitialLoad = false) => {
     if (!selectedFp) {
       setLoading(false);
+      return;
+    }
+    
+    // Get fresh token for each request
+    const token = sessionStorage.getItem('pm_auth_token');
+    if (!token) {
+      console.warn('No auth token available');
       return;
     }
     
@@ -81,7 +87,7 @@ const Dashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedFp, token]);
+  }, [selectedFp]);
 
   const fetchNotifications = async () => {
     try {
@@ -109,10 +115,10 @@ const Dashboard = () => {
       fetchDashboardData(true); // Initial load - show loading spinner
       fetchNotifications();
     }
-    // Background refresh every 60 seconds - no loading spinner
+    // Background refresh every 30 seconds - no loading spinner
     const interval = setInterval(() => {
       if (selectedFp) fetchDashboardData(false);
-    }, 60000);
+    }, 30000);
     return () => clearInterval(interval);
   }, [fetchDashboardData, selectedFp]);
 
