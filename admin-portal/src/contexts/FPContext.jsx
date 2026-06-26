@@ -119,59 +119,32 @@ export const FPProvider = ({ children }) => {
     fetchFpList();
   }, [fetchFpList]);
 
-  // Listen for storage changes (login/logout) to refresh FP list
+  // Listen for custom login event (dispatched after token is stored)
   useEffect(() => {
+    const handleLoginEvent = () => {
+      console.log('[FPContext] fp-refresh event received, fetching FP list...');
+      // Small delay to ensure token is fully stored
+      setTimeout(() => {
+        fetchFpList();
+      }, 100);
+    };
+    
+    // Listen for storage changes from other tabs
     const handleStorageChange = (e) => {
-      if (e.key === 'pm_auth_token') {
-        // Token was added or removed - refresh FP list
+      if (e.key === 'pm_auth_token' && e.newValue) {
+        console.log('[FPContext] Token added in another tab, fetching FP list...');
         fetchFpList();
       }
     };
     
-    // Also listen for custom login event (for same-tab login)
-    const handleLoginEvent = () => {
-      fetchFpList();
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
     window.addEventListener('fp-refresh', handleLoginEvent);
+    window.addEventListener('storage', handleStorageChange);
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('fp-refresh', handleLoginEvent);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, [fetchFpList]);
-
-  // Check for token on interval for same-tab login detection
-  // Only runs a few times after mount to catch immediate post-login state
-  useEffect(() => {
-    let lastToken = sessionStorage.getItem('pm_auth_token');
-    let checkCount = 0;
-    const maxChecks = 10; // Only check 10 times (5 seconds total)
-    
-    const checkTokenChange = () => {
-      checkCount++;
-      const currentToken = sessionStorage.getItem('pm_auth_token');
-      
-      if (currentToken !== lastToken) {
-        lastToken = currentToken;
-        if (currentToken && fpList.length === 0) {
-          // Token was just added and we don't have FP list - fetch it
-          fetchFpList();
-        }
-      }
-      
-      // Stop checking after maxChecks or if we have data
-      if (checkCount >= maxChecks || fpList.length > 0) {
-        clearInterval(interval);
-      }
-    };
-    
-    // Check every 500ms but only for a limited time after mount
-    const interval = setInterval(checkTokenChange, 500);
-    
-    return () => clearInterval(interval);
-  }, [fetchFpList, fpList.length]);
 
   const selectFp = useCallback((fp) => {
     if (fp && fp.id) {
