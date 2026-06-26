@@ -121,33 +121,92 @@ const INDIAN_STATES = [
 
 const FPCustomers = ({ user, defaultTab = 'list' }) => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   
-  // URL-synced state
-  const activeView = searchParams.get('view') || defaultTab;
-  const selectedCategory = searchParams.get('category') || null;
-  const selectedEntryType = searchParams.get('entryType') || null;
-  const currentStep = parseInt(searchParams.get('step') || '1', 10);
-  const searchTerm = searchParams.get('search') || '';
+  // URL-based step management for browser back/forward
+  const urlView = searchParams.get('view');
+  const urlCategory = searchParams.get('category');
+  const urlEntryType = searchParams.get('entryType');
+  const urlStep = searchParams.get('step');
+  const urlSearch = searchParams.get('search') || '';
   
-  // URL state setters
-  const updateUrlParam = useCallback((key, value, defaultValue = '') => {
-    setSearchParams(prev => {
-      const newParams = new URLSearchParams(prev);
-      if (value === defaultValue || value === null || value === undefined || value === '') {
-        newParams.delete(key);
-      } else {
-        newParams.set(key, String(value));
-      }
-      return newParams;
-    }, { replace: true });
-  }, [setSearchParams]);
+  // Local state synced from URL
+  const [activeView, setActiveViewState] = useState(defaultTab);
+  const [selectedCategory, setSelectedCategoryState] = useState(null);
+  const [selectedEntryType, setSelectedEntryTypeState] = useState(null);
+  const [currentStep, setCurrentStepState] = useState(1);
+  const [searchTerm, setSearchTermState] = useState('');
   
-  const setActiveView = (value) => updateUrlParam('view', value, 'list');
-  const setSelectedCategory = (value) => updateUrlParam('category', value);
-  const setSelectedEntryType = (value) => updateUrlParam('entryType', value);
-  const setCurrentStep = (value) => updateUrlParam('step', value, '1');
-  const setSearchTerm = (value) => updateUrlParam('search', value);
+  // Push initial history entry when page first loads
+  useEffect(() => {
+    if (!urlView && !urlCategory && !urlEntryType) {
+      navigate(defaultTab === 'add' ? '?view=add' : '?view=list', { replace: true });
+    }
+  }, []);
+  
+  // Sync state with URL when browser back/forward is used
+  useEffect(() => {
+    if (urlView === 'add' && urlEntryType && urlCategory) {
+      setActiveViewState('add');
+      setSelectedCategoryState(urlCategory);
+      setSelectedEntryTypeState(urlEntryType);
+    } else if (urlView === 'add' && urlCategory && !urlEntryType) {
+      setActiveViewState('add');
+      setSelectedCategoryState(urlCategory);
+      setSelectedEntryTypeState(null);
+    } else if (urlView === 'add' && !urlCategory) {
+      setActiveViewState('add');
+      setSelectedCategoryState(null);
+      setSelectedEntryTypeState(null);
+    } else if (urlView === 'list' || !urlView) {
+      setActiveViewState('list');
+      setSelectedCategoryState(null);
+      setSelectedEntryTypeState(null);
+    }
+    if (urlStep) setCurrentStepState(parseInt(urlStep, 10));
+    setSearchTermState(urlSearch);
+  }, [urlView, urlCategory, urlEntryType, urlStep, urlSearch]);
+  
+  // Navigation helpers that push to history
+  const setActiveView = (value) => {
+    if (value === 'list') {
+      navigate('?view=list');
+    } else {
+      navigate('?view=add');
+    }
+  };
+  
+  const setSelectedCategory = (value) => {
+    if (value) {
+      navigate(`?view=add&category=${value}`);
+    } else {
+      navigate('?view=add');
+    }
+  };
+  
+  const setSelectedEntryType = (value) => {
+    if (value && selectedCategory) {
+      navigate(`?view=add&category=${selectedCategory}&entryType=${value}`);
+    } else if (selectedCategory) {
+      navigate(`?view=add&category=${selectedCategory}`);
+    }
+  };
+  
+  const setCurrentStep = (value) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('step', String(value));
+    navigate(`?${params.toString()}`, { replace: true });
+  };
+  
+  const setSearchTerm = (value) => {
+    const params = new URLSearchParams(window.location.search);
+    if (value) {
+      params.set('search', value);
+    } else {
+      params.delete('search');
+    }
+    navigate(`?${params.toString()}`, { replace: true });
+  };
   
   const [customers, setCustomers] = useState([]);
   const [properties, setProperties] = useState([]);
@@ -475,10 +534,15 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
 
   const goBack = () => {
     if (selectedEntryType) {
-      setSelectedEntryType(null);
+      // Go back to entry type selection
+      navigate(`?view=add&category=${selectedCategory}`);
       resetForm();
     } else if (selectedCategory) {
-      setSelectedCategory(null);
+      // Go back to category selection
+      navigate('?view=add');
+    } else {
+      // Go back to list
+      navigate('?view=list');
     }
   };
 
