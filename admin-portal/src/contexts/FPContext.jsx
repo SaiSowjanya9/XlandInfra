@@ -143,25 +143,35 @@ export const FPProvider = ({ children }) => {
   }, [fetchFpList]);
 
   // Check for token on interval for same-tab login detection
+  // Only runs a few times after mount to catch immediate post-login state
   useEffect(() => {
     let lastToken = sessionStorage.getItem('pm_auth_token');
+    let checkCount = 0;
+    const maxChecks = 10; // Only check 10 times (5 seconds total)
     
     const checkTokenChange = () => {
+      checkCount++;
       const currentToken = sessionStorage.getItem('pm_auth_token');
+      
       if (currentToken !== lastToken) {
         lastToken = currentToken;
-        if (currentToken) {
-          // Token was just added - fetch FP list
+        if (currentToken && fpList.length === 0) {
+          // Token was just added and we don't have FP list - fetch it
           fetchFpList();
         }
       }
+      
+      // Stop checking after maxChecks or if we have data
+      if (checkCount >= maxChecks || fpList.length > 0) {
+        clearInterval(interval);
+      }
     };
     
-    // Check every 500ms for token changes (handles same-tab login)
+    // Check every 500ms but only for a limited time after mount
     const interval = setInterval(checkTokenChange, 500);
     
     return () => clearInterval(interval);
-  }, [fetchFpList]);
+  }, [fetchFpList, fpList.length]);
 
   const selectFp = useCallback((fp) => {
     if (fp && fp.id) {

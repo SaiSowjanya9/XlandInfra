@@ -26,13 +26,16 @@ const Dashboard = () => {
   const token = sessionStorage.getItem('pm_auth_token');
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (isInitialLoad = false) => {
     if (!selectedFp) {
       setLoading(false);
       return;
     }
     
-    setLoading(true);
+    // Only show loading spinner on initial load, not on background refresh
+    if (isInitialLoad) {
+      setLoading(true);
+    }
     try {
       let endpoint;
       if (selectedFp.id === 'all') {
@@ -103,11 +106,12 @@ const Dashboard = () => {
   // Load dashboard data when FP changes
   useEffect(() => {
     if (selectedFp) {
-      fetchDashboardData();
+      fetchDashboardData(true); // Initial load - show loading spinner
       fetchNotifications();
     }
+    // Background refresh every 60 seconds - no loading spinner
     const interval = setInterval(() => {
-      if (selectedFp) fetchDashboardData();
+      if (selectedFp) fetchDashboardData(false);
     }, 60000);
     return () => clearInterval(interval);
   }, [fetchDashboardData, selectedFp]);
