@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import VendorAssignmentModal from '../components/VendorAssignmentModal';
 import StaticMapView from '../components/common/StaticMapView';
+import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
 import * as XLSX from 'xlsx';
 
 // Category options for Properties (same as Onboarding)
@@ -1082,29 +1083,18 @@ const Properties = () => {
                 </div>
               </div>
 
-              {/* Map Location with embedded Google Map */}
-              {((viewProperty.mapLocation?.lat && viewProperty.mapLocation?.lng) || viewProperty.latitude || viewProperty.longitude) && (
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Map Location</h3>
-                  <div className="space-y-3">
-                    <p className="text-sm text-gray-700">
-                      {viewProperty.mapLocation?.address || viewProperty.landmark || `${viewProperty.address || ''}, ${viewProperty.city || ''}, ${viewProperty.state || ''}, ${viewProperty.postalCode || viewProperty.zip_code || ''}`}
-                    </p>
-                    {(() => {
-                      const lat = viewProperty.mapLocation?.lat || viewProperty.latitude;
-                      const lng = viewProperty.mapLocation?.lng || viewProperty.longitude;
-                      if (lat && lng) {
-                        return (
-                          <>
-                            <StaticMapView lat={lat} lng={lng} height={200} />
-                          </>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-                </div>
-              )}
+              {/* Property Location */}
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Location</h3>
+                <PropertyLocationDisplay 
+                  location={{
+                    lat: viewProperty.mapLocation?.lat || viewProperty.latitude,
+                    lng: viewProperty.mapLocation?.lng || viewProperty.longitude,
+                    address: viewProperty.mapLocation?.address || viewProperty.landmark || `${viewProperty.address || ''}, ${viewProperty.city || ''}, ${viewProperty.state || ''}, ${viewProperty.postalCode || viewProperty.zip_code || ''}`
+                  }}
+                  propertyName={viewProperty.name || viewProperty.community_name || 'Property'}
+                />
+              </div>
 
               {/* Contact Information */}
               {(() => {
