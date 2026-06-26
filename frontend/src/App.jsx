@@ -25,6 +25,7 @@ const ConstructionDelivery = lazy(() => import('./pages/services/ConstructionDel
 const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/legal/TermsOfService'));
 const CookiePolicy = lazy(() => import('./pages/legal/CookiePolicy'));
+const EstimateAction = lazy(() => import('./pages/EstimateAction'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -278,6 +279,9 @@ function App() {
         } />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/activate/:token" element={<ActivateAccount />} />
+        
+        {/* Estimate Action - Public (for email approve/reject links) */}
+        <Route path="/estimate-action/:estimateId" element={<EstimateAction />} />
         {/* Dashboard routes use direct imports for instant loading after login */}
         <Route path="/dashboard/*" element={
           <ProtectedDashboard user={user} onLogout={handleLogout} />
