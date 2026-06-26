@@ -323,7 +323,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
                 COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
                 op.total_units as units, op.number_of_units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
-                op.landmark, op.latitude, op.longitude,
+                op.landmark, COALESCE(op.latitude, op.map_lat) as latitude, COALESCE(op.longitude, op.map_lng) as longitude, op.map_address,
                 op.association_contacts,
                 op.contact_person, op.contact_phone, op.contact_email,
                 op.number_of_blocks, op.block_names, op.units_per_block,
