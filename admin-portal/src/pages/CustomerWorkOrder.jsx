@@ -472,47 +472,64 @@ const CustomerWorkOrder = ({ user }) => {
                 <User className="w-4 h-4 text-emerald-600" />
                 <span>Your Details</span>
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Name <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    value={formData.customerName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
-                    placeholder="Your name"
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
-                      formErrors.customerName ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
-                    }`}
-                  />
-                  {formErrors.customerName && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.customerName}</p>}
+              {selectedProperty ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Name <span className="text-red-500">*</span></p>
+                    <p className="text-sm font-medium text-gray-900">{formData.customerName || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Email <span className="text-red-500">*</span></p>
+                    <p className="text-sm font-medium text-gray-900">{formData.customerEmail || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Phone Number <span className="text-red-500">*</span></p>
+                    <p className="text-sm font-medium text-gray-900">{formData.customerPhone || '-'}</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email <span className="text-red-500">*</span></label>
-                  <input
-                    type="email"
-                    value={formData.customerEmail}
-                    onChange={(e) => setFormData(prev => ({ ...prev, customerEmail: e.target.value }))}
-                    placeholder="your@email.com"
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
-                      formErrors.customerEmail ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
-                    }`}
-                  />
-                  {formErrors.customerEmail && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.customerEmail}</p>}
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Name <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={formData.customerName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
+                      placeholder="Your name"
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
+                        formErrors.customerName ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
+                      }`}
+                    />
+                    {formErrors.customerName && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.customerName}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email <span className="text-red-500">*</span></label>
+                    <input
+                      type="email"
+                      value={formData.customerEmail}
+                      onChange={(e) => setFormData(prev => ({ ...prev, customerEmail: e.target.value }))}
+                      placeholder="your@email.com"
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
+                        formErrors.customerEmail ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
+                      }`}
+                    />
+                    {formErrors.customerEmail && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.customerEmail}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number <span className="text-red-500">*</span></label>
+                    <input
+                      type="tel"
+                      value={formData.customerPhone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, customerPhone: e.target.value }))}
+                      placeholder="Phone number"
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
+                        formErrors.customerPhone ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
+                      }`}
+                    />
+                    {formErrors.customerPhone && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.customerPhone}</p>}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number <span className="text-red-500">*</span></label>
-                  <input
-                    type="tel"
-                    value={formData.customerPhone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, customerPhone: e.target.value }))}
-                    placeholder="Phone number"
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:outline-none transition-all ${
-                      formErrors.customerPhone ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
-                    }`}
-                  />
-                  {formErrors.customerPhone && <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.customerPhone}</p>}
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Category Selection */}
