@@ -1720,19 +1720,30 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
   const {
     orderId, orderNumber, title, propertyName, propertyId,
     customerName, customerEmail, customerPhone,
-    categoryName, subcategoryName, completedBy, completedByRole
+    categoryName, subcategoryName, completedBy, completedByRole,
+    franchisePartnerId, propertyZone
   } = workOrderData;
 
-  // Send to customer in TO field, admin in BCC (hidden from customer)
-  const toAddress = customerEmail || NOTIFICATION_EMAIL;
-  const bccAddress = customerEmail ? NOTIFICATION_EMAIL : undefined;
+  // Get recipients: FP email + zone-centric employees (NO admin email)
+  let internalRecipients = [];
+  if (franchisePartnerId) {
+    const fpRecipients = await getWorkOrderNotificationRecipients(franchisePartnerId, propertyZone, null);
+    internalRecipients = fpRecipients.filter(email => email.toLowerCase() !== NOTIFICATION_EMAIL.toLowerCase());
+    console.log(`📧 Work order completion notification recipients for FP ${franchisePartnerId}, zone ${propertyZone}:`, internalRecipients);
+  }
 
-  const mailOptions = {
-    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
-    to: toAddress,
-    bcc: bccAddress,
-    subject: `✅ Work Order Completed - ${orderNumber || orderId}`,
-    html: `
+  // If no customer email, don't send
+  if (!customerEmail) {
+    console.log('📧 No customer email provided, skipping work order completion notification');
+    return;
+  }
+
+  // Build list of all recipients (customer + FP + zone employees)
+  const allRecipients = [customerEmail, ...internalRecipients.filter(email => email.toLowerCase() !== customerEmail.toLowerCase())];
+  console.log(`📧 Sending separate completion emails to ${allRecipients.length} recipients:`, allRecipients);
+
+  const emailSubject = `✅ Work Order Completed - ${orderNumber || orderId}`;
+  const emailHtml = `
       <!DOCTYPE html>
       <html>
       <head><meta charset="utf-8"></head>
@@ -1821,12 +1832,21 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
         </div>
       </body>
       </html>
-    `
-  };
+    `;
 
+  // Send SEPARATE individual emails to each recipient (complete privacy - no BCC visible)
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`📧 Work order completion notification sent for ${orderNumber || orderId}`);
+    for (const recipientEmail of allRecipients) {
+      const mailOptions = {
+        from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+        to: recipientEmail,
+        subject: emailSubject,
+        html: emailHtml
+      };
+      await transporter.sendMail(mailOptions);
+      console.log(`📧 Work order completion notification sent to: ${recipientEmail}`);
+    }
+    console.log(`📧 Work order completion notification sent for ${orderNumber || orderId} to ${allRecipients.length} recipients`);
     return { success: true };
   } catch (error) {
     console.error('Error sending completion notification:', error.message);

@@ -1146,8 +1146,13 @@ router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_
     // Send completion email if status is completed
     if (status === 'completed') {
       const [workOrder] = await pool.execute(
-        `SELECT work_order_id, title, property_name, property_id, customer_name, customer_email, customer_phone, category_name, subcategory_name 
-         FROM work_orders WHERE id = ?`, [id]
+        `SELECT wo.work_order_id, wo.title, wo.property_name, wo.property_id, wo.customer_name, wo.customer_email, wo.customer_phone, 
+                wo.category_name, wo.subcategory_name, wo.franchise_partner_id,
+                COALESCE(p.zone_id, op.zone) as property_zone
+         FROM work_orders wo
+         LEFT JOIN properties p ON wo.property_id = p.id
+         LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+         WHERE wo.id = ?`, [id]
       );
       if (workOrder.length > 0) {
         const { sendWorkOrderCompletedNotification } = require('../services/emailService');
@@ -1163,7 +1168,9 @@ router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_
           categoryName: workOrder[0].category_name,
           subcategoryName: workOrder[0].subcategory_name,
           completedBy: req.user?.username || req.user?.email || 'FP Admin',
-          completedByRole: 'Franchise Partner'
+          completedByRole: 'Franchise Partner',
+          franchisePartnerId: workOrder[0].franchise_partner_id,
+          propertyZone: workOrder[0].property_zone
         }).catch(err => console.error('Completion email error:', err));
       }
     }
