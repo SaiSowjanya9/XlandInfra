@@ -971,6 +971,7 @@ router.patch('/work-orders/:id/status', requireCoordinatorScope, validateOwnersh
 
     // Send completion email if status is completed
     if (status === 'completed') {
+      console.log('[Coordinator] Status changed to completed, fetching work order for email...');
       const [workOrder] = await pool.query(
         `SELECT wo.work_order_id, wo.title, wo.property_name, wo.property_id, wo.customer_name, wo.customer_email, wo.customer_phone, 
                 wo.category_name, wo.subcategory_name, wo.franchise_partner_id,
@@ -980,24 +981,30 @@ router.patch('/work-orders/:id/status', requireCoordinatorScope, validateOwnersh
          LEFT JOIN onboarded_properties op ON wo.property_id = op.id
          WHERE wo.id = ?`, [id]
       );
+      console.log('[Coordinator] Work order data for email:', workOrder[0]);
       if (workOrder.length > 0) {
         const { sendWorkOrderCompletedNotification } = require('../services/emailService');
-        sendWorkOrderCompletedNotification({
-          orderId: id,
-          orderNumber: workOrder[0].work_order_id,
-          title: workOrder[0].title,
-          propertyName: workOrder[0].property_name,
-          propertyId: workOrder[0].property_id,
-          customerName: workOrder[0].customer_name,
-          customerEmail: workOrder[0].customer_email,
-          customerPhone: workOrder[0].customer_phone,
-          categoryName: workOrder[0].category_name,
-          subcategoryName: workOrder[0].subcategory_name,
-          completedBy: req.user?.username || req.user?.email || 'Coordinator',
-          completedByRole: 'Coordinator',
-          franchisePartnerId: workOrder[0].franchise_partner_id,
-          propertyZone: workOrder[0].property_zone
-        }).catch(err => console.error('Completion email error:', err));
+        try {
+          await sendWorkOrderCompletedNotification({
+            orderId: id,
+            orderNumber: workOrder[0].work_order_id,
+            title: workOrder[0].title,
+            propertyName: workOrder[0].property_name,
+            propertyId: workOrder[0].property_id,
+            customerName: workOrder[0].customer_name,
+            customerEmail: workOrder[0].customer_email,
+            customerPhone: workOrder[0].customer_phone,
+            categoryName: workOrder[0].category_name,
+            subcategoryName: workOrder[0].subcategory_name,
+            completedBy: req.user?.username || req.user?.email || 'Coordinator',
+            completedByRole: 'Coordinator',
+            franchisePartnerId: workOrder[0].franchise_partner_id,
+            propertyZone: workOrder[0].property_zone
+          });
+          console.log('[Coordinator] Completion email sent successfully');
+        } catch (err) {
+          console.error('[Coordinator] Completion email error:', err);
+        }
       }
     }
     

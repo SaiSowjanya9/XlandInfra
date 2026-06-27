@@ -504,6 +504,7 @@ router.patch('/:id/status', async (req, res) => {
 
       // Send completion email if status is completed
       if (status === 'completed') {
+        console.log('[Admin] Status changed to completed, sending email...');
         const [workOrder] = await pool.query(
           `SELECT wo.work_order_id, wo.title, wo.property_name, wo.property_id, wo.customer_name, wo.customer_email, wo.customer_phone, 
                   wo.category_name, wo.subcategory_name, wo.franchise_partner_id,
@@ -513,24 +514,30 @@ router.patch('/:id/status', async (req, res) => {
            LEFT JOIN onboarded_properties op ON wo.property_id = op.id
            WHERE wo.id = ?`, [id]
         );
+        console.log('[Admin] Work order data:', workOrder[0]);
         if (workOrder.length > 0) {
           const { sendWorkOrderCompletedNotification } = require('../services/emailService');
-          sendWorkOrderCompletedNotification({
-            orderId: id,
-            orderNumber: workOrder[0].work_order_id,
-            title: workOrder[0].title,
-            propertyName: workOrder[0].property_name,
-            propertyId: workOrder[0].property_id,
-            customerName: workOrder[0].customer_name,
-            customerEmail: workOrder[0].customer_email,
-            customerPhone: workOrder[0].customer_phone,
-            categoryName: workOrder[0].category_name,
-            subcategoryName: workOrder[0].subcategory_name,
-            completedBy: 'Admin',
-            completedByRole: 'Admin',
-            franchisePartnerId: workOrder[0].franchise_partner_id,
-            propertyZone: workOrder[0].property_zone
-          }).catch(err => console.error('Completion email error:', err));
+          try {
+            await sendWorkOrderCompletedNotification({
+              orderId: id,
+              orderNumber: workOrder[0].work_order_id,
+              title: workOrder[0].title,
+              propertyName: workOrder[0].property_name,
+              propertyId: workOrder[0].property_id,
+              customerName: workOrder[0].customer_name,
+              customerEmail: workOrder[0].customer_email,
+              customerPhone: workOrder[0].customer_phone,
+              categoryName: workOrder[0].category_name,
+              subcategoryName: workOrder[0].subcategory_name,
+              completedBy: 'Admin',
+              completedByRole: 'Admin',
+              franchisePartnerId: workOrder[0].franchise_partner_id,
+              propertyZone: workOrder[0].property_zone
+            });
+            console.log('[Admin] Completion email sent');
+          } catch (err) {
+            console.error('[Admin] Completion email error:', err);
+          }
         }
       }
 

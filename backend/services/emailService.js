@@ -1717,12 +1717,16 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
 
 // Send notification when work order is completed
 const sendWorkOrderCompletedNotification = async (workOrderData) => {
+  console.log('📧 [COMPLETION EMAIL] Function called with data:', JSON.stringify(workOrderData, null, 2));
+  
   const {
     orderId, orderNumber, title, propertyName, propertyId,
     customerName, customerEmail, customerPhone,
     categoryName, subcategoryName, completedBy, completedByRole,
     franchisePartnerId, propertyZone
   } = workOrderData;
+
+  console.log(`📧 [COMPLETION EMAIL] Customer: ${customerEmail}, FP: ${franchisePartnerId}, Zone: ${propertyZone}`);
 
   // Get recipients: FP email + zone-centric employees (NO admin email)
   let internalRecipients = [];
