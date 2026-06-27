@@ -385,7 +385,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type, op.entry_type,
                   op.zone as zone_name, op.area_name as area, 
                   COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
-                  op.total_units as units, op.number_of_units,
+                  op.total_units, op.number_of_units,
                   op.number_of_blocks, op.block_names, op.units_per_block,
                   op.block_info, op.block_na, op.flat_block_info, op.flat_block_na,
                   op.villa_plot_number, op.plot_na,
@@ -408,7 +408,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
         onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type, op.entry_type,
                   op.zone as zone_name, op.area_name as area, 
                   COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
-                  op.total_units as units, op.number_of_units,
+                  op.total_units, op.number_of_units,
                   op.number_of_blocks, op.block_names, op.units_per_block,
                   op.block_info, op.block_na, op.flat_block_info, op.flat_block_na,
                   op.villa_plot_number, op.plot_na,
@@ -752,6 +752,16 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
 
     const [workOrders] = await pool.query(query, params);
 
+    // Fetch attachments for each work order
+    for (const wo of workOrders) {
+      const [attachments] = await pool.execute(
+        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+         FROM work_order_attachments WHERE work_order_id = ?`,
+        [wo.id]
+      );
+      wo.attachments = attachments;
+    }
+
     res.json({ success: true, data: workOrders });
   } catch (error) {
     console.error('Pending work orders fetch error:', error);
@@ -818,6 +828,16 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
     }
 
     const [workOrders] = await pool.query(query, params);
+
+    // Fetch attachments for each work order
+    for (const wo of workOrders) {
+      const [attachments] = await pool.execute(
+        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+         FROM work_order_attachments WHERE work_order_id = ?`,
+        [wo.id]
+      );
+      wo.attachments = attachments;
+    }
 
     res.json({ success: true, data: workOrders });
   } catch (error) {

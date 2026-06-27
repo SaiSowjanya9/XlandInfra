@@ -321,7 +321,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type, op.entry_type,
                 op.zone as zone_name, op.area_name as area, 
                 COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
-                op.total_units as units, op.number_of_units,
+                op.total_units, op.number_of_units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 op.landmark, COALESCE(op.latitude, op.map_lat) as latitude, COALESCE(op.longitude, op.map_lng) as longitude, op.map_address,
                 op.association_contacts,
