@@ -1218,6 +1218,16 @@ router.get('/dashboard', async (req, res) => {
 
     console.log('[Customer Dashboard] Found work orders:', workOrders.length, 'for property:', propertyName);
 
+    // Fetch attachments for each work order
+    for (const wo of workOrders) {
+      const [attachments] = await pool.execute(
+        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+         FROM work_order_attachments WHERE work_order_id = ?`,
+        [wo.id]
+      );
+      wo.attachments = attachments;
+    }
+
     // Get stats for this customer
     const [[stats]] = await pool.execute(
       `SELECT 

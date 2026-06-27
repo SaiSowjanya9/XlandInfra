@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin } from 'lucide-react';
+import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -456,6 +456,41 @@ const Dashboard = ({ user }) => {
                   )}
                 </div>
               </div>
+
+              {/* Attachments */}
+              {selectedWorkOrder.attachments && selectedWorkOrder.attachments.length > 0 && (
+                <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-4 border border-dark-600/50 backdrop-blur-sm">
+                  <h4 className="text-gold-400 font-medium mb-4 flex items-center gap-2">
+                    <Paperclip className="w-4 h-4" /> Attachments ({selectedWorkOrder.attachments.length})
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {selectedWorkOrder.attachments.map((att) => (
+                      <a
+                        key={att.id}
+                        href={`${API_BASE_URL}/uploads/${att.file_path}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex flex-col items-center p-3 bg-dark-600/40 rounded-lg hover:bg-dark-600/60 transition-colors border border-dark-500/30 hover:border-gold-500/30"
+                      >
+                        {att.file_type?.startsWith('image/') ? (
+                          <img
+                            src={`${API_BASE_URL}/uploads/${att.file_path}`}
+                            alt={att.file_name}
+                            className="w-16 h-16 object-cover rounded-lg mb-2"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-dark-500/50 rounded-lg flex items-center justify-center mb-2">
+                            <FileText className="w-8 h-8 text-gold-400" />
+                          </div>
+                        )}
+                        <span className="text-xs text-dark-200 truncate w-full text-center">
+                          {att.file_name || att.original_name || 'File'}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
