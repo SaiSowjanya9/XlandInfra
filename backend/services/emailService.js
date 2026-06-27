@@ -1732,14 +1732,23 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
     console.log(`📧 Work order completion notification recipients for FP ${franchisePartnerId}, zone ${propertyZone}:`, internalRecipients);
   }
 
-  // If no customer email, don't send
-  if (!customerEmail) {
-    console.log('📧 No customer email provided, skipping work order completion notification');
-    return;
+  // If no customer email, still try to send to FP/employees
+  if (!customerEmail && internalRecipients.length === 0) {
+    console.log('📧 No customer email and no internal recipients, skipping work order completion notification');
+    return { success: false, error: 'No recipients found' };
   }
 
   // Build list of all recipients (customer + FP + zone employees)
-  const allRecipients = [customerEmail, ...internalRecipients.filter(email => email.toLowerCase() !== customerEmail.toLowerCase())];
+  const allRecipients = [
+    customerEmail,
+    ...internalRecipients.filter(email => !customerEmail || email.toLowerCase() !== customerEmail.toLowerCase())
+  ].filter(Boolean); // Remove null/undefined
+  
+  if (allRecipients.length === 0) {
+    console.log('📧 No valid recipients for completion notification');
+    return { success: false, error: 'No valid recipients' };
+  }
+  
   console.log(`📧 Sending separate completion emails to ${allRecipients.length} recipients:`, allRecipients);
 
   const emailSubject = `✅ Work Order Completed - ${orderNumber || orderId}`;
