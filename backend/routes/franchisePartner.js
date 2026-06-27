@@ -964,6 +964,16 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
     const [workOrders] = await pool.execute(query, params);
     console.log('[FP Work Orders GET] Found:', workOrders.length, 'work orders');
 
+    // Fetch attachments for each work order
+    for (const wo of workOrders) {
+      const [attachments] = await pool.execute(
+        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+         FROM work_order_attachments WHERE work_order_id = ?`,
+        [wo.id]
+      );
+      wo.attachments = attachments;
+    }
+
     res.json({
       success: true,
       data: workOrders

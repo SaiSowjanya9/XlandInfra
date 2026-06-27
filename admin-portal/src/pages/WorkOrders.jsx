@@ -1038,6 +1038,37 @@ const WorkOrders = ({ admin }) => {
                 </div>
               )}
 
+              {/* Attachments Section */}
+              {selectedOrder.attachments && selectedOrder.attachments.length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">Attachments ({selectedOrder.attachments.length})</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {selectedOrder.attachments.map((att) => (
+                      <a
+                        key={att.id}
+                        href={`/uploads/${att.file_path}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group"
+                      >
+                        {att.file_type?.startsWith('image/') ? (
+                          <img
+                            src={`/uploads/${att.file_path}`}
+                            alt={att.file_name}
+                            className="w-full h-20 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-full h-20 bg-gray-100 rounded flex items-center justify-center">
+                            <span className="text-2xl">📄</span>
+                          </div>
+                        )}
+                        <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-blue-600">{att.file_name}</p>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
                 <button onClick={() => handleEditWorkOrder(selectedOrder)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Edit</button>
                 <button onClick={() => setSelectedOrder(null)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Close</button>
