@@ -296,7 +296,6 @@ const FPEmployees = ({ user }) => {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Employee</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Employee ID</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Role</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Phone</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Email</th>
@@ -329,9 +328,6 @@ const FPEmployees = ({ user }) => {
                     <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className="font-medium text-gray-900">{employee.name}</span>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
-                        {employee.employee_code || employee.employeeId || employee.employee_id}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium capitalize ${
