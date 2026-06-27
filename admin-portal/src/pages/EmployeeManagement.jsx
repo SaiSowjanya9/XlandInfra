@@ -98,7 +98,7 @@ const EmployeeManagement = () => {
           .filter(u => EMPLOYEE_MANAGEMENT_ROLES.includes(u.role))
           .map(u => ({
             id: u.id,
-            oderId: u.userId,
+            userId: u.userId,
             username: u.username,
             email: u.email,
             name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),

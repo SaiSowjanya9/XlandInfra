@@ -457,7 +457,7 @@ const EmployeeDetails = () => {
                         }`}>
                           {employee.assignedZones === 'all' 
                             ? 'All Zones' 
-                            : `${employee.assignedZones?.length || 0} Zones`
+                            : `${employee.assignedZones?.length || 0} ${employee.assignedZones?.length === 1 ? 'Zone' : 'Zones'}`
                           }
                         </span>
                       ) : (
