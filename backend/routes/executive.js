@@ -387,7 +387,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type, op.entry_type,
                 op.zone as zone_name, op.area_name as area, 
                 COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
-                op.total_units as units, op.number_of_units,
+                op.total_units, op.number_of_units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 op.landmark, COALESCE(op.latitude, op.map_lat) as latitude, COALESCE(op.longitude, op.map_lng) as longitude, op.map_address,
                 op.association_contacts,
@@ -635,6 +635,16 @@ router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
 
     const [workOrders] = await pool.query(query, params);
 
+    // Fetch attachments for each work order
+    for (const wo of workOrders) {
+      const [attachments] = await pool.execute(
+        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+         FROM work_order_attachments WHERE work_order_id = ?`,
+        [wo.id]
+      );
+      wo.attachments = attachments;
+    }
+
     res.json({ success: true, data: workOrders });
   } catch (error) {
     console.error('Pending work orders fetch error:', error);
@@ -676,6 +686,16 @@ router.get('/work-orders/completed', requireExecutiveScope, async (req, res) => 
     const params = franchisePartnerId ? [franchisePartnerId, ...zoneFilter.params] : [creatorEmail, ...zoneFilter.params];
 
     const [workOrders] = await pool.query(query, params);
+
+    // Fetch attachments for each work order
+    for (const wo of workOrders) {
+      const [attachments] = await pool.execute(
+        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+         FROM work_order_attachments WHERE work_order_id = ?`,
+        [wo.id]
+      );
+      wo.attachments = attachments;
+    }
 
     res.json({ success: true, data: workOrders });
   } catch (error) {

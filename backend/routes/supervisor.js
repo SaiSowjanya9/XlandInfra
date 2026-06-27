@@ -751,6 +751,16 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
 
     const [workOrders] = await pool.query(query, params);
 
+    // Fetch attachments for each work order
+    for (const wo of workOrders) {
+      const [attachments] = await pool.execute(
+        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+         FROM work_order_attachments WHERE work_order_id = ?`,
+        [wo.id]
+      );
+      wo.attachments = attachments;
+    }
+
     res.json({ success: true, data: workOrders });
   } catch (error) {
     console.error('Pending work orders fetch error:', error);
@@ -788,6 +798,16 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
     const params = franchisePartnerId ? [franchisePartnerId, ...zoneFilter.params] : [creatorEmail, ...zoneFilter.params];
 
     const [workOrders] = await pool.query(query, params);
+
+    // Fetch attachments for each work order
+    for (const wo of workOrders) {
+      const [attachments] = await pool.execute(
+        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+         FROM work_order_attachments WHERE work_order_id = ?`,
+        [wo.id]
+      );
+      wo.attachments = attachments;
+    }
 
     res.json({ success: true, data: workOrders });
   } catch (error) {
