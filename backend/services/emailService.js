@@ -1519,24 +1519,19 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
     console.log(`📧 Work order notification recipients for FP ${franchisePartnerId}, zone ${propertyZone}:`, internalRecipients);
   }
 
-  // Send to customer in TO field (visible), internal recipients in BCC (hidden from customer)
-  // If no customer email, don't send (instead of falling back to admin)
+  // Send SEPARATE emails to each recipient (no BCC - complete privacy)
+  // If no customer email, don't send
   if (!customerEmail) {
     console.log('📧 No customer email provided, skipping work order notification');
     return;
   }
-  const toAddress = customerEmail;
-  const bccAddresses = internalRecipients.filter(email => email.toLowerCase() !== customerEmail.toLowerCase());
+  
+  // Build list of all recipients (customer + FP + zone employees)
+  const allRecipients = [customerEmail, ...internalRecipients.filter(email => email.toLowerCase() !== customerEmail.toLowerCase())];
+  console.log(`📧 Sending separate emails to ${allRecipients.length} recipients:`, allRecipients);
 
-  console.log(`📧 Email TO: ${toAddress}`);
-  console.log(`📧 Email BCC: ${bccAddresses.length > 0 ? bccAddresses.join(', ') : 'none'}`);
-
-  const mailOptions = {
-    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
-    to: toAddress,
-    bcc: bccAddresses.length > 0 ? bccAddresses.join(', ') : undefined,
-    subject: `Work Order Created - ${orderNumber || orderId} | ${propertyName || 'Service Request'}`,
-    html: `
+  const emailSubject = `Work Order Created - ${orderNumber || orderId} | ${propertyName || 'Service Request'}`;
+  const emailHtml = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -1698,13 +1693,21 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
         </table>
       </body>
       </html>
-    `
-  };
+    `;
 
+  // Send SEPARATE individual emails to each recipient (complete privacy - no BCC visible)
   try {
-    await transporter.sendMail(mailOptions);
-    const allRecipients = [toAddress, ...bccAddresses].filter(Boolean);
-    console.log(`📧 Work order creation notification sent for ${orderNumber || orderId} to: ${allRecipients.join(', ')}`);
+    for (const recipientEmail of allRecipients) {
+      const mailOptions = {
+        from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+        to: recipientEmail,
+        subject: emailSubject,
+        html: emailHtml
+      };
+      await transporter.sendMail(mailOptions);
+      console.log(`📧 Work order notification sent to: ${recipientEmail}`);
+    }
+    console.log(`📧 Work order creation notification sent for ${orderNumber || orderId} to ${allRecipients.length} recipients`);
     return { success: true };
   } catch (error) {
     console.error('❌ Error sending work order notification:', error.message);
