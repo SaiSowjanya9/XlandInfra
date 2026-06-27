@@ -804,6 +804,20 @@ router.post('/work-orders', requireSupervisorScope, async (req, res) => {
     const { propertyId, categoryId, subcategoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate,
             propertyName, categoryName, subcategoryName, customerName, customerEmail, customerPhone } = req.body;
 
+    // Backend validation - prevent empty work orders
+    if (!propertyId) {
+      return res.status(400).json({ success: false, message: 'Property is required' });
+    }
+    if (!customerName || !customerName.trim()) {
+      return res.status(400).json({ success: false, message: 'Customer name is required' });
+    }
+    if (!customerPhone || !customerPhone.trim()) {
+      return res.status(400).json({ success: false, message: 'Customer phone is required' });
+    }
+    if (!categoryId) {
+      return res.status(400).json({ success: false, message: 'Category is required' });
+    }
+
     const workOrderId = `WO-${Date.now()}`;
 
     // Fetch property details if not provided - including actual property_id and zone

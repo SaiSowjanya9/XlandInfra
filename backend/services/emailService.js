@@ -1511,24 +1511,22 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
   // Build full address
   const fullAddress = [propertyAddress, propertyCity, propertyState].filter(Boolean).join(', ');
 
-  // Get recipients: FP email + zone-centric employees (NOT customer - we handle that separately)
-  let internalRecipients = [NOTIFICATION_EMAIL]; // Always include admin
+  // Get recipients: FP email + zone-centric employees (NO admin email)
+  let internalRecipients = [];
   if (franchisePartnerId) {
     const fpRecipients = await getWorkOrderNotificationRecipients(franchisePartnerId, propertyZone, null);
-    // Merge with admin, avoiding duplicates
-    fpRecipients.forEach(email => {
-      if (email.toLowerCase() !== NOTIFICATION_EMAIL.toLowerCase()) {
-        internalRecipients.push(email);
-      }
-    });
+    internalRecipients = fpRecipients.filter(email => email.toLowerCase() !== NOTIFICATION_EMAIL.toLowerCase());
     console.log(`📧 Work order notification recipients for FP ${franchisePartnerId}, zone ${propertyZone}:`, internalRecipients);
   }
 
   // Send to customer in TO field (visible), internal recipients in BCC (hidden from customer)
-  const toAddress = customerEmail || NOTIFICATION_EMAIL;
-  const bccAddresses = customerEmail 
-    ? internalRecipients.filter(email => email.toLowerCase() !== customerEmail.toLowerCase())
-    : internalRecipients.slice(1); // Skip first (NOTIFICATION_EMAIL) since it's already in TO
+  // If no customer email, don't send (instead of falling back to admin)
+  if (!customerEmail) {
+    console.log('📧 No customer email provided, skipping work order notification');
+    return;
+  }
+  const toAddress = customerEmail;
+  const bccAddresses = internalRecipients.filter(email => email.toLowerCase() !== customerEmail.toLowerCase());
 
   console.log(`📧 Email TO: ${toAddress}`);
   console.log(`📧 Email BCC: ${bccAddresses.length > 0 ? bccAddresses.join(', ') : 'none'}`);
