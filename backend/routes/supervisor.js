@@ -702,6 +702,17 @@ router.get('/work-orders', requireSupervisorScope, async (req, res) => {
     query += ' ORDER BY wo.created_at DESC';
 
     const [workOrders] = await pool.query(query, params);
+    
+    // Fetch attachments for each work order
+    for (const wo of workOrders) {
+      const [attachments] = await pool.execute(
+        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+         FROM work_order_attachments WHERE work_order_id = ?`,
+        [wo.id]
+      );
+      wo.attachments = attachments;
+    }
+    
     res.json({ success: true, data: workOrders });
   } catch (error) {
     console.error('Work orders fetch error:', error);

@@ -1113,6 +1113,37 @@ const ManagerWorkOrders = ({ user }) => {
                 <p className="font-medium text-gray-900">{selectedWorkOrder.description || '-'}</p>
               </div>
 
+              {/* Attachments Section */}
+              {selectedWorkOrder.attachments && selectedWorkOrder.attachments.length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">Attachments ({selectedWorkOrder.attachments.length})</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {selectedWorkOrder.attachments.map((att) => (
+                      <a
+                        key={att.id}
+                        href={`/uploads/${att.file_path}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group"
+                      >
+                        {att.file_type?.startsWith('image/') ? (
+                          <img
+                            src={`/uploads/${att.file_path}`}
+                            alt={att.file_name}
+                            className="w-full h-20 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-full h-20 bg-gray-100 rounded flex items-center justify-center">
+                            <span className="text-2xl">📄</span>
+                          </div>
+                        )}
+                        <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-blue-600">{att.file_name}</p>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end pt-4 border-t border-gray-100">
                 <button
                   onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }}
