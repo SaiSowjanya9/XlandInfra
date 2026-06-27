@@ -247,8 +247,20 @@ const WorkOrders = ({ admin }) => {
   // Handle create work order submit
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.propertyId || !formData.categoryId) {
-      setSuccess('Please select property and category');
+    if (!formData.propertyId) {
+      setError('Please select a property');
+      return;
+    }
+    if (!formData.customerName?.trim()) {
+      setError('Customer name is required');
+      return;
+    }
+    if (!formData.customerPhone?.trim()) {
+      setError('Customer phone number is required');
+      return;
+    }
+    if (!formData.categoryId) {
+      setError('Please select a category');
       return;
     }
     try {

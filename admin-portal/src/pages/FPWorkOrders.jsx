@@ -205,6 +205,24 @@ const FPWorkOrders = ({ user }) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
 
+    // Validate required fields
+    if (!formData.propertyId) {
+      setMessage({ type: 'error', text: 'Please select a property' });
+      return;
+    }
+    if (!formData.customerName?.trim()) {
+      setMessage({ type: 'error', text: 'Customer name is required' });
+      return;
+    }
+    if (!formData.customerPhone?.trim()) {
+      setMessage({ type: 'error', text: 'Customer phone number is required' });
+      return;
+    }
+    if (!formData.categoryId) {
+      setMessage({ type: 'error', text: 'Please select a category' });
+      return;
+    }
+
     try {
       // Get category and subcategory names for the selected IDs
       const selectedCategory = categories.find(c => c.id === parseInt(formData.categoryId));
