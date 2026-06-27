@@ -108,6 +108,25 @@ const ExecutiveWorkOrders = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
+
+    // Validate required fields
+    if (!formData.propertyId) {
+      setMessage({ type: 'error', text: 'Please select a property' });
+      return;
+    }
+    if (!formData.customerName?.trim()) {
+      setMessage({ type: 'error', text: 'Customer name is required' });
+      return;
+    }
+    if (!formData.customerPhone?.trim()) {
+      setMessage({ type: 'error', text: 'Customer phone number is required' });
+      return;
+    }
+    if (!formData.categoryId) {
+      setMessage({ type: 'error', text: 'Please select a category' });
+      return;
+    }
+
     try {
       const response = await fetch('/api/executive/work-orders', {
         method: 'POST',
