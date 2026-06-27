@@ -2384,6 +2384,29 @@ router.post('/employees', requireFPScope, async (req, res) => {
     // Use provided username or generate from email (part before @)
     const username = providedUsername?.trim() || (email.trim().toLowerCase().split('@')[0] + '_' + Date.now().toString(36));
 
+    // Check if username already exists in users table (global uniqueness required for login)
+    const [existingUsername] = await pool.execute(
+      'SELECT id, email, role, franchise_partner_id, is_active FROM users WHERE username = ?',
+      [username]
+    );
+
+    if (existingUsername.length > 0) {
+      const existing = existingUsername[0];
+      let hint = '';
+      if (existing.franchise_partner_id === req.fpId) {
+        hint = existing.is_active 
+          ? ' (used by an active employee in your organization)' 
+          : ' (used by an inactive employee in your organization)';
+      } else {
+        hint = ' (used by another organization)';
+      }
+      return res.status(400).json({
+        success: false,
+        message: `Username "${username}" is already taken${hint}. Please choose a different username.`,
+        field: 'username'
+      });
+    }
+
     // Get FP company name for email
     const [fpData] = await pool.execute(
       'SELECT company_name FROM franchise_partners WHERE id = ?',
