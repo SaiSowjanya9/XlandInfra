@@ -997,6 +997,20 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       categoryName: reqCategoryName, subcategoryName: reqSubcategoryName
     } = req.body;
 
+    // Backend validation - prevent empty work orders
+    if (!propertyId) {
+      return res.status(400).json({ success: false, message: 'Property is required' });
+    }
+    if (!customerName || !customerName.trim()) {
+      return res.status(400).json({ success: false, message: 'Customer name is required' });
+    }
+    if (!customerPhone || !customerPhone.trim()) {
+      return res.status(400).json({ success: false, message: 'Customer phone is required' });
+    }
+    if (!categoryId) {
+      return res.status(400).json({ success: false, message: 'Category is required' });
+    }
+
     // Validate property belongs to FP - check both tables (include property_id, property_type, and zone for email)
     let property = [];
     
