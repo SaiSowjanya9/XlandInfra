@@ -359,7 +359,7 @@ const FPEmployees = ({ user }) => {
                           }`}>
                             {empZones === 'all' 
                               ? 'All Zones' 
-                              : `${empZones?.length || 0} Zones`
+                              : `${empZones?.length || 0} ${empZones?.length === 1 ? 'Zone' : 'Zones'}`
                             }
                           </span>
                         ) : (

@@ -1459,7 +1459,7 @@ const CustomerSubmissions = () => {
                             ? 'bg-purple-100 text-purple-700'
                             : 'bg-blue-100 text-blue-700'
                         }`}>
-                          {employee.assignedZones === 'all' ? 'All Zones' : `${employee.assignedZones?.length || 0} Zones`}
+                          {employee.assignedZones === 'all' ? 'All Zones' : `${employee.assignedZones?.length || 0} ${employee.assignedZones?.length === 1 ? 'Zone' : 'Zones'}`}
                         </span>
                       </div>
                       {selectedEmployee?.employeeId === employee.employeeId && (
