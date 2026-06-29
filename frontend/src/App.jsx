@@ -82,15 +82,12 @@ const LoginWrapper = ({ user, onLogin }) => {
 // Session timeout in milliseconds (30 minutes)
 const SESSION_TIMEOUT = 30 * 60 * 1000;
 
-// API base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
-
 // Verify if customer session is still valid (customer exists and is active)
 const verifyCustomerSession = async (user) => {
   if (!user || !user.customerId || !user.email) return false;
   
   try {
-    const response = await fetch(`${API_BASE_URL}/customers/verify-session`, {
+    const response = await fetch('/api/customers/verify-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -99,7 +96,12 @@ const verifyCustomerSession = async (user) => {
       })
     });
     
-    if (!response.ok) return false;
+    if (!response.ok) {
+      console.log('Session verify response not ok:', response.status);
+      // Don't logout on server errors (5xx) - only on explicit invalid response
+      if (response.status >= 500) return true;
+      return false;
+    }
     
     const data = await response.json();
     return data.valid === true;

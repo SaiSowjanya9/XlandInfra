@@ -1564,6 +1564,17 @@ router.get('/all-work-orders', authenticate, adminOnly, async (req, res) => {
     query += ` ORDER BY wo.created_at DESC LIMIT 500`;
     
     const [workOrders] = await pool.execute(query);
+    
+    // Fetch attachments for each work order
+    for (const wo of workOrders) {
+      const [attachments] = await pool.execute(
+        `SELECT id, file_name, original_name, file_path, file_type, file_size, created_at 
+         FROM work_order_attachments WHERE work_order_id = ?`,
+        [wo.id]
+      );
+      wo.attachments = attachments;
+    }
+    
     console.log('Admin all-work-orders: Found', workOrders.length, 'work orders');
     res.json({ success: true, data: workOrders || [] });
   } catch (error) {
@@ -2228,6 +2239,17 @@ router.get('/fp-view/:fpId/work-orders', authenticate, adminOnly, async (req, re
     query += ` ORDER BY wo.created_at DESC`;
     
     const [workOrders] = await pool.execute(query, params);
+    
+    // Fetch attachments for each work order
+    for (const wo of workOrders) {
+      const [attachments] = await pool.execute(
+        `SELECT id, file_name, original_name, file_path, file_type, file_size, created_at 
+         FROM work_order_attachments WHERE work_order_id = ?`,
+        [wo.id]
+      );
+      wo.attachments = attachments;
+    }
+    
     console.log('Admin fp-view work-orders: Found', workOrders.length, 'for FP', fpIdNum);
     res.json({ success: true, data: workOrders || [] });
   } catch (error) {
