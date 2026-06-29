@@ -77,7 +77,7 @@ const SupervisorWorkOrders = ({ user }) => {
   }, [activeTab]);
 
   const handlePropertySearch = (value) => {
-    setFormData({ ...formData, propertySearch: value, propertyId: '' });
+    setFormData(prev => ({ ...prev, propertySearch: value, propertyId: '' }));
     setSelectedProperty(null);
     if (value.length > 1) {
       const results = properties.filter(p => 
@@ -94,19 +94,19 @@ const SupervisorWorkOrders = ({ user }) => {
 
   const selectProperty = (property) => {
     setSelectedProperty(property);
-    setFormData({ 
-      ...formData, 
+    setFormData(prev => ({ 
+      ...prev, 
       propertyId: property.id, 
-      propertySearch: property.property_id || '',
+      propertySearch: property.property_id || property.name || '',
       customerName: property.contact_person || property.contactPerson || property.owner_name || '',
       customerEmail: property.contact_email || property.contactEmail || property.email || '',
       customerPhone: property.contact_phone || property.contactPhone || property.phone || property.mobile || ''
-    });
+    }));
     setShowPropertyDropdown(false);
   };
 
   const handleCategoryChange = (categoryId) => {
-    setFormData({ ...formData, categoryId, subcategoryId: '' });
+    setFormData(prev => ({ ...prev, categoryId, subcategoryId: '' }));
     const category = categories.find(c => c.id === parseInt(categoryId));
     setSubcategories(category?.subcategories || []);
   };
