@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck } from 'lucide-react';
 
@@ -11,6 +11,14 @@ const Dashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const modalRef = useRef(null);
+
+  // Scroll modal to top when opened
+  useEffect(() => {
+    if (selectedWorkOrder && modalRef.current) {
+      modalRef.current.scrollTop = 0;
+    }
+  }, [selectedWorkOrder]);
 
   // Fetch dashboard data on mount
   useEffect(() => {
@@ -321,6 +329,7 @@ const Dashboard = ({ user }) => {
           onClick={() => setSelectedWorkOrder(null)}
         >
           <div 
+            ref={modalRef}
             className="bg-dark-800 sm:rounded-2xl border-0 sm:border border-gold-600/30 w-full sm:max-w-2xl min-h-screen sm:min-h-0 sm:max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
@@ -377,17 +386,9 @@ const Dashboard = ({ user }) => {
                 <h4 className="text-gold-400 font-medium mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
                   <MapPin className="w-4 h-4" /> Property & Location
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
-                  <div>
-                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Property Type</p>
-                    <p className="text-white font-medium capitalize bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.property_type || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Location</p>
-                    <p className="text-white font-medium bg-dark-600/30 px-3 py-2 rounded-lg">
-                      {[selectedWorkOrder.block && `Block ${selectedWorkOrder.block}`, selectedWorkOrder.flat_number && `Flat ${selectedWorkOrder.flat_number}`].filter(Boolean).join(', ') || '-'}
-                    </p>
-                  </div>
+                <div>
+                  <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Property Type</p>
+                  <p className="text-white font-medium capitalize bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.property_type || '-'}</p>
                 </div>
               </div>
 
