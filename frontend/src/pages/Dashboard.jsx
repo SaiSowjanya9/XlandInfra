@@ -12,11 +12,22 @@ const Dashboard = ({ user }) => {
   const [error, setError] = useState(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const modalRef = useRef(null);
+  const overlayRef = useRef(null);
 
   // Scroll modal to top when opened
   useEffect(() => {
-    if (selectedWorkOrder && modalRef.current) {
-      modalRef.current.scrollTop = 0;
+    if (selectedWorkOrder) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        if (modalRef.current) {
+          modalRef.current.scrollTop = 0;
+        }
+        if (overlayRef.current) {
+          overlayRef.current.scrollTop = 0;
+        }
+        // Also scroll window for mobile
+        window.scrollTo(0, 0);
+      }, 10);
     }
   }, [selectedWorkOrder]);
 
@@ -325,6 +336,7 @@ const Dashboard = ({ user }) => {
       {/* Work Order Detail Modal */}
       {selectedWorkOrder && (
         <div 
+          ref={overlayRef}
           className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center z-[9999] p-0 sm:p-4 overflow-y-auto" 
           onClick={() => setSelectedWorkOrder(null)}
         >
