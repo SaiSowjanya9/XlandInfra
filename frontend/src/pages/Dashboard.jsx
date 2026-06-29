@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
-// For uploads, we need the base URL without /api path
-const UPLOADS_BASE_URL = API_BASE_URL.replace(/\/api$/, '');
+// For uploads, use empty string for relative URLs - served at /uploads on same domain
+const UPLOADS_BASE_URL = '';
 
 const Dashboard = ({ user }) => {
   const [dashboardData, setDashboardData] = useState(null);
