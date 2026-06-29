@@ -37,10 +37,10 @@ const SupervisorWorkOrders = ({ user }) => {
   const token = sessionStorage.getItem('pm_auth_token');
 
   const priorityOptions = [
-    { value: 'low', label: 'Low', color: 'border-gray-300 text-gray-600' },
-    { value: 'medium', label: 'Medium', color: 'border-amber-400 text-amber-600 bg-amber-50' },
-    { value: 'high', label: 'High', color: 'border-orange-400 text-orange-600' },
-    { value: 'urgent', label: 'Urgent', color: 'border-red-400 text-red-600' }
+    { value: 'low', label: 'Low', color: 'bg-green-100 text-green-700 border-green-400' },
+    { value: 'medium', label: 'Medium', color: 'bg-amber-50 text-amber-700 border-amber-400' },
+    { value: 'high', label: 'High', color: 'bg-orange-100 text-orange-700 border-orange-400' },
+    { value: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-700 border-red-400' }
   ];
 
   const fetchWorkOrders = async () => {
