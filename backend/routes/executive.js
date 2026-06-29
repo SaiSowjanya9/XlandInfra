@@ -586,7 +586,7 @@ router.get('/work-orders', requireExecutiveScope, async (req, res) => {
     // Fetch attachments for each work order
     for (const wo of workOrders) {
       const [attachments] = await pool.execute(
-        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+        `SELECT id, file_name, original_name, file_path, file_type, file_size, created_at 
          FROM work_order_attachments WHERE work_order_id = ?`,
         [wo.id]
       );
@@ -638,7 +638,7 @@ router.get('/work-orders/pending', requireExecutiveScope, async (req, res) => {
     // Fetch attachments for each work order
     for (const wo of workOrders) {
       const [attachments] = await pool.execute(
-        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+        `SELECT id, file_name, original_name, file_path, file_type, file_size, created_at 
          FROM work_order_attachments WHERE work_order_id = ?`,
         [wo.id]
       );
@@ -690,7 +690,7 @@ router.get('/work-orders/completed', requireExecutiveScope, async (req, res) => 
     // Fetch attachments for each work order
     for (const wo of workOrders) {
       const [attachments] = await pool.execute(
-        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+        `SELECT id, file_name, original_name, file_path, file_type, file_size, created_at 
          FROM work_order_attachments WHERE work_order_id = ?`,
         [wo.id]
       );

@@ -296,6 +296,12 @@ const Dashboard = ({ user }) => {
                           Block {wo.block}, Flat {wo.flat_number}
                         </span>
                       )}
+                      {wo.attachments && wo.attachments.length > 0 && (
+                        <span className="flex items-center gap-1 text-gold-400">
+                          <Paperclip className="w-3 h-3" />
+                          {wo.attachments.length} {wo.attachments.length === 1 ? 'file' : 'files'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <ChevronRight className="w-5 h-5 text-dark-500 group-hover:text-gold-400 flex-shrink-0 mt-1" />
@@ -464,30 +470,38 @@ const Dashboard = ({ user }) => {
                     <Paperclip className="w-4 h-4" /> Attachments ({selectedWorkOrder.attachments.length})
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {selectedWorkOrder.attachments.map((att) => (
-                      <a
-                        key={att.id}
-                        href={`${API_BASE_URL}/uploads/${att.file_path}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex flex-col items-center p-3 bg-dark-600/40 rounded-lg hover:bg-dark-600/60 transition-colors border border-dark-500/30 hover:border-gold-500/30"
-                      >
-                        {att.file_type?.startsWith('image/') ? (
-                          <img
-                            src={`${API_BASE_URL}/uploads/${att.file_path}`}
-                            alt={att.file_name}
-                            className="w-16 h-16 object-cover rounded-lg mb-2"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 bg-dark-500/50 rounded-lg flex items-center justify-center mb-2">
-                            <FileText className="w-8 h-8 text-gold-400" />
-                          </div>
-                        )}
-                        <span className="text-xs text-dark-200 truncate w-full text-center">
-                          {att.file_name || att.original_name || 'File'}
-                        </span>
-                      </a>
-                    ))}
+                    {selectedWorkOrder.attachments.map((att) => {
+                      // Handle file_path that may or may not include 'uploads/' prefix
+                      const filePath = att.file_path?.startsWith('uploads/') 
+                        ? att.file_path 
+                        : `uploads/${att.file_path || att.file_name}`;
+                      const fileUrl = `${API_BASE_URL}/${filePath}`;
+                      
+                      return (
+                        <a
+                          key={att.id}
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex flex-col items-center p-3 bg-dark-600/40 rounded-lg hover:bg-dark-600/60 transition-colors border border-dark-500/30 hover:border-gold-500/30"
+                        >
+                          {att.file_type?.startsWith('image/') ? (
+                            <img
+                              src={fileUrl}
+                              alt={att.file_name || att.original_name}
+                              className="w-16 h-16 object-cover rounded-lg mb-2"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-dark-500/50 rounded-lg flex items-center justify-center mb-2">
+                              <FileText className="w-8 h-8 text-gold-400" />
+                            </div>
+                          )}
+                          <span className="text-xs text-dark-200 truncate w-full text-center">
+                            {att.original_name || att.file_name || 'File'}
+                          </span>
+                        </a>
+                      );
+                    })}
                   </div>
                 </div>
               )}
