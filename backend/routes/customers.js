@@ -644,6 +644,75 @@ router.post('/login', async (req, res) => {
 });
 
 // ============================================
+// POST /api/customers/verify-session - Verify if customer still exists and is active
+// Called on page refresh to validate session
+// ============================================
+router.post('/verify-session', async (req, res) => {
+  try {
+    const { customerId, email } = req.body;
+
+    if (!customerId || !email) {
+      return res.status(400).json({
+        success: false,
+        valid: false,
+        message: 'Customer ID and email are required'
+      });
+    }
+
+    // Check if customer exists and is active
+    const [customers] = await pool.execute(
+      `SELECT id, customer_id, email, is_active, is_activated 
+       FROM customer_accounts 
+       WHERE customer_id = ? AND email = ?`,
+      [customerId, email.toLowerCase()]
+    );
+
+    if (customers.length === 0) {
+      return res.json({
+        success: true,
+        valid: false,
+        message: 'Customer account not found'
+      });
+    }
+
+    const customer = customers[0];
+
+    // Check if account is active and activated
+    if (!customer.is_active) {
+      return res.json({
+        success: true,
+        valid: false,
+        message: 'Customer account has been deactivated'
+      });
+    }
+
+    if (!customer.is_activated) {
+      return res.json({
+        success: true,
+        valid: false,
+        message: 'Customer account is not activated'
+      });
+    }
+
+    // Session is valid
+    res.json({
+      success: true,
+      valid: true,
+      message: 'Session is valid'
+    });
+
+  } catch (error) {
+    console.error('Error verifying session:', error);
+    res.status(500).json({
+      success: false,
+      valid: false,
+      message: 'Error verifying session',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
 // POST /api/customers/forgot-password - Request password reset
 // ============================================
 router.post('/forgot-password', async (req, res) => {
