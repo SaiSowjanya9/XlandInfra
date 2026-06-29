@@ -9,9 +9,12 @@ const Layout = ({ children, user, onLogout }) => {
       <header className="bg-dark-800 shadow-lg border-b border-gold-600/20 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/dashboard" className="flex items-center space-x-4">
-              <BrandLogo size="sm" className="hidden sm:flex" />
-              <BrandLogo size="xs" showText={false} className="sm:hidden" />
+            <Link to="/dashboard" className="flex items-center space-x-3">
+              <img src="/logo.png" alt="XLAND INFRA" className="h-10 w-auto" />
+              <div className="flex flex-col">
+                <span className="text-gold-400 font-bold text-lg leading-tight tracking-wide">XLAND INFRA</span>
+                <span className="text-gray-400 text-[10px] tracking-[0.2em] leading-tight">— PVT LTD —</span>
+              </div>
             </Link>
             {/* User Menu */}
             <div className="flex items-center space-x-3">

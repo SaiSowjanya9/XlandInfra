@@ -73,7 +73,21 @@ router.get('/categories', async (req, res) => {
 // ============================================
 // CREATE WORK ORDER (Customer Portal - No Auth Required)
 // ============================================
-router.post('/', upload.array('attachments', 5), async (req, res) => {
+router.post('/', (req, res, next) => {
+  upload.array('attachments', 5)(req, res, (err) => {
+    if (err) {
+      console.error('Multer upload error:', err);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, message: 'File too large. Maximum size is 10MB.' });
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ success: false, message: 'Too many files. Maximum 5 files allowed.' });
+      }
+      return res.status(400).json({ success: false, message: 'File upload error: ' + err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const {
       categoryId,

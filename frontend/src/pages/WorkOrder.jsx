@@ -265,13 +265,16 @@ const WorkOrder = ({ user }) => {
           setSubmitSuccess(false);
         }, 3000);
       } else {
-        setToast({ message: result.message || 'Failed to submit work order', type: 'error' });
-        setTimeout(() => setToast(null), 5000);
-        setErrors({ submit: result.message || 'Failed to submit work order' });
+        const errorMsg = result.message || result.error || 'Failed to submit work order';
+        setToast({ message: errorMsg, type: 'error' });
+        setTimeout(() => setToast(null), 8000);
+        setErrors({ submit: errorMsg });
       }
     } catch (error) {
       console.error('Error submitting work order:', error);
-      setErrors({ submit: 'Failed to submit work order. Please try again.' });
+      setToast({ message: 'Network error. Please check your connection and try again.', type: 'error' });
+      setTimeout(() => setToast(null), 8000);
+      setErrors({ submit: 'Network error. Please check your connection and try again.' });
     } finally {
       setIsSubmitting(false);
     }
