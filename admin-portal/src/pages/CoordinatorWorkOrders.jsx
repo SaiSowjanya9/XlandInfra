@@ -33,6 +33,8 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const CoordinatorWorkOrders = ({ user }) => {
   // Check if this is an FP-created Coordinator (has franchisePartnerId)
   const isFPCoordinator = !!user?.franchisePartnerId;
@@ -1490,7 +1492,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {selectedWorkOrder.attachments.map((att) => {
                       const filePath = att.file_path?.startsWith('uploads/') ? att.file_path : `uploads/${att.file_path || att.file_name}`;
-                      const fileUrl = `/${filePath}`;
+                      const fileUrl = `${API_BASE}/${filePath}`;
                       return (
                         <a
                           key={att.id}

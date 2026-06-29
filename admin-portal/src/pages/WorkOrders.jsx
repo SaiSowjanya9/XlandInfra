@@ -1045,7 +1045,7 @@ const WorkOrders = ({ admin }) => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {selectedOrder.attachments.map((att) => {
                       const filePath = att.file_path?.startsWith('uploads/') ? att.file_path : `uploads/${att.file_path || att.file_name}`;
-                      const fileUrl = `/${filePath}`;
+                      const fileUrl = `${API_BASE}/${filePath}`;
                       return (
                         <a
                           key={att.id}

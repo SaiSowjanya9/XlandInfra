@@ -25,6 +25,8 @@ import {
   List
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const FPWorkOrders = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);
   const [properties, setProperties] = useState([]);
@@ -1479,7 +1481,7 @@ const FPWorkOrders = ({ user }) => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {selectedWorkOrder.attachments.map((att) => {
                       const filePath = att.file_path?.startsWith('uploads/') ? att.file_path : `uploads/${att.file_path || att.file_name}`;
-                      const fileUrl = `/${filePath}`;
+                      const fileUrl = `${API_BASE}/${filePath}`;
                       return (
                         <a
                           key={att.id}

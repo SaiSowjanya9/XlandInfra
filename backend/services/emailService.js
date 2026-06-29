@@ -1491,8 +1491,58 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
     categoryName, subcategoryName, priority, description,
     permissionToEnter, hasPet, entryNotes,
     createdBy, createdByRole, createdFromPortal,
-    franchisePartnerId, propertyZone
+    franchisePartnerId, propertyZone,
+    attachments = []
   } = workOrderData;
+
+  // Build attachments HTML section
+  const BASE_URL = process.env.BASE_URL || 'https://xlandinfra.com';
+  let attachmentsHtml = '';
+  if (attachments && attachments.length > 0) {
+    const attachmentItems = attachments.map(att => {
+      const filePath = att.file_path?.startsWith('uploads/') ? att.file_path : `uploads/${att.file_path || att.file_name}`;
+      const fileUrl = `${BASE_URL}/${filePath}`;
+      const isImage = att.file_type?.startsWith('image/');
+      const displayName = att.original_name || att.file_name || 'File';
+      
+      if (isImage) {
+        return `
+          <td style="padding: 8px; text-align: center; vertical-align: top;">
+            <a href="${fileUrl}" target="_blank" style="text-decoration: none;">
+              <img src="${fileUrl}" alt="${displayName}" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 1px solid #e5e7eb; object-fit: cover;" />
+            </a>
+            <p style="margin: 4px 0 0 0; font-size: 11px; color: #6b7280; word-break: break-all;">${displayName.substring(0, 20)}${displayName.length > 20 ? '...' : ''}</p>
+          </td>
+        `;
+      } else {
+        return `
+          <td style="padding: 8px; text-align: center; vertical-align: top;">
+            <a href="${fileUrl}" target="_blank" style="text-decoration: none;">
+              <div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto; border: 1px solid #e5e7eb;">
+                <span style="font-size: 24px;">📄</span>
+              </div>
+            </a>
+            <p style="margin: 4px 0 0 0; font-size: 11px; color: #6b7280; word-break: break-all;">${displayName.substring(0, 20)}${displayName.length > 20 ? '...' : ''}</p>
+          </td>
+        `;
+      }
+    }).join('');
+
+    attachmentsHtml = `
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #f0f9ff; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #0ea5e9;">
+        <tr>
+          <td style="padding: 16px;">
+            <h2 style="margin: 0 0 12px 0; color: #1e293b; font-size: 14px; font-weight: 600;">📎 Attachments (${attachments.length})</h2>
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+              <tr>
+                ${attachmentItems}
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    `;
+  }
 
   const priorityColors = {
     high: '#ef4444',
@@ -1665,6 +1715,9 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
                       </tr>
                     </table>
                     ` : ''}
+                    
+                    <!-- Attachments -->
+                    ${attachmentsHtml}
                     
                     <!-- Created By -->
                     <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #f1f5f9; border-radius: 8px; margin-top: 20px;">

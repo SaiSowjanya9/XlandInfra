@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText } from 'lucide-react';
+import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -314,22 +314,25 @@ const Dashboard = ({ user }) => {
 
       {/* Work Order Detail Modal */}
       {selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setSelectedWorkOrder(null)}>
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" 
+          onClick={() => setSelectedWorkOrder(null)}
+        >
           <div 
-            className="bg-dark-800 rounded-2xl border border-gold-600/30 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            className="bg-dark-800 rounded-2xl border border-gold-600/30 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="sticky top-0 bg-dark-800 border-b border-dark-600 p-5 flex items-center justify-between">
+            <div className="sticky top-0 bg-dark-800 border-b border-gold-600/20 p-5 flex items-center justify-between z-10">
               <div>
                 <p className="text-gold-400 font-mono text-sm">{selectedWorkOrder.work_order_id}</p>
                 <h3 className="text-xl font-bold text-white mt-1">Work Order Details</h3>
               </div>
               <button 
                 onClick={() => setSelectedWorkOrder(null)}
-                className="p-2 text-dark-400 hover:text-white hover:bg-dark-700 rounded-lg transition-colors"
+                className="p-2.5 text-dark-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/30 rounded-lg transition-all border border-transparent"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -462,6 +465,26 @@ const Dashboard = ({ user }) => {
                   )}
                 </div>
               </div>
+
+              {/* Vendor Info */}
+              {selectedWorkOrder.vendor_name && (
+                <div className="bg-gradient-to-br from-purple-900/20 to-purple-800/10 rounded-xl p-4 border border-purple-500/20 backdrop-blur-sm">
+                  <h4 className="text-purple-400 font-medium mb-3 flex items-center gap-2">
+                    <Truck className="w-4 h-4" /> Assigned Vendor
+                  </h4>
+                  <div className="flex items-center gap-3 bg-dark-600/30 px-4 py-3 rounded-lg">
+                    <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
+                      <Truck className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">{selectedWorkOrder.vendor_name}</p>
+                      {selectedWorkOrder.vendor_phone && (
+                        <p className="text-dark-400 text-sm">{selectedWorkOrder.vendor_phone}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Attachments */}
               {selectedWorkOrder.attachments && selectedWorkOrder.attachments.length > 0 && (
