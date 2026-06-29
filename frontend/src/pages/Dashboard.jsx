@@ -317,29 +317,29 @@ const Dashboard = ({ user }) => {
       {/* Work Order Detail Modal */}
       {selectedWorkOrder && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center z-[9999] p-0 sm:p-4 overflow-y-auto" 
           onClick={() => setSelectedWorkOrder(null)}
         >
           <div 
-            className="bg-dark-800 rounded-2xl border border-gold-600/30 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            className="bg-dark-800 sm:rounded-2xl border-0 sm:border border-gold-600/30 w-full sm:max-w-2xl min-h-screen sm:min-h-0 sm:max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-dark-800 border-b border-gold-600/20 p-5 flex items-center justify-between z-10">
+            {/* Modal Header - Sticky */}
+            <div className="sticky top-0 bg-dark-800 border-b border-gold-600/20 p-4 sm:p-5 flex items-center justify-between z-10">
               <div>
-                <p className="text-gold-400 font-mono text-sm">{selectedWorkOrder.work_order_id}</p>
-                <h3 className="text-xl font-bold text-white mt-1">Work Order Details</h3>
+                <p className="text-gold-400 font-mono text-xs sm:text-sm">{selectedWorkOrder.work_order_id}</p>
+                <h3 className="text-lg sm:text-xl font-bold text-white mt-1">Work Order Details</h3>
               </div>
               <button 
                 onClick={() => setSelectedWorkOrder(null)}
-                className="p-2.5 text-dark-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/30 rounded-lg transition-all border border-transparent"
+                className="p-2 sm:p-2.5 text-dark-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/30 rounded-lg transition-all border border-transparent"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-5 space-y-6">
+            <div className="p-4 sm:p-5 space-y-4 sm:space-y-6 pb-8">
               {/* Status & Priority */}
               <div className="flex items-center gap-3 flex-wrap">
                 {getStatusBadge(selectedWorkOrder.status)}
@@ -350,11 +350,11 @@ const Dashboard = ({ user }) => {
               </div>
 
               {/* Service Details */}
-              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-4 border border-dark-600/50 backdrop-blur-sm">
-                <h4 className="text-gold-400 font-medium mb-4 flex items-center gap-2">
+              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-3 sm:p-4 border border-dark-600/50 backdrop-blur-sm">
+                <h4 className="text-gold-400 font-medium mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
                   <Wrench className="w-4 h-4" /> Service Details
                 </h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                   <div>
                     <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Category</p>
                     <p className="text-white font-medium bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.category_name || '-'}</p>
@@ -373,16 +373,16 @@ const Dashboard = ({ user }) => {
               </div>
 
               {/* Property & Location */}
-              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-4 border border-dark-600/50 backdrop-blur-sm">
-                <h4 className="text-gold-400 font-medium mb-4 flex items-center gap-2">
+              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-3 sm:p-4 border border-dark-600/50 backdrop-blur-sm">
+                <h4 className="text-gold-400 font-medium mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
                   <MapPin className="w-4 h-4" /> Property & Location
                 </h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="col-span-2 sm:col-span-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
+                  <div>
                     <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Property Type</p>
                     <p className="text-white font-medium capitalize bg-dark-600/30 px-3 py-2 rounded-lg">{selectedWorkOrder.property_type || '-'}</p>
                   </div>
-                  <div className="col-span-2 sm:col-span-1">
+                  <div>
                     <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Location</p>
                     <p className="text-white font-medium bg-dark-600/30 px-3 py-2 rounded-lg">
                       {[selectedWorkOrder.block && `Block ${selectedWorkOrder.block}`, selectedWorkOrder.flat_number && `Flat ${selectedWorkOrder.flat_number}`].filter(Boolean).join(', ') || '-'}
@@ -392,11 +392,11 @@ const Dashboard = ({ user }) => {
               </div>
 
               {/* Customer Details */}
-              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-4 border border-dark-600/50 backdrop-blur-sm">
-                <h4 className="text-gold-400 font-medium mb-4 flex items-center gap-2">
+              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-3 sm:p-4 border border-dark-600/50 backdrop-blur-sm">
+                <h4 className="text-gold-400 font-medium mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
                   <User className="w-4 h-4" /> Customer Details
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                <div className="grid grid-cols-1 gap-2 sm:gap-3 text-sm">
                   <div className="flex items-center gap-3 bg-dark-600/30 px-3 py-2.5 rounded-lg">
                     <div className="w-8 h-8 bg-gold-500/20 rounded-full flex items-center justify-center">
                       <User className="w-4 h-4 text-gold-400" />
@@ -419,9 +419,9 @@ const Dashboard = ({ user }) => {
               </div>
 
               {/* Entry & Pet Info */}
-              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-4 border border-dark-600/50 backdrop-blur-sm">
-                <h4 className="text-gold-400 font-medium mb-4">Entry & Additional Info</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-3 sm:p-4 border border-dark-600/50 backdrop-blur-sm">
+                <h4 className="text-gold-400 font-medium mb-3 sm:mb-4 text-sm sm:text-base">Entry & Additional Info</h4>
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 text-sm">
                   <div className="bg-dark-600/30 px-3 py-2.5 rounded-lg">
                     <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Permission to Enter</p>
                     <p className={`font-medium ${selectedWorkOrder.permission_to_enter === 'yes' ? 'text-green-400' : 'text-red-400'}`}>
@@ -444,12 +444,12 @@ const Dashboard = ({ user }) => {
               </div>
 
               {/* Timeline */}
-              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-4 border border-dark-600/50 backdrop-blur-sm">
-                <h4 className="text-gold-400 font-medium mb-4 flex items-center gap-2">
+              <div className="bg-gradient-to-br from-dark-700/60 to-dark-700/30 rounded-xl p-3 sm:p-4 border border-dark-600/50 backdrop-blur-sm">
+                <h4 className="text-gold-400 font-medium mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
                   <Clock className="w-4 h-4" /> Timeline
                 </h4>
-                <div className="flex flex-wrap gap-3 text-sm">
-                  <div className="bg-dark-600/30 px-4 py-2.5 rounded-lg flex-1 min-w-[140px]">
+                <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2 sm:gap-3 text-sm">
+                  <div className="bg-dark-600/30 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:flex-1 sm:min-w-[140px]">
                     <p className="text-dark-400 text-xs uppercase tracking-wider mb-1">Created</p>
                     <p className="text-white font-medium">{formatDate(selectedWorkOrder.created_at)}</p>
                   </div>
