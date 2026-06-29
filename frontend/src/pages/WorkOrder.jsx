@@ -298,7 +298,7 @@ const WorkOrder = ({ user }) => {
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Category Selection */}
-        <div className="bg-dark-800/80 rounded-xl shadow-lg border border-gold-600/20 p-5">
+        <div className="bg-dark-800/80 rounded-xl shadow-lg border border-gold-600/20 p-5 overflow-visible">
           <h3 className="text-lg font-semibold text-white mb-4">
             Service Category
           </h3>
@@ -308,7 +308,7 @@ const WorkOrder = ({ user }) => {
             <label className="block text-sm font-medium text-dark-200 mb-2">
               Category <span className="text-red-400">*</span>
             </label>
-            <div className="relative">
+            <div className="relative overflow-visible">
               <button
                 type="button"
                 onClick={() => {
@@ -328,7 +328,7 @@ const WorkOrder = ({ user }) => {
               </button>
               
               {showCategoryDropdown && (
-                <div className="absolute z-50 w-full mt-2 bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                <div className="absolute z-[100] w-full mt-2 bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto">
                   {categories.map((category, index) => (
                     <button
                       key={category.id}
@@ -362,7 +362,7 @@ const WorkOrder = ({ user }) => {
             <label className="block text-sm font-medium text-dark-200 mb-2">
               Subcategory <span className="text-red-400">*</span>
             </label>
-            <div className="relative">
+            <div className="relative overflow-visible">
               <button
                 type="button"
                 onClick={() => {
@@ -391,7 +391,7 @@ const WorkOrder = ({ user }) => {
               </button>
               
               {showSubcategoryDropdown && (
-                <div className="absolute z-50 w-full mt-2 bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                <div className="absolute z-[100] w-full mt-2 bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto">
                   {subcategories.length > 0 ? (
                     subcategories.map((sub, index) => (
                       <button
