@@ -1076,7 +1076,8 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       ]
     );
 
-    // Save attachments if any
+    // Save attachments if any and build array for email
+    const savedAttachments = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         await pool.execute(
@@ -1084,6 +1085,13 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
            VALUES (?, ?, ?, ?, ?, ?)`,
           [result.insertId, file.filename, file.originalname, file.path, file.mimetype, file.size]
         );
+        savedAttachments.push({
+          file_name: file.filename,
+          original_name: file.originalname,
+          file_path: file.path,
+          file_type: file.mimetype,
+          file_size: file.size
+        });
       }
     }
 
@@ -1107,7 +1115,8 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       createdBy: req.user?.username || req.user?.email || 'FP Admin',
       createdByRole: 'Franchise Partner',
       franchisePartnerId: req.fpId,
-      propertyZone: property[0]?.zone || null
+      propertyZone: property[0]?.zone || null,
+      attachments: savedAttachments
     }).catch(err => console.error('Email notification error:', err));
 
     res.status(201).json({

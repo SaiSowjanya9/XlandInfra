@@ -292,7 +292,8 @@ router.post('/', (req, res, next) => {
         createdBy: finalCustomerName || finalCustomerEmail || 'Customer',
         createdByRole: 'Customer',
         franchisePartnerId: franchisePartnerId,
-        propertyZone: propDetails.zone || null
+        propertyZone: propDetails.zone || null,
+        attachments: attachments
       }).catch(err => console.error('Email notification error:', err));
 
       return res.status(201).json({
@@ -724,7 +725,8 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
         createdBy: 'Admin',
         createdByRole: 'Admin',
         franchisePartnerId: propFranchisePartnerId,
-        propertyZone: propZone
+        propertyZone: propZone,
+        attachments: [] // Admin portal work orders don't have attachments yet
       }).catch(err => console.error('Email notification error:', err));
 
       return res.status(201).json({
