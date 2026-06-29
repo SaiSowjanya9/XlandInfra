@@ -4,7 +4,8 @@ import {
   CheckCircle, Clock, Eye, Building2, User, Camera, Upload, FileText, Image, List
 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+// Use empty string for relative URLs - uploads are served at /uploads on same domain
+const API_BASE = '';
 
 const ExecutiveWorkOrders = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);

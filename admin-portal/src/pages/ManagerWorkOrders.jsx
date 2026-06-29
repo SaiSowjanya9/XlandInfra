@@ -26,7 +26,8 @@ import {
   Navigation
 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+// Use empty string for relative URLs - uploads are served at /uploads on same domain
+const API_BASE = '';
 
 const ManagerWorkOrders = ({ user }) => {
   const [workOrders, setWorkOrders] = useState([]);

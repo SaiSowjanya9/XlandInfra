@@ -33,7 +33,8 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+// Use empty string for relative URLs - uploads are served at /uploads on same domain
+const API_BASE = '';
 
 const CoordinatorWorkOrders = ({ user }) => {
   // Check if this is an FP-created Coordinator (has franchisePartnerId)
