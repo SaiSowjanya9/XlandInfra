@@ -868,28 +868,32 @@ const ExecutiveWorkOrders = ({ user }) => {
                 <div>
                   <p className="text-sm text-gray-500 mb-2">Attachments ({selectedWorkOrder.attachments.length})</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {selectedWorkOrder.attachments.map((att) => (
-                      <a
-                        key={att.id}
-                        href={`/uploads/${att.file_path}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group"
-                      >
-                        {att.file_type?.startsWith('image/') ? (
-                          <img
-                            src={`/uploads/${att.file_path}`}
-                            alt={att.file_name}
-                            className="w-full h-20 object-cover rounded"
-                          />
-                        ) : (
-                          <div className="w-full h-20 bg-gray-100 rounded flex items-center justify-center">
-                            <span className="text-2xl">📄</span>
-                          </div>
-                        )}
-                        <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-blue-600">{att.file_name}</p>
-                      </a>
-                    ))}
+                    {selectedWorkOrder.attachments.map((att) => {
+                      const filePath = att.file_path?.startsWith('uploads/') ? att.file_path : `uploads/${att.file_path || att.file_name}`;
+                      const fileUrl = `/${filePath}`;
+                      return (
+                        <a
+                          key={att.id}
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group"
+                        >
+                          {att.file_type?.startsWith('image/') ? (
+                            <img
+                              src={fileUrl}
+                              alt={att.original_name || att.file_name}
+                              className="w-full h-20 object-cover rounded"
+                            />
+                          ) : (
+                            <div className="w-full h-20 bg-gray-100 rounded flex items-center justify-center">
+                              <span className="text-2xl">📄</span>
+                            </div>
+                          )}
+                          <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-blue-600">{att.original_name || att.file_name}</p>
+                        </a>
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -328,15 +328,17 @@ const WorkOrder = ({ user }) => {
               </button>
               
               {showCategoryDropdown && (
-                <div className="absolute z-20 w-full mt-2 bg-dark-700 border border-dark-600 rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                  {categories.map((category) => (
+                <div className="absolute z-50 w-full mt-2 bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                  {categories.map((category, index) => (
                     <button
                       key={category.id}
                       type="button"
                       onClick={() => handleCategorySelect(category.id)}
-                      className={`w-full px-4 py-3 text-left hover:bg-dark-600 flex items-center justify-between transition-colors text-white ${
-                        formData.categoryId === category.id.toString() ? 'bg-gold-600/20 text-gold-400' : ''
-                      }`}
+                      className={`w-full px-4 py-3.5 text-left hover:bg-gold-600/20 flex items-center justify-between transition-colors text-sm sm:text-base ${
+                        formData.categoryId === category.id.toString() 
+                          ? 'bg-gold-600/20 text-gold-400' 
+                          : 'text-white'
+                      } ${index !== categories.length - 1 ? 'border-b border-dark-600' : ''}`}
                     >
                       <span>{category.name}</span>
                       {formData.categoryId === category.id.toString() && (
@@ -388,23 +390,31 @@ const WorkOrder = ({ user }) => {
                 <ChevronDown className={`w-5 h-5 text-dark-400 transition-transform duration-200 ${showSubcategoryDropdown ? 'rotate-180' : ''}`} />
               </button>
               
-              {showSubcategoryDropdown && subcategories.length > 0 && (
-                <div className="absolute z-20 w-full mt-2 bg-dark-700 border border-dark-600 rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                  {subcategories.map((sub) => (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => handleSubcategorySelect(sub.id)}
-                      className={`w-full px-4 py-3 text-left hover:bg-dark-600 flex items-center justify-between transition-colors text-white ${
-                        formData.subcategoryId === sub.id.toString() ? 'bg-gold-600/20 text-gold-400' : ''
-                      }`}
-                    >
-                      <span>{sub.name}</span>
-                      {formData.subcategoryId === sub.id.toString() && (
-                        <Check className="w-5 h-5 text-gold-400" />
-                      )}
-                    </button>
-                  ))}
+              {showSubcategoryDropdown && (
+                <div className="absolute z-50 w-full mt-2 bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                  {subcategories.length > 0 ? (
+                    subcategories.map((sub, index) => (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={() => handleSubcategorySelect(sub.id)}
+                        className={`w-full px-4 py-3.5 text-left hover:bg-gold-600/20 flex items-center justify-between transition-colors text-sm sm:text-base ${
+                          formData.subcategoryId === sub.id.toString() 
+                            ? 'bg-gold-600/20 text-gold-400' 
+                            : 'text-white'
+                        } ${index !== subcategories.length - 1 ? 'border-b border-dark-600' : ''}`}
+                      >
+                        <span>{sub.name}</span>
+                        {formData.subcategoryId === sub.id.toString() && (
+                          <Check className="w-5 h-5 text-gold-400" />
+                        )}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3.5 text-dark-400 text-sm text-center">
+                      No subcategories available
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -586,13 +596,13 @@ const WorkOrder = ({ user }) => {
           <label className="block text-sm font-medium text-white mb-4">
             Priority
           </label>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-2 sm:gap-3">
             {['low', 'medium', 'high', 'urgent'].map((priority) => (
               <button
                 key={priority}
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, priority }))}
-                className={`py-3 px-4 rounded-lg border-2 transition-all capitalize font-medium ${
+                className={`py-2.5 sm:py-3 px-1 sm:px-4 rounded-lg border-2 transition-all capitalize font-medium text-xs sm:text-sm whitespace-nowrap ${
                   formData.priority === priority
                     ? priority === 'low' ? 'border-green-500 bg-green-900/30 text-green-400'
                       : priority === 'medium' ? 'border-yellow-500 bg-yellow-900/30 text-yellow-400'

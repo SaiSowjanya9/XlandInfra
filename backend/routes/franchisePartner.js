@@ -967,7 +967,7 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
     // Fetch attachments for each work order
     for (const wo of workOrders) {
       const [attachments] = await pool.execute(
-        `SELECT id, file_name, file_path, file_type, file_size, created_at 
+        `SELECT id, file_name, original_name, file_path, file_type, file_size, created_at 
          FROM work_order_attachments WHERE work_order_id = ?`,
         [wo.id]
       );
@@ -1080,9 +1080,9 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         await pool.execute(
-          `INSERT INTO work_order_attachments (work_order_id, file_name, file_path, file_type, file_size)
-           VALUES (?, ?, ?, ?, ?)`,
-          [result.insertId, file.originalname, file.filename, file.mimetype, file.size]
+          `INSERT INTO work_order_attachments (work_order_id, file_name, original_name, file_path, file_type, file_size)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [result.insertId, file.filename, file.originalname, file.path, file.mimetype, file.size]
         );
       }
     }
