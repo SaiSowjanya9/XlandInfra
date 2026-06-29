@@ -1495,8 +1495,8 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
     attachments = []
   } = workOrderData;
 
-  // Build attachments HTML section
-  const BASE_URL = process.env.BASE_URL || 'https://xlandinfra.com';
+  // Build attachments HTML section - use API server URL for uploads
+  const BASE_URL = process.env.API_BASE_URL || 'https://api.xlandinfra.com';
   let attachmentsHtml = '';
   if (attachments && attachments.length > 0) {
     const attachmentItems = attachments.map(att => {

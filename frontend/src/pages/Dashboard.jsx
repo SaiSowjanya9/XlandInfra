@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+// For uploads, we need the base URL without /api path
+const UPLOADS_BASE_URL = API_BASE_URL.replace(/\/api$/, '');
 
 const Dashboard = ({ user }) => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -498,7 +500,7 @@ const Dashboard = ({ user }) => {
                       const filePath = att.file_path?.startsWith('uploads/') 
                         ? att.file_path 
                         : `uploads/${att.file_path || att.file_name}`;
-                      const fileUrl = `${API_BASE_URL}/${filePath}`;
+                      const fileUrl = `${UPLOADS_BASE_URL}/${filePath}`;
                       
                       return (
                         <a
