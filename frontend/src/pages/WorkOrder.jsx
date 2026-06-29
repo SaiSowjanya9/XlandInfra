@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
@@ -21,6 +22,8 @@ import { categories } from '../data/categories';
 const WorkOrder = ({ user }) => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const categoryBtnRef = useRef(null);
+  const subcategoryBtnRef = useRef(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -40,10 +43,43 @@ const WorkOrder = ({ user }) => {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
   const [toast, setToast] = useState(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
 
   // Get selected category
   const selectedCategory = categories.find(c => c.id === parseInt(formData.categoryId));
   const subcategories = selectedCategory?.subcategories || [];
+
+  // Calculate dropdown position
+  const updateDropdownPosition = (ref) => {
+    if (ref?.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 8,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  };
+
+  // Toggle category dropdown
+  const toggleCategoryDropdown = () => {
+    if (!showCategoryDropdown) {
+      updateDropdownPosition(categoryBtnRef);
+    }
+    setShowCategoryDropdown(!showCategoryDropdown);
+    setShowSubcategoryDropdown(false);
+  };
+
+  // Toggle subcategory dropdown
+  const toggleSubcategoryDropdown = () => {
+    if (formData.categoryId) {
+      if (!showSubcategoryDropdown) {
+        updateDropdownPosition(subcategoryBtnRef);
+      }
+      setShowSubcategoryDropdown(!showSubcategoryDropdown);
+      setShowCategoryDropdown(false);
+    }
+  };
 
   // Handle category selection
   const handleCategorySelect = (categoryId) => {
@@ -65,6 +101,21 @@ const WorkOrder = ({ user }) => {
     setShowSubcategoryDropdown(false);
     setErrors(prev => ({ ...prev, subcategoryId: '' }));
   };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showCategoryDropdown || showSubcategoryDropdown) {
+        if (!e.target.closest('.dropdown-portal') && 
+            !e.target.closest('[data-dropdown-trigger]')) {
+          setShowCategoryDropdown(false);
+          setShowSubcategoryDropdown(false);
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCategoryDropdown, showSubcategoryDropdown]);
 
   // Handle file upload
   const handleFileUpload = (event) => {
@@ -298,7 +349,7 @@ const WorkOrder = ({ user }) => {
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Category Selection */}
-        <div className="bg-dark-800/80 rounded-xl shadow-lg border border-gold-600/20 p-5 overflow-visible">
+        <div className={`bg-dark-800/80 rounded-xl shadow-lg border border-gold-600/20 p-5 overflow-visible relative ${(showCategoryDropdown || showSubcategoryDropdown) ? 'z-50' : 'z-0'}`}>
           <h3 className="text-lg font-semibold text-white mb-4">
             Service Category
           </h3>
@@ -308,13 +359,12 @@ const WorkOrder = ({ user }) => {
             <label className="block text-sm font-medium text-dark-200 mb-2">
               Category <span className="text-red-400">*</span>
             </label>
-            <div className="relative overflow-visible">
+            <div className="relative">
               <button
+                ref={categoryBtnRef}
                 type="button"
-                onClick={() => {
-                  setShowCategoryDropdown(!showCategoryDropdown);
-                  setShowSubcategoryDropdown(false);
-                }}
+                data-dropdown-trigger
+                onClick={toggleCategoryDropdown}
                 className={`w-full px-4 py-3 bg-dark-700 border rounded-lg text-left flex items-center justify-between transition-all duration-200 ${
                   errors.categoryId 
                     ? 'border-red-500 focus:ring-red-500' 
@@ -327,8 +377,16 @@ const WorkOrder = ({ user }) => {
                 <ChevronDown className={`w-5 h-5 text-dark-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
               </button>
               
-              {showCategoryDropdown && (
-                <div className="absolute z-[100] w-full mt-2 bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto">
+              {showCategoryDropdown && createPortal(
+                <div 
+                  className="dropdown-portal fixed bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto"
+                  style={{
+                    top: dropdownPosition.top,
+                    left: dropdownPosition.left,
+                    width: dropdownPosition.width,
+                    zIndex: 9999
+                  }}
+                >
                   {categories.map((category, index) => (
                     <button
                       key={category.id}
@@ -346,7 +404,8 @@ const WorkOrder = ({ user }) => {
                       )}
                     </button>
                   ))}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
             {errors.categoryId && (
@@ -362,15 +421,12 @@ const WorkOrder = ({ user }) => {
             <label className="block text-sm font-medium text-dark-200 mb-2">
               Subcategory <span className="text-red-400">*</span>
             </label>
-            <div className="relative overflow-visible">
+            <div className="relative">
               <button
+                ref={subcategoryBtnRef}
                 type="button"
-                onClick={() => {
-                  if (formData.categoryId) {
-                    setShowSubcategoryDropdown(!showSubcategoryDropdown);
-                    setShowCategoryDropdown(false);
-                  }
-                }}
+                data-dropdown-trigger
+                onClick={toggleSubcategoryDropdown}
                 disabled={!formData.categoryId}
                 className={`w-full px-4 py-3 bg-dark-700 border rounded-lg text-left flex items-center justify-between transition-all duration-200 ${
                   !formData.categoryId 
@@ -390,8 +446,16 @@ const WorkOrder = ({ user }) => {
                 <ChevronDown className={`w-5 h-5 text-dark-400 transition-transform duration-200 ${showSubcategoryDropdown ? 'rotate-180' : ''}`} />
               </button>
               
-              {showSubcategoryDropdown && (
-                <div className="absolute z-[100] w-full mt-2 bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto">
+              {showSubcategoryDropdown && createPortal(
+                <div 
+                  className="dropdown-portal fixed bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto"
+                  style={{
+                    top: dropdownPosition.top,
+                    left: dropdownPosition.left,
+                    width: dropdownPosition.width,
+                    zIndex: 9999
+                  }}
+                >
                   {subcategories.length > 0 ? (
                     subcategories.map((sub, index) => (
                       <button
@@ -415,7 +479,8 @@ const WorkOrder = ({ user }) => {
                       No subcategories available
                     </div>
                   )}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
             {errors.subcategoryId && (
@@ -596,13 +661,13 @@ const WorkOrder = ({ user }) => {
           <label className="block text-sm font-medium text-white mb-4">
             Priority
           </label>
-          <div className="grid grid-cols-4 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             {['low', 'medium', 'high', 'urgent'].map((priority) => (
               <button
                 key={priority}
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, priority }))}
-                className={`py-2.5 sm:py-3 px-1 sm:px-4 rounded-lg border-2 transition-all capitalize font-medium text-xs sm:text-sm whitespace-nowrap ${
+                className={`py-3 px-4 rounded-lg border-2 transition-all capitalize font-medium text-sm ${
                   formData.priority === priority
                     ? priority === 'low' ? 'border-green-500 bg-green-900/30 text-green-400'
                       : priority === 'medium' ? 'border-yellow-500 bg-yellow-900/30 text-yellow-400'
