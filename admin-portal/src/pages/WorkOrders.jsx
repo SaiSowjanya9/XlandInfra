@@ -940,7 +940,7 @@ const WorkOrders = ({ admin }) => {
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Work Order Details </h2>
+                  <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
                   <p className="text-sm text-gray-500 mt-1">{selectedOrder.work_order_id}</p>
                 </div>
                 <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-gray-100 rounded-lg">
@@ -976,7 +976,7 @@ const WorkOrders = ({ admin }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Property ID</p>
-                    <p className="font-medium text-gray-900 font-mono text-blue-600">{selectedOrder.property_code || selectedOrder.actual_property_id || '-'}</p>
+                    <p className="font-medium text-gray-900 font-mono text-blue-600">{selectedOrder.actual_property_id || selectedOrder.property_code || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Property Type</p>
@@ -986,6 +986,36 @@ const WorkOrders = ({ admin }) => {
                     <p className="text-xs text-gray-500">Zone / Division</p>
                     <p className="font-medium text-gray-900">{selectedOrder.zone || 'N/A'} / {selectedOrder.division || 'N/A'}</p>
                   </div>
+                  {(selectedOrder.property_type === 'gated_community' || selectedOrder.property_type === 'apartment') && (
+                    <>
+                      <div>
+                        <p className="text-xs text-gray-500">Total Units</p>
+                        <p className="font-medium text-gray-900">{selectedOrder.total_units || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Total Blocks</p>
+                        <p className="font-medium text-gray-900">{selectedOrder.total_blocks || 'N/A'}</p>
+                      </div>
+                    </>
+                  )}
+                  {selectedOrder.block && (
+                    <div>
+                      <p className="text-xs text-gray-500">Block</p>
+                      <p className="font-medium text-gray-900">{selectedOrder.block}</p>
+                    </div>
+                  )}
+                  {selectedOrder.flat_number && (
+                    <div>
+                      <p className="text-xs text-gray-500">Flat/Unit</p>
+                      <p className="font-medium text-gray-900">{selectedOrder.flat_number}</p>
+                    </div>
+                  )}
+                  {selectedOrder.property_address && (
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500">Address</p>
+                      <p className="font-medium text-gray-900">{selectedOrder.property_address}{selectedOrder.property_city ? `, ${selectedOrder.property_city}` : ''}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1016,11 +1046,11 @@ const WorkOrders = ({ admin }) => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Created</p>
-                  <p className="font-medium text-gray-900">{new Date(selectedOrder.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  <p className="font-medium text-gray-900">{new Date(selectedOrder.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Vendor</p>
-                  <p className="font-medium text-gray-900">{selectedOrder.vendor_name || 'Not Assigned'}</p>
+                  <p className="text-sm text-gray-500">Assigned To</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.vendor_name || selectedOrder.assigned_employee_name || 'Not Assigned'}</p>
                 </div>
               </div>
 
@@ -1032,20 +1062,39 @@ const WorkOrders = ({ admin }) => {
               )}
 
               {selectedOrder.description && (
-                <div>
-                  <p className="text-sm text-gray-500">Description</p>
+                <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
+                  <p className="text-sm font-medium text-amber-800 mb-1">Description</p>
                   <p className="text-gray-700">{selectedOrder.description}</p>
+                </div>
+              )}
+
+              {/* Entry Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${selectedOrder.permission_to_enter === 'yes' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                  <span className="text-sm text-gray-600">Permission to Enter: <span className="font-medium">{selectedOrder.permission_to_enter || 'N/A'}</span></span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${selectedOrder.has_pet === 'yes' ? 'bg-amber-500' : 'bg-gray-400'}`}></span>
+                  <span className="text-sm text-gray-600">Has Pet: <span className="font-medium">{selectedOrder.has_pet || 'N/A'}</span></span>
+                </div>
+              </div>
+
+              {selectedOrder.entry_notes && (
+                <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                  <p className="text-sm font-medium text-yellow-800 mb-1">Entry Notes</p>
+                  <p className="text-gray-700">{selectedOrder.entry_notes}</p>
                 </div>
               )}
 
               {/* Attachments Section */}
               {selectedOrder.attachments && selectedOrder.attachments.length > 0 && (
                 <div>
-                  <p className="text-sm text-gray-500 mb-2">Attachments ({selectedOrder.attachments.length})</p>
+                  <p className="text-sm font-medium text-gray-700 mb-2">Attachments ({selectedOrder.attachments.length})</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {selectedOrder.attachments.map((att) => {
                       const filePath = att.file_path?.startsWith('uploads/') ? att.file_path : `uploads/${att.file_path || att.file_name}`;
-                      const fileUrl = `${API_BASE}/${filePath}`;
+                      const fileUrl = `/${filePath}`;
                       return (
                         <a
                           key={att.id}
@@ -1074,8 +1123,8 @@ const WorkOrders = ({ admin }) => {
               )}
 
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button onClick={() => handleEditWorkOrder(selectedOrder)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Edit</button>
                 <button onClick={() => setSelectedOrder(null)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Close</button>
+                <button onClick={() => handleEditWorkOrder(selectedOrder)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Edit</button>
               </div>
             </div>
           </div>
