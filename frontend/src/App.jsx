@@ -82,6 +82,34 @@ const LoginWrapper = ({ user, onLogin }) => {
 // Session timeout in milliseconds (30 minutes)
 const SESSION_TIMEOUT = 30 * 60 * 1000;
 
+// API base URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+// Verify if customer session is still valid (customer exists and is active)
+const verifyCustomerSession = async (user) => {
+  if (!user || !user.customerId || !user.email) return false;
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/customers/verify-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customerId: user.customerId,
+        email: user.email
+      })
+    });
+    
+    if (!response.ok) return false;
+    
+    const data = await response.json();
+    return data.valid === true;
+  } catch (error) {
+    console.error('Session verification failed:', error);
+    // On network error, don't force logout - allow offline access
+    return true;
+  }
+};
+
 // Vendor Portal Coming Soon Component
 function VendorPortalComingSoon() {
   return (
@@ -171,23 +199,39 @@ function App() {
   };
 
   useEffect(() => {
-    try {
-      const savedUser = sessionStorage.getItem('portalUser');
-      
-      if (savedUser && isSessionValid()) {
-        setUser(JSON.parse(savedUser));
-        updateActivity(); // Refresh activity on load
-      } else if (savedUser) {
-        // Session expired - clear everything
+    const initializeSession = async () => {
+      try {
+        const savedUser = sessionStorage.getItem('portalUser');
+        
+        if (savedUser && isSessionValid()) {
+          const parsedUser = JSON.parse(savedUser);
+          
+          // Verify customer still exists and is active in the database
+          const isValid = await verifyCustomerSession(parsedUser);
+          
+          if (isValid) {
+            setUser(parsedUser);
+            updateActivity(); // Refresh activity on load
+          } else {
+            // Customer no longer exists or is deactivated - clear session
+            console.log('Customer session invalid - logging out');
+            sessionStorage.removeItem('portalUser');
+            sessionStorage.removeItem('lastActivity');
+          }
+        } else if (savedUser) {
+          // Session expired - clear everything
+          sessionStorage.removeItem('portalUser');
+          sessionStorage.removeItem('lastActivity');
+        }
+      } catch (error) {
+        console.error('Error loading saved state:', error);
         sessionStorage.removeItem('portalUser');
         sessionStorage.removeItem('lastActivity');
       }
-    } catch (error) {
-      console.error('Error loading saved state:', error);
-      sessionStorage.removeItem('portalUser');
-      sessionStorage.removeItem('lastActivity');
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    
+    initializeSession();
   }, []);
 
   // QR scans are tracked only via the QR redirect service (qr.xlandinfra.com)
