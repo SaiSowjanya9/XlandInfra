@@ -964,8 +964,8 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                     const servicesText = Array.isArray(serviceRows) 
                       ? serviceRows.map(s => s.name || s.service || 'Service').join(', ') 
                       : '-';
-                    // Property type and billing duration might be in services JSON or as separate columns
-                    const propertyType = pkg.property_type || servicesData?.property_type || '-';
+                    // Property type is inside services JSON, check there first
+                    const propertyType = servicesData?.property_type || pkg.property_type || '-';
                     const billingDuration = pkg.billing_duration || servicesData?.billing_duration || 'monthly';
                     return (
                       <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">

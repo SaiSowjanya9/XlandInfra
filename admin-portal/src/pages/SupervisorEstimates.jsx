@@ -945,7 +945,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                           return (
                             <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-6 py-4"><span className="font-semibold text-gray-900">{pkg.name || 'Unnamed Package'}</span></td>
-                              <td className="px-4 py-4"><span className="text-gray-700">{pkg.property_type || 'GC'}</span></td>
+                              <td className="px-4 py-4"><span className="text-gray-700">{getPackagePropertyType(pkg) || 'GC'}</span></td>
                               <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border whitespace-nowrap ${getBillingBadgeColor(pkg.billing_duration)}`}>{BILLING_DURATIONS.find(d => d.value === pkg.billing_duration)?.label || 'Monthly'}</span></td>
                               <td className="px-4 py-4 max-w-xs"><p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText || '-'}</p></td>
                               <td className="px-4 py-4 text-right"><span className="font-semibold text-gray-900">{formatCurrency(getPackagePrice(pkg))}</span></td>
