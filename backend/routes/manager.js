@@ -1548,14 +1548,14 @@ router.get('/employees', requireManagerScope, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Employee management not available for standalone managers' });
     }
 
-    // Get all employees for this FP (excluding the current manager and other managers)
+    // Get all employees for this FP (including managers so they can modify their own zones and other managers' zones)
     const [employees] = await pool.execute(
       `SELECT e.id, e.user_id as employee_id, e.first_name, e.last_name, 
               CONCAT(e.first_name, ' ', e.last_name) as name,
               e.email, e.phone, e.country_code, e.role, e.is_active
        FROM fp_employees e
-       WHERE e.franchise_partner_id = ? AND e.is_active = 1 AND e.role != 'manager'
-       ORDER BY e.first_name, e.last_name`,
+       WHERE e.franchise_partner_id = ? AND e.is_active = 1
+       ORDER BY FIELD(e.role, 'manager', 'coordinator', 'supervisor', 'executive'), e.first_name, e.last_name`,
       [req.franchisePartnerId]
     );
 
