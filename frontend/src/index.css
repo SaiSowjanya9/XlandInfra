@@ -1179,8 +1179,10 @@ body {
 /* Dropdown portal - mobile scroll fix with visible scrollbar */
 .dropdown-portal {
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
+  overflow-y: scroll !important;
+  overscroll-behavior-y: contain;
+  /* Allow all touch actions for scrolling */
+  touch-action: auto;
   /* Force scrollbar visibility */
   scrollbar-width: thin;
   scrollbar-color: #D4AF37 #27272a;
@@ -1209,6 +1211,11 @@ body {
 
 /* Ensure dropdown items are touch-friendly on mobile */
 @media (max-width: 768px) {
+  .dropdown-portal {
+    /* iOS specific scroll fix */
+    -webkit-overflow-scrolling: touch;
+  }
+  
   .dropdown-portal button,
   .dropdown-portal > div {
     min-height: 48px;

@@ -199,42 +199,83 @@ const sendWorkOrderNotification = async (workOrder) => {
 // Send notification for contact form submission
 const sendContactNotification = async (contactData) => {
   const emailHtml = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #1e293b; color: #f1f5f9;">
-      <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #d97706;">
-        <h1 style="color: #fbbf24; margin: 0;">XlandInfra Customer Portal</h1>
-        <p style="color: #94a3b8; margin-top: 5px;">New Contact Form Submission</p>
-      </div>
-      
-      <div style="padding: 20px 0;">
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Name:</td>
-            <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9; font-weight: bold;">${contactData.name}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Email:</td>
-            <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9;">${contactData.email}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Phone:</td>
-            <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9;">${contactData.phone || 'N/A'}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; color: #94a3b8;">Submitted At:</td>
-            <td style="padding: 10px; color: #f1f5f9;">${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })}</td>
-          </tr>
-        </table>
-        
-        <div style="margin-top: 20px; padding: 15px; background-color: #334155; border-radius: 8px;">
-          <h3 style="color: #fbbf24; margin: 0 0 10px 0;">Message:</h3>
-          <p style="color: #f1f5f9; margin: 0; white-space: pre-wrap;">${contactData.message}</p>
-        </div>
-      </div>
-      
-      <div style="text-align: center; padding: 20px 0; border-top: 1px solid #334155; color: #64748b; font-size: 12px;">
-        <p>This is an automated notification from XlandInfra Customer Portal</p>
-      </div>
-    </div>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f5f5f5;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5;">
+        <tr>
+          <td align="center" style="padding: 20px;">
+            <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#1e293b" style="background-color: #1e293b; max-width: 600px;">
+              <!-- Header -->
+              <tr>
+                <td align="center" bgcolor="#1e293b" style="background-color: #1e293b; padding: 25px 20px; border-bottom: 3px solid #d97706;">
+                  <h1 style="margin: 0; font-family: Arial, sans-serif; font-size: 24px; color: #fbbf24;">XlandInfra Customer Portal</h1>
+                  <p style="margin: 8px 0 0 0; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8;">New Contact Form Submission</p>
+                </td>
+              </tr>
+              
+              <!-- Content - Order: Name, Email, Phone, City, Subject -->
+              <tr>
+                <td bgcolor="#1e293b" style="background-color: #1e293b; padding: 25px 30px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td width="120" style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8; vertical-align: top;">Name:</td>
+                      <td style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #ffffff; font-weight: bold;">${contactData.name}</td>
+                    </tr>
+                    <tr>
+                      <td width="120" style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8; vertical-align: top;">Email:</td>
+                      <td style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #60a5fa;"><a href="mailto:${contactData.email}" style="color: #60a5fa; text-decoration: none;">${contactData.email}</a></td>
+                    </tr>
+                    <tr>
+                      <td width="120" style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8; vertical-align: top;">Phone:</td>
+                      <td style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #ffffff;">${contactData.phone || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                      <td width="120" style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8; vertical-align: top;">City:</td>
+                      <td style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #ffffff;">${contactData.city || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                      <td width="120" style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8; vertical-align: top;">Subject:</td>
+                      <td style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #ffffff;">${contactData.subject || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                      <td width="120" style="padding: 12px 10px; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8; vertical-align: top;">Submitted At:</td>
+                      <td style="padding: 12px 10px; font-family: Arial, sans-serif; font-size: 14px; color: #ffffff;">${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })}</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- Message Section -->
+              <tr>
+                <td bgcolor="#1e293b" style="background-color: #1e293b; padding: 0 30px 25px 30px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#334155" style="background-color: #334155;">
+                    <tr>
+                      <td style="padding: 15px;">
+                        <h3 style="margin: 0 0 10px 0; font-family: Arial, sans-serif; font-size: 16px; color: #fbbf24;">Message:</h3>
+                        <p style="margin: 0; font-family: Arial, sans-serif; font-size: 14px; color: #ffffff; line-height: 1.5;">${contactData.message.replace(/\n/g, '<br>')}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td align="center" bgcolor="#1e293b" style="background-color: #1e293b; padding: 20px; border-top: 1px solid #475569;">
+                  <p style="margin: 0; font-family: Arial, sans-serif; font-size: 12px; color: #64748b;">This is an automated notification from XlandInfra Customer Portal</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
   `;
 
   try {
@@ -275,41 +316,65 @@ const sendRegistrationNotification = async (userData) => {
     to: NOTIFICATION_EMAIL,
     subject: `New User Registration - ${userData.firstName} ${userData.lastName}`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #1e293b; color: #f1f5f9;">
-        <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #d97706;">
-          <h1 style="color: #fbbf24; margin: 0;">XlandInfra Customer Portal</h1>
-          <p style="color: #94a3b8; margin-top: 5px;">New User Registration</p>
-        </div>
-        
-        <div style="padding: 20px 0;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Name:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9; font-weight: bold;">${userData.firstName} ${userData.lastName}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Email:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9;">${userData.email}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Phone:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9;">${userData.phone || 'N/A'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #94a3b8;">Unit Number:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #334155; color: #f1f5f9;">${userData.unitNumber || 'N/A'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; color: #94a3b8;">Registered At:</td>
-              <td style="padding: 10px; color: #f1f5f9;">${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })}</td>
-            </tr>
-          </table>
-        </div>
-        
-        <div style="text-align: center; padding: 20px 0; border-top: 1px solid #334155; color: #64748b; font-size: 12px;">
-          <p>This is an automated notification from XlandInfra Customer Portal</p>
-        </div>
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f5f5f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5;">
+          <tr>
+            <td align="center" style="padding: 20px;">
+              <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#1e293b" style="background-color: #1e293b; max-width: 600px;">
+                <!-- Header -->
+                <tr>
+                  <td align="center" bgcolor="#1e293b" style="background-color: #1e293b; padding: 25px 20px; border-bottom: 3px solid #d97706;">
+                    <h1 style="margin: 0; font-family: Arial, sans-serif; font-size: 24px; color: #fbbf24;">XlandInfra Customer Portal</h1>
+                    <p style="margin: 8px 0 0 0; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8;">New User Registration</p>
+                  </td>
+                </tr>
+                
+                <!-- Content -->
+                <tr>
+                  <td bgcolor="#1e293b" style="background-color: #1e293b; padding: 25px 30px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="120" style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8; vertical-align: top;">Name:</td>
+                        <td style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #ffffff; font-weight: bold;">${userData.firstName} ${userData.lastName}</td>
+                      </tr>
+                      <tr>
+                        <td width="120" style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8; vertical-align: top;">Email:</td>
+                        <td style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #60a5fa;"><a href="mailto:${userData.email}" style="color: #60a5fa; text-decoration: none;">${userData.email}</a></td>
+                      </tr>
+                      <tr>
+                        <td width="120" style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8; vertical-align: top;">Phone:</td>
+                        <td style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #ffffff;">${userData.phone || 'N/A'}</td>
+                      </tr>
+                      <tr>
+                        <td width="120" style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8; vertical-align: top;">Unit Number:</td>
+                        <td style="padding: 12px 10px; border-bottom: 1px solid #475569; font-family: Arial, sans-serif; font-size: 14px; color: #ffffff;">${userData.unitNumber || 'N/A'}</td>
+                      </tr>
+                      <tr>
+                        <td width="120" style="padding: 12px 10px; font-family: Arial, sans-serif; font-size: 14px; color: #94a3b8; vertical-align: top;">Registered At:</td>
+                        <td style="padding: 12px 10px; font-family: Arial, sans-serif; font-size: 14px; color: #ffffff;">${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td align="center" bgcolor="#1e293b" style="background-color: #1e293b; padding: 20px; border-top: 1px solid #475569;">
+                    <p style="margin: 0; font-family: Arial, sans-serif; font-size: 12px; color: #64748b;">This is an automated notification from XlandInfra Customer Portal</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `
   };
 

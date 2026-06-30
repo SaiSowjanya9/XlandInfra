@@ -102,11 +102,12 @@ const WorkOrder = ({ user }) => {
     setErrors(prev => ({ ...prev, subcategoryId: '' }));
   };
 
-  // Close dropdowns when clicking outside (supports both mouse and touch)
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (showCategoryDropdown || showSubcategoryDropdown) {
         const target = e.target;
+        // Don't close if clicking inside dropdown or on trigger
         if (!target.closest('.dropdown-portal') && 
             !target.closest('[data-dropdown-trigger]')) {
           setShowCategoryDropdown(false);
@@ -114,11 +115,10 @@ const WorkOrder = ({ user }) => {
         }
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    // Use click event instead of mousedown/touchstart to avoid interfering with scroll
+    document.addEventListener('click', handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
   }, [showCategoryDropdown, showSubcategoryDropdown]);
 
