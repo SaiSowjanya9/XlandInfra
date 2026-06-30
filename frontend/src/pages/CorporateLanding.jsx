@@ -600,7 +600,7 @@ function CorporateLanding() {
                 <span className="inline-block text-white opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.3s_forwards]">Building</span>
                 <br />
                 <span className="inline-block opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.5s_forwards]">
-                  <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(216,178,92,0.3)]">Dreams Into</span>
+                  <span className="text-gold-hero drop-shadow-[0_0_30px_rgba(216,178,92,0.3)]">Your Dreams Into</span>
                 </span>
                 <br />
                 <span className="inline-block text-white opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.7s_forwards]">Reality</span>

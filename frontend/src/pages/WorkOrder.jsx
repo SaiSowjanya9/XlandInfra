@@ -382,12 +382,14 @@ const WorkOrder = ({ user }) => {
               
               {showCategoryDropdown && createPortal(
                 <div 
-                  className="dropdown-portal fixed bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto"
+                  className="dropdown-portal fixed bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl overflow-y-auto overscroll-contain"
                   style={{
                     top: dropdownPosition.top,
                     left: dropdownPosition.left,
                     width: dropdownPosition.width,
-                    zIndex: 9999
+                    maxHeight: 'min(60vh, 350px)',
+                    zIndex: 9999,
+                    WebkitOverflowScrolling: 'touch'
                   }}
                 >
                   {categories.map((category, index) => (
@@ -451,12 +453,14 @@ const WorkOrder = ({ user }) => {
               
               {showSubcategoryDropdown && createPortal(
                 <div 
-                  className="dropdown-portal fixed bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto"
+                  className="dropdown-portal fixed bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl overflow-y-auto overscroll-contain"
                   style={{
                     top: dropdownPosition.top,
                     left: dropdownPosition.left,
                     width: dropdownPosition.width,
-                    zIndex: 9999
+                    maxHeight: 'min(60vh, 350px)',
+                    zIndex: 9999,
+                    WebkitOverflowScrolling: 'touch'
                   }}
                 >
                   {subcategories.length > 0 ? (
