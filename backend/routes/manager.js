@@ -1549,11 +1549,13 @@ router.get('/employees', requireManagerScope, async (req, res) => {
     }
 
     // Get all employees for this FP (including managers so they can modify their own zones and other managers' zones)
+    // JOIN with users table to get the formatted user_id (MGR001, COORD001, etc.)
     const [employees] = await pool.execute(
-      `SELECT e.id, e.user_id as employee_id, e.first_name, e.last_name, 
+      `SELECT e.id, u.user_id as employee_id, e.first_name, e.last_name, 
               CONCAT(e.first_name, ' ', e.last_name) as name,
               e.email, e.phone, e.country_code, e.role, e.is_active
        FROM fp_employees e
+       LEFT JOIN users u ON e.user_id = u.id
        WHERE e.franchise_partner_id = ? AND e.is_active = 1
        ORDER BY FIELD(e.role, 'manager', 'coordinator', 'supervisor', 'executive'), e.first_name, e.last_name`,
       [req.franchisePartnerId]

@@ -409,7 +409,7 @@ const FPEmployeeZones = ({ user }) => {
                 {/* Employee Header */}
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <p className="text-xs font-mono text-gray-500 mb-1">{employee.employeeId || employee.employee_id || employee.employee_code}</p>
+                    <p className="text-xs font-mono text-gray-500 mb-1">{employee.formatted_user_id || employee.employee_id || employee.employeeId || `ID: ${employee.id}`}</p>
                     <h3 className="font-semibold text-gray-900">{employee.name}</h3>
                   </div>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -492,7 +492,7 @@ const FPEmployeeZones = ({ user }) => {
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-mono text-gray-500 mb-1">{selectedEmployee.employeeId || selectedEmployee.employee_id || selectedEmployee.employee_code}</p>
+                  <p className="text-xs font-mono text-gray-500 mb-1">{selectedEmployee.formatted_user_id || selectedEmployee.employee_id || selectedEmployee.employeeId || `ID: ${selectedEmployee.id}`}</p>
                   <h2 className="text-xl font-bold text-gray-900">{selectedEmployee.name}</h2>
                   <p className="text-sm text-gray-500">{selectedEmployee.email}</p>
                 </div>
