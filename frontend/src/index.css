@@ -137,6 +137,34 @@ body {
   background-clip: text;
 }
 
+/* iOS Safari gradient text fix - prevents text disappearing during animations */
+.text-gold-hero {
+  color: #D4AF37;
+  -webkit-text-fill-color: #D4AF37;
+}
+
+/* When GPU acceleration is available, use gradient */
+@supports (background-clip: text) and (not (-webkit-touch-callout: none)) {
+  .text-gold-hero {
+    background: linear-gradient(to right, #E5C044, #D4AF37, #C9A227);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+}
+
+/* iOS-specific: use solid gold color to avoid rendering issues */
+@supports (-webkit-touch-callout: none) {
+  .text-gold-hero {
+    background: none !important;
+    -webkit-background-clip: border-box !important;
+    background-clip: border-box !important;
+    color: #D4AF37 !important;
+    -webkit-text-fill-color: #D4AF37 !important;
+  }
+}
+
 /* Gold shimmer effect */
 .gold-shimmer {
   background: linear-gradient(90deg, #B89A3C, #D8B25C, #E8C26C, #D8B25C, #B89A3C);
@@ -733,13 +761,18 @@ body {
   0% {
     opacity: 0;
     transform: translateY(20px);
-    filter: blur(4px);
   }
   100% {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
   }
+}
+
+/* Animation wrapper class for hero text - iOS compatible */
+[class*="animate-[fadeSlideIn"] {
+  will-change: opacity, transform;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 /* Hero Background Slow Zoom - Cinematic Ken Burns Effect */
@@ -1108,6 +1141,23 @@ body {
 .feature-box {
   overflow: hidden;
   word-break: break-word;
+}
+
+/* Dropdown portal - iOS mobile scroll fix */
+.dropdown-portal {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+/* Ensure dropdown items are touch-friendly on mobile */
+@media (max-width: 768px) {
+  .dropdown-portal button,
+  .dropdown-portal > div {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+  }
 }
 
 /* iOS-compatible service card styles */

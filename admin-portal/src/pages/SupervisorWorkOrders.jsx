@@ -77,6 +77,7 @@ const SupervisorWorkOrders = ({ user }) => {
   }, [activeTab]);
 
   const handlePropertySearch = (value) => {
+    // Only reset propertyId if user is actively searching (not just clicking)
     setFormData(prev => ({ ...prev, propertySearch: value, propertyId: '' }));
     setSelectedProperty(null);
     if (value.length > 1) {
@@ -92,17 +93,29 @@ const SupervisorWorkOrders = ({ user }) => {
     }
   };
 
+  const clearSelectedProperty = () => {
+    setSelectedProperty(null);
+    setFormData(prev => ({ ...prev, propertyId: '', propertySearch: '', customerName: '', customerEmail: '', customerPhone: '' }));
+  };
+
   const selectProperty = (property) => {
+    console.log('Selecting property:', property);
+    const propId = property.id || property.property_id;
+    if (!propId) {
+      setMessage({ type: 'error', text: 'Invalid property selection' });
+      return;
+    }
     setSelectedProperty(property);
     setFormData(prev => ({ 
       ...prev, 
-      propertyId: property.id, 
+      propertyId: propId,
       propertySearch: property.property_id || property.name || '',
       customerName: property.contact_person || property.contactPerson || property.owner_name || '',
       customerEmail: property.contact_email || property.contactEmail || property.email || '',
       customerPhone: property.contact_phone || property.contactPhone || property.phone || property.mobile || ''
     }));
     setShowPropertyDropdown(false);
+    setMessage({ type: '', text: '' }); // Clear any previous error
   };
 
   const handleCategoryChange = (categoryId) => {
@@ -134,8 +147,11 @@ const SupervisorWorkOrders = ({ user }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.propertyId) {
-      setMessage({ type: 'error', text: 'Please select a property' });
+    // Use selectedProperty.id as fallback if formData.propertyId is missing
+    const actualPropertyId = formData.propertyId || selectedProperty?.id || selectedProperty?.property_id;
+    console.log('Submitting form with propertyId:', formData.propertyId, 'actualPropertyId:', actualPropertyId, 'selectedProperty:', selectedProperty);
+    if (!actualPropertyId) {
+      setMessage({ type: 'error', text: 'Property is required' });
       return;
     }
     if (!formData.customerName || !formData.customerPhone) {
@@ -152,7 +168,9 @@ const SupervisorWorkOrders = ({ user }) => {
 
     try {
       const submitData = new FormData();
-      submitData.append('propertyId', formData.propertyId);
+      submitData.append('propertyId', actualPropertyId);
+      submitData.append('propertyName', selectedProperty?.name || selectedProperty?.community_name || '');
+      submitData.append('propertyType', selectedProperty?.property_type || '');
       submitData.append('categoryId', formData.categoryId);
       submitData.append('subcategoryId', formData.subcategoryId || '');
       submitData.append('customerName', formData.customerName);
@@ -334,14 +352,26 @@ const SupervisorWorkOrders = ({ user }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Property ID <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={formData.propertySearch}
-                  onChange={(e) => handlePropertySearch(e.target.value)}
-                  onFocus={() => formData.propertySearch && setShowPropertyDropdown(true)}
-                  placeholder="Search by Property ID or Community Name..."
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.propertySearch}
+                    onChange={(e) => !selectedProperty && handlePropertySearch(e.target.value)}
+                    onFocus={() => !selectedProperty && formData.propertySearch && setShowPropertyDropdown(true)}
+                    placeholder="Search by Property ID or Community Name..."
+                    readOnly={!!selectedProperty}
+                    className={`w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${selectedProperty ? 'bg-green-50 border-green-300 pr-10' : ''}`}
+                  />
+                  {selectedProperty && (
+                    <button
+                      type="button"
+                      onClick={clearSelectedProperty}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
                 {showPropertyDropdown && propertySearchResults.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {propertySearchResults.map(p => (
