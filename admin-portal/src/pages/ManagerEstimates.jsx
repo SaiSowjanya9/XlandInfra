@@ -893,8 +893,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     </div>
   );
 
-  // AMC PACKAGES
-  const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType));
+  // AMC PACKAGES - Use getPackagePropertyType to correctly extract property type from services JSON
+  const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(getPackagePropertyType(p), filterPropertyType));
   const handleSaveAmcPackage = async () => {
     if (!amcForm.packageName.trim()) { showToast('Enter package name', 'error'); return; }
     if (!selectedPropertyType) { showToast('Select property type', 'error'); return; }

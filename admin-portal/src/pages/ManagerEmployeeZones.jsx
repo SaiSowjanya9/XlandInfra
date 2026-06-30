@@ -53,6 +53,7 @@ const ManagerEmployeeZones = ({ user }) => {
   const [selectedZones, setSelectedZones] = useState([]);
   const [assignedZonesMap, setAssignedZonesMap] = useState({});
   const [loading, setLoading] = useState(true);
+  const [viewZonesEmployee, setViewZonesEmployee] = useState(null);
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -434,10 +435,13 @@ const ManagerEmployeeZones = ({ user }) => {
                   </div>
                 </div>
 
-                {/* Zone Assignment Status */}
-                <div className={`p-3 rounded-lg mb-4 ${
-                  hasZones ? 'bg-emerald-50 border border-emerald-100' : 'bg-gray-50 border border-gray-200'
-                }`}>
+                {/* Zone Assignment Status - Clickable to view all zones */}
+                <div 
+                  onClick={() => hasZones && zoneCount > 2 && setViewZonesEmployee(employee)}
+                  className={`p-3 rounded-lg mb-4 ${
+                    hasZones ? 'bg-emerald-50 border border-emerald-100' : 'bg-gray-50 border border-gray-200'
+                  } ${hasZones && zoneCount > 2 ? 'cursor-pointer hover:bg-emerald-100 transition-colors' : ''}`}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <MapPin className={`w-4 h-4 ${hasZones ? 'text-emerald-600' : 'text-gray-500'}`} />
@@ -447,6 +451,9 @@ const ManagerEmployeeZones = ({ user }) => {
                     </div>
                     {hasZones && empZones === 'all' && (
                       <span className="text-xs text-emerald-600">All</span>
+                    )}
+                    {hasZones && zoneCount > 2 && (
+                      <span className="text-xs text-emerald-500 underline">View all</span>
                     )}
                   </div>
                   <p className={`text-xs mt-1 ${hasZones ? 'text-emerald-600' : 'text-gray-500'}`}>
@@ -635,6 +642,47 @@ const ManagerEmployeeZones = ({ user }) => {
                   Save Changes
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View All Zones Popup */}
+      {viewZonesEmployee && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setViewZonesEmployee(null)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-green-50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Assigned Zones</h3>
+                  <p className="text-sm text-gray-500">{viewZonesEmployee.name || `${viewZonesEmployee.first_name || ''} ${viewZonesEmployee.last_name || ''}`.trim()}</p>
+                </div>
+                <button onClick={() => setViewZonesEmployee(null)} className="p-2 hover:bg-white/50 rounded-lg transition-colors">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+            <div className="p-5 max-h-80 overflow-y-auto">
+              <div className="flex flex-wrap gap-2">
+                {(() => {
+                  const empZones = viewZonesEmployee.assignedZones || viewZonesEmployee.assigned_zones || [];
+                  const zoneList = empZones === 'all' ? zones.map(z => z.name) : (Array.isArray(empZones) ? empZones : []);
+                  return zoneList.map((zoneName, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium border border-emerald-200">
+                      <MapPin className="w-3.5 h-3.5" />
+                      {zoneName}
+                    </span>
+                  ));
+                })()}
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setViewZonesEmployee(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
