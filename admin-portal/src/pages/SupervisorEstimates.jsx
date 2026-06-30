@@ -890,7 +890,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                       <p className="text-sm text-gray-500">
                         {filterPropertyType === 'all' 
                           ? `${amcPackages.length} package(s) available` 
-                          : `${amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType)).length} package(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
+                          : `${amcPackages.filter(p => matchPropertyType(getPackagePropertyType(p), filterPropertyType)).length} package(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
                       </p>
                     </div>
                   </div>
@@ -906,7 +906,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
 
                 {amcPackages.length === 0 ? (
                   <div className="p-12 text-center"><Package className="w-12 h-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-500">No AMC packages available</p></div>
-                ) : (filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType))).length === 0 ? (
+                ) : (filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(getPackagePropertyType(p), filterPropertyType))).length === 0 ? (
                   <div className="p-8 text-center"><p className="text-gray-500">No packages found for this property type</p><button onClick={() => setFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">Show all packages</button></div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -922,7 +922,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {(filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(p.property_type, filterPropertyType))).map((pkg) => {
+                        {(filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => matchPropertyType(getPackagePropertyType(p), filterPropertyType))).map((pkg) => {
                           // Parse services JSON if it's a string, or use directly if object
                           let servicesData = pkg.services;
                           if (typeof servicesData === 'string') {
