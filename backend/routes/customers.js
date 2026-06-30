@@ -1267,7 +1267,7 @@ router.get('/dashboard', async (req, res) => {
 
     // Get work orders for this customer - match by property_id (numeric or code string), property_name, resident_id, or customer_email
     const [workOrders] = await pool.execute(
-      `SELECT wo.id, wo.work_order_id, wo.category_id, wo.subcategory_id,
+      `SELECT DISTINCT wo.id, wo.work_order_id, wo.category_id, wo.subcategory_id,
               wo.category_name, wo.subcategory_name, wo.description,
               wo.permission_to_enter, wo.entry_notes, wo.has_pet, wo.priority,
               wo.status, wo.customer_name, wo.customer_email, wo.customer_phone,
@@ -1277,8 +1277,8 @@ router.get('/dashboard', async (req, res) => {
               wo.assigned_vendor_id, wo.scheduled_date, wo.completed_at,
               wo.created_at, wo.updated_at, wo.source
        FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id OR wo.property_id = p.property_id
-       LEFT JOIN onboarded_properties op ON wo.property_id = op.id OR wo.property_id = op.property_id
+       LEFT JOIN properties p ON (wo.property_id = p.id OR wo.property_id = p.property_id) AND p.status != 'deleted'
+       LEFT JOIN onboarded_properties op ON (wo.property_id = op.id OR wo.property_id = op.property_id) AND op.status = 'active'
        WHERE wo.property_id = ? 
           OR wo.property_id = ?
           OR wo.property_name = ?
@@ -1404,7 +1404,7 @@ router.get('/work-orders', async (req, res) => {
 
     // Get all work orders with full details - match by property_id (numeric or code string), property_name, resident_id, or customer_email
     const [workOrders] = await pool.execute(
-      `SELECT wo.id, wo.work_order_id, wo.category_id, wo.subcategory_id,
+      `SELECT DISTINCT wo.id, wo.work_order_id, wo.category_id, wo.subcategory_id,
               wo.category_name, wo.subcategory_name, wo.description,
               wo.permission_to_enter, wo.entry_notes, wo.has_pet, wo.priority,
               wo.status, wo.customer_name, wo.customer_email, wo.customer_phone,
@@ -1414,8 +1414,8 @@ router.get('/work-orders', async (req, res) => {
               wo.assigned_vendor_id, wo.scheduled_date, wo.completed_at,
               wo.admin_notes, wo.created_at, wo.updated_at, wo.source
        FROM work_orders wo
-       LEFT JOIN properties p ON wo.property_id = p.id OR wo.property_id = p.property_id
-       LEFT JOIN onboarded_properties op ON wo.property_id = op.id OR wo.property_id = op.property_id
+       LEFT JOIN properties p ON (wo.property_id = p.id OR wo.property_id = p.property_id) AND p.status != 'deleted'
+       LEFT JOIN onboarded_properties op ON (wo.property_id = op.id OR wo.property_id = op.property_id) AND op.status = 'active'
        WHERE wo.property_id = ? 
           OR wo.property_id = ?
           OR wo.property_name = ?
