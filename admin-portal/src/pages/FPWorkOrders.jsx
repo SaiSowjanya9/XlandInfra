@@ -68,6 +68,7 @@ const FPWorkOrders = ({ user }) => {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [closingNotes, setClosingNotes] = useState('');
   const [completingWorkOrderId, setCompletingWorkOrderId] = useState(null);
+  const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
@@ -570,9 +571,11 @@ const FPWorkOrders = ({ user }) => {
     }
   };
 
-  const handleCompleteWorkOrder = () => {
-    if (completingWorkOrderId) {
-      handleStatusChange(completingWorkOrderId, 'completed', closingNotes);
+  const handleCompleteWorkOrder = async () => {
+    if (completingWorkOrderId && !isSubmittingCompletion) {
+      setIsSubmittingCompletion(true);
+      await handleStatusChange(completingWorkOrderId, 'completed', closingNotes);
+      setIsSubmittingCompletion(false);
     }
   };
 
@@ -1943,10 +1946,11 @@ const FPWorkOrders = ({ user }) => {
               </button>
               <button
                 onClick={handleCompleteWorkOrder}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                disabled={isSubmittingCompletion}
+                className={`px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 ${isSubmittingCompletion ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <CheckCircle className="w-4 h-4" />
-                Mark as Completed
+                {isSubmittingCompletion ? 'Completing...' : 'Mark as Completed'}
               </button>
             </div>
           </div>
