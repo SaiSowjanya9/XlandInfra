@@ -33,10 +33,10 @@ setTimeout(() => initContactTable(), 2000);
 
 // Submit contact form
 router.post('/', async (req, res) => {
-  console.log('📝 Contact form submission received:', { name: req.body.name, email: req.body.email, phone: req.body.phone });
+  console.log('📝 Contact form submission received:', { name: req.body.name, email: req.body.email, phone: req.body.phone, city: req.body.city, subject: req.body.subject });
   
   try {
-    const { name, email, phone, message } = req.body;
+    const { name, email, phone, city, subject, message } = req.body;
 
     // Validate required fields
     if (!name || !email || !message) {
@@ -54,6 +54,8 @@ router.post('/', async (req, res) => {
         name,
         email,
         phone: phone || null,
+        city: city || null,
+        subject: subject || null,
         message,
         createdAt: new Date()
       });
@@ -69,11 +71,12 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Store submission in MySQL
+    // Store submission in MySQL (city and subject stored in message for backward compatibility)
+    const fullMessage = city || subject ? `City: ${city || 'N/A'}\nSubject: ${subject || 'N/A'}\n\n${message}` : message;
     const [result] = await db.pool.execute(
       `INSERT INTO contact_submissions (name, email, phone, message, status)
        VALUES (?, ?, ?, ?, 'new')`,
-      [name, email, phone || null, message]
+      [name, email, phone || null, fullMessage]
     );
 
     const insertId = result.insertId;
@@ -87,12 +90,14 @@ router.post('/', async (req, res) => {
     const submission = rows[0];
     console.log('📝 New contact submission saved to database:', submission);
 
-    // Send email notification
+    // Send email notification with separate fields
     const emailSent = await sendContactNotification({
       name: submission.name,
       email: submission.email,
       phone: submission.phone,
-      message: submission.message,
+      city: city || null,
+      subject: subject || null,
+      message: message,
       createdAt: submission.created_at
     });
 

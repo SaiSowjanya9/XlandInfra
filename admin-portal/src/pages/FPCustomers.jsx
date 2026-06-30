@@ -137,12 +137,15 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
   const [currentStep, setCurrentStepState] = useState(1);
   const [searchTerm, setSearchTermState] = useState('');
   
-  // Push initial history entry when page first loads
+  // Push initial history entry when page first loads or when defaultTab changes
   useEffect(() => {
-    if (!urlView && !urlCategory && !urlEntryType) {
+    // When navigating directly to /customers/add route, force the add view
+    if (defaultTab === 'add' && urlView !== 'add') {
+      navigate('?view=add', { replace: true });
+    } else if (!urlView && !urlCategory && !urlEntryType) {
       navigate(defaultTab === 'add' ? '?view=add' : '?view=list', { replace: true });
     }
-  }, []);
+  }, [defaultTab]);
   
   // Sync state with URL when browser back/forward is used
   useEffect(() => {

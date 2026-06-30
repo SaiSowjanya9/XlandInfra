@@ -271,7 +271,9 @@ function CorporateLanding() {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          message: `Subject: ${formData.subject}\nCity: ${formData.city}\n\n${formData.message}`
+          city: formData.city,
+          subject: formData.subject,
+          message: formData.message
         }),
       });
 
