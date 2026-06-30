@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
   ChevronRight,
+  ChevronsDown,
   Paperclip,
   Camera,
   Image,
@@ -44,6 +45,8 @@ const WorkOrder = ({ user }) => {
   const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
   const [toast, setToast] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [hasScrolledCategory, setHasScrolledCategory] = useState(false);
+  const [hasScrolledSubcategory, setHasScrolledSubcategory] = useState(false);
 
   // Get selected category
   const selectedCategory = categories.find(c => c.id === parseInt(formData.categoryId));
@@ -65,6 +68,7 @@ const WorkOrder = ({ user }) => {
   const toggleCategoryDropdown = () => {
     if (!showCategoryDropdown) {
       updateDropdownPosition(categoryBtnRef);
+      setHasScrolledCategory(false); // Reset scroll indicator
     }
     setShowCategoryDropdown(!showCategoryDropdown);
     setShowSubcategoryDropdown(false);
@@ -75,6 +79,7 @@ const WorkOrder = ({ user }) => {
     if (formData.categoryId) {
       if (!showSubcategoryDropdown) {
         updateDropdownPosition(subcategoryBtnRef);
+        setHasScrolledSubcategory(false); // Reset scroll indicator
       }
       setShowSubcategoryDropdown(!showSubcategoryDropdown);
       setShowCategoryDropdown(false);
@@ -102,19 +107,24 @@ const WorkOrder = ({ user }) => {
     setErrors(prev => ({ ...prev, subcategoryId: '' }));
   };
 
-  // Close dropdowns when clicking outside
+  // Close dropdowns when clicking outside (supports both mouse and touch)
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (showCategoryDropdown || showSubcategoryDropdown) {
-        if (!e.target.closest('.dropdown-portal') && 
-            !e.target.closest('[data-dropdown-trigger]')) {
+        const target = e.target;
+        if (!target.closest('.dropdown-portal') && 
+            !target.closest('[data-dropdown-trigger]')) {
           setShowCategoryDropdown(false);
           setShowSubcategoryDropdown(false);
         }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [showCategoryDropdown, showSubcategoryDropdown]);
 
   // Handle file upload
@@ -391,13 +401,16 @@ const WorkOrder = ({ user }) => {
                     zIndex: 9999,
                     WebkitOverflowScrolling: 'touch'
                   }}
+                  onScroll={(e) => {
+                    if (e.target.scrollTop > 20) setHasScrolledCategory(true);
+                  }}
                 >
                   {categories.map((category, index) => (
                     <button
                       key={category.id}
                       type="button"
                       onClick={() => handleCategorySelect(category.id)}
-                      className={`w-full px-4 py-3.5 text-left hover:bg-gold-600/20 flex items-center justify-between transition-colors text-sm sm:text-base ${
+                      className={`w-full px-4 py-3.5 text-left hover:bg-gold-600/20 flex items-center justify-between transition-colors text-sm sm:text-base active:bg-gold-600/30 ${
                         formData.categoryId === category.id.toString() 
                           ? 'bg-gold-600/20 text-gold-400' 
                           : 'text-white'
@@ -409,6 +422,15 @@ const WorkOrder = ({ user }) => {
                       )}
                     </button>
                   ))}
+                  {/* Scroll indicator for mobile - hides after scrolling */}
+                  {categories.length > 5 && !hasScrolledCategory && (
+                    <div className="sticky bottom-0 left-0 right-0 flex items-center justify-center py-2 bg-gradient-to-t from-dark-800 via-dark-800/95 to-transparent pointer-events-none">
+                      <div className="flex items-center gap-1 text-gold-400/70 text-xs">
+                        <ChevronsDown className="w-4 h-4 animate-bounce" />
+                        <span>Scroll for more</span>
+                      </div>
+                    </div>
+                  )}
                 </div>,
                 document.body
               )}
@@ -462,25 +484,39 @@ const WorkOrder = ({ user }) => {
                     zIndex: 9999,
                     WebkitOverflowScrolling: 'touch'
                   }}
+                  onScroll={(e) => {
+                    if (e.target.scrollTop > 20) setHasScrolledSubcategory(true);
+                  }}
                 >
                   {subcategories.length > 0 ? (
-                    subcategories.map((sub, index) => (
-                      <button
-                        key={sub.id}
-                        type="button"
-                        onClick={() => handleSubcategorySelect(sub.id)}
-                        className={`w-full px-4 py-3.5 text-left hover:bg-gold-600/20 flex items-center justify-between transition-colors text-sm sm:text-base ${
-                          formData.subcategoryId === sub.id.toString() 
-                            ? 'bg-gold-600/20 text-gold-400' 
-                            : 'text-white'
-                        } ${index !== subcategories.length - 1 ? 'border-b border-dark-600' : ''}`}
-                      >
-                        <span>{sub.name}</span>
-                        {formData.subcategoryId === sub.id.toString() && (
-                          <Check className="w-5 h-5 text-gold-400" />
-                        )}
-                      </button>
-                    ))
+                    <>
+                      {subcategories.map((sub, index) => (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => handleSubcategorySelect(sub.id)}
+                          className={`w-full px-4 py-3.5 text-left hover:bg-gold-600/20 flex items-center justify-between transition-colors text-sm sm:text-base active:bg-gold-600/30 ${
+                            formData.subcategoryId === sub.id.toString() 
+                              ? 'bg-gold-600/20 text-gold-400' 
+                              : 'text-white'
+                          } ${index !== subcategories.length - 1 ? 'border-b border-dark-600' : ''}`}
+                        >
+                          <span>{sub.name}</span>
+                          {formData.subcategoryId === sub.id.toString() && (
+                            <Check className="w-5 h-5 text-gold-400" />
+                          )}
+                        </button>
+                      ))}
+                      {/* Scroll indicator for mobile - hides after scrolling */}
+                      {subcategories.length > 5 && !hasScrolledSubcategory && (
+                        <div className="sticky bottom-0 left-0 right-0 flex items-center justify-center py-2 bg-gradient-to-t from-dark-800 via-dark-800/95 to-transparent pointer-events-none">
+                          <div className="flex items-center gap-1 text-gold-400/70 text-xs">
+                            <ChevronsDown className="w-4 h-4 animate-bounce" />
+                            <span>Scroll for more</span>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="px-4 py-3.5 text-dark-400 text-sm text-center">
                       No subcategories available
