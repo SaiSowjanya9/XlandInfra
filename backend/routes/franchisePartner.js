@@ -1181,10 +1181,12 @@ router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_
                 wo.customer_name, wo.customer_email, wo.customer_phone, 
                 wo.category_name, wo.subcategory_name, wo.description, wo.closing_notes, wo.franchise_partner_id,
                 COALESCE(p.zone_id, op.zone) as property_zone,
-                COALESCE(p.division, op.division) as division
+                COALESCE(fd.name, fd2.name, p.division_id, op.division) as division
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN onboarded_properties op ON wo.property_id = op.id
+         LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = wo.franchise_partner_id
+         LEFT JOIN fp_divisions fd2 ON (CAST(op.division AS UNSIGNED) = fd2.id OR op.division = fd2.name) AND fd2.franchise_partner_id = wo.franchise_partner_id
          WHERE wo.id = ?`, [id]
       );
       console.log('[FP] Work order data:', workOrder[0]);
