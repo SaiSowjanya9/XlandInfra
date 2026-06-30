@@ -728,15 +728,16 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
 
     const workOrderId = `WO-${Date.now()}`;
 
-    // Fetch property details if not provided - including actual property_id and zone
+    // Fetch property details if not provided - including actual property_id, zone, and division
     let finalPropertyName = propertyName;
     let finalPropertyType = null;
     let actualPropertyId = null;
     let propertyZone = null;
+    let propertyDivision = null;
     if (propertyId) {
       const [props] = await pool.query(
-        `SELECT name, property_type, property_id, zone_id as zone FROM properties WHERE id = ? 
-         UNION SELECT community_name as name, property_type, property_id, zone FROM onboarded_properties WHERE id = ?`,
+        `SELECT name, property_type, property_id, zone_id as zone, division FROM properties WHERE id = ? 
+         UNION SELECT community_name as name, property_type, property_id, zone, division FROM onboarded_properties WHERE id = ?`,
         [propertyId, propertyId]
       );
       if (props.length > 0) {
@@ -744,6 +745,16 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
         finalPropertyType = props[0].property_type;
         actualPropertyId = props[0].property_id;
         propertyZone = props[0].zone;
+        propertyDivision = props[0].division;
+      }
+    }
+
+    // Fetch zone name from zones table if zone_id exists
+    let zoneName = propertyZone || null;
+    if (propertyZone && !isNaN(parseInt(propertyZone))) {
+      const [zoneData] = await pool.query('SELECT name FROM zones WHERE id = ?', [parseInt(propertyZone)]);
+      if (zoneData.length > 0) {
+        zoneName = zoneData[0].name;
       }
     }
 
@@ -791,6 +802,8 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
       customerName,
       customerEmail,
       customerPhone,
+      zoneName: zoneName,
+      division: propertyDivision,
       categoryName: finalCategoryName,
       subcategoryName: finalSubcategoryName,
       priority,
@@ -816,22 +829,28 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
 router.patch('/work-orders/:id/status', requireExecutiveScope, async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, closingNotes } = req.body;
 
     const allowedStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
     }
 
-    await pool.query('UPDATE work_orders SET status = ?, updated_at = NOW() WHERE id = ?', [status, id]);
+    // If completing, also save closing notes and completed date
+    if (status === 'completed') {
+      await pool.query('UPDATE work_orders SET status = ?, closing_notes = ?, completed_date = NOW(), updated_at = NOW() WHERE id = ?', [status, closingNotes || null, id]);
+    } else {
+      await pool.query('UPDATE work_orders SET status = ?, updated_at = NOW() WHERE id = ?', [status, id]);
+    }
 
     // Send completion email if status is completed
     if (status === 'completed') {
       console.log('[Executive] Status changed to completed, sending email...');
       const [workOrder] = await pool.query(
         `SELECT wo.work_order_id, wo.title, wo.property_name, wo.property_id, wo.customer_name, wo.customer_email, wo.customer_phone, 
-                wo.category_name, wo.subcategory_name, wo.franchise_partner_id,
-                COALESCE(p.zone_id, op.zone) as property_zone
+                wo.category_name, wo.subcategory_name, wo.description, wo.closing_notes, wo.franchise_partner_id,
+                COALESCE(p.zone_id, op.zone) as property_zone,
+                COALESCE(p.division, op.division) as division
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN onboarded_properties op ON wo.property_id = op.id
@@ -839,6 +858,13 @@ router.patch('/work-orders/:id/status', requireExecutiveScope, async (req, res) 
       );
       console.log('[Executive] Work order data:', workOrder[0]);
       if (workOrder.length > 0) {
+        // Fetch zone name from zones table
+        let zoneName = workOrder[0].property_zone || null;
+        if (workOrder[0].property_zone && !isNaN(parseInt(workOrder[0].property_zone))) {
+          const [zoneData] = await pool.query('SELECT name FROM zones WHERE id = ?', [parseInt(workOrder[0].property_zone)]);
+          if (zoneData.length > 0) zoneName = zoneData[0].name;
+        }
+        
         const { sendWorkOrderCompletedNotification } = require('../services/emailService');
         try {
           await sendWorkOrderCompletedNotification({
@@ -850,10 +876,15 @@ router.patch('/work-orders/:id/status', requireExecutiveScope, async (req, res) 
             customerName: workOrder[0].customer_name,
             customerEmail: workOrder[0].customer_email,
             customerPhone: workOrder[0].customer_phone,
+            zoneName: zoneName,
+            division: workOrder[0].division,
             categoryName: workOrder[0].category_name,
             subcategoryName: workOrder[0].subcategory_name,
+            description: workOrder[0].description,
+            closingNotes: workOrder[0].closing_notes,
             completedBy: req.user?.username || req.user?.email || 'Executive',
             completedByRole: 'Executive',
+            completedAt: new Date(),
             franchisePartnerId: workOrder[0].franchise_partner_id,
             propertyZone: workOrder[0].property_zone
           });

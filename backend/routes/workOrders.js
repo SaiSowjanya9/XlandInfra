@@ -189,6 +189,15 @@ router.post('/', (req, res, next) => {
         console.log('[WorkOrder] Property lookup - fpId:', franchisePartnerId, 'zone:', propDetails.zone, 'propertyId:', actualPropertyId);
       }
 
+      // Fetch zone name from zones table if zone_id exists
+      let zoneName = propDetails.zone || null;
+      if (propDetails.zone && !isNaN(parseInt(propDetails.zone))) {
+        const [zoneData] = await pool.query('SELECT name FROM zones WHERE id = ?', [parseInt(propDetails.zone)]);
+        if (zoneData.length > 0) {
+          zoneName = zoneData[0].name;
+        }
+      }
+
       // Use property details as fallbacks for customer info
       const finalCustomerName = customerName || propDetails.contact_person || null;
       const finalCustomerEmail = customerEmail || propDetails.contact_email || null;
@@ -282,6 +291,8 @@ router.post('/', (req, res, next) => {
         customerName: finalCustomerName,
         customerEmail: finalCustomerEmail,
         customerPhone: finalCustomerPhone,
+        zoneName: zoneName,
+        division: propDetails.division || null,
         categoryName: category.name,
         subcategoryName,
         priority: priority || 'medium',
@@ -484,7 +495,7 @@ router.get('/:id', async (req, res) => {
 router.patch('/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, notes, adminId } = req.body;
+    const { status, notes, adminId, closingNotes } = req.body;
     
     const validStatuses = ['pending', 'assigned', 'in_progress', 'completed', 'closed', 'cancelled'];
     if (!validStatuses.includes(status)) {
@@ -502,13 +513,20 @@ router.patch('/:id/status', async (req, res) => {
         return res.status(404).json({ success: false, message: 'Work order not found' });
       }
 
-      // Update status
+      // Update status - include closing_notes if completing
       const completedAt = (status === 'completed' || status === 'closed') ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
 
-      await pool.query(
-        `UPDATE work_orders SET status = ?, completed_at = ?, updated_at = NOW() WHERE id = ?`,
-        [status, completedAt, id]
-      );
+      if (status === 'completed') {
+        await pool.query(
+          `UPDATE work_orders SET status = ?, closing_notes = ?, completed_at = ?, completed_date = NOW(), updated_at = NOW() WHERE id = ?`,
+          [status, closingNotes || null, completedAt, id]
+        );
+      } else {
+        await pool.query(
+          `UPDATE work_orders SET status = ?, completed_at = ?, updated_at = NOW() WHERE id = ?`,
+          [status, completedAt, id]
+        );
+      }
 
       // Add to history
       await pool.query(
@@ -522,8 +540,9 @@ router.patch('/:id/status', async (req, res) => {
         console.log('[Admin] Status changed to completed, sending email...');
         const [workOrder] = await pool.query(
           `SELECT wo.work_order_id, wo.title, wo.property_name, wo.property_id, wo.customer_name, wo.customer_email, wo.customer_phone, 
-                  wo.category_name, wo.subcategory_name, wo.franchise_partner_id,
-                  COALESCE(p.zone_id, op.zone) as property_zone
+                  wo.category_name, wo.subcategory_name, wo.description, wo.closing_notes, wo.franchise_partner_id,
+                  COALESCE(p.zone_id, op.zone) as property_zone,
+                  COALESCE(p.division, op.division) as division
            FROM work_orders wo
            LEFT JOIN properties p ON wo.property_id = p.id
            LEFT JOIN onboarded_properties op ON wo.property_id = op.id
@@ -531,6 +550,13 @@ router.patch('/:id/status', async (req, res) => {
         );
         console.log('[Admin] Work order data:', workOrder[0]);
         if (workOrder.length > 0) {
+          // Fetch zone name from zones table
+          let zoneName = workOrder[0].property_zone || null;
+          if (workOrder[0].property_zone && !isNaN(parseInt(workOrder[0].property_zone))) {
+            const [zoneData] = await pool.query('SELECT name FROM zones WHERE id = ?', [parseInt(workOrder[0].property_zone)]);
+            if (zoneData.length > 0) zoneName = zoneData[0].name;
+          }
+          
           const { sendWorkOrderCompletedNotification } = require('../services/emailService');
           try {
             await sendWorkOrderCompletedNotification({
@@ -542,10 +568,15 @@ router.patch('/:id/status', async (req, res) => {
               customerName: workOrder[0].customer_name,
               customerEmail: workOrder[0].customer_email,
               customerPhone: workOrder[0].customer_phone,
+              zoneName: zoneName,
+              division: workOrder[0].division,
               categoryName: workOrder[0].category_name,
               subcategoryName: workOrder[0].subcategory_name,
+              description: workOrder[0].description,
+              closingNotes: workOrder[0].closing_notes,
               completedBy: 'Admin',
               completedByRole: 'Admin',
+              completedAt: new Date(),
               franchisePartnerId: workOrder[0].franchise_partner_id,
               propertyZone: workOrder[0].property_zone
             });
@@ -620,17 +651,18 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
       filePath: file.path
     })) : [];
 
-    // Fetch actual property_id, franchise_partner_id, and zone from database
+    // Fetch actual property_id, franchise_partner_id, zone, and division from database
     let actualPropertyId = null;
     let finalPropertyName = propertyName;
     let finalPropertyType = propertyType;
     let propFranchisePartnerId = null;
     let propZone = null;
+    let propDivision = null;
     const propId = propertyId && propertyId !== 'undefined' ? propertyId : null;
     
     if (propId) {
       const [propData] = await pool.query(
-        `SELECT property_id, name, property_type, franchise_partner_id, zone_id as zone FROM properties WHERE id = ?`,
+        `SELECT property_id, name, property_type, franchise_partner_id, zone_id as zone, division FROM properties WHERE id = ?`,
         [propId]
       );
       if (propData.length > 0) {
@@ -639,10 +671,11 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
         finalPropertyType = finalPropertyType || propData[0].property_type;
         propFranchisePartnerId = propData[0].franchise_partner_id;
         propZone = propData[0].zone;
+        propDivision = propData[0].division;
       } else {
         // Try onboarded_properties
         const [opData] = await pool.query(
-          `SELECT property_id, community_name as name, property_type, franchise_partner_id, zone FROM onboarded_properties WHERE id = ?`,
+          `SELECT property_id, community_name as name, property_type, franchise_partner_id, zone, division FROM onboarded_properties WHERE id = ?`,
           [propId]
         );
         if (opData.length > 0) {
@@ -651,7 +684,17 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
           finalPropertyType = finalPropertyType || opData[0].property_type;
           propFranchisePartnerId = opData[0].franchise_partner_id;
           propZone = opData[0].zone;
+          propDivision = opData[0].division;
         }
+      }
+    }
+
+    // Fetch zone name from zones table if zone_id exists
+    let propZoneName = propZone || null;
+    if (propZone && !isNaN(parseInt(propZone))) {
+      const [zoneData] = await pool.query('SELECT name FROM zones WHERE id = ?', [parseInt(propZone)]);
+      if (zoneData.length > 0) {
+        propZoneName = zoneData[0].name;
       }
     }
 
@@ -718,6 +761,8 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
         customerName,
         customerEmail,
         customerPhone,
+        zoneName: propZoneName,
+        division: propDivision,
         categoryName: category.name,
         subcategoryName,
         priority: priority || 'medium',

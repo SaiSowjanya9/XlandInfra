@@ -21,6 +21,9 @@ const ExecutiveWorkOrders = ({ user }) => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [closingNotes, setClosingNotes] = useState('');
+  const [completingWorkOrderId, setCompletingWorkOrderId] = useState(null);
   const [propertySearch, setPropertySearch] = useState('');
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [attachments, setAttachments] = useState([]);
@@ -211,22 +214,41 @@ const ExecutiveWorkOrders = ({ user }) => {
     setAttachments(attachments.filter((_, i) => i !== index));
   };
 
-  const handleStatusChange = async (workOrderId, newStatus) => {
+  const handleStatusChange = async (workOrderId, newStatus, closingNotesValue = null) => {
+    // If completing, show modal to enter closing notes
+    if (newStatus === 'completed' && closingNotesValue === null) {
+      setCompletingWorkOrderId(workOrderId);
+      setClosingNotes('');
+      setShowCompletionModal(true);
+      return;
+    }
+
     try {
       const response = await fetch(`/api/executive/work-orders/${workOrderId}/status`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, closingNotes: closingNotesValue })
       });
       const result = await response.json();
       if (result.success) {
         setMessage({ type: 'success', text: 'Status updated successfully!' });
         fetchWorkOrders();
+        if (newStatus === 'completed') {
+          setShowCompletionModal(false);
+          setClosingNotes('');
+          setCompletingWorkOrderId(null);
+        }
       } else {
         setMessage({ type: 'error', text: result.message || 'Failed to update status' });
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to update status' });
+    }
+  };
+
+  const handleCompleteWorkOrder = () => {
+    if (completingWorkOrderId) {
+      handleStatusChange(completingWorkOrderId, 'completed', closingNotes);
     }
   };
 
@@ -904,6 +926,41 @@ const ExecutiveWorkOrders = ({ user }) => {
             <div className="p-6 border-t border-gray-100">
               <button onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }} className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Completion Modal with Closing Notes */}
+      {showCompletionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">Complete Work Order</h2>
+                </div>
+                <button onClick={() => { setShowCompletionModal(false); setClosingNotes(''); setCompletingWorkOrderId(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 mb-4">Please add any closing notes or comments about the completed work.</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Closing Notes <span className="text-gray-400">(Optional)</span></label>
+                <textarea value={closingNotes} onChange={(e) => setClosingNotes(e.target.value)} rows={4} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 resize-none" placeholder="E.g., Replaced faulty wiring, cleaned AC filters, etc..." />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button onClick={() => { setShowCompletionModal(false); setClosingNotes(''); setCompletingWorkOrderId(null); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
+              <button onClick={handleCompleteWorkOrder} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                Mark as Completed
               </button>
             </div>
           </div>

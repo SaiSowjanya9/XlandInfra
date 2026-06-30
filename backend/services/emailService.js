@@ -1553,6 +1553,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
     orderId, orderNumber, title, propertyName, propertyId,
     propertyType, propertyAddress, propertyCity, propertyState,
     customerName, customerEmail, customerPhone,
+    zoneName, division,
     categoryName, subcategoryName, priority, description,
     permissionToEnter, hasPet, entryNotes,
     createdBy, createdByRole, createdFromPortal,
@@ -1687,6 +1688,14 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
                             <tr>
                               <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Phone:</td>
                               <td style="padding: 6px 0;"><a href="tel:${customerPhone}" style="color: #3b82f6; font-weight: bold; font-size: 14px; text-decoration: none;">${customerPhone || '-'}</a></td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Zone Area:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-size: 13px;">${zoneName || '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Division:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-size: 13px;">${division || '-'}</td>
                             </tr>
                           </table>
                         </td>
@@ -1840,7 +1849,9 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
   const {
     orderId, orderNumber, title, propertyName, propertyId,
     customerName, customerEmail, customerPhone,
-    categoryName, subcategoryName, completedBy, completedByRole,
+    zoneName, division,
+    categoryName, subcategoryName, description, closingNotes,
+    completedBy, completedByRole, completedAt,
     franchisePartnerId, propertyZone
   } = workOrderData;
 
@@ -1873,94 +1884,178 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
   
   console.log(`📧 Sending separate completion emails to ${allRecipients.length} recipients:`, allRecipients);
 
-  const emailSubject = `✅ Work Order Completed - ${orderNumber || orderId}`;
+  // Format completion date
+  const completionDate = completedAt ? new Date(completedAt).toLocaleString('en-IN', { 
+    timeZone: 'Asia/Kolkata', 
+    dateStyle: 'long', 
+    timeStyle: 'short' 
+  }) : new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'long', timeStyle: 'short' });
+
+  const emailSubject = `Work Order Completed - ${orderNumber || orderId}`;
   const emailHtml = `
       <!DOCTYPE html>
       <html>
-      <head><meta charset="utf-8"></head>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
       <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Arial, sans-serif;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
-            <h1 style="margin: 0; color: #ffffff; font-size: 24px;">✅ Work Order Completed</h1>
-            <p style="margin: 10px 0 0 0; color: #d1fae5; font-size: 14px;">${orderNumber || orderId}</p>
-          </div>
-          
-          <!-- Content -->
-          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-            <!-- Order Info -->
-            <div style="background: #ecfdf5; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #10b981;">
-              <h2 style="margin: 0 0 15px 0; color: #065f46; font-size: 18px;">📋 Work Order Details</h2>
-              <table style="width: 100%; border-collapse: collapse;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f3f4f6;">
+          <tr>
+            <td style="padding: 20px 10px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <!-- Header -->
                 <tr>
-                  <td style="padding: 8px 0; color: #64748b; width: 140px;">Order ID:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold;">${orderNumber || orderId}</td>
+                  <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 25px 20px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 600;">Work Order Completed</h1>
+                  </td>
                 </tr>
+                
+                <!-- Content -->
                 <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Title:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${title || 'Service Request'}</td>
+                  <td style="padding: 25px 20px;">
+                    <!-- Greeting -->
+                    <p style="margin: 0 0 20px 0; color: #1e293b; font-size: 15px; line-height: 1.6;">
+                      Hello,<br><br>
+                      The work order you submitted has been completed successfully.
+                    </p>
+                    
+                    <!-- Work Order Details -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #f8fafc; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #10b981;">
+                      <tr>
+                        <td style="padding: 20px;">
+                          <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Work Order Details</h2>
+                          <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; width: 100px; vertical-align: top;">ID:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-weight: 600; font-size: 14px;">${orderNumber || orderId}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Status:</td>
+                              <td style="padding: 6px 0;">
+                                <span style="background: #10b981; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">COMPLETED</span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Category:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-size: 14px;">${categoryName || '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Problem:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-size: 14px;">${subcategoryName || '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Completed:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-size: 14px;">${completionDate}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Customer Details -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #eff6ff; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+                      <tr>
+                        <td style="padding: 20px;">
+                          <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Customer Details</h2>
+                          <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; width: 100px; vertical-align: top;">Name:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-weight: 600; font-size: 14px;">${customerName || '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Email:</td>
+                              <td style="padding: 6px 0;"><a href="mailto:${customerEmail}" style="color: #3b82f6; font-size: 13px; text-decoration: none;">${customerEmail || '-'}</a></td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Phone:</td>
+                              <td style="padding: 6px 0;"><a href="tel:${customerPhone}" style="color: #3b82f6; font-weight: 600; font-size: 14px; text-decoration: none;">${customerPhone || '-'}</a></td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Zone Area:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-size: 13px;">${zoneName || '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">Division:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-size: 13px;">${division || '-'}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Property Details -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #f0fdf4; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #22c55e;">
+                      <tr>
+                        <td style="padding: 20px;">
+                          <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Property Details</h2>
+                          <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; width: 100px; vertical-align: top;">Name:</td>
+                              <td style="padding: 6px 0; color: #1e293b; font-weight: 600; font-size: 14px;">${propertyName || '-'}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">ID:</td>
+                              <td style="padding: 6px 0; color: #64748b; font-family: monospace; font-size: 12px;">${propertyId || '-'}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+
+                    ${description ? `
+                    <!-- Description -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #fef3c7; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+                      <tr>
+                        <td style="padding: 20px;">
+                          <h2 style="margin: 0 0 10px 0; color: #92400e; font-size: 14px; font-weight: 600;">Description</h2>
+                          <p style="margin: 0; color: #1e293b; font-size: 14px; line-height: 1.5;">${description}</p>
+                        </td>
+                      </tr>
+                    </table>
+                    ` : ''}
+
+                    ${closingNotes ? `
+                    <!-- Closing Notes -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #f0f9ff; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;">
+                      <tr>
+                        <td style="padding: 20px;">
+                          <h2 style="margin: 0 0 10px 0; color: #0369a1; font-size: 14px; font-weight: 600;">Closing Notes</h2>
+                          <p style="margin: 0; color: #1e293b; font-size: 14px; line-height: 1.5;">${closingNotes}</p>
+                        </td>
+                      </tr>
+                    </table>
+                    ` : ''}
+                    
+                    <!-- Completed By -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background: #f1f5f9; border-radius: 12px;">
+                      <tr>
+                        <td style="padding: 15px; text-align: center;">
+                          <p style="margin: 0; color: #64748b; font-size: 13px;">
+                            Marked as completed by <strong style="color: #059669;">${completedBy || 'System'}</strong>
+                            ${completedByRole ? `(${completedByRole})` : ''}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
                 </tr>
+                
+                <!-- Footer -->
                 <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Category:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${categoryName || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Subcategory:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${subcategoryName || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #64748b;">Status:</td>
-                  <td style="padding: 8px 0;">
-                    <span style="background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">
-                      COMPLETED
-                    </span>
+                  <td style="background: #1e293b; padding: 20px; text-align: center;">
+                    <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+                      XLAND INFRA Private Limited | Work Order Completion Notification
+                    </p>
+                    <p style="margin: 8px 0 0 0; color: #64748b; font-size: 11px;">
+                      © ${new Date().getFullYear()} All rights reserved
+                    </p>
                   </td>
                 </tr>
               </table>
-            </div>
-            
-            <!-- Property Info -->
-            <div style="background: #f0fdf4; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-              <h2 style="margin: 0 0 15px 0; color: #166534; font-size: 18px;">🏠 Property</h2>
-              <p style="margin: 0; color: #1e293b; font-size: 16px; font-weight: bold;">${propertyName || '-'}</p>
-              <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">ID: ${propertyId || '-'}</p>
-            </div>
-            
-            <!-- Customer Info -->
-            <div style="background: #eff6ff; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-              <h2 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">👤 Customer</h2>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 5px 0; color: #64748b;">Name:</td>
-                  <td style="padding: 5px 0; color: #1e293b; font-weight: bold;">${customerName || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #64748b;">Email:</td>
-                  <td style="padding: 5px 0; color: #1e293b;">${customerEmail || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #64748b;">Phone:</td>
-                  <td style="padding: 5px 0; color: #1e293b;">${customerPhone || '-'}</td>
-                </tr>
-              </table>
-            </div>
-            
-            <!-- Completed By -->
-            <div style="background: #f1f5f9; border-radius: 12px; padding: 15px; text-align: center;">
-              <p style="margin: 0; color: #64748b; font-size: 14px;">
-                Marked as completed by <strong style="color: #059669;">${completedBy || 'System'}</strong>
-                ${completedByRole ? `(${completedByRole})` : ''}
-              </p>
-            </div>
-          </div>
-          
-          <!-- Footer -->
-          <div style="background: #059669; padding: 20px; border-radius: 0 0 16px 16px; text-align: center;">
-            <p style="margin: 0; color: #d1fae5; font-size: 12px;">
-              XLAND INFRA Private Limited | Work Order Completion Notification
-            </p>
-          </div>
-        </div>
+            </td>
+          </tr>
+        </table>
       </body>
       </html>
     `;
