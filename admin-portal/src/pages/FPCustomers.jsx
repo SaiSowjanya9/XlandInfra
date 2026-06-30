@@ -140,10 +140,14 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
   // Push initial history entry when page first loads or when defaultTab changes
   useEffect(() => {
     // When navigating directly to /customers/add route, force the add view
-    if (defaultTab === 'add' && urlView !== 'add') {
-      navigate('?view=add', { replace: true });
+    if (defaultTab === 'add') {
+      if (urlView !== 'add') {
+        navigate('?view=add', { replace: true });
+      }
+      // Ensure state is set to 'add' immediately for defaultTab='add'
+      setActiveViewState('add');
     } else if (!urlView && !urlCategory && !urlEntryType) {
-      navigate(defaultTab === 'add' ? '?view=add' : '?view=list', { replace: true });
+      navigate('?view=list', { replace: true });
     }
   }, [defaultTab]);
   
@@ -161,11 +165,12 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
       setActiveViewState('add');
       setSelectedCategoryState(null);
       setSelectedEntryTypeState(null);
-    } else if (urlView === 'list' || !urlView) {
+    } else if (urlView === 'list') {
       setActiveViewState('list');
       setSelectedCategoryState(null);
       setSelectedEntryTypeState(null);
     }
+    // Don't reset to list when urlView is empty - let the first useEffect handle defaultTab
     if (urlStep) setCurrentStepState(parseInt(urlStep, 10));
     setSearchTermState(urlSearch);
   }, [urlView, urlCategory, urlEntryType, urlStep, urlSearch]);

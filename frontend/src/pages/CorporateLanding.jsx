@@ -1232,12 +1232,12 @@ function CorporateLanding() {
                     className="select-field"
                   >
                     <option value="">Select a subject</option>
-                    <option value="property-management">Property Management</option>
-                    <option value="property-sales">Property Sales & Advisory</option>
-                    <option value="investment">Investment Consultation</option>
-                    <option value="design">Design & Conceptualization</option>
-                    <option value="construction">Construction & Delivery</option>
-                    <option value="other">Other</option>
+                    <option value="Property Management">Property Management</option>
+                    <option value="Property Sales & Advisory">Property Sales & Advisory</option>
+                    <option value="Investment Consultation">Investment Consultation</option>
+                    <option value="Design & Conceptualization">Design & Conceptualization</option>
+                    <option value="Construction & Delivery">Construction & Delivery</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
                 <div>
