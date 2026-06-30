@@ -240,7 +240,7 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN fp_employees fpe ON wo.created_by = fpe.id OR wo.created_by = fpe.email
-         LEFT JOIN pm_admins pma ON wo.created_by = pma.id OR wo.created_by = pma.email
+         LEFT JOIN users pma ON wo.created_by = pma.id OR wo.created_by = pma.email
          WHERE wo.franchise_partner_id = ?
          ORDER BY wo.created_at DESC LIMIT 5`,
         [fpId]

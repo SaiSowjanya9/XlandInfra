@@ -265,7 +265,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN fp_employees fpe ON wo.created_by = fpe.id OR wo.created_by = fpe.email
-         LEFT JOIN pm_admins pma ON wo.created_by = pma.id OR wo.created_by = pma.email
+         LEFT JOIN users pma ON wo.created_by = pma.id OR wo.created_by = pma.email
          WHERE wo.franchise_partner_id = ? AND (wo.created_by = ? OR wo.created_by = ? OR wo.created_by LIKE ?)
          ORDER BY wo.created_at DESC
          LIMIT 10`,
