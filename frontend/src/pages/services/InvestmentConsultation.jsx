@@ -77,7 +77,7 @@ const InvestmentConsultation = () => {
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-normal mb-8 leading-[1.1] tracking-tight opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.4s_forwards]">
               <span className="text-white">Strategic Real Estate</span>
               <br />
-              <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Investment Guidance</span>
+              <span className="text-gold-hero">Investment Guidance</span>
               <br />
               <span className="text-white">for Long-Term Growth</span>
             </h1>
@@ -144,7 +144,7 @@ const InvestmentConsultation = () => {
               <div className="h-px w-12 bg-gradient-to-l from-transparent to-gold-400"></div>
             </div>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-4 tracking-tight">
-              Investment Success <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Roadmap</span>
+              Investment Success <span className="text-gold-hero">Roadmap</span>
             </h2>
             <p className="text-gray-400 text-lg max-w-2xl mx-auto">
               A strategic process designed to maximize real estate growth and long-term returns.
@@ -355,7 +355,7 @@ const InvestmentConsultation = () => {
           {/* CTA Card */}
           <div className="text-center p-8 md:p-10 bg-gradient-to-b from-zinc-900/60 to-zinc-900/30 border border-gold-500/20 rounded-3xl bg-[#0D0D0D]/80 hover:border-gold-400/40 transition-all duration-500">
             <h2 className="text-2xl md:text-3xl font-display font-normal text-white mb-3 tracking-tight">
-              Ready to Build Your Next <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Investment Success</span>?
+              Ready to Build Your Next <span className="text-gold-hero">Investment Success</span>?
             </h2>
             <p className="text-gray-400 mb-6 max-w-xl mx-auto text-sm md:text-base leading-relaxed">
               Connect with XLand Infra today and take the first step toward strategic real estate growth and long-term value.
