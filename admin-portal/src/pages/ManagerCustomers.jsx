@@ -1465,15 +1465,7 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
                     value={formData.mapLocation}
                     onChange={(loc) => {
                       updateFormData('mapLocation', loc);
-                      // Auto-populate address fields from captured location
-                      if (loc.address) {
-                        // Parse address components from Nominatim response
-                        const parts = loc.address.split(', ');
-                        if (parts.length >= 3 && !formData.city) {
-                          // Try to extract city (usually in the middle)
-                          updateFormData('city', parts[Math.floor(parts.length / 2)] || '');
-                        }
-                      }
+                      // Note: Auto-populate disabled - employees enter data manually
                     }}
                     savedBy={user?.name || user?.email || 'Manager'}
                     showShareOption={false}

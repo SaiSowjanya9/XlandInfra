@@ -73,6 +73,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [viewEstimate, setViewEstimate] = useState(null);
+  const [viewAmcPackage, setViewAmcPackage] = useState(null);
   const [fpPortalLinks, setFpPortalLinks] = useState([]);
   const clearAllFilters = () => { setEstimateTypeFilter('all'); setStatusFilter('all'); setCategoryFilter('all'); setFromDate(''); setToDate(''); setSearchTerm(''); };
 
@@ -950,7 +951,16 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                               <td className="px-4 py-4 max-w-xs"><p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText || '-'}</p></td>
                               <td className="px-4 py-4 text-right"><span className="font-semibold text-gray-900">{formatCurrency(getPackagePrice(pkg))}</span></td>
                               <td className="px-4 py-4">
-                                <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg transition-colors" title="View">
+                                <button 
+                                  onClick={() => {
+                                    const serviceRows = servicesData?.serviceRows || servicesData || [];
+                                    const propertyType = servicesData?.property_type || pkg.property_type;
+                                    const billingDuration = servicesData?.billing_duration || pkg.billing_duration;
+                                    setViewAmcPackage({ ...pkg, servicesData, serviceRows, propertyType, billingDuration });
+                                  }}
+                                  className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" 
+                                  title="View Details"
+                                >
                                   <Eye className="w-4 h-4" />
                                 </button>
                               </td>
@@ -1275,6 +1285,98 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
               {/* Created By */}
               <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
                 Created by: {viewEstimate.created_by_name || '-'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View AMC Package Modal */}
+      {viewAmcPackage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">AMC Package Details</h3>
+              <button onClick={() => setViewAmcPackage(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              {/* Package Header */}
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-4 rounded-lg border border-indigo-100">
+                <h4 className="text-xl font-bold text-indigo-900">{viewAmcPackage.name}</h4>
+                <p className="text-sm text-indigo-600 mt-1">{viewAmcPackage.package_code || `PKG-${viewAmcPackage.id}`}</p>
+              </div>
+
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Property Type</p>
+                  <p className="font-semibold text-sm">{getPropertyTypeLabel(viewAmcPackage.propertyType)}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Billing</p>
+                  <p className="font-semibold text-sm capitalize whitespace-nowrap">{viewAmcPackage.billingDuration?.replace('-', ' ') || 'Monthly'}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Total Price</p>
+                  <p className="font-bold text-lg text-green-700">{formatCurrency(getPackagePrice(viewAmcPackage))}</p>
+                </div>
+              </div>
+
+              {/* Description */}
+              {viewAmcPackage.description && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Description</p>
+                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewAmcPackage.description}</p>
+                </div>
+              )}
+
+              {/* Services Included */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Services Included</p>
+                {viewAmcPackage.serviceRows && viewAmcPackage.serviceRows.length > 0 ? (
+                  <div className="space-y-2">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-100 rounded-lg">
+                      <div className="col-span-1 text-xs font-semibold text-gray-600">#</div>
+                      <div className="col-span-3 text-xs font-semibold text-gray-600">Service</div>
+                      <div className="col-span-5 text-xs font-semibold text-gray-600 text-center">Description</div>
+                      <div className="col-span-2 text-xs font-semibold text-gray-600 text-center">Frequency</div>
+                      <div className="col-span-1 text-xs font-semibold text-gray-600 text-center">Visits</div>
+                    </div>
+                    {viewAmcPackage.serviceRows.map((svc, idx) => (
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-blue-50 px-3 py-3 rounded-lg border border-blue-100">
+                        <div className="col-span-1">
+                          <span className="w-6 h-6 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                        </div>
+                        <div className="col-span-3"><p className="font-medium text-gray-800 text-sm">{svc.name || svc.service || 'Service'}</p></div>
+                        <div className={`col-span-5 text-sm text-gray-600 ${!svc.description ? 'text-center' : ''}`}>{svc.description || '-'}</div>
+                        <div className="col-span-2 text-center"><span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">{(svc.frequency || svc.frequency_type || 'Monthly').replace(/^\d+x\s*/i, '')}</span></div>
+                        <div className="col-span-1 text-center"><span className="font-semibold text-sm">{svc.visits || svc.frequency_count || '12'}</span></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">No services listed</p>
+                )}
+              </div>
+
+              {/* Price Summary */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Subtotal:</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">GST ({viewAmcPackage.gst_percentage || 0}%):</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                    <span className="font-bold text-gray-800">TOTAL:</span>
+                    <span className="font-bold text-lg text-green-700">{formatCurrency((viewAmcPackage.price || viewAmcPackage.base_price) + (((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100))}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
