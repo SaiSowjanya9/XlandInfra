@@ -1183,8 +1183,33 @@ body {
   touch-action: pan-y;
 }
 
+/* Make scrollbar always visible on mobile */
+.dropdown-portal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdown-portal::-webkit-scrollbar-track {
+  background: rgba(39, 39, 42, 0.5);
+  border-radius: 3px;
+}
+
+.dropdown-portal::-webkit-scrollbar-thumb {
+  background: rgba(216, 178, 92, 0.6);
+  border-radius: 3px;
+}
+
+.dropdown-portal::-webkit-scrollbar-thumb:hover {
+  background: rgba(216, 178, 92, 0.8);
+}
+
 /* Ensure dropdown items are touch-friendly on mobile */
 @media (max-width: 768px) {
+  .dropdown-portal {
+    /* Force scrollbar to always show on mobile */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(216, 178, 92, 0.6) rgba(39, 39, 42, 0.5);
+  }
+  
   .dropdown-portal button,
   .dropdown-portal > div {
     min-height: 48px;
