@@ -1011,12 +1011,12 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       return res.status(400).json({ success: false, message: 'Category is required' });
     }
 
-    // Validate property belongs to FP - check both tables (include property_id, property_type, and zone for email)
+    // Validate property belongs to FP - check both tables (include property_id, property_type, zone, and division for email)
     let property = [];
     
     // Check properties table first
     const [regularProp] = await pool.execute(
-      'SELECT id, name, property_id, property_type, zone_id as zone FROM properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
+      'SELECT id, name, property_id, property_type, zone_id as zone, division FROM properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
       [propertyId, propertyId, req.fpId]
     );
     
@@ -1025,7 +1025,7 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
     } else {
       // Check onboarded_properties table
       const [onboardedProp] = await pool.execute(
-        'SELECT id, community_name as name, property_id, property_type, zone FROM onboarded_properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
+        'SELECT id, community_name as name, property_id, property_type, zone, division FROM onboarded_properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
         [propertyId, propertyId, req.fpId]
       );
       property = onboardedProp;
@@ -1036,6 +1036,15 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
         success: false,
         message: 'Invalid property selection'
       });
+    }
+
+    // Fetch zone name from zones table if zone_id exists
+    let zoneName = property[0]?.zone || null;
+    if (property[0]?.zone && !isNaN(parseInt(property[0]?.zone))) {
+      const [zoneData] = await pool.execute('SELECT name FROM zones WHERE id = ?', [parseInt(property[0].zone)]);
+      if (zoneData.length > 0) {
+        zoneName = zoneData[0].name;
+      }
     }
 
     const workOrderId = `WO-${Date.now()}`;
@@ -1108,6 +1117,8 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       customerName,
       customerEmail,
       customerPhone,
+      zoneName: zoneName,
+      division: property[0]?.division || null,
       categoryName,
       subcategoryName,
       priority,
@@ -1138,12 +1149,20 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
 router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_orders'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, notes } = req.body;
+    const { status, notes, closingNotes } = req.body;
 
-    await pool.execute(
-      `UPDATE work_orders SET status = ?, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
-      [status, id, req.fpId]
-    );
+    // If completing, also save closing notes and completed date
+    if (status === 'completed') {
+      await pool.execute(
+        `UPDATE work_orders SET status = ?, closing_notes = ?, completed_date = NOW(), updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+        [status, closingNotes || null, id, req.fpId]
+      );
+    } else {
+      await pool.execute(
+        `UPDATE work_orders SET status = ?, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+        [status, id, req.fpId]
+      );
+    }
 
     // Log status change
     await pool.execute(
@@ -1157,8 +1176,9 @@ router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_
       console.log('[FP] Status changed to completed, sending email...');
       const [workOrder] = await pool.execute(
         `SELECT wo.work_order_id, wo.title, wo.property_name, wo.property_id, wo.customer_name, wo.customer_email, wo.customer_phone, 
-                wo.category_name, wo.subcategory_name, wo.franchise_partner_id,
-                COALESCE(p.zone_id, op.zone) as property_zone
+                wo.category_name, wo.subcategory_name, wo.description, wo.closing_notes, wo.franchise_partner_id,
+                COALESCE(p.zone_id, op.zone) as property_zone,
+                COALESCE(p.division, op.division) as division
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN onboarded_properties op ON wo.property_id = op.id
@@ -1166,6 +1186,13 @@ router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_
       );
       console.log('[FP] Work order data:', workOrder[0]);
       if (workOrder.length > 0) {
+        // Fetch zone name from zones table
+        let zoneName = workOrder[0].property_zone || null;
+        if (workOrder[0].property_zone && !isNaN(parseInt(workOrder[0].property_zone))) {
+          const [zoneData] = await pool.execute('SELECT name FROM zones WHERE id = ?', [parseInt(workOrder[0].property_zone)]);
+          if (zoneData.length > 0) zoneName = zoneData[0].name;
+        }
+        
         const { sendWorkOrderCompletedNotification } = require('../services/emailService');
         try {
           await sendWorkOrderCompletedNotification({
@@ -1177,10 +1204,15 @@ router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_
             customerName: workOrder[0].customer_name,
             customerEmail: workOrder[0].customer_email,
             customerPhone: workOrder[0].customer_phone,
+            zoneName: zoneName,
+            division: workOrder[0].division,
             categoryName: workOrder[0].category_name,
             subcategoryName: workOrder[0].subcategory_name,
+            description: workOrder[0].description,
+            closingNotes: workOrder[0].closing_notes,
             completedBy: req.user?.username || req.user?.email || 'FP Admin',
             completedByRole: 'Franchise Partner',
+            completedAt: new Date(),
             franchisePartnerId: workOrder[0].franchise_partner_id,
             propertyZone: workOrder[0].property_zone
           });
