@@ -1540,24 +1540,115 @@ router.delete('/vendors/:id', requireManagerScope, validateOwnership('onboarded_
 // EMPLOYEE MANAGEMENT
 // ============================================
 
-// Get all manager employees - DISABLED for Manager role
+// Get all employees - For FP Managers, returns FP employees with zone assignments
 router.get('/employees', requireManagerScope, async (req, res) => {
-  return res.status(403).json({ success: false, message: 'Employee management not allowed for this role' });
+  try {
+    // Only FP Managers can access employee data
+    if (!req.isFPManager || !req.franchisePartnerId) {
+      return res.status(403).json({ success: false, message: 'Employee management not available for standalone managers' });
+    }
+
+    // Get all employees for this FP (excluding the current manager and other managers)
+    const [employees] = await pool.execute(
+      `SELECT e.id, e.user_id as employee_id, e.first_name, e.last_name, 
+              CONCAT(e.first_name, ' ', e.last_name) as name,
+              e.email, e.phone, e.country_code, e.role, e.is_active
+       FROM fp_employees e
+       WHERE e.franchise_partner_id = ? AND e.is_active = 1 AND e.role != 'manager'
+       ORDER BY e.first_name, e.last_name`,
+      [req.franchisePartnerId]
+    );
+
+    // Get zone assignments
+    const [zoneAssignments] = await pool.execute(
+      `SELECT fp_employee_id, zone_name FROM fp_employee_zones WHERE franchise_partner_id = ?`,
+      [req.franchisePartnerId]
+    );
+
+    // Build a map of employee zones
+    const employeeZonesMap = {};
+    zoneAssignments.forEach(za => {
+      if (!employeeZonesMap[za.fp_employee_id]) {
+        employeeZonesMap[za.fp_employee_id] = [];
+      }
+      if (za.zone_name) {
+        employeeZonesMap[za.fp_employee_id].push(za.zone_name);
+      }
+    });
+
+    // Transform employees with their zones
+    const transformedEmployees = employees.map(emp => ({
+      ...emp,
+      assignedZones: employeeZonesMap[emp.id] || [],
+      assigned_zones: employeeZonesMap[emp.id] || []
+    }));
+
+    res.json({ success: true, data: transformedEmployees });
+  } catch (error) {
+    console.error('Get employees error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
-// Create employee - DISABLED for Manager role
+// Create employee - DISABLED for Manager role (FP handles employee creation)
 router.post('/employees', requireManagerScope, async (req, res) => {
-  return res.status(403).json({ success: false, message: 'Employee management not allowed for this role' });
+  return res.status(403).json({ success: false, message: 'Employee creation is managed by the Franchise Partner' });
 });
 
-// Update employee - DISABLED for Manager role
+// Update employee - DISABLED for Manager role (FP handles employee updates)
 router.put('/employees/:id', requireManagerScope, async (req, res) => {
-  return res.status(403).json({ success: false, message: 'Employee management not allowed for this role' });
+  return res.status(403).json({ success: false, message: 'Employee updates are managed by the Franchise Partner' });
 });
 
-// Delete employee - DISABLED for Manager role
+// Update employee zones - For FP Managers to assign zones
+router.put('/employees/:id/zones', requireManagerScope, async (req, res) => {
+  try {
+    // Only FP Managers can update zones
+    if (!req.isFPManager || !req.franchisePartnerId) {
+      return res.status(403).json({ success: false, message: 'Zone management not available for standalone managers' });
+    }
+
+    const { id } = req.params;
+    const { zones } = req.body;
+    
+    console.log('[Manager] Updating zones for employee:', id, 'FP:', req.franchisePartnerId, 'Zones:', zones);
+    
+    // Verify employee belongs to this FP
+    const [empCheck] = await pool.execute(
+      `SELECT id FROM fp_employees WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.franchisePartnerId]
+    );
+    
+    if (empCheck.length === 0) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+    
+    // Delete existing zone assignments
+    await pool.execute(
+      `DELETE FROM fp_employee_zones WHERE fp_employee_id = ? AND franchise_partner_id = ?`,
+      [id, req.franchisePartnerId]
+    );
+    
+    // Insert new zone assignments
+    if (zones && zones.length > 0) {
+      for (const zoneName of zones) {
+        await pool.execute(
+          `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_name) VALUES (?, ?, ?)`,
+          [req.franchisePartnerId, id, zoneName]
+        );
+      }
+    }
+    
+    res.json({ success: true, message: 'Employee zones updated successfully' });
+  } catch (error) {
+    console.error('[Manager] Update employee zones error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete employee - DISABLED for Manager role (FP handles employee deletion)
 router.delete('/employees/:id', requireManagerScope, async (req, res) => {
-  return res.status(403).json({ success: false, message: 'Employee management not allowed for this role' });
+  return res.status(403).json({ success: false, message: 'Employee deletion is managed by the Franchise Partner' });
 });
 
 // View FP employee zone assignments (READ-ONLY for managers under FP) - ZONE-CENTRIC
