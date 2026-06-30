@@ -1175,7 +1175,10 @@ router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_
     if (status === 'completed') {
       console.log('[FP] Status changed to completed, sending email...');
       const [workOrder] = await pool.execute(
-        `SELECT wo.work_order_id, wo.title, wo.property_name, wo.property_id, wo.customer_name, wo.customer_email, wo.customer_phone, 
+        `SELECT wo.work_order_id, wo.title, 
+                COALESCE(p.name, op.community_name, wo.property_name) as property_name,
+                COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
+                wo.customer_name, wo.customer_email, wo.customer_phone, 
                 wo.category_name, wo.subcategory_name, wo.description, wo.closing_notes, wo.franchise_partner_id,
                 COALESCE(p.zone_id, op.zone) as property_zone,
                 COALESCE(p.division, op.division) as division
@@ -1200,7 +1203,7 @@ router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_
             orderNumber: workOrder[0].work_order_id,
             title: workOrder[0].title,
             propertyName: workOrder[0].property_name,
-            propertyId: workOrder[0].property_id,
+            propertyId: workOrder[0].property_code,
             customerName: workOrder[0].customer_name,
             customerEmail: workOrder[0].customer_email,
             customerPhone: workOrder[0].customer_phone,
