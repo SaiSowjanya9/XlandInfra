@@ -23,6 +23,7 @@ const SupervisorWorkOrders = ({ user }) => {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [closingNotes, setClosingNotes] = useState('');
   const [completingWorkOrderId, setCompletingWorkOrderId] = useState(null);
+  const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [attachments, setAttachments] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -254,9 +255,11 @@ const SupervisorWorkOrders = ({ user }) => {
     }
   };
 
-  const handleCompleteWorkOrder = () => {
-    if (completingWorkOrderId) {
-      handleStatusChange({ id: completingWorkOrderId }, 'completed', closingNotes);
+  const handleCompleteWorkOrder = async () => {
+    if (completingWorkOrderId && !isSubmittingCompletion) {
+      setIsSubmittingCompletion(true);
+      await handleStatusChange({ id: completingWorkOrderId }, 'completed', closingNotes);
+      setIsSubmittingCompletion(false);
     }
   };
 
@@ -1121,9 +1124,9 @@ const SupervisorWorkOrders = ({ user }) => {
             </div>
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
               <button onClick={() => { setShowCompletionModal(false); setClosingNotes(''); setCompletingWorkOrderId(null); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
-              <button onClick={handleCompleteWorkOrder} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2">
+              <button onClick={handleCompleteWorkOrder} disabled={isSubmittingCompletion} className={`px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 ${isSubmittingCompletion ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 <CheckCircle className="w-4 h-4" />
-                Mark as Completed
+                {isSubmittingCompletion ? 'Completing...' : 'Mark as Completed'}
               </button>
             </div>
           </div>
