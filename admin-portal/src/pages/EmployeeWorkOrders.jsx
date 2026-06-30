@@ -453,7 +453,7 @@ const EmployeeWorkOrders = ({ admin }) => {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  // Handle status change
+  // Handle status change - uses the same endpoint as updateStatus
   const handleStatusChange = async (workOrderId, newStatus, closingNotesValue = null) => {
     // If completing, show modal to enter closing notes
     if (newStatus === 'completed' && closingNotesValue === null) {
@@ -464,10 +464,10 @@ const EmployeeWorkOrders = ({ admin }) => {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/api/admin/work-orders/${workOrderId}/status`, {
+      const response = await fetch(`${API_BASE}/api/work-orders/${workOrderId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ status: newStatus, closingNotes: closingNotesValue })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus, adminId: admin?.id, closingNotes: closingNotesValue })
       });
       const result = await response.json();
       if (result.success) {
