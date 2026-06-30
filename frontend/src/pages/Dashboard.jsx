@@ -543,6 +543,16 @@ const Dashboard = ({ user }) => {
                   </div>
                 </div>
               )}
+
+              {/* Completion Notes - Show when work order is completed */}
+              {selectedWorkOrder.status === 'completed' && selectedWorkOrder.closing_notes && (
+                <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-xl p-4 border border-green-500/30 backdrop-blur-sm">
+                  <h4 className="text-green-400 font-medium mb-3 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" /> Completion Notes
+                  </h4>
+                  <p className="text-green-200 bg-dark-600/30 px-4 py-3 rounded-lg">{selectedWorkOrder.closing_notes}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
