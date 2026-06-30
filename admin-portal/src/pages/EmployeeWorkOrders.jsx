@@ -275,18 +275,31 @@ const EmployeeWorkOrders = ({ admin }) => {
     }
   };
 
-  const updateStatus = async (id, status) => {
+  const updateStatus = async (id, status, closingNotesValue = null) => {
+    // If completing, show modal to enter closing notes
+    if (status === 'completed' && closingNotesValue === null) {
+      setCompletingWorkOrderId(id);
+      setClosingNotes('');
+      setShowCompletionModal(true);
+      return;
+    }
+    
     try {
       const response = await fetch(`${API_BASE}/api/work-orders/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, adminId: admin?.id })
+        body: JSON.stringify({ status, adminId: admin?.id, closingNotes: closingNotesValue })
       });
       const result = await response.json();
       if (result.success) {
         setSuccess('Status updated successfully');
         fetchWorkOrders();
         setSelectedOrder(null);
+        if (status === 'completed') {
+          setShowCompletionModal(false);
+          setClosingNotes('');
+          setCompletingWorkOrderId(null);
+        }
         setTimeout(() => setSuccess(''), 3000);
       }
     } catch (error) {
@@ -476,7 +489,7 @@ const EmployeeWorkOrders = ({ admin }) => {
   const handleCompleteWorkOrder = async () => {
     if (completingWorkOrderId && !isSubmittingCompletion) {
       setIsSubmittingCompletion(true);
-      await handleStatusChange(completingWorkOrderId, 'completed', closingNotes);
+      await updateStatus(completingWorkOrderId, 'completed', closingNotes);
       setIsSubmittingCompletion(false);
     }
   };
