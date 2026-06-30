@@ -404,7 +404,7 @@ const ManagerEmployeeZones = ({ user }) => {
                 {/* Employee Header */}
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <p className="text-xs font-mono text-gray-500 mb-1">{employee.employeeId || employee.employee_id || employee.employee_code || employee.user_id}</p>
+                    <p className="text-xs font-mono text-gray-500 mb-1">{employee.employee_id || employee.user_id || employee.employeeId || `ID: ${employee.id}`}</p>
                     <h3 className="font-semibold text-gray-900">{employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim()}</h3>
                   </div>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -487,7 +487,7 @@ const ManagerEmployeeZones = ({ user }) => {
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-mono text-gray-500 mb-1">{selectedEmployee.employeeId || selectedEmployee.employee_id || selectedEmployee.employee_code || selectedEmployee.user_id}</p>
+                  <p className="text-xs font-mono text-gray-500 mb-1">{selectedEmployee.employee_id || selectedEmployee.user_id || selectedEmployee.employeeId || `ID: ${selectedEmployee.id}`}</p>
                   <h2 className="text-xl font-bold text-gray-900">{selectedEmployee.name || `${selectedEmployee.first_name || ''} ${selectedEmployee.last_name || ''}`.trim()}</h2>
                   <p className="text-sm text-gray-500">{selectedEmployee.email}</p>
                 </div>
