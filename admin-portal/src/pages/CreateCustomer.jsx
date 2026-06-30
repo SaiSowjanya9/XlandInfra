@@ -1566,13 +1566,7 @@ const CreateCustomer = ({ admin }) => {
                 value={formData.mapLocation}
                 onChange={(loc) => {
                   updateFormData('mapLocation', loc);
-                  // Auto-populate address fields from captured location
-                  if (loc.address) {
-                    const parts = loc.address.split(', ');
-                    if (parts.length >= 3 && !formData.city) {
-                      updateFormData('city', parts[Math.floor(parts.length / 2)] || '');
-                    }
-                  }
+                  // Note: Auto-populate disabled - data is entered manually
                 }}
                 savedBy="Admin"
                 showShareOption={false}

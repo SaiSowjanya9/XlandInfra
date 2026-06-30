@@ -1453,13 +1453,7 @@ const SupervisorCustomers = ({ user, defaultTab = 'list' }) => {
                     value={formData.mapLocation}
                     onChange={(loc) => {
                       updateFormData('mapLocation', loc);
-                      // Auto-populate address fields from captured location
-                      if (loc.address) {
-                        const parts = loc.address.split(', ');
-                        if (parts.length >= 3 && !formData.city) {
-                          updateFormData('city', parts[Math.floor(parts.length / 2)] || '');
-                        }
-                      }
+                      // Note: Auto-populate disabled - employees enter data manually
                     }}
                     savedBy={user?.name || user?.email || 'Supervisor'}
                     showShareOption={false}
