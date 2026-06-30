@@ -9,7 +9,28 @@ const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 const { sendCustomerActivationEmail } = require('../services/emailService');
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`)
+});
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type'), false);
+    }
+  }
+});
 
 // Constants for customer activation
 const ACTIVATION_EXPIRY_HOURS = 72;
@@ -816,13 +837,26 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
   }
 });
 
-router.post('/work-orders', requireSupervisorScope, async (req, res) => {
+router.post('/work-orders', requireSupervisorScope, (req, res, next) => {
+  // Use multer to parse FormData with attachments
+  upload.array('attachments', 5)(req, res, (err) => {
+    if (err) {
+      console.error('Multer upload error:', err);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, message: 'File too large. Maximum size is 10MB.' });
+      }
+      return res.status(400).json({ success: false, message: err.message || 'File upload error' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId || req.fpId;
     console.log('[Supervisor WO Create] SupervisorID:', supervisorId, 'FP:', franchisePartnerId);
+    console.log('[Supervisor WO Create] Body:', req.body);
     const { propertyId, categoryId, subcategoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate,
-            propertyName, categoryName, subcategoryName, customerName, customerEmail, customerPhone } = req.body;
+            propertyName, categoryName, subcategoryName, customerName, customerEmail, customerPhone, entryNotes } = req.body;
 
     // Backend validation - prevent empty work orders
     if (!propertyId) {
@@ -882,19 +916,31 @@ router.post('/work-orders', requireSupervisorScope, async (req, res) => {
     const [result] = await pool.query(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
         priority, permission_to_enter, has_pet, scheduled_date, franchise_partner_id, status,
-        property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone, zone, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
+        property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone, zone, created_by, entry_notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
         priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, franchisePartnerId,
         finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
-        customerName || null, customerEmail || null, customerPhone || null, propertyZone, createdBy]
+        customerName || null, customerEmail || null, customerPhone || null, propertyZone, createdBy, entryNotes || null]
     );
 
+    const workOrderDbId = result.insertId;
+
+    // Save attachments if any
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        await pool.query(
+          `INSERT INTO work_order_attachments (work_order_id, file_name, original_name, file_path, file_type, file_size)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [workOrderDbId, file.filename, file.originalname, `/uploads/${file.filename}`, file.mimetype, file.size]
+        );
+      }
+    }
+
     // Send email notification for new work order
-    // Sends to: FP email + zone-centric employees + customer
     const { sendWorkOrderCreatedNotification } = require('../services/emailService');
     sendWorkOrderCreatedNotification({
-      orderId: result.insertId,
+      orderId: workOrderDbId,
       orderNumber: workOrderId,
       title: title || `Service Request - ${finalCategoryName || 'General'}`,
       propertyName: finalPropertyName,
@@ -916,7 +962,7 @@ router.post('/work-orders', requireSupervisorScope, async (req, res) => {
     res.json({
       success: true,
       message: 'Work order created successfully',
-      data: { id: result.insertId, workOrderId }
+      data: { id: workOrderDbId, workOrderId }
     });
   } catch (error) {
     console.error('Work order create error:', error);
