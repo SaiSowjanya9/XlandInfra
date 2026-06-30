@@ -129,12 +129,21 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* Gold gradient text - Premium */
+/* Gold gradient text - Premium (iOS-safe) */
 .text-gold-gradient {
-  background: linear-gradient(135deg, #E8C96C 0%, #D8B25C 50%, #C8A24C 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #D4AF37;
+  -webkit-text-fill-color: #D4AF37;
+}
+
+/* Apply gradient on non-iOS browsers */
+@supports (background-clip: text) and (not (-webkit-touch-callout: none)) {
+  .text-gold-gradient {
+    background: linear-gradient(135deg, #E8C96C 0%, #D8B25C 50%, #C8A24C 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+  }
 }
 
 /* iOS Safari gradient text fix - prevents text disappearing during animations */
@@ -173,11 +182,19 @@ body {
 }
 
 .text-shimmer {
-  background: linear-gradient(90deg, #D8B25C, #E8C26C, #D8B25C, #C9A227, #D8B25C);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer 4s linear infinite;
+  color: #D8B25C;
+  -webkit-text-fill-color: #D8B25C;
+}
+
+@supports (background-clip: text) and (not (-webkit-touch-callout: none)) {
+  .text-shimmer {
+    background: linear-gradient(90deg, #D8B25C, #E8C26C, #D8B25C, #C9A227, #D8B25C);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: shimmer 4s linear infinite;
+  }
 }
 
 @keyframes shimmer {
@@ -805,39 +822,55 @@ body {
                0 0 60px rgba(216, 178, 92, 0.2);
 }
 
-/* Premium Shiny Gold Text */
+/* Premium Shiny Gold Text - iOS safe */
 .text-gold-shine {
-  background: linear-gradient(
-    180deg,
-    #FFFDE7 0%,
-    #FFD54F 12%,
-    #FFCA28 22%,
-    #FFB300 35%,
-    #E5A000 48%,
-    #C99700 58%,
-    #B8860B 70%,
-    #996515 85%,
-    #7A5000 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #D4AF37;
+  -webkit-text-fill-color: #D4AF37;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-  text-shadow: none;
+}
+
+@supports (background-clip: text) and (not (-webkit-touch-callout: none)) {
+  .text-gold-shine {
+    background: linear-gradient(
+      180deg,
+      #FFFDE7 0%,
+      #FFD54F 12%,
+      #FFCA28 22%,
+      #FFB300 35%,
+      #E5A000 48%,
+      #C99700 58%,
+      #B8860B 70%,
+      #996515 85%,
+      #7A5000 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    text-shadow: none;
+  }
 }
 
 .text-gold-subtle {
-  background: linear-gradient(
-    180deg,
-    #E5C044 0%,
-    #D4AF37 30%,
-    #C9A227 60%,
-    #A17F1A 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #C9A227;
+  -webkit-text-fill-color: #C9A227;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+@supports (background-clip: text) and (not (-webkit-touch-callout: none)) {
+  .text-gold-subtle {
+    background: linear-gradient(
+      180deg,
+      #E5C044 0%,
+      #D4AF37 30%,
+      #C9A227 60%,
+      #A17F1A 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
 }
 
 /* Shimmer Animation */

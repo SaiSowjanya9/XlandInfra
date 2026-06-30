@@ -160,7 +160,7 @@ const PrivacyPolicy = () => {
             <Shield className="w-8 h-8 text-gold-400" />
           </div>
           <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">
-            Privacy <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Policy</span>
+            Privacy <span className="text-gold-hero">Policy</span>
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-4">
             Your privacy is important to us. This policy outlines how XLAND INFRA PVT LTD collects, uses, and protects your personal information.

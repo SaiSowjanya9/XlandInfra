@@ -121,7 +121,7 @@ const CookiePolicy = () => {
             <Cookie className="w-8 h-8 text-gold-400" />
           </div>
           <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">
-            Cookie <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Policy</span>
+            Cookie <span className="text-gold-hero">Policy</span>
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-4">
             This policy explains how XLAND INFRA uses cookies and similar technologies to recognize you when you visit our website.

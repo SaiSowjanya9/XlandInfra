@@ -170,7 +170,7 @@ const PropertyManagement = () => {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-normal mb-6 leading-[1.1] tracking-tight opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.4s_forwards]">
                 <span className="text-white">YOUR PROPERTY.</span>
                 <br />
-                <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">OUR PRIORITY.</span>
+                <span className="text-gold-hero">OUR PRIORITY.</span>
               </h1>
 
               <h2 className="text-xl md:text-2xl text-gold-400/80 font-semibold mb-6 opacity-0 animate-[fadeSlideIn_0.8s_ease-out_0.5s_forwards]">
@@ -236,7 +236,7 @@ const PropertyManagement = () => {
               <div className="h-px w-12 bg-gradient-to-l from-transparent to-gold-400"></div>
             </div>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-4">
-              One Partner. <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Better Control. Better Value.</span>
+              One Partner. <span className="text-gold-hero">Better Control. Better Value.</span>
             </h2>
           </div>
 
@@ -315,7 +315,7 @@ const PropertyManagement = () => {
             </div>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-4">
               We Take Care of Your Property, <br />
-              <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">So You Can Focus on What Matters</span>
+              <span className="text-gold-hero">So You Can Focus on What Matters</span>
             </h2>
           </div>
 
@@ -353,7 +353,7 @@ const PropertyManagement = () => {
               <div className="h-px w-12 bg-gradient-to-l from-transparent to-gold-400"></div>
             </div>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-4">
-              The Real <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Cost Difference</span>
+              The Real <span className="text-gold-hero">Cost Difference</span>
             </h2>
           </div>
 
@@ -433,7 +433,7 @@ const PropertyManagement = () => {
               <div className="h-px w-12 bg-gradient-to-l from-transparent to-gold-400"></div>
             </div>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-4">
-              The ROI of <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Smart Property Management</span>
+              The ROI of <span className="text-gold-hero">Smart Property Management</span>
             </h2>
           </div>
 
@@ -472,7 +472,7 @@ const PropertyManagement = () => {
               <div className="h-px w-12 bg-gradient-to-l from-transparent to-gold-400"></div>
             </div>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-4">
-              Why Owners Choose <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">XLAND INFRA</span>
+              Why Owners Choose <span className="text-gold-hero">XLAND INFRA</span>
             </h2>
           </div>
 
@@ -514,7 +514,7 @@ const PropertyManagement = () => {
           {/* Heading */}
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-normal text-white mb-6">
             One Partner. All Solutions. <br />
-            <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Total Peace of Mind.</span>
+            <span className="text-gold-hero">Total Peace of Mind.</span>
           </h2>
           <p className="text-gray-400 text-lg mb-10 max-w-2xl mx-auto">
             Ready to experience hassle-free property management? Let's discuss how we can help protect and grow your investment.

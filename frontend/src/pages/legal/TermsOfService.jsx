@@ -151,7 +151,7 @@ You may terminate your account at any time by contacting us. Upon termination, y
             <FileText className="w-8 h-8 text-gold-400" />
           </div>
           <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">
-            Terms of <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">Service</span>
+            Terms of <span className="text-gold-hero">Service</span>
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-4">
             Please read these terms carefully before using our services. By using XLAND INFRA services, you agree to these terms.
