@@ -226,12 +226,13 @@ router.post('/', (req, res, next) => {
       const finalPropertyType = propertyType || propDetails.property_type || null;
 
       // Check for duplicate work order (same property, category, subcategory created in last 30 seconds)
+      const subcatIdForQuery = subcategoryId && !isNaN(parseInt(subcategoryId)) ? parseInt(subcategoryId) : null;
       const [recentDuplicates] = await pool.query(
         `SELECT id, work_order_id FROM work_orders 
-         WHERE property_id = ? AND category_id = ? AND subcategory_id = ? 
+         WHERE property_id = ? AND category_id = ? AND (subcategory_id = ? OR (subcategory_id IS NULL AND ? IS NULL))
          AND created_at > DATE_SUB(NOW(), INTERVAL 30 SECOND)
          LIMIT 1`,
-        [propDetails.id || propId, parseInt(categoryId), parseInt(subcategoryId)]
+        [propDetails.id || propId, parseInt(categoryId), subcatIdForQuery, subcatIdForQuery]
       );
       
       if (recentDuplicates.length > 0) {
