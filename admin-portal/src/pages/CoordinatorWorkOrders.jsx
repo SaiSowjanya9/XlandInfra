@@ -71,6 +71,7 @@ const CoordinatorWorkOrders = ({ user }) => {
     propertyId: '',
     categoryId: '',
     subcategoryId: '',
+    customSubcategory: '',
     clientId: '',
     customerName: '',
     customerEmail: '',
@@ -177,15 +178,32 @@ const CoordinatorWorkOrders = ({ user }) => {
       setMessage({ type: 'error', text: 'Please select a category' });
       return;
     }
+    // Validate subcategory - either dropdown selection or custom text
+    if (isOtherCategory) {
+      if (!formData.customSubcategory?.trim()) {
+        setMessage({ type: 'error', text: 'Please enter a subcategory' });
+        return;
+      }
+    } else if (!formData.subcategoryId) {
+      setMessage({ type: 'error', text: 'Please select a subcategory' });
+      return;
+    }
 
     try {
+      const submitData = { ...formData };
+      // Handle custom subcategory for "Other" category
+      if (isOtherCategory && formData.customSubcategory) {
+        submitData.customSubcategory = formData.customSubcategory;
+        submitData.subcategoryId = '';
+      }
+      
       const response = await fetch('/api/coordinator/work-orders', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(submitData)
       });
 
       const result = await response.json();
@@ -376,6 +394,7 @@ const CoordinatorWorkOrders = ({ user }) => {
       propertyId: '',
       categoryId: '',
       subcategoryId: '',
+      customSubcategory: '',
       clientId: '',
       customerName: '',
       customerEmail: '',
@@ -395,10 +414,14 @@ const CoordinatorWorkOrders = ({ user }) => {
 
   // Handle category change to load subcategories from embedded data
   const handleCategoryChange = (categoryId) => {
-    setFormData({ ...formData, categoryId, subcategoryId: '' });
+    setFormData({ ...formData, categoryId, subcategoryId: '', customSubcategory: '' });
     const category = categories.find(c => c.id === parseInt(categoryId));
     setSubcategories(category?.subcategories || []);
   };
+  
+  // Check if "Other" category is selected
+  const selectedCategory = categories.find(c => c.id === parseInt(formData.categoryId));
+  const isOtherCategory = selectedCategory?.isCustom || selectedCategory?.name === 'Other';
 
   // Fetch subcategories (uses embedded data from categories)
   const fetchSubcategories = (categoryId) => {
@@ -1173,17 +1196,27 @@ const CoordinatorWorkOrders = ({ user }) => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
-                  <select
-                    value={formData.subcategoryId}
-                    onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                    disabled={!formData.categoryId}
-                  >
-                    <option value="">{formData.categoryId ? 'Select Subcategory' : 'Select Category first'}</option>
-                    {subcategories.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+                  {isOtherCategory ? (
+                    <input
+                      type="text"
+                      value={formData.customSubcategory}
+                      onChange={(e) => setFormData({ ...formData, customSubcategory: e.target.value })}
+                      placeholder="Enter subcategory / issue type"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
+                    />
+                  ) : (
+                    <select
+                      value={formData.subcategoryId}
+                      onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
+                      disabled={!formData.categoryId}
+                    >
+                      <option value="">{formData.categoryId ? 'Select Subcategory' : 'Select Category first'}</option>
+                      {subcategories.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div>
