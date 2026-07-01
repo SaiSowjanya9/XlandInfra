@@ -294,7 +294,7 @@ const SupervisorWorkOrders = ({ user }) => {
     return colors[status] || 'bg-gray-100 text-gray-700';
   };
 
-  const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+  const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }) : '-';
 
   // Filter by tab (all/completed) first, then by status filter, then by search
   const tabFilteredWorkOrders = activeTab === 'completed'

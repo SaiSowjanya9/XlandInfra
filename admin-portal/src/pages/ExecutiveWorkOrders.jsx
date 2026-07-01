@@ -284,7 +284,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   };
 
   const getPriorityColor = (priority) => priorityOptions.find(p => p.value === priority)?.color || 'bg-gray-100 text-gray-700';
-  const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+  const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }) : '-';
 
   return (
     <div className="space-y-6">
