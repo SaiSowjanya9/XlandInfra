@@ -1029,7 +1029,7 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
     
     // Check properties table first
     const [regularProp] = await pool.execute(
-      'SELECT id, name, property_id, property_type, zone_id as zone, division FROM properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
+      'SELECT id, name, property_id, property_type, zone_id as zone, COALESCE(division_id, division) as division FROM properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
       [propertyId, propertyId, req.fpId]
     );
     

@@ -895,7 +895,7 @@ router.post('/work-orders', requireSupervisorScope, (req, res, next) => {
     let propertyDivision = null;
     if (propertyId) {
       const [props] = await pool.query(
-        `SELECT name, property_type, property_id, zone_id as zone, division FROM properties WHERE id = ? 
+        `SELECT name, property_type, property_id, zone_id as zone, COALESCE(division_id, division) as division FROM properties WHERE id = ? 
          UNION SELECT community_name as name, property_type, property_id, zone, division FROM onboarded_properties WHERE id = ?`,
         [propertyId, propertyId]
       );
