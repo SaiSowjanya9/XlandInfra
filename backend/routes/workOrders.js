@@ -92,6 +92,7 @@ router.post('/', (req, res, next) => {
     const {
       categoryId,
       subcategoryId,
+      customSubcategory,
       description,
       permissionToEnter,
       entryNotes,
@@ -109,11 +110,30 @@ router.post('/', (req, res, next) => {
       propertyType
     } = req.body;
 
-    // Validate required fields
-    if (!categoryId || !subcategoryId) {
+    // Get category details first to check if it's "Other" category
+    const category = categoriesConfig.find(c => c.id === parseInt(categoryId));
+    const isOtherCategory = category?.isCustom || category?.name === 'Other';
+
+    // Validate required fields - allow customSubcategory for "Other" category
+    if (!categoryId) {
       return res.status(400).json({
         success: false,
-        message: 'Category and subcategory are required'
+        message: 'Category is required'
+      });
+    }
+    
+    // For "Other" category, require customSubcategory; otherwise require subcategoryId
+    if (isOtherCategory) {
+      if (!customSubcategory || !customSubcategory.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please enter a subcategory for "Other" category'
+        });
+      }
+    } else if (!subcategoryId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subcategory is required'
       });
     }
 
@@ -125,15 +145,15 @@ router.post('/', (req, res, next) => {
       });
     }
 
-    // Get category and subcategory names from config
-    const category = categoriesConfig.find(c => c.id === parseInt(categoryId));
     if (!category) {
       return res.status(400).json({ success: false, message: 'Invalid category' });
     }
     
-    // Find subcategory name by ID
+    // Find subcategory name - use customSubcategory for "Other" category
     let subcategoryName = '';
-    if (category.subcategories && category.subcategories.length > 0) {
+    if (isOtherCategory && customSubcategory) {
+      subcategoryName = customSubcategory.trim();
+    } else if (category.subcategories && category.subcategories.length > 0) {
       const parsedSubId = parseInt(subcategoryId);
       const subcat = category.subcategories.find(s => s.id === parsedSubId);
       if (subcat) {
@@ -611,6 +631,7 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
     const {
       categoryId,
       subcategoryId,
+      customSubcategory,
       description,
       permissionToEnter,
       entryNotes,
@@ -629,17 +650,32 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
       propertyType
     } = req.body;
 
-    if (!categoryId || !subcategoryId) {
-      return res.status(400).json({ success: false, message: 'Category and subcategory are required' });
+    // Get category details first to check if it's "Other" category
+    const category = categoriesConfig.find(c => c.id === parseInt(categoryId));
+    const isOtherCategory = category?.isCustom || category?.name === 'Other';
+
+    if (!categoryId) {
+      return res.status(400).json({ success: false, message: 'Category is required' });
+    }
+    
+    // For "Other" category, require customSubcategory; otherwise require subcategoryId
+    if (isOtherCategory) {
+      if (!customSubcategory || !customSubcategory.trim()) {
+        return res.status(400).json({ success: false, message: 'Please enter a subcategory' });
+      }
+    } else if (!subcategoryId) {
+      return res.status(400).json({ success: false, message: 'Subcategory is required' });
     }
 
-    const category = categoriesConfig.find(c => c.id === parseInt(categoryId));
     if (!category) {
       return res.status(400).json({ success: false, message: 'Invalid category' });
     }
 
+    // Find subcategory name - use customSubcategory for "Other" category
     let subcategoryName = '';
-    if (category.subcategories && category.subcategories.length > 0) {
+    if (isOtherCategory && customSubcategory) {
+      subcategoryName = customSubcategory.trim();
+    } else if (category.subcategories && category.subcategories.length > 0) {
       const parsedSubId = parseInt(subcategoryId);
       const subcat = category.subcategories.find(s => s.id === parsedSubId);
       if (subcat) {
