@@ -183,7 +183,7 @@ router.post('/', (req, res, next) => {
       if (propId) {
         // Try properties table first - check by both id and property_id columns
         const [propData] = await pool.query(
-          `SELECT id, franchise_partner_id, name, property_type, property_id, zone_id as zone, division,
+          `SELECT id, franchise_partner_id, name, property_type, property_id, zone_id as zone, COALESCE(division_id, division) as division,
                   address, city, state, contact_person, contact_phone, contact_email
            FROM properties WHERE id = ? OR property_id = ?`,
           [propId, propId]
@@ -716,7 +716,7 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
     
     if (propId) {
       const [propData] = await pool.query(
-        `SELECT property_id, name, property_type, franchise_partner_id, zone_id as zone, division FROM properties WHERE id = ?`,
+        `SELECT property_id, name, property_type, franchise_partner_id, zone_id as zone, COALESCE(division_id, division) as division FROM properties WHERE id = ?`,
         [propId]
       );
       if (propData.length > 0) {
