@@ -32,6 +32,7 @@ const ExecutiveWorkOrders = ({ user }) => {
     propertyId: '',
     categoryId: '',
     subcategoryId: '',
+    customSubcategory: '',
     customerName: '',
     customerEmail: '',
     customerPhone: '',
@@ -133,12 +134,29 @@ const ExecutiveWorkOrders = ({ user }) => {
       setMessage({ type: 'error', text: 'Please select a category' });
       return;
     }
+    // Validate subcategory - either dropdown selection or custom text
+    if (isOtherCategory) {
+      if (!formData.customSubcategory?.trim()) {
+        setMessage({ type: 'error', text: 'Please enter a subcategory' });
+        return;
+      }
+    } else if (!formData.subcategoryId) {
+      setMessage({ type: 'error', text: 'Please select a subcategory' });
+      return;
+    }
 
     try {
+      const submitData = { ...formData };
+      // Handle custom subcategory for "Other" category
+      if (isOtherCategory && formData.customSubcategory) {
+        submitData.customSubcategory = formData.customSubcategory;
+        submitData.subcategoryId = '';
+      }
+      
       const response = await fetch('/api/executive/work-orders', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(submitData)
       });
       const result = await response.json();
       if (result.success) {
@@ -159,6 +177,7 @@ const ExecutiveWorkOrders = ({ user }) => {
       propertyId: '',
       categoryId: '',
       subcategoryId: '',
+      customSubcategory: '',
       customerName: '',
       customerEmail: '',
       customerPhone: '',
@@ -196,10 +215,14 @@ const ExecutiveWorkOrders = ({ user }) => {
 
   // Handle category change to load subcategories from embedded data
   const handleCategoryChange = (categoryId) => {
-    setFormData({ ...formData, categoryId, subcategoryId: '' });
+    setFormData({ ...formData, categoryId, subcategoryId: '', customSubcategory: '' });
     const category = categories.find(c => c.id === parseInt(categoryId));
     setSubcategories(category?.subcategories || []);
   };
+  
+  // Check if "Other" category is selected
+  const selectedCategory = categories.find(c => c.id === parseInt(formData.categoryId));
+  const isOtherCategory = selectedCategory?.isCustom || selectedCategory?.name === 'Other';
 
   // Handle file attachments
   const handleFileSelect = (e) => {
@@ -629,18 +652,29 @@ const ExecutiveWorkOrders = ({ user }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory <span className="text-red-500">*</span></label>
-                <select
-                  required
-                  value={formData.subcategoryId}
-                  onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  disabled={!formData.categoryId}
-                >
-                  <option value="">{formData.categoryId ? 'Select subcategory' : 'Select a category first'}</option>
-                  {subcategories.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
+                {isOtherCategory ? (
+                  <input
+                    type="text"
+                    required
+                    value={formData.customSubcategory}
+                    onChange={(e) => setFormData({ ...formData, customSubcategory: e.target.value })}
+                    placeholder="Enter subcategory / issue type"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <select
+                    required
+                    value={formData.subcategoryId}
+                    onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    disabled={!formData.categoryId}
+                  >
+                    <option value="">{formData.categoryId ? 'Select subcategory' : 'Select a category first'}</option>
+                    {subcategories.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
 

@@ -29,6 +29,7 @@ const WorkOrder = ({ user }) => {
   const [formData, setFormData] = useState({
     categoryId: '',
     subcategoryId: '',
+    customSubcategory: '',
     description: '',
     permissionToEnter: '',
     entryNotes: '',
@@ -86,10 +87,11 @@ const WorkOrder = ({ user }) => {
     setFormData(prev => ({
       ...prev,
       categoryId: categoryId.toString(),
-      subcategoryId: ''
+      subcategoryId: '',
+      customSubcategory: ''
     }));
     setShowCategoryDropdown(false);
-    setErrors(prev => ({ ...prev, categoryId: '' }));
+    setErrors(prev => ({ ...prev, categoryId: '', subcategoryId: '', customSubcategory: '' }));
   };
 
   // Handle subcategory selection
@@ -190,7 +192,13 @@ const WorkOrder = ({ user }) => {
     if (!formData.categoryId) {
       newErrors.categoryId = 'Please select a category';
     }
-    if (!formData.subcategoryId) {
+    // Check if "Other" category is selected (isCustom flag)
+    const isOtherCategory = selectedCategory?.isCustom || selectedCategory?.name === 'Other';
+    if (isOtherCategory) {
+      if (!formData.customSubcategory?.trim()) {
+        newErrors.customSubcategory = 'Please enter a subcategory';
+      }
+    } else if (!formData.subcategoryId) {
       newErrors.subcategoryId = 'Please select a subcategory';
     }
     if (!formData.permissionToEnter) {
@@ -218,7 +226,14 @@ const WorkOrder = ({ user }) => {
       // Create FormData for file upload
       const submitData = new FormData();
       submitData.append('categoryId', formData.categoryId);
-      submitData.append('subcategoryId', formData.subcategoryId);
+      // For "Other" category, send custom subcategory text
+      const isOtherCategory = selectedCategory?.isCustom || selectedCategory?.name === 'Other';
+      if (isOtherCategory && formData.customSubcategory) {
+        submitData.append('customSubcategory', formData.customSubcategory);
+        submitData.append('subcategoryId', ''); // No predefined subcategory
+      } else {
+        submitData.append('subcategoryId', formData.subcategoryId);
+      }
       submitData.append('description', formData.description);
       submitData.append('permissionToEnter', formData.permissionToEnter);
       submitData.append('entryNotes', formData.entryNotes);
@@ -425,79 +440,105 @@ const WorkOrder = ({ user }) => {
             )}
           </div>
 
-          {/* Subcategory Dropdown */}
+          {/* Subcategory - Dropdown or Text Input based on category */}
           <div>
             <label className="block text-sm font-medium text-dark-200 mb-2">
               Subcategory <span className="text-red-400">*</span>
             </label>
-            <div className="relative">
-              <button
-                ref={subcategoryBtnRef}
-                type="button"
-                data-dropdown-trigger
-                onClick={toggleSubcategoryDropdown}
-                disabled={!formData.categoryId}
-                className={`w-full px-4 py-3 bg-dark-700 border rounded-lg text-left flex items-center justify-between transition-all duration-200 ${
-                  !formData.categoryId 
-                    ? 'bg-dark-800 cursor-not-allowed' 
-                    : errors.subcategoryId 
+            {/* Show text input for "Other" category, dropdown for rest */}
+            {selectedCategory?.isCustom || selectedCategory?.name === 'Other' ? (
+              <div>
+                <input
+                  type="text"
+                  value={formData.customSubcategory}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, customSubcategory: e.target.value }));
+                    setErrors(prev => ({ ...prev, customSubcategory: '' }));
+                  }}
+                  placeholder="Enter subcategory / issue type"
+                  className={`w-full px-4 py-3 bg-dark-700 border rounded-lg text-white placeholder-dark-400 transition-all duration-200 ${
+                    errors.customSubcategory 
                       ? 'border-red-500 focus:ring-red-500' 
                       : 'border-dark-600 focus:ring-gold-500 focus:border-gold-500'
-                } ${showSubcategoryDropdown ? 'ring-2 ring-gold-500' : ''}`}
-              >
-                <span className={formData.subcategoryId ? 'text-white' : 'text-dark-400'}>
-                  {formData.subcategoryId 
-                    ? subcategories.find(s => s.id === parseInt(formData.subcategoryId))?.name 
-                    : formData.categoryId 
-                      ? 'Select a subcategory' 
-                      : 'Select a category first'}
-                </span>
-                <ChevronDown className={`w-5 h-5 text-dark-400 transition-transform duration-200 ${showSubcategoryDropdown ? 'rotate-180' : ''}`} />
-              </button>
-              
-              {showSubcategoryDropdown && createPortal(
-                <div 
-                  className="dropdown-portal fixed bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl overflow-y-scroll"
-                  style={{
-                    top: dropdownPosition.top,
-                    left: dropdownPosition.left,
-                    width: dropdownPosition.width,
-                    maxHeight: 'min(50vh, 300px)',
-                    zIndex: 9999
-                  }}
+                  }`}
+                />
+                {errors.customSubcategory && (
+                  <p className="mt-2 text-sm text-red-400 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    {errors.customSubcategory}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="relative">
+                <button
+                  ref={subcategoryBtnRef}
+                  type="button"
+                  data-dropdown-trigger
+                  onClick={toggleSubcategoryDropdown}
+                  disabled={!formData.categoryId}
+                  className={`w-full px-4 py-3 bg-dark-700 border rounded-lg text-left flex items-center justify-between transition-all duration-200 ${
+                    !formData.categoryId 
+                      ? 'bg-dark-800 cursor-not-allowed' 
+                      : errors.subcategoryId 
+                        ? 'border-red-500 focus:ring-red-500' 
+                        : 'border-dark-600 focus:ring-gold-500 focus:border-gold-500'
+                  } ${showSubcategoryDropdown ? 'ring-2 ring-gold-500' : ''}`}
                 >
-                  {subcategories.length > 0 ? (
-                    subcategories.map((sub, index) => (
-                      <button
-                        key={sub.id}
-                        type="button"
-                        onClick={() => handleSubcategorySelect(sub.id)}
-                        className={`w-full px-4 py-3.5 text-left hover:bg-gold-600/20 flex items-center justify-between transition-colors text-sm sm:text-base active:bg-gold-600/30 ${
-                          formData.subcategoryId === sub.id.toString() 
-                            ? 'bg-gold-600/20 text-gold-400' 
-                            : 'text-white'
-                        } ${index !== subcategories.length - 1 ? 'border-b border-dark-600' : ''}`}
-                      >
-                        <span>{sub.name}</span>
-                        {formData.subcategoryId === sub.id.toString() && (
-                          <Check className="w-5 h-5 text-gold-400" />
-                        )}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-4 py-3.5 text-dark-400 text-sm text-center">
-                      No subcategories available
-                    </div>
-                  )}
-                </div>,
-                document.body
-              )}
-            </div>
-            {errors.subcategoryId && (
-              <p className="mt-2 text-sm text-red-400 flex items-center">
-                <AlertCircle className="w-4 h-4 mr-1" />
-                {errors.subcategoryId}
-              </p>
+                  <span className={formData.subcategoryId ? 'text-white' : 'text-dark-400'}>
+                    {formData.subcategoryId 
+                      ? subcategories.find(s => s.id === parseInt(formData.subcategoryId))?.name 
+                      : formData.categoryId 
+                        ? 'Select a subcategory' 
+                        : 'Select a category first'}
+                  </span>
+                  <ChevronDown className={`w-5 h-5 text-dark-400 transition-transform duration-200 ${showSubcategoryDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showSubcategoryDropdown && createPortal(
+                  <div 
+                    className="dropdown-portal fixed bg-dark-800 border-2 border-gold-500/50 rounded-xl shadow-2xl overflow-y-scroll"
+                    style={{
+                      top: dropdownPosition.top,
+                      left: dropdownPosition.left,
+                      width: dropdownPosition.width,
+                      maxHeight: 'min(50vh, 300px)',
+                      zIndex: 9999
+                    }}
+                  >
+                    {subcategories.length > 0 ? (
+                      subcategories.map((sub, index) => (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => handleSubcategorySelect(sub.id)}
+                          className={`w-full px-4 py-3.5 text-left hover:bg-gold-600/20 flex items-center justify-between transition-colors text-sm sm:text-base active:bg-gold-600/30 ${
+                            formData.subcategoryId === sub.id.toString() 
+                              ? 'bg-gold-600/20 text-gold-400' 
+                              : 'text-white'
+                          } ${index !== subcategories.length - 1 ? 'border-b border-dark-600' : ''}`}
+                        >
+                          <span>{sub.name}</span>
+                          {formData.subcategoryId === sub.id.toString() && (
+                            <Check className="w-5 h-5 text-gold-400" />
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3.5 text-dark-400 text-sm text-center">
+                        No subcategories available
+                      </div>
+                    )}
+                  </div>,
+                  document.body
+                )}
+                {errors.subcategoryId && (
+                  <p className="mt-2 text-sm text-red-400 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    {errors.subcategoryId}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </div>

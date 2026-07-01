@@ -46,6 +46,7 @@ const CustomerWorkOrder = ({ user }) => {
     customerPhone: '',
     categoryId: '',
     subcategoryId: '',
+    customSubcategory: '',
     description: '',
     permissionToEnter: '',
     entryNotes: '',
@@ -138,11 +139,15 @@ const CustomerWorkOrder = ({ user }) => {
     setFormData(prev => ({
       ...prev,
       categoryId: categoryId.toString(),
-      subcategoryId: ''
+      subcategoryId: '',
+      customSubcategory: ''
     }));
     setShowCategoryDropdown(false);
-    setFormErrors(prev => ({ ...prev, categoryId: '' }));
+    setFormErrors(prev => ({ ...prev, categoryId: '', subcategoryId: '', customSubcategory: '' }));
   };
+  
+  // Check if "Other" category is selected
+  const isOtherCategory = selectedCategory?.isCustom || selectedCategory?.name === 'Other';
 
   // Handle subcategory selection
   const handleSubcategorySelect = (subcategoryId) => {
@@ -206,7 +211,12 @@ const CustomerWorkOrder = ({ user }) => {
     if (!formData.customerEmail.trim()) newErrors.customerEmail = 'Email is required';
     if (!formData.customerPhone.trim()) newErrors.customerPhone = 'Phone number is required';
     if (!formData.categoryId) newErrors.categoryId = 'Please select a category';
-    if (!formData.subcategoryId) newErrors.subcategoryId = 'Please select a subcategory';
+    // Validate subcategory - either dropdown selection or custom text
+    if (isOtherCategory) {
+      if (!formData.customSubcategory?.trim()) newErrors.customSubcategory = 'Please enter a subcategory';
+    } else if (!formData.subcategoryId) {
+      newErrors.subcategoryId = 'Please select a subcategory';
+    }
     if (!formData.permissionToEnter) newErrors.permissionToEnter = 'Please select Yes or No';
     if (!formData.hasPet) newErrors.hasPet = 'Please select Yes or No';
     setFormErrors(newErrors);
@@ -226,7 +236,13 @@ const CustomerWorkOrder = ({ user }) => {
       submitData.append('customerEmail', formData.customerEmail);
       submitData.append('customerPhone', formData.customerPhone);
       submitData.append('categoryId', formData.categoryId);
-      submitData.append('subcategoryId', formData.subcategoryId);
+      // Handle custom subcategory for "Other" category
+      if (isOtherCategory && formData.customSubcategory) {
+        submitData.append('customSubcategory', formData.customSubcategory);
+        submitData.append('subcategoryId', '');
+      } else {
+        submitData.append('subcategoryId', formData.subcategoryId);
+      }
       submitData.append('description', formData.description);
       submitData.append('permissionToEnter', formData.permissionToEnter);
       submitData.append('entryNotes', formData.entryNotes);
@@ -263,6 +279,7 @@ const CustomerWorkOrder = ({ user }) => {
           customerPhone: '',
           categoryId: '',
           subcategoryId: '',
+          customSubcategory: '',
           description: '',
           permissionToEnter: '',
           entryNotes: '',
@@ -600,74 +617,109 @@ const CustomerWorkOrder = ({ user }) => {
                 )}
               </div>
 
-              {/* Subcategory Dropdown */}
+              {/* Subcategory - Text Input for "Other" category, Dropdown for others */}
               <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (formData.categoryId) {
-                      setShowSubcategoryDropdown(!showSubcategoryDropdown);
-                      setShowCategoryDropdown(false);
-                    }
-                  }}
-                  disabled={!formData.categoryId}
-                  className={`w-full px-4 py-4 bg-white border-2 rounded-xl text-left flex items-center justify-between transition-all ${
-                    !formData.categoryId
-                      ? 'bg-gray-50 cursor-not-allowed border-gray-200'
-                      : formErrors.subcategoryId
-                        ? 'border-red-400'
-                        : formData.subcategoryId
-                          ? 'border-emerald-500 bg-emerald-50/30'
-                          : 'border-gray-200 hover:border-emerald-300'
-                  } ${showSubcategoryDropdown ? 'ring-2 ring-emerald-500' : ''}`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      formData.subcategoryId ? 'bg-emerald-100' : 'bg-gray-100'
-                    }`}>
-                      <ChevronRight className={`w-5 h-5 ${formData.subcategoryId ? 'text-emerald-600' : 'text-gray-400'}`} />
-                    </div>
-                    <div>
+                {isOtherCategory ? (
+                  <div>
+                    <div className="flex items-center space-x-3 mb-2">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-emerald-100">
+                        <ChevronRight className="w-5 h-5 text-emerald-600" />
+                      </div>
                       <p className="text-xs text-gray-500 uppercase tracking-wider">Subcategory</p>
-                      <p className={`font-medium ${formData.subcategoryId ? 'text-gray-900' : 'text-gray-400'}`}>
-                        {formData.subcategoryId
-                          ? subcategories.find(s => s.id === parseInt(formData.subcategoryId))?.name
-                          : formData.categoryId
-                            ? 'Select a subcategory'
-                            : 'Select a category first'}
-                      </p>
                     </div>
+                    <input
+                      type="text"
+                      value={formData.customSubcategory}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, customSubcategory: e.target.value }));
+                        setFormErrors(prev => ({ ...prev, customSubcategory: '' }));
+                      }}
+                      placeholder="Enter subcategory / issue type"
+                      className={`w-full px-4 py-4 bg-white border-2 rounded-xl transition-all ${
+                        formErrors.customSubcategory
+                          ? 'border-red-400'
+                          : formData.customSubcategory
+                            ? 'border-emerald-500 bg-emerald-50/30'
+                            : 'border-gray-200 hover:border-emerald-300'
+                      }`}
+                    />
+                    {formErrors.customSubcategory && (
+                      <p className="mt-2 text-sm text-red-500 flex items-center">
+                        <AlertCircle className="w-4 h-4 mr-1" />
+                        {formErrors.customSubcategory}
+                      </p>
+                    )}
                   </div>
-                  <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showSubcategoryDropdown ? 'rotate-180' : ''}`} />
-                </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (formData.categoryId) {
+                          setShowSubcategoryDropdown(!showSubcategoryDropdown);
+                          setShowCategoryDropdown(false);
+                        }
+                      }}
+                      disabled={!formData.categoryId}
+                      className={`w-full px-4 py-4 bg-white border-2 rounded-xl text-left flex items-center justify-between transition-all ${
+                        !formData.categoryId
+                          ? 'bg-gray-50 cursor-not-allowed border-gray-200'
+                          : formErrors.subcategoryId
+                            ? 'border-red-400'
+                            : formData.subcategoryId
+                              ? 'border-emerald-500 bg-emerald-50/30'
+                              : 'border-gray-200 hover:border-emerald-300'
+                      } ${showSubcategoryDropdown ? 'ring-2 ring-emerald-500' : ''}`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          formData.subcategoryId ? 'bg-emerald-100' : 'bg-gray-100'
+                        }`}>
+                          <ChevronRight className={`w-5 h-5 ${formData.subcategoryId ? 'text-emerald-600' : 'text-gray-400'}`} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider">Subcategory</p>
+                          <p className={`font-medium ${formData.subcategoryId ? 'text-gray-900' : 'text-gray-400'}`}>
+                            {formData.subcategoryId
+                              ? subcategories.find(s => s.id === parseInt(formData.subcategoryId))?.name
+                              : formData.categoryId
+                                ? 'Select a subcategory'
+                                : 'Select a category first'}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showSubcategoryDropdown ? 'rotate-180' : ''}`} />
+                    </button>
 
-                {showSubcategoryDropdown && subcategories.length > 0 && (
-                  <div className="absolute z-30 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
-                    {subcategories.map((sub) => (
-                      <button
-                        key={sub.id}
-                        type="button"
-                        onClick={() => handleSubcategorySelect(sub.id)}
-                        className={`w-full px-4 py-3 text-left hover:bg-emerald-50 flex items-center justify-between transition-colors ${
-                          formData.subcategoryId === sub.id.toString() ? 'bg-emerald-50' : ''
-                        }`}
-                      >
-                        <span className={formData.subcategoryId === sub.id.toString() ? 'text-emerald-700 font-medium' : 'text-gray-700'}>
-                          {sub.name}
-                        </span>
-                        {formData.subcategoryId === sub.id.toString() && (
-                          <Check className="w-5 h-5 text-emerald-600" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                    {showSubcategoryDropdown && subcategories.length > 0 && (
+                      <div className="absolute z-30 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
+                        {subcategories.map((sub) => (
+                          <button
+                            key={sub.id}
+                            type="button"
+                            onClick={() => handleSubcategorySelect(sub.id)}
+                            className={`w-full px-4 py-3 text-left hover:bg-emerald-50 flex items-center justify-between transition-colors ${
+                              formData.subcategoryId === sub.id.toString() ? 'bg-emerald-50' : ''
+                            }`}
+                          >
+                            <span className={formData.subcategoryId === sub.id.toString() ? 'text-emerald-700 font-medium' : 'text-gray-700'}>
+                              {sub.name}
+                            </span>
+                            {formData.subcategoryId === sub.id.toString() && (
+                              <Check className="w-5 h-5 text-emerald-600" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-                {formErrors.subcategoryId && (
-                  <p className="mt-2 text-sm text-red-500 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {formErrors.subcategoryId}
-                  </p>
+                    {formErrors.subcategoryId && (
+                      <p className="mt-2 text-sm text-red-500 flex items-center">
+                        <AlertCircle className="w-4 h-4 mr-1" />
+                        {formErrors.subcategoryId}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>

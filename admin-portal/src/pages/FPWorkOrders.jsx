@@ -77,6 +77,7 @@ const FPWorkOrders = ({ user }) => {
     propertyId: '',
     categoryId: '',
     subcategoryId: '',
+    customSubcategory: '',
     customerName: '',
     customerEmail: '',
     customerPhone: '',
@@ -229,19 +230,36 @@ const FPWorkOrders = ({ user }) => {
       setMessage({ type: 'error', text: 'Please select a category' });
       return;
     }
+    // Validate subcategory - either dropdown selection or custom text
+    if (isOtherCategory) {
+      if (!formData.customSubcategory?.trim()) {
+        setMessage({ type: 'error', text: 'Please enter a subcategory' });
+        return;
+      }
+    } else if (!formData.subcategoryId) {
+      setMessage({ type: 'error', text: 'Please select a subcategory' });
+      return;
+    }
 
     try {
       // Get category and subcategory names for the selected IDs
-      const selectedCategory = categories.find(c => c.id === parseInt(formData.categoryId));
-      const selectedSubcategory = subcategories.find(s => s.id === parseInt(formData.subcategoryId));
+      const selCategory = categories.find(c => c.id === parseInt(formData.categoryId));
+      const selSubcategory = subcategories.find(s => s.id === parseInt(formData.subcategoryId));
       
       // Use FormData for file uploads
       const submitData = new FormData();
       submitData.append('propertyId', formData.propertyId);
       submitData.append('categoryId', formData.categoryId);
-      submitData.append('subcategoryId', formData.subcategoryId);
-      submitData.append('categoryName', selectedCategory?.name || '');
-      submitData.append('subcategoryName', selectedSubcategory?.name || '');
+      // Handle custom subcategory for "Other" category
+      if (isOtherCategory && formData.customSubcategory) {
+        submitData.append('customSubcategory', formData.customSubcategory);
+        submitData.append('subcategoryId', '');
+        submitData.append('subcategoryName', formData.customSubcategory);
+      } else {
+        submitData.append('subcategoryId', formData.subcategoryId);
+        submitData.append('subcategoryName', selSubcategory?.name || '');
+      }
+      submitData.append('categoryName', selCategory?.name || '');
       submitData.append('customerName', formData.customerName);
       submitData.append('customerEmail', formData.customerEmail);
       submitData.append('customerPhone', formData.customerPhone);
@@ -284,10 +302,14 @@ const FPWorkOrders = ({ user }) => {
   };
 
   const handleCategoryChange = (categoryId) => {
-    setFormData({ ...formData, categoryId, subcategoryId: '' });
+    setFormData({ ...formData, categoryId, subcategoryId: '', customSubcategory: '' });
     const category = categories.find(c => c.id === parseInt(categoryId));
     setSubcategories(category?.subcategories || []);
   };
+  
+  // Check if "Other" category is selected
+  const selectedCategory = categories.find(c => c.id === parseInt(formData.categoryId));
+  const isOtherCategory = selectedCategory?.isCustom || selectedCategory?.name === 'Other';
 
   // Fetch subcategories for edit modal (uses embedded data from categories)
   const fetchSubcategories = (categoryId) => {
@@ -447,6 +469,7 @@ const FPWorkOrders = ({ user }) => {
       propertyId: '',
       categoryId: '',
       subcategoryId: '',
+      customSubcategory: '',
       customerName: '',
       customerEmail: '',
       customerPhone: '',
@@ -905,31 +928,41 @@ const FPWorkOrders = ({ user }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Subcategory <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
+                {isOtherCategory ? (
                   <input
                     type="text"
-                    value={subcategorySearch || subcategories.find(s => s.id === parseInt(formData.subcategoryId))?.name || ''}
-                    onChange={(e) => { setSubcategorySearch(e.target.value); setShowSubcategoryDropdown(true); }}
-                    onFocus={() => setShowSubcategoryDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowSubcategoryDropdown(false), 400)}
-                    placeholder={formData.categoryId ? 'Select a subcategory' : 'Select a category first'}
-                    disabled={!formData.categoryId}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    value={formData.customSubcategory}
+                    onChange={(e) => setFormData({ ...formData, customSubcategory: e.target.value })}
+                    placeholder="Enter subcategory / issue type"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
-                  {showSubcategoryDropdown && formData.categoryId && (
-                    <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {filteredSubcategories.map(sub => (
-                        <div key={sub.id} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.subcategoryId === String(sub.id) ? 'bg-blue-50' : ''}`}>
-                          <button type="button" onMouseDown={() => { setFormData({ ...formData, subcategoryId: String(sub.id) }); setSubcategorySearch(sub.name); setShowSubcategoryDropdown(false); }}
-                            className={`flex-1 text-left text-sm ${formData.subcategoryId === String(sub.id) ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{sub.name}</button>
-                          {sub.name !== 'Other' && !categories.find(c => c.id === parseInt(formData.categoryId))?.isDefault && (
-                            <button type="button" onMouseDown={(e) => handleDeleteSubcategory(sub.id, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><X className="w-3 h-3" /></button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={subcategorySearch || subcategories.find(s => s.id === parseInt(formData.subcategoryId))?.name || ''}
+                      onChange={(e) => { setSubcategorySearch(e.target.value); setShowSubcategoryDropdown(true); }}
+                      onFocus={() => setShowSubcategoryDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowSubcategoryDropdown(false), 400)}
+                      placeholder={formData.categoryId ? 'Select a subcategory' : 'Select a category first'}
+                      disabled={!formData.categoryId}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                    {showSubcategoryDropdown && formData.categoryId && (
+                      <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {filteredSubcategories.map(sub => (
+                          <div key={sub.id} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.subcategoryId === String(sub.id) ? 'bg-blue-50' : ''}`}>
+                            <button type="button" onMouseDown={() => { setFormData({ ...formData, subcategoryId: String(sub.id) }); setSubcategorySearch(sub.name); setShowSubcategoryDropdown(false); }}
+                              className={`flex-1 text-left text-sm ${formData.subcategoryId === String(sub.id) ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{sub.name}</button>
+                            {sub.name !== 'Other' && !categories.find(c => c.id === parseInt(formData.categoryId))?.isDefault && (
+                              <button type="button" onMouseDown={(e) => handleDeleteSubcategory(sub.id, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><X className="w-3 h-3" /></button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

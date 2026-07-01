@@ -33,7 +33,7 @@ const SupervisorWorkOrders = ({ user }) => {
   const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
-    propertyId: '', propertySearch: '', categoryId: '', subcategoryId: '',
+    propertyId: '', propertySearch: '', categoryId: '', subcategoryId: '', customSubcategory: '',
     customerName: '', customerEmail: '', customerPhone: '',
     description: '', priority: 'medium', permissionToEnter: 'yes', hasPet: 'no', entryNotes: ''
   });
@@ -123,10 +123,14 @@ const SupervisorWorkOrders = ({ user }) => {
   };
 
   const handleCategoryChange = (categoryId) => {
-    setFormData(prev => ({ ...prev, categoryId, subcategoryId: '' }));
+    setFormData(prev => ({ ...prev, categoryId, subcategoryId: '', customSubcategory: '' }));
     const category = categories.find(c => c.id === parseInt(categoryId));
     setSubcategories(category?.subcategories || []);
   };
+  
+  // Check if "Other" category is selected
+  const selectedCategory = categories.find(c => c.id === parseInt(formData.categoryId));
+  const isOtherCategory = selectedCategory?.isCustom || selectedCategory?.name === 'Other';
 
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -166,6 +170,16 @@ const SupervisorWorkOrders = ({ user }) => {
       setMessage({ type: 'error', text: 'Please select a category' });
       return;
     }
+    // Validate subcategory - either dropdown selection or custom text
+    if (isOtherCategory) {
+      if (!formData.customSubcategory?.trim()) {
+        setMessage({ type: 'error', text: 'Please enter a subcategory' });
+        return;
+      }
+    } else if (!formData.subcategoryId) {
+      setMessage({ type: 'error', text: 'Please select a subcategory' });
+      return;
+    }
 
     setSubmitting(true);
     setMessage({ type: '', text: '' });
@@ -176,7 +190,13 @@ const SupervisorWorkOrders = ({ user }) => {
       submitData.append('propertyName', selectedProperty?.name || selectedProperty?.community_name || '');
       submitData.append('propertyType', selectedProperty?.property_type || '');
       submitData.append('categoryId', formData.categoryId);
-      submitData.append('subcategoryId', formData.subcategoryId || '');
+      // Handle custom subcategory for "Other" category
+      if (isOtherCategory && formData.customSubcategory) {
+        submitData.append('customSubcategory', formData.customSubcategory);
+        submitData.append('subcategoryId', '');
+      } else {
+        submitData.append('subcategoryId', formData.subcategoryId || '');
+      }
       submitData.append('customerName', formData.customerName);
       submitData.append('customerEmail', formData.customerEmail);
       submitData.append('customerPhone', formData.customerPhone);
@@ -214,7 +234,7 @@ const SupervisorWorkOrders = ({ user }) => {
 
   const resetForm = () => {
     setFormData({
-      propertyId: '', propertySearch: '', categoryId: '', subcategoryId: '',
+      propertyId: '', propertySearch: '', categoryId: '', subcategoryId: '', customSubcategory: '',
       customerName: '', customerEmail: '', customerPhone: '',
       description: '', priority: 'medium', permissionToEnter: 'yes', hasPet: 'no', entryNotes: ''
     });
@@ -563,15 +583,25 @@ const SupervisorWorkOrders = ({ user }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Subcategory <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={formData.subcategoryId}
-                  onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
-                  disabled={!formData.categoryId}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                >
-                  <option value="">{formData.categoryId ? 'Select subcategory' : 'Select a category first'}</option>
-                  {subcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                {isOtherCategory ? (
+                  <input
+                    type="text"
+                    value={formData.customSubcategory}
+                    onChange={(e) => setFormData({ ...formData, customSubcategory: e.target.value })}
+                    placeholder="Enter subcategory / issue type"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <select
+                    value={formData.subcategoryId}
+                    onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
+                    disabled={!formData.categoryId}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="">{formData.categoryId ? 'Select subcategory' : 'Select a category first'}</option>
+                    {subcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                )}
               </div>
             </div>
 
