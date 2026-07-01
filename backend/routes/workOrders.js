@@ -218,6 +218,18 @@ router.post('/', (req, res, next) => {
         }
       }
 
+      // Fetch division name from fp_divisions table if division exists
+      let divisionName = propDetails.division || null;
+      if (propDetails.division && franchisePartnerId) {
+        const [divData] = await pool.query(
+          'SELECT name FROM fp_divisions WHERE (id = ? OR name = ?) AND franchise_partner_id = ?',
+          [parseInt(propDetails.division) || 0, propDetails.division, franchisePartnerId]
+        );
+        if (divData.length > 0) {
+          divisionName = divData[0].name;
+        }
+      }
+
       // Use property details as fallbacks for customer info
       const finalCustomerName = customerName || propDetails.contact_person || null;
       const finalCustomerEmail = customerEmail || propDetails.contact_email || null;
@@ -313,7 +325,7 @@ router.post('/', (req, res, next) => {
         customerEmail: finalCustomerEmail,
         customerPhone: finalCustomerPhone,
         zoneName: zoneName,
-        division: propDetails.division || null,
+        division: divisionName,
         categoryName: category.name,
         subcategoryName,
         priority: priority || 'medium',
@@ -740,6 +752,18 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
       }
     }
 
+    // Fetch division name from fp_divisions table if division exists
+    let propDivisionName = propDivision || null;
+    if (propDivision && propFranchisePartnerId) {
+      const [divData] = await pool.query(
+        'SELECT name FROM fp_divisions WHERE (id = ? OR name = ?) AND franchise_partner_id = ?',
+        [parseInt(propDivision) || 0, propDivision, propFranchisePartnerId]
+      );
+      if (divData.length > 0) {
+        propDivisionName = divData[0].name;
+      }
+    }
+
     try {
       const [result] = await pool.query(
         `INSERT INTO work_orders (
@@ -804,7 +828,7 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
         customerEmail,
         customerPhone,
         zoneName: propZoneName,
-        division: propDivision,
+        division: propDivisionName,
         categoryName: category.name,
         subcategoryName,
         priority: priority || 'medium',

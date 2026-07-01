@@ -917,6 +917,18 @@ router.post('/work-orders', requireSupervisorScope, (req, res, next) => {
       }
     }
 
+    // Fetch division name from fp_divisions table if division exists
+    let divisionName = propertyDivision || null;
+    if (propertyDivision && franchisePartnerId) {
+      const [divData] = await pool.query(
+        'SELECT name FROM fp_divisions WHERE (id = ? OR name = ?) AND franchise_partner_id = ?',
+        [parseInt(propertyDivision) || 0, propertyDivision, franchisePartnerId]
+      );
+      if (divData.length > 0) {
+        divisionName = divData[0].name;
+      }
+    }
+
     // Get category and subcategory names - use customSubcategory for "Other" category
     let finalCategoryName = categoryName || category?.name;
     let finalSubcategoryName = subcategoryName;
@@ -967,7 +979,7 @@ router.post('/work-orders', requireSupervisorScope, (req, res, next) => {
       customerEmail,
       customerPhone,
       zoneName: zoneName,
-      division: propertyDivision,
+      division: divisionName,
       categoryName: finalCategoryName,
       subcategoryName: finalSubcategoryName,
       priority,
