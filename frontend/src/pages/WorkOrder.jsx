@@ -226,13 +226,19 @@ const WorkOrder = ({ user }) => {
       // Create FormData for file upload
       const submitData = new FormData();
       submitData.append('categoryId', formData.categoryId);
+      // Add category name from the selected category
+      submitData.append('categoryName', selectedCategory?.name || '');
       // For "Other" category, send custom subcategory text
       const isOtherCategory = selectedCategory?.isCustom || selectedCategory?.name === 'Other';
       if (isOtherCategory && formData.customSubcategory) {
         submitData.append('customSubcategory', formData.customSubcategory);
         submitData.append('subcategoryId', ''); // No predefined subcategory
+        submitData.append('subcategoryName', formData.customSubcategory);
       } else {
         submitData.append('subcategoryId', formData.subcategoryId);
+        // Add subcategory name
+        const selectedSubcat = subcategories.find(s => s.id === parseInt(formData.subcategoryId));
+        submitData.append('subcategoryName', selectedSubcat?.name || '');
       }
       submitData.append('description', formData.description);
       submitData.append('permissionToEnter', formData.permissionToEnter);

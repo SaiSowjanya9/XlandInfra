@@ -190,12 +190,18 @@ const SupervisorWorkOrders = ({ user }) => {
       submitData.append('propertyName', selectedProperty?.name || selectedProperty?.community_name || '');
       submitData.append('propertyType', selectedProperty?.property_type || '');
       submitData.append('categoryId', formData.categoryId);
+      // Add category name
+      const selectedCat = categories.find(c => c.id === parseInt(formData.categoryId));
+      submitData.append('categoryName', selectedCat?.name || '');
       // Handle custom subcategory for "Other" category
       if (isOtherCategory && formData.customSubcategory) {
         submitData.append('customSubcategory', formData.customSubcategory);
         submitData.append('subcategoryId', '');
+        submitData.append('subcategoryName', formData.customSubcategory);
       } else {
         submitData.append('subcategoryId', formData.subcategoryId || '');
+        const selectedSubcat = selectedCat?.subcategories?.find(s => s.id === parseInt(formData.subcategoryId));
+        submitData.append('subcategoryName', selectedSubcat?.name || '');
       }
       submitData.append('customerName', formData.customerName);
       submitData.append('customerEmail', formData.customerEmail);

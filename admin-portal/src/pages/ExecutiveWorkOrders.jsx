@@ -147,10 +147,18 @@ const ExecutiveWorkOrders = ({ user }) => {
 
     try {
       const submitData = { ...formData };
+      // Add category name from the selected category
+      const selectedCat = categories.find(c => c.id === parseInt(formData.categoryId));
+      submitData.categoryName = selectedCat?.name || '';
+      
       // Handle custom subcategory for "Other" category
       if (isOtherCategory && formData.customSubcategory) {
         submitData.customSubcategory = formData.customSubcategory;
         submitData.subcategoryId = '';
+      } else if (formData.subcategoryId) {
+        // Add subcategory name from selected subcategory
+        const selectedSubcat = selectedCat?.subcategories?.find(s => s.id === parseInt(formData.subcategoryId));
+        submitData.subcategoryName = selectedSubcat?.name || '';
       }
       
       const response = await fetch('/api/executive/work-orders', {
