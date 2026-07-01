@@ -271,6 +271,12 @@ const categories = [
       { id: 1710, name: 'Replacement needed' },
       { id: 1799, name: 'Other' }
     ]
+  },
+  {
+    id: 99,
+    name: 'Other',
+    isCustom: true,
+    subcategories: []
   }
 ];
 
