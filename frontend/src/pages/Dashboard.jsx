@@ -130,16 +130,18 @@ const Dashboard = ({ user }) => {
     );
   };
 
-  // Format date
+  // Format date in IST (Indian Standard Time)
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-IN', { 
+    return date.toLocaleString('en-IN', { 
       day: '2-digit', 
       month: 'short', 
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata'
     });
   };
 
