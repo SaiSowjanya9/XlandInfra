@@ -660,7 +660,13 @@ const EmployeeWorkOrders = ({ admin }) => {
       if (formData.customerEmail) submitData.append('customerEmail', formData.customerEmail);
       submitData.append('customerPhone', formData.customerPhone);
       submitData.append('categoryId', formData.categoryId);
+      // Add category name
+      const selectedCat = categories.find(c => c.id === parseInt(formData.categoryId));
+      submitData.append('categoryName', selectedCat?.name || '');
       submitData.append('subcategoryId', formData.subcategoryId);
+      // Add subcategory name
+      const selectedSubcat = selectedCat?.subcategories?.find(s => s.id === parseInt(formData.subcategoryId));
+      submitData.append('subcategoryName', selectedSubcat?.name || '');
       submitData.append('description', formData.description);
       submitData.append('permissionToEnter', formData.permissionToEnter);
       submitData.append('entryNotes', formData.entryNotes);
