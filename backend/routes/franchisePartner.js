@@ -992,10 +992,15 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
 router.post('/work-orders', requireFPScope, upload.array('attachments', 5), async (req, res) => {
   try {
     const {
-      propertyId, categoryId, subcategoryId, description, priority,
+      propertyId, categoryId, subcategoryId, customSubcategory, description, priority,
       permissionToEnter, hasPet, entryNotes, customerName, customerEmail, customerPhone,
       categoryName: reqCategoryName, subcategoryName: reqSubcategoryName
     } = req.body;
+
+    // Get category details to check if it's "Other" category
+    const categoriesConfig = require('../config/categories');
+    const category = categoriesConfig.find(c => c.id === parseInt(categoryId) || c.id === categoryId);
+    const isOtherCategory = category?.isCustom || category?.name === 'Other';
 
     // Backend validation - prevent empty work orders
     if (!propertyId) {
@@ -1009,6 +1014,14 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
     }
     if (!categoryId) {
       return res.status(400).json({ success: false, message: 'Category is required' });
+    }
+    // Validate subcategory - require customSubcategory for "Other" category
+    if (isOtherCategory) {
+      if (!customSubcategory || !customSubcategory.trim()) {
+        return res.status(400).json({ success: false, message: 'Please enter a subcategory' });
+      }
+    } else if (!subcategoryId) {
+      return res.status(400).json({ success: false, message: 'Subcategory is required' });
     }
 
     // Validate property belongs to FP - check both tables (include property_id, property_type, zone, and division for email)
@@ -1050,20 +1063,16 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
     const workOrderId = `WO-${Date.now()}`;
     const title = `Service Request - ${property[0].name || 'Property'}`;
 
-    // Get category and subcategory names - use request body values or fetch from config
-    const categoriesConfig = require('../config/categories');
-    let categoryName = reqCategoryName || null;
+    // Get category and subcategory names - use customSubcategory for "Other" category
+    let categoryName = reqCategoryName || category?.name || null;
     let subcategoryName = reqSubcategoryName || null;
     
-    if (categoryId && !categoryName) {
-      const category = categoriesConfig.find(c => c.id === parseInt(categoryId));
-      if (category) categoryName = category.name;
-    }
-    
-    if (subcategoryId && !subcategoryName) {
+    if (isOtherCategory && customSubcategory) {
+      subcategoryName = customSubcategory.trim();
+    } else if (subcategoryId && !subcategoryName) {
       // Find subcategory in the category's embedded subcategories
-      for (const category of categoriesConfig) {
-        const subcategory = category.subcategories?.find(s => s.id === parseInt(subcategoryId));
+      for (const cat of categoriesConfig) {
+        const subcategory = cat.subcategories?.find(s => s.id === parseInt(subcategoryId));
         if (subcategory) {
           subcategoryName = subcategory.name;
           break;

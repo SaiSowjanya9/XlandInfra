@@ -709,8 +709,13 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId || req.fpId;
     console.log('[Executive WO Create] ExecutiveID:', executiveId, 'FP:', franchisePartnerId);
-    const { propertyId, categoryId, subcategoryId, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate,
+    const { propertyId, categoryId, subcategoryId, customSubcategory, clientId, title, description, priority, permissionToEnter, hasPet, scheduledDate,
             propertyName, categoryName, subcategoryName, customerName, customerEmail, customerPhone } = req.body;
+
+    // Get category details to check if it's "Other" category
+    const categoriesConfig = require('../config/categories');
+    const category = categoriesConfig.find(c => c.id === parseInt(categoryId) || c.id === categoryId);
+    const isOtherCategory = category?.isCustom || category?.name === 'Other';
 
     // Backend validation - prevent empty work orders
     if (!propertyId) {
@@ -724,6 +729,14 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
     }
     if (!categoryId) {
       return res.status(400).json({ success: false, message: 'Category is required' });
+    }
+    // Validate subcategory - require customSubcategory for "Other" category
+    if (isOtherCategory) {
+      if (!customSubcategory || !customSubcategory.trim()) {
+        return res.status(400).json({ success: false, message: 'Please enter a subcategory' });
+      }
+    } else if (!subcategoryId) {
+      return res.status(400).json({ success: false, message: 'Subcategory is required' });
     }
 
     const workOrderId = `WO-${Date.now()}`;
@@ -758,21 +771,14 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
       }
     }
 
-    // Fetch category and subcategory details from config
-    let finalCategoryName = categoryName;
+    // Get category and subcategory names - use customSubcategory for "Other" category
+    let finalCategoryName = categoryName || category?.name;
     let finalSubcategoryName = subcategoryName;
-    if (categoryId) {
-      try {
-        const categoriesConfig = require('../config/categories');
-        const category = categoriesConfig.find(c => c.id === parseInt(categoryId) || c.id === categoryId);
-        if (category) {
-          if (!finalCategoryName) finalCategoryName = category.name;
-          if (!finalSubcategoryName && subcategoryId && category.subcategories) {
-            const subcat = category.subcategories.find(s => s.id === parseInt(subcategoryId) || s.id === subcategoryId);
-            if (subcat) finalSubcategoryName = subcat.name;
-          }
-        }
-      } catch (e) { console.log('Category lookup error:', e.message); }
+    if (isOtherCategory && customSubcategory) {
+      finalSubcategoryName = customSubcategory.trim();
+    } else if (!finalSubcategoryName && subcategoryId && category?.subcategories) {
+      const subcat = category.subcategories.find(s => s.id === parseInt(subcategoryId) || s.id === subcategoryId);
+      if (subcat) finalSubcategoryName = subcat.name;
     }
 
     // Get creator identifier for zone-centric filtering
