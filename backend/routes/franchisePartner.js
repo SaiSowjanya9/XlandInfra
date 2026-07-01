@@ -1060,6 +1060,18 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       }
     }
 
+    // Fetch division name from fp_divisions table if division exists
+    let divisionName = property[0]?.division || null;
+    if (property[0]?.division && req.fpId) {
+      const [divData] = await pool.execute(
+        'SELECT name FROM fp_divisions WHERE (id = ? OR name = ?) AND franchise_partner_id = ?',
+        [parseInt(property[0].division) || 0, property[0].division, req.fpId]
+      );
+      if (divData.length > 0) {
+        divisionName = divData[0].name;
+      }
+    }
+
     const workOrderId = `WO-${Date.now()}`;
     const title = `Service Request - ${property[0].name || 'Property'}`;
 
@@ -1127,7 +1139,7 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       customerEmail,
       customerPhone,
       zoneName: zoneName,
-      division: property[0]?.division || null,
+      division: divisionName,
       categoryName,
       subcategoryName,
       priority,
