@@ -228,7 +228,7 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
       
       // Recent work orders with creator name lookup
       pool.execute(
-        `SELECT wo.*, p.name as property_name, c.name as category_name,
+        `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name,
                 COALESCE(
                   CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
                   CONCAT(pma.first_name, ' ', COALESCE(pma.last_name, '')),

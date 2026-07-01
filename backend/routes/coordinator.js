@@ -261,7 +261,7 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
 
     // Get recent work orders (own created + zone-centric) with creator name lookup
     const [recentWorkOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, c.name as category_name,
+      `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name,
               COALESCE(
                 CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
                 CONCAT(pma.first_name, ' ', COALESCE(pma.last_name, '')),
@@ -617,7 +617,7 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
           COALESCE(p.city, op.city) as property_city,
           COALESCE(p.state, op.state) as property_state,
           op.total_units, op.number_of_blocks as total_blocks, op.entry_type,
-          c.name as category_name, v.company_name as vendor_name,
+          COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(
             CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
             CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
@@ -646,7 +646,7 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
           COALESCE(p.city, op.city) as property_city,
           COALESCE(p.state, op.state) as property_state,
           op.total_units, op.number_of_blocks as total_blocks, op.entry_type,
-          c.name as category_name, v.company_name as vendor_name,
+          COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(
             CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
             CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
@@ -715,7 +715,7 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
           COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
           COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
           op.total_units, op.number_of_blocks as total_blocks,
-          c.name as category_name, v.company_name as vendor_name,
+          COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
@@ -736,7 +736,7 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
           COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
           COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
           op.total_units, op.number_of_blocks as total_blocks,
-          c.name as category_name, v.company_name as vendor_name,
+          COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
@@ -792,7 +792,7 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
           COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
           COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
           op.total_units, op.number_of_blocks as total_blocks,
-          c.name as category_name, v.company_name as vendor_name,
+          COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
@@ -813,7 +813,7 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
           COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
           COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
           op.total_units, op.number_of_blocks as total_blocks,
-          c.name as category_name, v.company_name as vendor_name,
+          COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
@@ -2203,7 +2203,7 @@ router.get('/export/work-orders', requireCoordinatorScope, async (req, res) => {
     const coordinatorId = req.coordinatorId;
 
     const [workOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, c.name as category_name
+      `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id

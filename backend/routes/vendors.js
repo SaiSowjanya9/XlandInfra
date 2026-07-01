@@ -166,7 +166,7 @@ router.get('/my-work-orders', authenticate, vendorOnly, async (req, res) => {
     let query = `
       SELECT wo.*, 
              p.name as property_name, p.address as property_address,
-             c.name as category_name, sc.name as subcategory_name
+             COALESCE(c.name, wo.category_name) as category_name, sc.name as subcategory_name
       FROM work_orders wo
       JOIN properties p ON wo.property_id = p.id
       LEFT JOIN categories c ON wo.category_id = c.id
@@ -785,7 +785,7 @@ router.get('/dashboard', authenticate, vendorOnly, async (req, res) => {
 
     // Get work orders assigned to this vendor
     const [workOrders] = await pool.execute(
-      `SELECT wo.*, c.name as category_name, sc.name as subcategory_name, p.property_name
+      `SELECT wo.*, COALESCE(c.name, wo.category_name) as category_name, sc.name as subcategory_name, p.property_name
        FROM work_orders wo
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN subcategories sc ON wo.subcategory_id = sc.id

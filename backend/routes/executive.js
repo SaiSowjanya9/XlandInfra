@@ -274,7 +274,7 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
 
     // Get recent work orders (own created) with creator name lookup
     const [recentWorkOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, c.name as category_name,
+      `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name,
               COALESCE(
                 CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
                 CONCAT(pma.first_name, ' ', COALESCE(pma.last_name, '')),
@@ -2035,7 +2035,7 @@ router.get('/export/work-orders', requireExecutiveScope, async (req, res) => {
     const executiveId = req.executiveId;
 
     const [workOrders] = await pool.query(
-      `SELECT wo.*, p.name as property_name, c.name as category_name
+      `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN categories c ON wo.category_id = c.id
