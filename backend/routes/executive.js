@@ -338,7 +338,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
       const [rows] = await pool.query(
         `SELECT p.*,
                 COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area, 
-                COALESCE(fd.name, p.division_id) as division_name, p.division_id as division, p.number_of_units as units,
+                COALESCE(fd.name, p.division_id) as division_name, p.division_id as division, p.number_of_units as total_units,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
                 TRUE as is_active,
                 'fp' as access_type, FALSE as can_modify, FALSE as can_delete,
@@ -359,7 +359,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
       const [rows] = await pool.query(
         `SELECT p.*,
                 COALESCE(z.name, p.zone_id) as zone_name, p.area_name as area,
-                COALESCE(fd.name, p.division_id) as division_name, p.division_id as division, p.number_of_units as units,
+                COALESCE(fd.name, p.division_id) as division_name, p.division_id as division, p.number_of_units as total_units,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), p.created_by, 'System') as created_by_name,
                 TRUE as is_active,
                 'own' as access_type, TRUE as can_modify, FALSE as can_delete,
