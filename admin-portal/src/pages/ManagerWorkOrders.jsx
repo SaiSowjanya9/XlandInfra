@@ -677,61 +677,18 @@ const ManagerWorkOrders = ({ user }) => {
                       <p className="text-xs text-gray-500 mb-1">City</p>
                       <p className="text-sm font-medium text-gray-900">{selectedProperty.city || '-'}</p>
                     </div>
-                    <div className="col-span-2">
+                    <div>
                       <p className="text-xs text-gray-500 mb-1">Address</p>
                       <p className="text-sm font-medium text-gray-900">{selectedProperty.address || '-'}</p>
                     </div>
-                  </div>
-                  {/* Property Type Specific Fields */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-                    {(selectedProperty.property_type === 'gated_community' || selectedProperty.property_type === 'GC') && (
-                      <>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Total Units</p>
-                          <p className="text-sm font-medium text-gray-900">{selectedProperty.total_units || '-'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Blocks</p>
-                          <p className="text-sm font-medium text-gray-900">{selectedProperty.blocks || selectedProperty.number_of_blocks || '-'}</p>
-                        </div>
-                      </>
-                    )}
-                    {(selectedProperty.property_type === 'apartment' || selectedProperty.property_type === 'APT') && (
-                      <>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Total Units</p>
-                          <p className="text-sm font-medium text-gray-900">{selectedProperty.total_units || '-'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Tower/Block</p>
-                          <p className="text-sm font-medium text-gray-900">{selectedProperty.tower_name || selectedProperty.block_number || '-'}</p>
-                        </div>
-                      </>
-                    )}
-                    {(selectedProperty.property_type === 'villa' || selectedProperty.property_type === 'VILLA') && (
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Villa Number</p>
-                        <p className="text-sm font-medium text-gray-900">{selectedProperty.villa_number || selectedProperty.villa_plot_number || '-'}</p>
-                      </div>
-                    )}
-                    {(selectedProperty.property_type === 'plot' || selectedProperty.property_type === 'PLOT') && (
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Plot Number</p>
-                        <p className="text-sm font-medium text-gray-900">{selectedProperty.plot_number || selectedProperty.villa_plot_number || '-'}</p>
-                      </div>
-                    )}
-                    {(selectedProperty.property_type === 'flat' || selectedProperty.property_type === 'FLAT') && (
-                      <>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Block</p>
-                          <p className="text-sm font-medium text-gray-900">{selectedProperty.block || selectedProperty.block_number || '-'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Flat Number</p>
-                          <p className="text-sm font-medium text-gray-900">{selectedProperty.flat_number || '-'}</p>
-                        </div>
-                      </>
-                    )}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.total_units || selectedProperty.number_of_units || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Blocks</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.number_of_blocks || selectedProperty.blocks || '-'}</p>
+                    </div>
                   </div>
                 </div>
               )}
