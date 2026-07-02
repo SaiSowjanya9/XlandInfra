@@ -157,6 +157,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           zone: selectedProperty?.zone_name || selectedProperty?.zoneName || selectedProperty?.zone || directForm.zone,
           city: selectedProperty?.city || directForm.city,
           address: selectedProperty?.address || directForm.address,
+          total_units: selectedProperty?.total_units || selectedProperty?.units || selectedProperty?.number_of_units || directForm.numberOfUnits || null,
           package_id: selectedAmcPackage,
           package_name: amcPackages.find(p => p.id?.toString() === selectedAmcPackage)?.name || '',
           package_price: getPackagePrice(amcPackages.find(p => p.id?.toString() === selectedAmcPackage)),
@@ -1037,6 +1038,34 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   <div><p className="text-xs text-gray-500">Division</p><p className="font-medium text-sm">{viewEstimate.division || '-'}</p></div>
                   <div><p className="text-xs text-gray-500">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
                   <div className="col-span-2"><p className="text-xs text-gray-500">Address</p><p className="font-medium text-sm">{viewEstimate.address || viewEstimate.property_address || '-'}</p></div>
+                  {/* GC-specific fields */}
+                  {['GC', 'gated_community', 'Gated Community'].includes(viewEstimate.property_type) && (
+                    <>
+                      {(viewEstimate.number_of_blocks || viewEstimate.numberOfBlocks) && (
+                        <div><p className="text-xs text-gray-500">Number of Blocks</p><p className="font-medium text-sm">{viewEstimate.number_of_blocks || viewEstimate.numberOfBlocks}</p></div>
+                      )}
+                      <div><p className="text-xs text-gray-500">Total Units</p><p className="font-medium text-sm">{viewEstimate.total_units || viewEstimate.totalUnits || '-'}</p></div>
+                    </>
+                  )}
+                  {/* APT-specific fields */}
+                  {['APT', 'Apt', 'apartment', 'Apartment'].includes(viewEstimate.property_type) && (
+                    <>
+                      {(viewEstimate.tower_name || viewEstimate.towerName) && (
+                        <div><p className="text-xs text-gray-500">Tower/Building Name</p><p className="font-medium text-sm">{viewEstimate.tower_name || viewEstimate.towerName}</p></div>
+                      )}
+                      <div><p className="text-xs text-gray-500">Total Units</p><p className="font-medium text-sm">{viewEstimate.total_units || viewEstimate.totalUnits || viewEstimate.number_of_units || viewEstimate.numberOfUnits || '-'}</p></div>
+                    </>
+                  )}
+                  {/* Villa/Flat/Plot-specific fields */}
+                  {['VILLA', 'Villa', 'villa'].includes(viewEstimate.property_type) && (viewEstimate.villa_number || viewEstimate.villaNumber) && (
+                    <div><p className="text-xs text-gray-500">Villa Number</p><p className="font-medium text-sm">{viewEstimate.villa_number || viewEstimate.villaNumber}</p></div>
+                  )}
+                  {['FLAT', 'Flat', 'flat'].includes(viewEstimate.property_type) && (viewEstimate.flat_number || viewEstimate.flatNumber) && (
+                    <div><p className="text-xs text-gray-500">Flat Number</p><p className="font-medium text-sm">{viewEstimate.flat_number || viewEstimate.flatNumber}</p></div>
+                  )}
+                  {['PLOT', 'Plot', 'plot'].includes(viewEstimate.property_type) && (viewEstimate.plot_number || viewEstimate.plotNumber) && (
+                    <div><p className="text-xs text-gray-500">Plot Number</p><p className="font-medium text-sm">{viewEstimate.plot_number || viewEstimate.plotNumber}</p></div>
+                  )}
                 </div>
               </div>
 
