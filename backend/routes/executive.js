@@ -787,28 +787,6 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
 
     const workOrderId = `WO-${Date.now()}`;
 
-    // Ensure work_orders table has all required columns
-    try {
-      await pool.query(`ALTER TABLE work_orders ADD COLUMN property_name VARCHAR(255)`);
-    } catch (e) { /* Column exists */ }
-    try {
-      await pool.query(`ALTER TABLE work_orders ADD COLUMN customer_name VARCHAR(255)`);
-    } catch (e) { /* Column exists */ }
-    try {
-      await pool.query(`ALTER TABLE work_orders ADD COLUMN customer_email VARCHAR(255)`);
-    } catch (e) { /* Column exists */ }
-    try {
-      await pool.query(`ALTER TABLE work_orders ADD COLUMN customer_phone VARCHAR(50)`);
-    } catch (e) { /* Column exists */ }
-    try {
-      await pool.query(`ALTER TABLE work_orders ADD COLUMN zone VARCHAR(100)`);
-    } catch (e) { /* Column exists */ }
-    try {
-      await pool.query(`ALTER TABLE work_orders MODIFY COLUMN created_by VARCHAR(255)`);
-    } catch (e) { /* Column modification failed */ }
-    try {
-      await pool.query(`ALTER TABLE work_orders ADD COLUMN created_by_role VARCHAR(50)`);
-    } catch (e) { /* Column exists */ }
 
     // Fetch property details if not provided - including actual property_id, zone, and division
     let finalPropertyName = propertyName;
