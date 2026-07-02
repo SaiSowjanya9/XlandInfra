@@ -331,7 +331,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
           COALESCE(p.area_name, p.city) as area,
           COALESCE(fd.name, p.division_id) as division_name,
           p.division_id as division,
-          COALESCE(p.total_units, p.number_of_units) as total_units,
+          p.number_of_units as total_units,
           COALESCE(
             CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
             CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
@@ -354,7 +354,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
           COALESCE(p.area_name, p.city) as area,
           COALESCE(fd.name, p.division_id) as division_name,
           p.division_id as division,
-          COALESCE(p.total_units, p.number_of_units) as total_units,
+          p.number_of_units as total_units,
           COALESCE(
             CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
             CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
