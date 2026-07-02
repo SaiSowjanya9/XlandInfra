@@ -296,7 +296,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
         COALESCE(fd.name, p.division_id) as division_name,
         p.division_id as division,
         p.area_name as area,
-        COALESCE(p.number_of_units, p.number_of_blocks, 1) as units,
+        p.number_of_units as total_units,
         COALESCE(
           CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')),
           CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')),
