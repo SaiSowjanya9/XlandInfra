@@ -5,6 +5,8 @@ const { pool } = require('../config/database');
 // Notification email addresses - Use info@xlandinfra.com only (no Gmail)
 const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'info@xlandinfra.com';
 const CONTACT_EMAILS = ['info@xlandinfra.com'];
+// Separate sender email for contact forms to avoid "Note to self" in Outlook
+const CONTACT_FORM_SENDER = process.env.CONTACT_FORM_SENDER_EMAIL || process.env.EMAIL_USER;
 
 /**
  * Get work order notification recipients based on property zone
@@ -282,9 +284,10 @@ const sendContactNotification = async (contactData) => {
     // Send separate emails to each recipient for reliable delivery
     const emailPromises = CONTACT_EMAILS.map(async (email) => {
       const mailOptions = {
-        from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+        from: `"Customer Inquiry" <${CONTACT_FORM_SENDER}>`,
+        replyTo: `"${contactData.name}" <${contactData.email}>`,
         to: email,
-        subject: `New Contact Inquiry from ${contactData.name} - XLAND INFRA`,
+        subject: `[Customer Inquiry] ${contactData.subject || 'New Inquiry'} - ${contactData.name}`,
         html: emailHtml
       };
       
