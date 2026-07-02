@@ -292,6 +292,18 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const getStatusColor = (status) => { const colors = { draft: 'bg-gray-100 text-gray-700', pending_approval: 'bg-yellow-100 text-yellow-700', approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700', converted: 'bg-blue-100 text-blue-700', archived: 'bg-gray-100 text-gray-500' }; return colors[status] || 'bg-gray-100 text-gray-700'; };
   const formatCurrency = (amount) => { const num = parseFloat(amount); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : Math.round(num)); };
   const calculateTotals = () => { const subtotal = estimateForm.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0); const tax = (subtotal * estimateForm.taxPercentage) / 100; const discount = (subtotal * estimateForm.discountPercentage) / 100; return { subtotal, tax, discount, total: subtotal + tax - discount }; };
+  
+  // Helper to compute total units based on property type
+  const computeTotalUnits = (prop) => {
+    const propType = (prop.property_type || prop.entryType || prop.entry_type || '').toUpperCase();
+    if (propType === 'GC' || propType === 'GATED_COMMUNITY') {
+      const upbData = prop.units_per_block || prop.unitsPerBlock;
+      if (upbData) { try { const upb = typeof upbData === 'string' ? JSON.parse(upbData) : upbData; if (typeof upb === 'object' && upb !== null) { const total = Object.values(upb).reduce((sum, val) => sum + (parseInt(val) || 0), 0); if (total > 0) return total; } } catch (e) { /* ignore */ } }
+    }
+    if (propType === 'APT' || propType === 'APARTMENT') return prop.number_of_units || prop.total_units || prop.numberOfUnits || prop.totalUnits || null;
+    if (['VILLA', 'VILLAS', 'FLAT', 'FLATS', 'PLOT', 'PLOTS'].includes(propType)) return 1;
+    return prop.total_units || prop.totalUnits || prop.units || prop.number_of_units || null;
+  };
 
   const filteredEstimates = estimates.filter(e => e.title?.toLowerCase().includes(searchTerm.toLowerCase()) || e.estimate_id?.toLowerCase().includes(searchTerm.toLowerCase()) || e.client_name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -560,7 +572,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                           onChange={(e) => { 
                             setPropertyIdInput(e.target.value); 
                             const match = properties.find(p => p.property_id?.toLowerCase() === e.target.value.toLowerCase()); 
-                            setSelectedProperty(match || null); 
+                            if (match) { const totalUnits = computeTotalUnits(match); setSelectedProperty({ ...match, total_units: totalUnits, units: totalUnits }); } else { setSelectedProperty(null); }
                           }} 
                           placeholder="COORD-APT-1780347062151" 
                           className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500" 
