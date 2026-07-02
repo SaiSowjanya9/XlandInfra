@@ -208,9 +208,25 @@ const ExecutiveWorkOrders = ({ user }) => {
     )
   );
 
+  // Helper to compute total units from units_per_block if not set
+  const computeTotalUnits = (prop) => {
+    if (prop.total_units) return prop.total_units;
+    if (prop.number_of_units) return prop.number_of_units;
+    if (prop.units_per_block) {
+      try {
+        const upb = typeof prop.units_per_block === 'string' ? JSON.parse(prop.units_per_block) : prop.units_per_block;
+        if (typeof upb === 'object' && upb !== null) {
+          return Object.values(upb).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+        }
+      } catch (e) { /* ignore */ }
+    }
+    return null;
+  };
+
   // Handle property selection - auto-populate customer details and store property
   const handlePropertySelect = (property) => {
-    setSelectedProperty(property);
+    const totalUnits = computeTotalUnits(property);
+    setSelectedProperty({ ...property, total_units: totalUnits });
     setFormData({ 
       ...formData, 
       propertyId: property.id,
