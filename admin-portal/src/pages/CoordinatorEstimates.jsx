@@ -130,6 +130,18 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
 
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
   const formatCurrency = (amt) => { const num = parseFloat(amt); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : Math.round(num)); };
+  
+  // Helper to compute total units based on property type
+  const computeTotalUnits = (prop) => {
+    const propType = (prop.property_type || prop.entryType || prop.entry_type || '').toUpperCase();
+    if (propType === 'GC' || propType === 'GATED_COMMUNITY') {
+      const upbData = prop.units_per_block || prop.unitsPerBlock;
+      if (upbData) { try { const upb = typeof upbData === 'string' ? JSON.parse(upbData) : upbData; if (typeof upb === 'object' && upb !== null) { const total = Object.values(upb).reduce((sum, val) => sum + (parseInt(val) || 0), 0); if (total > 0) return total; } } catch (e) { /* ignore */ } }
+    }
+    if (propType === 'APT' || propType === 'APARTMENT') return prop.number_of_units || prop.total_units || prop.numberOfUnits || prop.totalUnits || null;
+    if (['VILLA', 'VILLAS', 'FLAT', 'FLATS', 'PLOT', 'PLOTS'].includes(propType)) return 1;
+    return prop.total_units || prop.totalUnits || prop.units || prop.number_of_units || null;
+  };
   const getAddonId = (addon) => (addon.id ?? addon.addonId)?.toString();
   const getAddonName = (addon) => addon.service_name || addon.name || addon.serviceName || addon.services?.[0]?.name || 'Add-on Service';
   const getAddonPrice = (addon) => parseFloat(addon.price ?? addon.totalPrice ?? addon.services?.[0]?.price) || 0;
@@ -504,7 +516,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">Property ID <span className="text-red-500">*</span></label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input type="text" value={propertyIdInput} onChange={(e) => { setPropertyIdInput(e.target.value); const m = properties.find(p => p.property_id?.toLowerCase() === e.target.value.toLowerCase()); setSelectedProperty(m || null); }} placeholder="GC-DMMN-20260520" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
+                <input type="text" value={propertyIdInput} onChange={(e) => { setPropertyIdInput(e.target.value); const m = properties.find(p => p.property_id?.toLowerCase() === e.target.value.toLowerCase()); if (m) { const totalUnits = computeTotalUnits(m); setSelectedProperty({ ...m, total_units: totalUnits, units: totalUnits }); } else { setSelectedProperty(null); } }} placeholder="GC-DMMN-20260520" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500" />
               </div>
               {selectedProperty && (
                 <div className="mt-6 space-y-4">

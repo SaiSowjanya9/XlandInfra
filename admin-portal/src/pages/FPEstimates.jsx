@@ -202,6 +202,35 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
+  
+  // Helper to compute total units based on property type
+  const computeTotalUnits = (prop) => {
+    const propType = (prop.property_type || prop.entryType || prop.entry_type || '').toUpperCase();
+    // For GC properties, compute from units_per_block
+    if (propType === 'GC' || propType === 'GATED_COMMUNITY') {
+      const upbData = prop.units_per_block || prop.unitsPerBlock;
+      if (upbData) {
+        try {
+          const upb = typeof upbData === 'string' ? JSON.parse(upbData) : upbData;
+          if (typeof upb === 'object' && upb !== null) {
+            const total = Object.values(upb).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+            if (total > 0) return total;
+          }
+        } catch (e) { /* ignore */ }
+      }
+    }
+    // For APT properties, use number_of_units or total_units
+    if (propType === 'APT' || propType === 'APARTMENT') {
+      return prop.number_of_units || prop.total_units || prop.numberOfUnits || prop.totalUnits || null;
+    }
+    // For VILLA, FLAT, PLOT - single unit
+    if (['VILLA', 'VILLAS', 'FLAT', 'FLATS', 'PLOT', 'PLOTS'].includes(propType)) {
+      return 1;
+    }
+    // Fallback to stored values
+    return prop.total_units || prop.totalUnits || prop.units || prop.number_of_units || null;
+  };
+
   const formatCurrency = (amt) => {
     const num = parseFloat(amt);
     const value = isNaN(num) ? 0 : Math.round(num);
@@ -703,7 +732,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     onChange={(e) => { 
                       setPropertyIdInput(e.target.value); 
                       const m = properties.find(p => p.property_id?.toLowerCase() === e.target.value.toLowerCase()); 
-                      setSelectedProperty(m || null); 
+                      if (m) {
+                        const totalUnits = computeTotalUnits(m);
+                        setSelectedProperty({ ...m, total_units: totalUnits, units: totalUnits });
+                      } else {
+                        setSelectedProperty(null);
+                      }
                     }} 
                     placeholder="GC-DMMN-20260520" 
                     className="w-full pl-10 pr-4 py-2.5 border-2 border-amber-500 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-600 text-sm"
