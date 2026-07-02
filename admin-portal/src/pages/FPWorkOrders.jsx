@@ -62,6 +62,7 @@ const FPWorkOrders = ({ user }) => {
   const [employees, setEmployees] = useState([]);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [propertySearch, setPropertySearch] = useState('');
+  const [selectedProperty, setSelectedProperty] = useState(null);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newSubcategoryName, setNewSubcategoryName] = useState('');
@@ -319,6 +320,7 @@ const FPWorkOrders = ({ user }) => {
 
   // Handle property selection and auto-populate customer details
   const handlePropertySelect = async (property) => {
+    setSelectedProperty(property);
     setFormData(prev => ({ 
       ...prev, 
       propertyId: property.id,
@@ -327,6 +329,13 @@ const FPWorkOrders = ({ user }) => {
       customerPhone: property.contact_phone || ''
     }));
     setPropertySearch(property.property_id || '');
+  };
+
+  // Clear selected property
+  const clearSelectedProperty = () => {
+    setSelectedProperty(null);
+    setFormData(prev => ({ ...prev, propertyId: '', customerName: '', customerEmail: '', customerPhone: '' }));
+    setPropertySearch('');
   };
 
   const handleAddCategory = async () => {
@@ -481,6 +490,7 @@ const FPWorkOrders = ({ user }) => {
       attachments: []
     });
     setPropertySearch('');
+    setSelectedProperty(null);
     setSubcategories([]);
   };
 
@@ -794,25 +804,37 @@ const FPWorkOrders = ({ user }) => {
                 <Building2 className="w-4 h-4 text-gray-500" />
                 <h3 className="font-medium text-gray-900">Property Information</h3>
               </div>
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Property ID <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="Search by Property ID or Community Name..."
-                  value={propertySearch}
-                  onChange={(e) => {
-                    setPropertySearch(e.target.value);
-                    // Clear selection when user types to search again
-                    if (formData.propertyId) {
-                      setFormData(prev => ({ ...prev, propertyId: '', customerName: '', customerEmail: '', customerPhone: '' }));
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
-                />
-                {propertySearch && filteredPropertyOptions.length > 0 && (
-                  <div className="mt-1 border border-gray-200 rounded-lg max-h-40 overflow-y-auto bg-white shadow-lg">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search by Property ID or Community Name..."
+                    value={propertySearch}
+                    readOnly={!!selectedProperty}
+                    onChange={(e) => {
+                      setPropertySearch(e.target.value);
+                      if (formData.propertyId) {
+                        setSelectedProperty(null);
+                        setFormData(prev => ({ ...prev, propertyId: '', customerName: '', customerEmail: '', customerPhone: '' }));
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 ${selectedProperty ? 'bg-green-50 border-green-300 pr-10' : 'bg-gray-50'}`}
+                  />
+                  {selectedProperty && (
+                    <button
+                      type="button"
+                      onClick={clearSelectedProperty}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                {propertySearch && filteredPropertyOptions.length > 0 && !selectedProperty && (
+                  <div className="absolute z-10 w-full mt-1 border border-gray-200 rounded-lg max-h-40 overflow-y-auto bg-white shadow-lg">
                     {filteredPropertyOptions.slice(0, 5).map(p => (
                       <button
                         key={p.id}
@@ -827,6 +849,48 @@ const FPWorkOrders = ({ user }) => {
                   </div>
                 )}
               </div>
+
+              {/* Property Details - Show after selection */}
+              {selectedProperty && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Property Name</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.name || selectedProperty.community_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Property Type</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Zone</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.zone_name || selectedProperty.zone || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Division</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.division_name || selectedProperty.division || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">City</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.city || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Address</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.address || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.total_units || selectedProperty.number_of_units || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Blocks</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedProperty.number_of_blocks || selectedProperty.blocks || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Customer Details */}
