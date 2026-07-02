@@ -351,6 +351,28 @@ router.get('/properties', requireFPScope, async (req, res) => {
       console.log('onboarded_properties fetch error:', e.message);
     }
 
+    // Helper to compute total_units from units_per_block JSON
+    const computeTotalUnits = (prop) => {
+      if (prop.total_units) return prop.total_units;
+      if (prop.number_of_units) return prop.number_of_units;
+      if (prop.units_per_block) {
+        try {
+          const upb = typeof prop.units_per_block === 'string' 
+            ? JSON.parse(prop.units_per_block) 
+            : prop.units_per_block;
+          if (typeof upb === 'object' && upb !== null) {
+            // Sum all block units: { "A": { "total": 9 }, "B": { "total": 12 } } or { "A": 9, "B": 12 }
+            return Object.values(upb).reduce((sum, block) => {
+              if (typeof block === 'number') return sum + block;
+              if (typeof block === 'object' && block.total) return sum + block.total;
+              return sum;
+            }, 0);
+          }
+        } catch (e) { /* ignore parse errors */ }
+      }
+      return null;
+    };
+
     // Combine both sources and sort by created_at DESC
     const allProperties = [...regularProperties, ...onboardedProperties]
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -378,7 +400,8 @@ router.get('/properties', requireFPScope, async (req, res) => {
           ...prop,
           contact_person,
           contact_phone,
-          contact_email
+          contact_email,
+          total_units: computeTotalUnits(prop)
         };
       });
 
