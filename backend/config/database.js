@@ -186,6 +186,7 @@ const initOnboardingTables = async () => {
         units_per_block JSON,
         block_names JSON,
         number_of_units INT,
+        total_units INT DEFAULT 0,
         villa_plot_number VARCHAR(100),
         block_info VARCHAR(255),
         status VARCHAR(20) DEFAULT 'active',
@@ -241,6 +242,21 @@ const initOnboardingTables = async () => {
       }
     } catch (e) {
       console.log(`  - Status column check failed`);
+    }
+
+    // Add total_units column to properties table if it doesn't exist
+    try {
+      const [totalUnitsCol] = await conn.execute(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'properties' AND COLUMN_NAME = 'total_units'`,
+        [dbConfig.database]
+      );
+      if (totalUnitsCol.length === 0) {
+        await conn.execute(`ALTER TABLE properties ADD COLUMN total_units INT DEFAULT 0`);
+        console.log(`  ✓ Added column: total_units to properties table`);
+      }
+    } catch (e) {
+      console.log(`  - total_units column check failed:`, e.message);
     }
 
     // Fix created_by column type if it's INT (should be VARCHAR)
