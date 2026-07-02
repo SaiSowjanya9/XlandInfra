@@ -318,9 +318,43 @@ const FPWorkOrders = ({ user }) => {
     setSubcategories(category?.subcategories || []);
   };
 
+  // Helper to compute total units based on property type
+  const computeTotalUnits = (prop) => {
+    const propType = (prop.property_type || prop.entryType || '').toUpperCase();
+    
+    // For GC properties, compute from units_per_block
+    if (propType === 'GC' || propType === 'GATED_COMMUNITY') {
+      if (prop.units_per_block) {
+        try {
+          const upb = typeof prop.units_per_block === 'string' ? JSON.parse(prop.units_per_block) : prop.units_per_block;
+          if (typeof upb === 'object' && upb !== null) {
+            const total = Object.values(upb).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+            if (total > 0) return total;
+          }
+        } catch (e) { /* ignore */ }
+      }
+    }
+    
+    // For APT properties, use number_of_units or total_units
+    if (propType === 'APT' || propType === 'APARTMENT') {
+      return prop.number_of_units || prop.total_units || prop.numberOfUnits || prop.totalUnits || null;
+    }
+    
+    // For VILLA, FLAT, PLOT - single unit
+    if (['VILLA', 'VILLAS', 'FLAT', 'FLATS', 'PLOT', 'PLOTS'].includes(propType)) {
+      return 1;
+    }
+    
+    // Fallback to stored values
+    if (prop.total_units) return prop.total_units;
+    if (prop.number_of_units) return prop.number_of_units;
+    return null;
+  };
+
   // Handle property selection and auto-populate customer details
   const handlePropertySelect = async (property) => {
-    setSelectedProperty(property);
+    const totalUnits = computeTotalUnits(property);
+    setSelectedProperty({ ...property, total_units: totalUnits });
     setFormData(prev => ({ 
       ...prev, 
       propertyId: property.id,

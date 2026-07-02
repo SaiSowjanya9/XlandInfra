@@ -221,8 +221,43 @@ const EmployeeWorkOrders = ({ admin }) => {
     }
   };
 
+  // Helper to compute total units based on property type
+  const computeTotalUnits = (prop) => {
+    const propType = (prop.property_type || prop.entryType || '').toUpperCase();
+    
+    // For GC properties, compute from units_per_block
+    if (propType === 'GC' || propType === 'GATED_COMMUNITY') {
+      const upbData = prop.units_per_block || prop.unitsPerBlock;
+      if (upbData) {
+        try {
+          const upb = typeof upbData === 'string' ? JSON.parse(upbData) : upbData;
+          if (typeof upb === 'object' && upb !== null) {
+            const total = Object.values(upb).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+            if (total > 0) return total;
+          }
+        } catch (e) { /* ignore */ }
+      }
+    }
+    
+    // For APT properties, use number_of_units or total_units
+    if (propType === 'APT' || propType === 'APARTMENT') {
+      return prop.number_of_units || prop.total_units || prop.numberOfUnits || prop.totalUnits || null;
+    }
+    
+    // For VILLA, FLAT, PLOT - single unit
+    if (['VILLA', 'VILLAS', 'FLAT', 'FLATS', 'PLOT', 'PLOTS'].includes(propType)) {
+      return 1;
+    }
+    
+    // Fallback to stored values
+    if (prop.total_units || prop.totalUnits) return prop.total_units || prop.totalUnits;
+    if (prop.number_of_units || prop.numberOfUnits) return prop.number_of_units || prop.numberOfUnits;
+    return null;
+  };
+
   const handlePropertySelect = (property) => {
-    setSelectedProperty(property);
+    const totalUnits = computeTotalUnits(property);
+    setSelectedProperty({ ...property, total_units: totalUnits });
     setPropertySearch(property.propertyId || property.property_id || '');
     setShowPropertyDropdown(false);
     
