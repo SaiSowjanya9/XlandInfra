@@ -396,7 +396,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
                 op.villa_plot_number, op.plot_na,
                 op.watchman_name, op.watchman_contact,
                 op.notes,
-                NULL as contact_person, NULL as contact_phone, NULL as email,
+                op.contact_person, op.contact_phone, op.contact_email as email,
                 COALESCE(CONCAT(fpe.first_name, ' ', COALESCE(fpe.last_name, '')), CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
                 op.created_at, op.status, TRUE as is_active,
                 'own' as access_type, FALSE as can_modify, FALSE as can_delete,
