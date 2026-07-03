@@ -854,36 +854,40 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
         customerName || null, customerEmail || null, customerPhone || null, propertyZone || null, createdBy]
     );
 
-    // Send email notification for new work order
-    // Sends to: FP email + zone-centric employees + customer
-    const { sendWorkOrderCreatedNotification } = require('../services/emailService');
-    sendWorkOrderCreatedNotification({
-      orderId: result.insertId,
-      orderNumber: workOrderId,
-      title: title || `Service Request - ${finalCategoryName || 'General'}`,
-      propertyName: finalPropertyName,
-      propertyId: actualPropertyId || propertyId,
-      propertyType: finalPropertyType,
-      customerName,
-      customerEmail,
-      customerPhone,
-      zoneName: zoneName,
-      division: divisionName,
-      categoryName: finalCategoryName,
-      subcategoryName: finalSubcategoryName,
-      priority,
-      description,
-      createdBy: req.user?.username || req.user?.email || 'Executive',
-      createdByRole: 'Executive',
-      franchisePartnerId: franchisePartnerId,
-      propertyZone: propertyZone
-    }).catch(err => console.error('Email notification error:', err));
-
+    // Send success response FIRST
     res.json({
       success: true,
       message: 'Work order created successfully',
       data: { id: result.insertId, workOrderId }
     });
+
+    // Send email notification AFTER response (non-blocking)
+    try {
+      const { sendWorkOrderCreatedNotification } = require('../services/emailService');
+      sendWorkOrderCreatedNotification({
+        orderId: result.insertId,
+        orderNumber: workOrderId,
+        title: title || `Service Request - ${finalCategoryName || 'General'}`,
+        propertyName: finalPropertyName,
+        propertyId: actualPropertyId || propertyId,
+        propertyType: finalPropertyType,
+        customerName,
+        customerEmail,
+        customerPhone,
+        zoneName: zoneName,
+        division: divisionName,
+        categoryName: finalCategoryName,
+        subcategoryName: finalSubcategoryName,
+        priority,
+        description,
+        createdBy: req.user?.username || req.user?.email || 'Executive',
+        createdByRole: 'Executive',
+        franchisePartnerId: franchisePartnerId,
+        propertyZone: propertyZone
+      }).catch(err => console.error('Email notification error:', err));
+    } catch (emailErr) {
+      console.error('Email service error:', emailErr);
+    }
   } catch (error) {
     console.error('Work order create error:', error);
     res.status(500).json({ success: false, message: 'Failed to create work order: ' + error.message });
