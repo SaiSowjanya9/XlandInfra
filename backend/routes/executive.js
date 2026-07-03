@@ -848,10 +848,10 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
         priority, permission_to_enter, has_pet, scheduled_date, franchise_partner_id, status,
         property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone, zone, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
+      [workOrderId, propertyId, categoryId || null, clientId || null, title || null, description || null,
         priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, franchisePartnerId,
         finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
-        customerName || null, customerEmail || null, customerPhone || null, propertyZone, createdBy]
+        customerName || null, customerEmail || null, customerPhone || null, propertyZone || null, createdBy]
     );
 
     // Send email notification for new work order
