@@ -167,7 +167,7 @@ const ExecutiveWorkOrders = ({ user }) => {
         body: JSON.stringify(submitData)
       });
       const result = await response.json();
-      if (result.success) {
+      if (response.ok && result.success) {
         setMessage({ type: 'success', text: 'Work order created successfully!' });
         setShowModal(false);
         resetForm();
@@ -176,7 +176,8 @@ const ExecutiveWorkOrders = ({ user }) => {
         setMessage({ type: 'error', text: result.message || 'Operation failed' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to create work order' });
+      console.error('Work order create error:', error);
+      setMessage({ type: 'error', text: error.message || 'Failed to create work order' });
     }
   };
 
