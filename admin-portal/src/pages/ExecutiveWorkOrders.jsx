@@ -169,8 +169,8 @@ const ExecutiveWorkOrders = ({ user }) => {
       const result = await response.json();
       if (response.ok && result.success) {
         setMessage({ type: 'success', text: 'Work order created successfully!' });
-        setShowModal(false);
         resetForm();
+        setActiveTab('all');
         fetchWorkOrders();
       } else {
         setMessage({ type: 'error', text: result.message || 'Operation failed' });
