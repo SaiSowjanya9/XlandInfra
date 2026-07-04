@@ -41,31 +41,19 @@ const GPSLocationCapture = ({
     }
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
         const accuracy = position.coords.accuracy;
         const googleMapsLink = getGoogleMapsUrl(lat, lng);
         const savedAt = new Date().toISOString();
 
-        // Try to get address from reverse geocoding (Nominatim - free)
-        let address = '';
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
-            { headers: { 'Accept-Language': 'en' } }
-          );
-          const data = await response.json();
-          address = data.display_name || '';
-        } catch (e) {
-          console.error('Reverse geocoding failed:', e);
-        }
-
+        // Auto-fetch address disabled - user enters address manually
         onChange({
           lat,
           lng,
           accuracy,
-          address,
+          address: '',
           googleMapsLink,
           savedAt,
           savedBy: savedBy || 'Unknown'
@@ -189,13 +177,6 @@ const GPSLocationCapture = ({
             </div>
           </div>
 
-          {/* Address (if captured) */}
-          {value.address && (
-            <div className="bg-white rounded-lg p-3 border border-gray-100">
-              <p className="text-xs text-gray-500 mb-1">Approximate Address</p>
-              <p className="text-sm text-gray-800">{value.address}</p>
-            </div>
-          )}
 
           {/* Google Maps Link */}
           <div className="bg-white rounded-lg p-3 border border-gray-100">

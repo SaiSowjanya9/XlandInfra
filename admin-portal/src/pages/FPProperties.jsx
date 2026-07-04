@@ -831,7 +831,7 @@ const FPProperties = ({ user }) => {
   const uniqueDivisions = [...new Set(properties.map(p => p.division).filter(Boolean))];
 
   // Get available zones from current properties (dynamic based on status filter)
-  const availableZones = React.useMemo(() => {
+  const availableZones = useMemo(() => {
     const zoneMap = new Map();
     properties.forEach(p => {
       const zoneName = p.zone_name || p.zone;
