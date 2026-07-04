@@ -289,6 +289,18 @@ router.get('/dashboard', requireFPScope, async (req, res) => {
 // Get all FP properties
 router.get('/properties', requireFPScope, async (req, res) => {
   try {
+    const { status } = req.query; // 'active', 'inactive', or 'all'
+    
+    // Build status filter clause
+    let statusClause;
+    if (status === 'inactive') {
+      statusClause = `AND p.status = 'inactive'`;
+    } else if (status === 'all') {
+      statusClause = `AND (p.status IS NULL OR p.status IN ('active', 'inactive'))`;
+    } else {
+      statusClause = `AND (p.status IS NULL OR p.status = 'active')`;
+    }
+    
     // Fetch from properties table with creator name
     const [regularProperties] = await pool.execute(
       `SELECT p.*,
@@ -309,10 +321,20 @@ router.get('/properties', requireFPScope, async (req, res) => {
        LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS UNSIGNED) = fpe.id
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR p.created_by = u.id
-       WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted')
+       WHERE p.franchise_partner_id = ? ${statusClause}
        ORDER BY p.created_at DESC`,
       [req.fpId]
     );
+
+    // Build status filter for onboarded_properties
+    let onbStatusClause;
+    if (status === 'inactive') {
+      onbStatusClause = `AND op.status = 'inactive'`;
+    } else if (status === 'all') {
+      onbStatusClause = `AND (op.status IS NULL OR op.status IN ('active', 'inactive'))`;
+    } else {
+      onbStatusClause = `AND (op.status IS NULL OR op.status = 'active')`;
+    }
 
     // Also fetch from onboarded_properties with creator name and division name
     let onboardedProperties = [];
@@ -341,8 +363,8 @@ router.get('/properties', requireFPScope, async (req, res) => {
          FROM onboarded_properties op
          LEFT JOIN fp_divisions fd ON (CAST(op.division AS UNSIGNED) = fd.id OR op.division = fd.name) AND fd.franchise_partner_id = op.franchise_partner_id
          LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username OR CAST(op.created_by AS UNSIGNED) = fpe.id
-         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.username OR op.created_by = u.user_id OR op.created_by = u.id
-         WHERE op.franchise_partner_id = ? AND op.status = 'active'
+         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.username || op.created_by = u.user_id OR op.created_by = u.id
+         WHERE op.franchise_partner_id = ? ${onbStatusClause}
          ORDER BY op.created_at DESC`,
         [req.fpId]
       );
@@ -694,46 +716,117 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
   }
 });
 
-// Delete property - cascades to clients and customer_accounts
-// Handles both 'properties' and 'onboarded_properties' tables
+// Delete property - Soft delete by setting status to 'inactive'
 router.delete('/properties/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
-    const sourceTable = req.query.source || 'properties';
-    
-    // Validate ownership - check both tables
-    let hasOwnership = false;
-    let tableName = 'properties';
-    let contactEmail = null;
-    
-    // Check properties table first
-    const [propRows] = await pool.execute(
-      'SELECT id, contact_email FROM properties WHERE id = ? AND franchise_partner_id = ?',
-      [id, req.fpId]
-    );
-    if (propRows.length > 0) {
-      hasOwnership = true;
-      tableName = 'properties';
-      contactEmail = propRows[0].contact_email;
-    }
-    
-    // Check onboarded_properties table if not found
-    if (!hasOwnership) {
-      const [onboardedRows] = await pool.execute(
-        'SELECT id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?',
+    let updated = false;
+
+    // Try to soft-delete from properties table first
+    try {
+      const [result1] = await pool.execute(
+        `UPDATE properties SET status = 'inactive' WHERE id = ? AND franchise_partner_id = ?`,
         [id, req.fpId]
       );
-      if (onboardedRows.length > 0) {
-        hasOwnership = true;
-        tableName = 'onboarded_properties';
-      }
+      if (result1.affectedRows > 0) updated = true;
+    } catch (e) { console.log('Properties table update skipped:', e.message); }
+
+    // Also try to soft-delete from onboarded_properties table
+    try {
+      const [result2] = await pool.execute(
+        `UPDATE onboarded_properties SET status = 'inactive' WHERE id = ? AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+      if (result2.affectedRows > 0) updated = true;
+    } catch (e) { console.log('Onboarded_properties table update skipped:', e.message); }
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
     }
-    
-    if (!hasOwnership) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only delete your own properties.'
-      });
+
+    console.log('📋 [FP] Soft-deleted (set inactive) property:', id);
+    res.json({ success: true, message: 'Customer moved to inactive. Can be restored from Inactive Customers.' });
+  } catch (error) {
+    console.error('Delete property error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Restore property - Set status back to 'active'
+router.put('/properties/:id/restore', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let restored = false;
+
+    // Try to restore from properties table first
+    try {
+      const [result1] = await pool.execute(
+        `UPDATE properties SET status = 'active' WHERE id = ? AND status = 'inactive' AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+      if (result1.affectedRows > 0) restored = true;
+    } catch (e) { console.log('Properties table restore skipped:', e.message); }
+
+    // Also try to restore from onboarded_properties table
+    try {
+      const [result2] = await pool.execute(
+        `UPDATE onboarded_properties SET status = 'active' WHERE id = ? AND status = 'inactive' AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+      if (result2.affectedRows > 0) restored = true;
+    } catch (e) { console.log('Onboarded_properties table restore skipped:', e.message); }
+
+    if (!restored) {
+      return res.status(404).json({ success: false, message: 'Property not found or already active' });
+    }
+
+    console.log('📋 [FP] Restored property:', id);
+    res.json({ success: true, message: 'Customer restored to active successfully.' });
+  } catch (error) {
+    console.error('Restore property error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Permanently delete property - Hard delete from database
+router.delete('/properties/:id/permanent', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let deleted = false;
+    let contactEmail = null;
+
+    // Get contact email before deleting (for customer_accounts cleanup)
+    try {
+      const [prop] = await pool.query('SELECT contact_email FROM properties WHERE id = ? AND franchise_partner_id = ?', [id, req.fpId]);
+      if (prop.length > 0) contactEmail = prop[0].contact_email;
+    } catch (e) {}
+    if (!contactEmail) {
+      try {
+        const [prop] = await pool.query('SELECT poc_email as contact_email FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?', [id, req.fpId]);
+        if (prop.length > 0) contactEmail = prop[0].contact_email;
+      } catch (e) {}
+    }
+
+    // Try to delete from properties table first
+    try {
+      const [result1] = await pool.execute(
+        `DELETE FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+      if (result1.affectedRows > 0) deleted = true;
+    } catch (e) { console.log('Properties table delete skipped:', e.message); }
+
+    // Also try to delete from onboarded_properties table
+    try {
+      const [result2] = await pool.execute(
+        `DELETE FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+      if (result2.affectedRows > 0) deleted = true;
+    } catch (e) { console.log('Onboarded_properties table delete skipped:', e.message); }
+
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
     // Delete customer_accounts by email (so email can be reused)
@@ -754,22 +847,10 @@ router.delete('/properties/:id', requireFPScope, async (req, res) => {
       console.log('📋 [FP] Deleted clients for property_id:', id);
     } catch (e) {}
 
-    // Delete the property from the correct table
-    if (tableName === 'onboarded_properties') {
-      await pool.execute(
-        `DELETE FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
-        [id, req.fpId]
-      );
-    } else {
-      await pool.execute(
-        `DELETE FROM properties WHERE id = ? AND franchise_partner_id = ?`,
-        [id, req.fpId]
-      );
-    }
-    
-    res.json({ success: true, message: 'Property and associated customer accounts deleted. Email can now be reused.' });
+    console.log('📋 [FP] Permanently deleted property:', id);
+    res.json({ success: true, message: 'Customer permanently deleted. This action cannot be undone.' });
   } catch (error) {
-    console.error('Delete property error:', error);
+    console.error('Permanent delete property error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

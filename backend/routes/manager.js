@@ -310,10 +310,22 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     const franchisePartnerId = req.franchisePartnerId;
     const employeeId = getEmployeeIdForZoneLookup(req);
     const creatorEmail = getCreatorIdentifier(req);
+    const { status } = req.query; // 'active', 'inactive', or 'all'
     
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
-    console.log('[Manager Properties] managerId:', managerId, 'franchisePartnerId:', franchisePartnerId, 'assignedZones:', assignedZones, 'creatorEmail:', creatorEmail);
+    console.log('[Manager Properties] managerId:', managerId, 'franchisePartnerId:', franchisePartnerId, 'assignedZones:', assignedZones, 'status:', status || 'active');
+    
+    // Build status filter clause
+    let statusClause;
+    if (status === 'inactive') {
+      statusClause = `AND p.status = 'inactive'`;
+    } else if (status === 'all') {
+      statusClause = `AND (p.status IS NULL OR p.status IN ('active', 'inactive'))`;
+    } else {
+      // Default: active only
+      statusClause = `AND (p.status IS NULL OR p.status = 'active')`;
+    }
     
     // Build zone filter (zone-centric + own created)
     const zoneFilter = buildPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'p');
@@ -337,7 +349,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
        LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
        LEFT JOIN users u ON p.created_by = u.email OR CAST(p.created_by AS UNSIGNED) = u.id
-       WHERE ${franchisePartnerId ? 'p.franchise_partner_id = ?' : 'p.manager_id = ?'} AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
+       WHERE ${franchisePartnerId ? 'p.franchise_partner_id = ?' : 'p.manager_id = ?'} ${statusClause}${zoneFilter.clause}
        ORDER BY p.created_at DESC`;
     const propParams = franchisePartnerId ? [franchisePartnerId, ...zoneFilter.params] : [managerId, ...zoneFilter.params];
     console.log('[Manager Properties] Params:', propParams);
@@ -346,6 +358,16 @@ router.get('/properties', requireManagerScope, async (req, res) => {
 
     // Also fetch from onboarded_properties with creator name (zone-centric + own created)
     // Only fetch if franchisePartnerId exists (onboarded_properties doesn't have manager_id column)
+    // Build status filter for onboarded_properties
+    let onbStatusClause;
+    if (status === 'inactive') {
+      onbStatusClause = `AND op.status = 'inactive'`;
+    } else if (status === 'all') {
+      onbStatusClause = `AND (op.status IS NULL OR op.status IN ('active', 'inactive'))`;
+    } else {
+      onbStatusClause = `AND (op.status IS NULL OR op.status = 'active')`;
+    }
+    
     let onboardedProperties = [];
     if (franchisePartnerId) {
       try {
@@ -374,7 +396,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
            LEFT JOIN fp_divisions fd ON (CAST(op.division AS UNSIGNED) = fd.id OR op.division = fd.name) AND fd.franchise_partner_id = op.franchise_partner_id
            LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username
            LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id
-           WHERE op.franchise_partner_id = ? AND op.status = 'active'${onbZoneFilter.clause}
+           WHERE op.franchise_partner_id = ? ${onbStatusClause}${onbZoneFilter.clause}
            ORDER BY op.created_at DESC`;
         const onbParams = [franchisePartnerId, ...onbZoneFilter.params];
         const [rows] = await pool.execute(onbQuery, onbParams);
