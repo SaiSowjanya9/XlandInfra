@@ -363,7 +363,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
          FROM onboarded_properties op
          LEFT JOIN fp_divisions fd ON (CAST(op.division AS UNSIGNED) = fd.id OR op.division = fd.name) AND fd.franchise_partner_id = op.franchise_partner_id
          LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username OR CAST(op.created_by AS UNSIGNED) = fpe.id
-         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.username || op.created_by = u.user_id OR op.created_by = u.id
+         LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.username OR op.created_by = u.user_id OR op.created_by = u.id
          WHERE op.franchise_partner_id = ? ${onbStatusClause}
          ORDER BY op.created_at DESC`,
         [req.fpId]

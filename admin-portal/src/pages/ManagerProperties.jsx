@@ -356,10 +356,18 @@ const ManagerProperties = ({ user }) => {
     return dateB.getTime() - dateA.getTime(); // Sort by latest first
   });
 
-  // Get counts for each tab
+  // Get counts for each tab (filtered by zone if selected)
   const getTabCount = (tabId) => {
-    if (tabId === 'all') return properties.length;
-    return properties.filter(p => normalizePropertyType(p.property_type) === tabId).length;
+    // First filter by zone if selected
+    let filtered = properties;
+    if (zoneFilter && zoneFilter !== 'all') {
+      filtered = properties.filter(p => 
+        p.zone_name?.toLowerCase() === zoneFilter.toLowerCase() ||
+        p.zone?.toLowerCase() === zoneFilter.toLowerCase()
+      );
+    }
+    if (tabId === 'all') return filtered.length;
+    return filtered.filter(p => normalizePropertyType(p.property_type) === tabId).length;
   };
 
   // Get available zones from current properties (dynamic based on status filter)

@@ -407,10 +407,18 @@ const CoordinatorProperties = ({ user }) => {
     return dateB.getTime() - dateA.getTime(); // Sort by latest first
   });
 
-  // Count properties by type
+  // Count properties by type (filtered by zone if selected)
   const getTypeCount = (type) => {
-    if (type === 'all') return properties.length;
-    return properties.filter(p => normalizePropertyType(p.property_type) === type).length;
+    // First filter by zone if selected
+    let filtered = properties;
+    if (selectedZone) {
+      filtered = properties.filter(p => 
+        p.zone_name?.toLowerCase() === selectedZone.toLowerCase() ||
+        p.zone?.toLowerCase() === selectedZone.toLowerCase()
+      );
+    }
+    if (type === 'all') return filtered.length;
+    return filtered.filter(p => normalizePropertyType(p.property_type) === type).length;
   };
 
   // Get unique divisions from properties
