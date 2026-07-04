@@ -31,7 +31,8 @@ import {
   Calendar,
   Download,
   Phone,
-  Mail
+  Mail,
+  RotateCcw
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import StaticMapView from '../components/common/StaticMapView';
@@ -105,7 +106,9 @@ const FPProperties = ({ user }) => {
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/fp/properties', {
+      // Pass status filter to API
+      const statusParam = statusFilter ? `?status=${statusFilter}` : '';
+      const response = await fetch(`/api/fp/properties${statusParam}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -187,6 +190,11 @@ const FPProperties = ({ user }) => {
     fetchVendors();
     fetchEmployees();
   }, []);
+  
+  // Refetch properties when status filter changes
+  useEffect(() => {
+    fetchProperties();
+  }, [statusFilter]);
   
   // Sync selectedProperty from URL params
   useEffect(() => {
@@ -325,17 +333,20 @@ const FPProperties = ({ user }) => {
     setEditFormData({});
   };
 
-  const handleDeleteProperty = async (propertyId) => {
-    if (!window.confirm('Are you sure you want to delete this property?')) return;
-    
+  // State for delete confirmation modals
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [permanentDeleteConfirm, setPermanentDeleteConfirm] = useState(null);
+  
+  // Soft delete - move to inactive
+  const handleDeleteProperty = async (property) => {
     try {
-      const response = await fetch(`/api/fp/properties/${propertyId}`, {
+      const response = await fetch(`/api/fp/properties/${property.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
       if (result.success) {
-        setMessage({ type: 'success', text: 'Property deleted successfully' });
+        setMessage({ type: 'success', text: 'Customer moved to inactive. Can be restored from Inactive Customers.' });
         fetchProperties();
       } else {
         setMessage({ type: 'error', text: result.message || 'Failed to delete property' });
@@ -343,6 +354,46 @@ const FPProperties = ({ user }) => {
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to delete property' });
     }
+    setDeleteConfirm(null);
+  };
+  
+  // Restore - move back to active
+  const handleRestoreProperty = async (property) => {
+    try {
+      const response = await fetch(`/api/fp/properties/${property.id}/restore`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Customer restored to active successfully!' });
+        fetchProperties();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Failed to restore property' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to restore property' });
+    }
+  };
+  
+  // Permanent delete - remove from database
+  const handlePermanentDeleteProperty = async (property) => {
+    try {
+      const response = await fetch(`/api/fp/properties/${property.id}/permanent`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Customer permanently deleted!' });
+        fetchProperties();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Failed to permanently delete property' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to permanently delete property' });
+    }
+    setPermanentDeleteConfirm(null);
   };
 
   const openAssignModal = (property, type) => {
@@ -756,9 +807,7 @@ const FPProperties = ({ user }) => {
     // Division filter
     if (selectedDivision && p.division !== selectedDivision) return false;
     
-    // Status filter - use is_active field to match display logic
-    if (statusFilter === 'active' && p.is_active === false) return false;
-    if (statusFilter === 'inactive' && p.is_active !== false) return false;
+    // Status filter is now handled by API, no client-side filtering needed
     
     return true;
   }).sort((a, b) => {
@@ -1037,9 +1086,9 @@ const FPProperties = ({ user }) => {
                       </td>
                       <td className="py-3 px-4">
                         <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                          property.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                          property.status === 'inactive' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
                         }`}>
-                          {property.is_active !== false ? 'Active' : 'Inactive'}
+                          {property.status === 'inactive' ? 'Inactive' : 'Active'}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -1081,13 +1130,32 @@ const FPProperties = ({ user }) => {
                               >
                                 <UserPlus className="w-4 h-4 text-green-500" />
                               </button>
-                              <button
-                                onClick={() => handleDeleteProperty(property.id)}
-                                className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4 text-red-500" />
-                              </button>
+                              {property.status === 'inactive' ? (
+                                <>
+                                  <button
+                                    onClick={() => handleRestoreProperty(property)}
+                                    className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors"
+                                    title="Restore Customer"
+                                  >
+                                    <RotateCcw className="w-4 h-4 text-emerald-600" />
+                                  </button>
+                                  <button
+                                    onClick={() => setPermanentDeleteConfirm(property)}
+                                    className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Permanently Delete"
+                                  >
+                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => setDeleteConfirm(property)}
+                                  className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Move to Inactive"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </button>
+                              )}
                             </>
                           )}
                         </div>
@@ -1961,6 +2029,64 @@ const FPProperties = ({ user }) => {
             <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
               <button onClick={closeEditModal} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
               <button onClick={handleSaveEdit} className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><Save className="w-4 h-4" />Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal (Move to Inactive) */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-7 h-7 text-orange-500" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center">Move to Inactive?</h3>
+            <p className="text-sm text-gray-500 text-center mt-2">
+              <strong>{deleteConfirm.name}</strong> will be moved to Inactive Customers. You can restore it anytime from the Inactive Customers filter.
+            </p>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteProperty(deleteConfirm)}
+                className="flex-1 px-4 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors"
+              >
+                Move to Inactive
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Permanent Delete Confirmation Modal */}
+      {permanentDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setPermanentDeleteConfirm(null)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-7 h-7 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center">Permanently Delete?</h3>
+            <p className="text-sm text-gray-500 text-center mt-2">
+              <strong>{permanentDeleteConfirm.name}</strong> will be permanently deleted from the database. <span className="text-red-600 font-semibold">This action cannot be undone.</span>
+            </p>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setPermanentDeleteConfirm(null)}
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handlePermanentDeleteProperty(permanentDeleteConfirm)}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+              >
+                Delete Permanently
+              </button>
             </div>
           </div>
         </div>

@@ -575,8 +575,102 @@ router.put('/properties/:id', authenticate, managerOrAdmin, async (req, res) => 
   }
 });
 
-// Delete property (Admin only) - handles both tables + cascades to clients and customer_accounts
+// Delete property (Admin only) - soft delete by setting status to 'inactive'
 router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let updated = false;
+
+    // Try to soft-delete from properties table first (set status to 'inactive')
+    try {
+      const [result1] = await pool.execute(
+        `UPDATE properties SET status = 'inactive' WHERE id = ?`,
+        [id]
+      );
+      if (result1.affectedRows > 0) updated = true;
+    } catch (e) { console.log('Properties table update skipped:', e.message); }
+
+    // Also try to soft-delete from onboarded_properties table
+    try {
+      const [result2] = await pool.execute(
+        `UPDATE onboarded_properties SET status = 'inactive' WHERE id = ?`,
+        [id]
+      );
+      if (result2.affectedRows > 0) updated = true;
+    } catch (e) { console.log('Onboarded_properties table update skipped:', e.message); }
+
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        message: 'Property not found'
+      });
+    }
+
+    console.log('📋 [Admin] Soft-deleted (set inactive) property:', id);
+
+    res.json({
+      success: true,
+      message: 'Customer moved to inactive. Can be restored from Inactive Customers.'
+    });
+  } catch (error) {
+    console.error('Error deleting property:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting property',
+      error: error.message
+    });
+  }
+});
+
+// Restore property (Admin only) - set status back to 'active'
+router.put('/properties/:id/restore', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let restored = false;
+
+    // Try to restore from properties table first
+    try {
+      const [result1] = await pool.execute(
+        `UPDATE properties SET status = 'active' WHERE id = ? AND status = 'inactive'`,
+        [id]
+      );
+      if (result1.affectedRows > 0) restored = true;
+    } catch (e) { console.log('Properties table restore skipped:', e.message); }
+
+    // Also try to restore from onboarded_properties table
+    try {
+      const [result2] = await pool.execute(
+        `UPDATE onboarded_properties SET status = 'active' WHERE id = ? AND status = 'inactive'`,
+        [id]
+      );
+      if (result2.affectedRows > 0) restored = true;
+    } catch (e) { console.log('Onboarded_properties table restore skipped:', e.message); }
+
+    if (!restored) {
+      return res.status(404).json({
+        success: false,
+        message: 'Property not found or already active'
+      });
+    }
+
+    console.log('📋 [Admin] Restored property:', id);
+
+    res.json({
+      success: true,
+      message: 'Customer restored to active successfully.'
+    });
+  } catch (error) {
+    console.error('Error restoring property:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error restoring property',
+      error: error.message
+    });
+  }
+});
+
+// Permanently delete property (Admin only) - hard delete from database
+router.delete('/properties/:id/permanent', authenticate, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
     let deleted = false;
@@ -597,20 +691,20 @@ router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
     // Try to delete from properties table first
     try {
       const [result1] = await pool.execute(
-        `UPDATE properties SET status = 'deleted' WHERE id = ?`,
+        `DELETE FROM properties WHERE id = ?`,
         [id]
       );
       if (result1.affectedRows > 0) deleted = true;
-    } catch (e) { console.log('Properties table update skipped:', e.message); }
+    } catch (e) { console.log('Properties table delete skipped:', e.message); }
 
     // Also try to delete from onboarded_properties table
     try {
       const [result2] = await pool.execute(
-        `UPDATE onboarded_properties SET status = 'deleted' WHERE id = ?`,
+        `DELETE FROM onboarded_properties WHERE id = ?`,
         [id]
       );
       if (result2.affectedRows > 0) deleted = true;
-    } catch (e) { console.log('Onboarded_properties table update skipped:', e.message); }
+    } catch (e) { console.log('Onboarded_properties table delete skipped:', e.message); }
 
     if (!deleted) {
       return res.status(404).json({
@@ -637,15 +731,17 @@ router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
       console.log('📋 [Admin] Deleted clients for property_id:', id);
     } catch (e) {}
 
+    console.log('📋 [Admin] Permanently deleted property:', id);
+
     res.json({
       success: true,
-      message: 'Property and associated customer accounts deleted. Email can now be reused.'
+      message: 'Customer permanently deleted. This action cannot be undone.'
     });
   } catch (error) {
-    console.error('Error deleting property:', error);
+    console.error('Error permanently deleting property:', error);
     res.status(500).json({
       success: false,
-      message: 'Error deleting property',
+      message: 'Error permanently deleting property',
       error: error.message
     });
   }
@@ -1449,7 +1545,20 @@ router.get('/fp-list', authenticate, adminOnly, async (req, res) => {
 // Get ALL properties from ALL FPs (Admin mode)
 router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
   try {
-    // Regular properties from all FPs - all fields with creator name (exclude deleted)
+    const { status } = req.query; // 'active', 'inactive', or 'all'
+    
+    // Build status filter clause
+    let statusClause;
+    if (status === 'inactive') {
+      statusClause = `AND p.status = 'inactive'`;
+    } else if (status === 'all') {
+      statusClause = `AND (p.status IS NULL OR p.status IN ('active', 'inactive'))`;
+    } else {
+      // Default: active only (exclude inactive and deleted)
+      statusClause = `AND (p.status IS NULL OR p.status = 'active')`;
+    }
+    
+    // Regular properties from all FPs - all fields with creator name
     const [properties] = await pool.execute(
       `SELECT p.id, p.property_id, p.name, p.property_type,
               p.zone_id as zone_name, p.area_name as area,
@@ -1469,13 +1578,23 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
        LEFT JOIN franchise_partners fp ON p.franchise_partner_id = fp.id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR) OR p.created_by = u.user_id
-       WHERE (p.status IS NULL OR p.status != 'deleted')
+       WHERE 1=1 ${statusClause}
        ORDER BY p.created_at DESC`
     );
     
     console.log('Admin all-properties: Found', properties.length, 'regular properties');
     
-    // Onboarded properties from all FPs
+    // Onboarded properties from all FPs - build status clause for onboarded_properties
+    let onboardedStatusClause;
+    if (status === 'inactive') {
+      onboardedStatusClause = `AND op.status = 'inactive'`;
+    } else if (status === 'all') {
+      onboardedStatusClause = `AND (op.status IS NULL OR op.status IN ('active', 'inactive'))`;
+    } else {
+      // Default: active only
+      onboardedStatusClause = `AND (op.status IS NULL OR op.status = 'active')`;
+    }
+    
     let onboardedProps = [];
     try {
       const [rows] = await pool.execute(
@@ -1497,7 +1616,7 @@ router.get('/all-properties', authenticate, adminOnly, async (req, res) => {
          LEFT JOIN franchise_partners fp ON op.franchise_partner_id = fp.id
          LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username OR CAST(op.created_by AS CHAR) = CAST(fpe.id AS CHAR)
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.username OR CAST(op.created_by AS CHAR) = CAST(u.id AS CHAR) OR op.created_by = u.user_id
-         WHERE (op.status IS NULL OR op.status = 'active' OR op.status != 'deleted')
+         WHERE 1=1 ${onboardedStatusClause}
          ORDER BY op.created_at DESC`
       );
       onboardedProps = rows;
@@ -2140,7 +2259,20 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
       return res.status(400).json({ success: false, message: 'Invalid FP ID' });
     }
     
-    console.log('Admin fp-view properties: Fetching for FP ID:', fpIdNum);
+    const { status } = req.query; // 'active', 'inactive', or 'all'
+    
+    console.log('Admin fp-view properties: Fetching for FP ID:', fpIdNum, 'status:', status || 'active');
+    
+    // Build status filter clause for properties
+    let statusClause;
+    if (status === 'inactive') {
+      statusClause = `AND p.status = 'inactive'`;
+    } else if (status === 'all') {
+      statusClause = `AND (p.status IS NULL OR p.status IN ('active', 'inactive'))`;
+    } else {
+      // Default: active only
+      statusClause = `AND (p.status IS NULL OR p.status = 'active')`;
+    }
     
     // Regular properties - use SELECT * to avoid column name issues
     let properties = [];
@@ -2148,7 +2280,7 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
       const [rows] = await pool.execute(
         `SELECT p.*, 'properties' as source_table
          FROM properties p
-         WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted')
+         WHERE p.franchise_partner_id = ? ${statusClause}
          ORDER BY p.created_at DESC`,
         [fpIdNum]
       );
@@ -2165,13 +2297,24 @@ router.get('/fp-view/:fpId/properties', authenticate, adminOnly, async (req, res
     
     console.log('Admin fp-view properties: Found', properties.length, 'regular properties');
     
+    // Build status filter clause for onboarded_properties
+    let onboardedStatusClause;
+    if (status === 'inactive') {
+      onboardedStatusClause = `AND op.status = 'inactive'`;
+    } else if (status === 'all') {
+      onboardedStatusClause = `AND (op.status IS NULL OR op.status IN ('active', 'inactive'))`;
+    } else {
+      // Default: active only
+      onboardedStatusClause = `AND (op.status IS NULL OR op.status = 'active')`;
+    }
+    
     // Onboarded properties
     let onboardedProps = [];
     try {
       const [rows] = await pool.execute(
         `SELECT op.*, 'onboarded_properties' as source_table
          FROM onboarded_properties op
-         WHERE op.franchise_partner_id = ? AND (op.status IS NULL OR op.status != 'deleted')
+         WHERE op.franchise_partner_id = ? ${onboardedStatusClause}
          ORDER BY op.created_at DESC`,
         [fpIdNum]
       );
