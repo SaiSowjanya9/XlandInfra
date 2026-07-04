@@ -395,6 +395,17 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
       const onbZoneFilter = buildOnboardedPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'op');
       const scopeColumn = franchisePartnerId ? 'franchise_partner_id' : 'executive_id';
       const scopeId = franchisePartnerId || executiveId;
+      
+      // Build status filter for onboarded_properties
+      let onbStatusClause;
+      if (status === 'inactive') {
+        onbStatusClause = ` AND op.status = 'inactive'`;
+      } else if (status === 'all') {
+        onbStatusClause = ` AND (op.status IS NULL OR op.status IN ('active', 'inactive'))`;
+      } else {
+        onbStatusClause = ` AND (op.status IS NULL OR op.status = 'active')`;
+      }
+      
       const [rows] = await pool.execute(
         `SELECT op.id, op.property_id, op.community_name as name, op.property_type, op.entry_type,
                 op.zone as zone_name, op.area_name as area, 
@@ -418,7 +429,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
          LEFT JOIN fp_divisions fd ON (CAST(op.division AS UNSIGNED) = fd.id OR op.division = fd.name) AND fd.franchise_partner_id = op.franchise_partner_id
          LEFT JOIN fp_employees fpe ON op.created_by = fpe.email OR op.created_by = fpe.username OR CAST(op.created_by AS CHAR) = CAST(fpe.id AS CHAR)
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.username OR op.created_by = u.user_id OR CAST(op.created_by AS CHAR) = CAST(u.id AS CHAR)
-         WHERE op.${scopeColumn} = ? AND op.status = 'active'${onbZoneFilter.clause}
+         WHERE op.${scopeColumn} = ?${onbStatusClause}${onbZoneFilter.clause}
          ORDER BY op.created_at DESC`,
         [scopeId, ...onbZoneFilter.params]
       );

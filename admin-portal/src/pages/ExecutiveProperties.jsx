@@ -277,7 +277,7 @@ const ExecutiveProperties = ({ user }) => {
       property.contact_email || '',
       property.created_by_name || 'System',
       property.created_at ? new Date(property.created_at).toLocaleDateString() : '',
-      property.is_active !== false ? 'Active' : 'Inactive'
+      property.status === 'inactive' ? 'Inactive' : 'Active'
     ];
     
     const csvContent = [headers.join(','), values.map(v => `"${v}"`).join(',')].join('\n');
@@ -675,9 +675,9 @@ const ExecutiveProperties = ({ user }) => {
                       </td>
                       <td className="py-3 px-4">
                         <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                          property.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                          property.status === 'inactive' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
                         }`}>
-                          {property.is_active !== false ? 'Active' : 'Inactive'}
+                          {property.status === 'inactive' ? 'Inactive' : 'Active'}
                         </span>
                       </td>
                       <td className="py-3 px-4">

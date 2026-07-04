@@ -391,6 +391,17 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     let onboardedProperties = [];
     try {
       const onbZoneFilter = buildOnboardedPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'op');
+      
+      // Build status filter for onboarded_properties
+      let onbStatusClause;
+      if (status === 'inactive') {
+        onbStatusClause = ` AND op.status = 'inactive'`;
+      } else if (status === 'all') {
+        onbStatusClause = ` AND (op.status IS NULL OR op.status IN ('active', 'inactive'))`;
+      } else {
+        onbStatusClause = ` AND (op.status IS NULL OR op.status = 'active')`;
+      }
+      
       let onbQuery, onbParams;
       if (isFPCoordinator) {
         // FP Coordinators see: ALL FP properties (if no zones) or zone-centric
@@ -413,7 +424,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
            FROM onboarded_properties op
            LEFT JOIN fp_divisions fd ON (CAST(op.division AS UNSIGNED) = fd.id OR op.division = fd.name) AND fd.franchise_partner_id = op.franchise_partner_id
            LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR CAST(op.created_by AS UNSIGNED) = u.id
-           WHERE op.franchise_partner_id = ?${onbZoneFilter.clause}
+           WHERE op.franchise_partner_id = ?${onbStatusClause}${onbZoneFilter.clause}
            ORDER BY op.created_at DESC`;
         onbParams = [franchisePartnerId, ...onbZoneFilter.params];
       } else {
@@ -436,7 +447,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
            FROM onboarded_properties op
            LEFT JOIN fp_divisions fd ON (CAST(op.division AS UNSIGNED) = fd.id OR op.division = fd.name) AND fd.franchise_partner_id = op.franchise_partner_id
            LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR CAST(op.created_by AS UNSIGNED) = u.id
-           WHERE (op.coordinator_id = ? OR op.created_by = ? OR op.created_by = ?)${onbZoneFilter.clause}
+           WHERE (op.coordinator_id = ? OR op.created_by = ? OR op.created_by = ?)${onbStatusClause}${onbZoneFilter.clause}
            ORDER BY op.created_at DESC`;
         onbParams = [coordinatorId, coordinatorId, creatorEmail, ...onbZoneFilter.params];
       }
