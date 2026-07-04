@@ -565,11 +565,14 @@ const CustomerSubmissions = () => {
     return true;
   }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sort by latest first
 
-  // Stats per type
+  // Stats per type (filtered by zone if selected)
+  const zoneFilteredProperties = zoneFilter 
+    ? properties.filter(p => p.zone === zoneFilter)
+    : properties;
   const statsByType = TABS.filter(t => t.id !== 'all').map(tab => ({
     ...tab,
-    count: properties.filter(p => normalizePropertyType(p.entryType) === tab.id).length,
-    units: properties.filter(p => normalizePropertyType(p.entryType) === tab.id).reduce((sum, p) => sum + (p.totalUnits || 0), 0)
+    count: zoneFilteredProperties.filter(p => normalizePropertyType(p.entryType) === tab.id).length,
+    units: zoneFilteredProperties.filter(p => normalizePropertyType(p.entryType) === tab.id).reduce((sum, p) => sum + (p.totalUnits || 0), 0)
   }));
 
   const formatDate = (iso) => {
