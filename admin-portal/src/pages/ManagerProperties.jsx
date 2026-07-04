@@ -341,8 +341,12 @@ const ManagerProperties = ({ user }) => {
     // Tab filter (property type) - normalize for consistent matching
     const matchesTab = activeTab === 'all' || normalizePropertyType(p.property_type) === activeTab;
     
-    // Zone filter
-    const matchesZone = zoneFilter === 'all' || p.zone_id?.toString() === zoneFilter;
+    // Zone filter - compare zone_id, zone_name, or zone field
+    const selectedZoneName = zones.find(z => String(z.id) === String(zoneFilter))?.name?.toLowerCase();
+    const matchesZone = zoneFilter === 'all' || 
+                        String(p.zone_id) === String(zoneFilter) ||
+                        p.zone_name?.toLowerCase() === selectedZoneName ||
+                        p.zone?.toLowerCase() === selectedZoneName;
     
     // Division filter
     const matchesDivision = divisionFilter === 'all' || p.division_id?.toString() === divisionFilter;

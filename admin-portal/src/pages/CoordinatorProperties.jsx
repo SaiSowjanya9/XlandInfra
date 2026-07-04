@@ -387,8 +387,15 @@ const CoordinatorProperties = ({ user }) => {
       )) return false;
     }
     
-    // Zone filter
-    if (selectedZone && p.zone_id !== parseInt(selectedZone)) return false;
+    // Zone filter - compare zone_id, zone_name, or zone field
+    if (selectedZone) {
+      const selectedZoneName = zones.find(z => String(z.id) === String(selectedZone))?.name?.toLowerCase();
+      const zoneMatch = 
+        String(p.zone_id) === String(selectedZone) ||
+        p.zone_name?.toLowerCase() === selectedZoneName ||
+        p.zone?.toLowerCase() === selectedZoneName;
+      if (!zoneMatch) return false;
+    }
     
     // Division filter
     if (selectedDivision && p.division !== selectedDivision) return false;
