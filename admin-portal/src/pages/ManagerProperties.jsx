@@ -341,12 +341,10 @@ const ManagerProperties = ({ user }) => {
     // Tab filter (property type) - normalize for consistent matching
     const matchesTab = activeTab === 'all' || normalizePropertyType(p.property_type) === activeTab;
     
-    // Zone filter - compare zone_id, zone_name, or zone field
-    const selectedZoneName = zones.find(z => String(z.id) === String(zoneFilter))?.name?.toLowerCase();
+    // Zone filter - compare by zone name (case-insensitive)
     const matchesZone = zoneFilter === 'all' || 
-                        String(p.zone_id) === String(zoneFilter) ||
-                        p.zone_name?.toLowerCase() === selectedZoneName ||
-                        p.zone?.toLowerCase() === selectedZoneName;
+                        p.zone_name?.toLowerCase() === zoneFilter.toLowerCase() ||
+                        p.zone?.toLowerCase() === zoneFilter.toLowerCase();
     
     // Division filter
     const matchesDivision = divisionFilter === 'all' || p.division_id?.toString() === divisionFilter;
@@ -363,6 +361,19 @@ const ManagerProperties = ({ user }) => {
     if (tabId === 'all') return properties.length;
     return properties.filter(p => normalizePropertyType(p.property_type) === tabId).length;
   };
+
+  // Get available zones from current properties (dynamic based on status filter)
+  const availableZones = React.useMemo(() => {
+    const zoneMap = new Map();
+    properties.forEach(p => {
+      const zoneName = p.zone_name || p.zone;
+      const zoneId = p.zone_id;
+      if (zoneName && !zoneMap.has(zoneName)) {
+        zoneMap.set(zoneName, { id: zoneId || zoneName, name: zoneName });
+      }
+    });
+    return Array.from(zoneMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [properties]);
 
   // Category Selection Screen
   if (!selectedCategory) {
@@ -501,8 +512,8 @@ const ManagerProperties = ({ user }) => {
             className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Zones</option>
-            {zones.map(z => (
-              <option key={z.id} value={z.id}>{z.name}</option>
+            {availableZones.map(z => (
+              <option key={z.id || z.name} value={z.name}>{z.name}</option>
             ))}
           </select>
           <select

@@ -801,13 +801,11 @@ const FPProperties = ({ user }) => {
       )) return false;
     }
     
-    // Zone filter - compare zone_id, zone_name, or zone field
+    // Zone filter - compare by zone name (case-insensitive)
     if (selectedZone) {
-      const selectedZoneName = zones.find(z => String(z.id) === String(selectedZone))?.name?.toLowerCase();
       const zoneMatch = 
-        String(p.zone_id) === String(selectedZone) ||
-        p.zone_name?.toLowerCase() === selectedZoneName ||
-        p.zone?.toLowerCase() === selectedZoneName;
+        p.zone_name?.toLowerCase() === selectedZone.toLowerCase() ||
+        p.zone?.toLowerCase() === selectedZone.toLowerCase();
       if (!zoneMatch) return false;
     }
     
@@ -831,6 +829,19 @@ const FPProperties = ({ user }) => {
 
   // Get unique divisions from properties
   const uniqueDivisions = [...new Set(properties.map(p => p.division).filter(Boolean))];
+
+  // Get available zones from current properties (dynamic based on status filter)
+  const availableZones = React.useMemo(() => {
+    const zoneMap = new Map();
+    properties.forEach(p => {
+      const zoneName = p.zone_name || p.zone;
+      const zoneId = p.zone_id;
+      if (zoneName && !zoneMap.has(zoneName)) {
+        zoneMap.set(zoneName, { id: zoneId || zoneName, name: zoneName });
+      }
+    });
+    return Array.from(zoneMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [properties]);
 
   // Category Selection View
   if (!selectedCategory) {
@@ -977,8 +988,8 @@ const FPProperties = ({ user }) => {
             className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm"
           >
             <option value="">All Zones</option>
-            {zones.map((zone) => (
-              <option key={zone.id} value={zone.id}>{zone.name}</option>
+            {availableZones.map((zone) => (
+              <option key={zone.id || zone.name} value={zone.name}>{zone.name}</option>
             ))}
           </select>
           <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
