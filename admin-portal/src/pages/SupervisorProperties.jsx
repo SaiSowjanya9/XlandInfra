@@ -62,7 +62,9 @@ const SupervisorProperties = ({ user }) => {
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/supervisor/properties', {
+      // Pass status filter to API
+      const statusParam = statusFilter ? `?status=${statusFilter}` : '';
+      const response = await fetch(`/api/supervisor/properties${statusParam}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -124,6 +126,11 @@ const SupervisorProperties = ({ user }) => {
     fetchVendors();
     fetchEmployees();
   }, []);
+  
+  // Refetch properties when status filter changes
+  useEffect(() => {
+    fetchProperties();
+  }, [statusFilter]);
 
   const handleDeleteProperty = async (propertyId) => {
     if (!window.confirm('Are you sure you want to delete this property?')) return;
@@ -382,9 +389,7 @@ const SupervisorProperties = ({ user }) => {
     // Division filter
     if (selectedDivision && p.division !== selectedDivision) return false;
     
-    // Status filter - use is_active field to match display logic
-    if (statusFilter === 'active' && p.is_active === false) return false;
-    if (statusFilter === 'inactive' && p.is_active !== false) return false;
+    // Status filter is now handled by API, no client-side filtering needed
     
     return true;
   }).sort((a, b) => {

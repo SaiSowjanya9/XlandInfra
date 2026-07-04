@@ -324,6 +324,18 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
     const franchisePartnerId = req.franchisePartnerId;
     const employeeId = getEmployeeIdForZoneLookup(req);
     const creatorEmail = getCreatorIdentifier(req);
+    const { status } = req.query; // 'active', 'inactive', or 'all'
+    
+    // Build status filter clause
+    let statusClause;
+    if (status === 'inactive') {
+      statusClause = `AND p.status = 'inactive'`;
+    } else if (status === 'all') {
+      statusClause = `AND (p.status IS NULL OR p.status IN ('active', 'inactive'))`;
+    } else {
+      // Default: active only
+      statusClause = `AND (p.status IS NULL OR p.status = 'active')`;
+    }
 
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
@@ -349,7 +361,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
          LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
          LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
-         WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
+         WHERE p.franchise_partner_id = ? ${statusClause}${zoneFilter.clause}
          ORDER BY p.created_at DESC`,
         [franchisePartnerId, ...zoneFilter.params]
       );
@@ -370,7 +382,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
          LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
          LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
-         WHERE p.executive_id = ? AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
+         WHERE p.executive_id = ? ${statusClause}${zoneFilter.clause}
          ORDER BY p.created_at DESC`,
         [executiveId, ...zoneFilter.params]
       );

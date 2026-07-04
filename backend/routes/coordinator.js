@@ -312,12 +312,24 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
     const isFPCoordinator = !!franchisePartnerId;
     const employeeId = getEmployeeIdForZoneLookup(req);
     const creatorEmail = getCreatorIdentifier(req);
+    const { status } = req.query; // 'active', 'inactive', or 'all'
+    
+    // Build status filter clause
+    let statusClause;
+    if (status === 'inactive') {
+      statusClause = `AND p.status = 'inactive'`;
+    } else if (status === 'all') {
+      statusClause = `AND (p.status IS NULL OR p.status IN ('active', 'inactive'))`;
+    } else {
+      // Default: active only
+      statusClause = `AND (p.status IS NULL OR p.status = 'active')`;
+    }
 
     // Get assigned zones for zone-centric filtering
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
     const zoneFilter = buildPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'p');
 
-    console.log(`[Coordinator Properties] employeeId: ${employeeId}, coordinatorId: ${coordinatorId}, fpId: ${franchisePartnerId}, isFPCoordinator: ${isFPCoordinator}`);
+    console.log(`[Coordinator Properties] employeeId: ${employeeId}, coordinatorId: ${coordinatorId}, fpId: ${franchisePartnerId}, isFPCoordinator: ${isFPCoordinator}, status: ${status || 'active'}`);
     console.log(`[Coordinator Properties] assignedZones: ${JSON.stringify(assignedZones)}, creatorEmail: ${creatorEmail}`);
 
     // For FP Coordinators: primarily filter by franchise_partner_id
@@ -344,7 +356,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
          LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
          LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
-         WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
+         WHERE p.franchise_partner_id = ? ${statusClause}${zoneFilter.clause}
          ORDER BY p.created_at DESC`;
       propParams = [franchisePartnerId, ...zoneFilter.params];
     } else {
@@ -367,7 +379,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
          LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
          LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username
          LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.user_id OR CAST(p.created_by AS UNSIGNED) = u.id
-         WHERE (p.coordinator_id = ? OR p.created_by = ? OR p.created_by = ?) AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
+         WHERE (p.coordinator_id = ? OR p.created_by = ? OR p.created_by = ?) ${statusClause}${zoneFilter.clause}
          ORDER BY p.created_at DESC`;
       propParams = [coordinatorId, coordinatorId, req.user?.username || req.user?.email || '', ...zoneFilter.params];
     }

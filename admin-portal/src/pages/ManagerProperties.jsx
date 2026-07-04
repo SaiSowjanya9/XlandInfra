@@ -120,8 +120,10 @@ const ManagerProperties = ({ user }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Pass status filter to properties API
+      const statusParam = statusFilter ? `?status=${statusFilter}` : '';
       const [propRes, zoneRes, divRes, vendRes, empRes] = await Promise.all([
-        fetch('/api/manager/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`/api/manager/properties${statusParam}`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/manager/zones', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/manager/divisions', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/manager/vendors', { headers: { 'Authorization': `Bearer ${token}` } }),
@@ -147,6 +149,11 @@ const ManagerProperties = ({ user }) => {
   useEffect(() => {
     fetchData();
   }, []);
+  
+  // Refetch properties when status filter changes
+  useEffect(() => {
+    fetchData();
+  }, [statusFilter]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

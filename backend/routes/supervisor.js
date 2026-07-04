@@ -378,6 +378,18 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const employeeId = getEmployeeIdForZoneLookup(req);
+    const { status } = req.query; // 'active', 'inactive', or 'all'
+    
+    // Build status filter clause
+    let statusClause;
+    if (status === 'inactive') {
+      statusClause = `AND p.status = 'inactive'`;
+    } else if (status === 'all') {
+      statusClause = `AND (p.status IS NULL OR p.status IN ('active', 'inactive'))`;
+    } else {
+      // Default: active only
+      statusClause = `AND (p.status IS NULL OR p.status = 'active')`;
+    }
     
     // Get FP ID from multiple sources
     let franchisePartnerId = req.franchisePartnerId || req.fpId || req.user?.franchisePartnerId || req.user?.fpId;
@@ -419,7 +431,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
        LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
-       WHERE (p.supervisor_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''}) AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
+       WHERE (p.supervisor_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''}) ${statusClause}${zoneFilter.clause}
        UNION
        SELECT p.*,
               COALESCE(z.name, zn.name, p.zone_id) as zone_name,
@@ -438,7 +450,7 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
        LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
-       WHERE sap.supervisor_id = ? AND (p.status IS NULL OR p.status != 'deleted')${zoneFilter.clause}
+       WHERE sap.supervisor_id = ? ${statusClause}${zoneFilter.clause}
        ORDER BY created_at DESC`;
     const params = franchisePartnerId 
       ? [supervisorId, franchisePartnerId, ...zoneFilter.params, supervisorId, ...zoneFilter.params] 
