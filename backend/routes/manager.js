@@ -259,7 +259,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
                   CASE WHEN wo.created_by REGEXP '^[0-9]+$' THEN NULL ELSE wo.created_by END,
                   'System'
                 ) as created_by_name,
-                COALESCE(fpe.role, pma.role, wo.created_by_role) as created_by_role
+                COALESCE(fpe.role, pma.role) as created_by_role
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
          LEFT JOIN categories c ON wo.category_id = c.id
