@@ -211,18 +211,10 @@ const COUNTRY_CODES = [
 // Map sub-components (must be children of MapContainer)
 const MapClickHandler = ({ onLocationSelect }) => {
   useMapEvents({
-    click: async (e) => {
+    click: (e) => {
       const { lat, lng } = e.latlng;
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-        );
-        const data = await res.json();
-        const addr = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-        onLocationSelect({ lat, lng, address: addr });
-      } catch {
-        onLocationSelect({ lat, lng, address: `${lat.toFixed(6)}, ${lng.toFixed(6)}` });
-      }
+      // Auto-fetch address disabled - user enters address manually
+      onLocationSelect({ lat, lng, address: '' });
     }
   });
   return null;
@@ -287,7 +279,7 @@ const MapLocationPicker = ({ value, onChange }) => {
   };
 
   // Live location functionality using browser Geolocation API
-  const handleGetLiveLocation = async () => {
+  const handleGetLiveLocation = () => {
     setLocationError('');
     setGettingLocation(true);
 
@@ -298,21 +290,12 @@ const MapLocationPicker = ({ value, onChange }) => {
     }
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         const { latitude: lat, longitude: lng } = position.coords;
         
-        // Update map marker position
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-          );
-          const data = await res.json();
-          const addr = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-          setSearchQuery(addr);
-          onChange({ lat, lng, address: addr });
-        } catch {
-          onChange({ lat, lng, address: `${lat.toFixed(6)}, ${lng.toFixed(6)}` });
-        }
+        // Auto-fetch address disabled - user enters address manually
+        setSearchQuery('');
+        onChange({ lat, lng, address: '' });
         setGettingLocation(false);
       },
       (error) => {

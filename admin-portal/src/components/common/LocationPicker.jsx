@@ -57,20 +57,6 @@ const searchAddress = async (query) => {
   }
 };
 
-// Reverse geocode using Nominatim
-const reverseGeocodeNominatim = async (lat, lng) => {
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
-      { headers: { 'Accept-Language': 'en' } }
-    );
-    return await response.json();
-  } catch (error) {
-    console.error('Reverse geocode error:', error);
-    return null;
-  }
-};
-
 // Parse address components from Nominatim response
 const parseNominatimAddress = (data) => {
   const addr = data?.address || {};
@@ -131,24 +117,14 @@ const LocationPicker = ({ value, onChange, onAddressComponentsChange }) => {
   }, [searchQuery]);
 
   // Handle map click
-  const handleMapClick = useCallback(async (lat, lng) => {
+  const handleMapClick = useCallback((lat, lng) => {
     setMarkerPosition([lat, lng]);
     setLocationError('');
+    setShowResults(false);
     
-    const result = await reverseGeocodeNominatim(lat, lng);
-    if (result) {
-      const address = result.display_name;
-      setSearchQuery(address);
-      setShowResults(false);
-      onChange({ lat, lng, address });
-      
-      const components = parseNominatimAddress(result);
-      onAddressComponentsChange?.(components);
-    } else {
-      const fallbackAddress = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-      onChange({ lat, lng, address: fallbackAddress });
-    }
-  }, [onChange, onAddressComponentsChange]);
+    // Auto-fetch address disabled - user enters address manually
+    onChange({ lat, lng, address: '' });
+  }, [onChange]);
 
   // Select a prediction
   const selectPrediction = useCallback((prediction) => {
@@ -180,25 +156,15 @@ const LocationPicker = ({ value, onChange, onAddressComponentsChange }) => {
     }
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
         
         setMarkerPosition([lat, lng]);
         setFlyTo([lat, lng]);
         
-        const result = await reverseGeocodeNominatim(lat, lng);
-        if (result) {
-          const address = result.display_name;
-          setSearchQuery(address);
-          onChange({ lat, lng, address });
-          
-          const components = parseNominatimAddress(result);
-          onAddressComponentsChange?.(components);
-        } else {
-          const fallbackAddress = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-          onChange({ lat, lng, address: fallbackAddress });
-        }
+        // Auto-fetch address disabled - user enters address manually
+        onChange({ lat, lng, address: '' });
         
         setGettingLocation(false);
       },
