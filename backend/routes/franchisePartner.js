@@ -2368,17 +2368,25 @@ router.get('/employees', requireFPScope, async (req, res) => {
   try {
     console.log('Fetching FP employees for FP ID:', req.fpId);
     const { status = 'active' } = req.query;
-    const isActiveFilter = status === 'inactive' ? 0 : 1;
     
-    // Get employees first - JOIN with users to get formatted user_id (MGR001, COORD001, etc.)
-    const [employees] = await pool.execute(
-      `SELECT e.*, u.user_id as formatted_user_id, TRIM(CONCAT(e.first_name, ' ', COALESCE(e.last_name, ''))) as name
+    // Build query based on status filter
+    let query = `SELECT e.*, u.user_id as formatted_user_id, TRIM(CONCAT(e.first_name, ' ', COALESCE(e.last_name, ''))) as name
        FROM fp_employees e
        LEFT JOIN users u ON e.user_id = u.id
-       WHERE e.franchise_partner_id = ? AND e.is_active = ?
-       ORDER BY e.created_at DESC`,
-      [req.fpId, isActiveFilter]
-    );
+       WHERE e.franchise_partner_id = ?`;
+    
+    const params = [req.fpId];
+    
+    if (status === 'active') {
+      query += ' AND e.is_active = 1';
+    } else if (status === 'inactive') {
+      query += ' AND e.is_active = 0';
+    }
+    // For 'all', no additional filter - returns both active and inactive
+    
+    query += ' ORDER BY e.created_at DESC';
+    
+    const [employees] = await pool.execute(query, params);
 
     // Get zone assignments separately
     const [zoneAssignments] = await pool.execute(
