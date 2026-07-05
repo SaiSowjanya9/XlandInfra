@@ -305,7 +305,7 @@ const CustomerDashboard = ({ user }) => {
                           {order.status?.replace('_', ' ')}
                         </span>
                         <p className="text-[10px] text-slate-600 mt-1">
-                          {new Date(order.created_at).toLocaleDateString()}
+                          {new Date(order.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                         </p>
                       </div>
                     </div>

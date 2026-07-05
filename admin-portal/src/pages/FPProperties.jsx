@@ -304,6 +304,7 @@ const FPProperties = ({ user }) => {
       newParams.set('view', String(property.id));
       return newParams;
     });
+    fetchPropertyEstimates(property.property_id || property.id);
   };
   
   const closeViewModal = () => {
@@ -313,6 +314,7 @@ const FPProperties = ({ user }) => {
       return newParams;
     }, { replace: true });
     setSelectedProperty(null);
+    setPropertyEstimates([]);
   };
   
   const openEditModalUrl = (property) => {
@@ -689,7 +691,7 @@ const FPProperties = ({ user }) => {
       property.contact_phone || '',
       property.contact_email || '',
       property.created_by_name || 'System',
-      property.created_at ? new Date(property.created_at).toLocaleDateString() : '',
+      property.created_at ? new Date(property.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
       property.is_active !== false ? 'Active' : 'Inactive'
     ];
     
@@ -726,7 +728,7 @@ const FPProperties = ({ user }) => {
       'Phone': property.contact_phone || '',
       'Email': property.contact_email || '',
       'Created By': property.created_by_name || 'System',
-      'Created Date': property.created_at ? new Date(property.created_at).toLocaleDateString() : '',
+      'Created Date': property.created_at ? new Date(property.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
       'Status': property.is_active !== false ? 'Active' : 'Inactive'
     }));
 
@@ -1590,13 +1592,54 @@ const FPProperties = ({ user }) => {
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <FileText className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-base font-semibold text-gray-900">Estimates (0)</h3>
+                  <h3 className="text-base font-semibold text-gray-900">Estimates ({propertyEstimates.length})</h3>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-8 text-center">
-                  <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                  <p className="text-sm text-gray-500">No estimates for this property</p>
-                  <p className="text-xs text-gray-400 mt-1">Create an estimate from the Estimates section</p>
-                </div>
+                {loadingEstimates ? (
+                  <div className="bg-gray-50 rounded-lg p-8 text-center">
+                    <RefreshCw className="w-8 h-8 text-gray-400 mx-auto mb-3 animate-spin" />
+                    <p className="text-sm text-gray-500">Loading estimates...</p>
+                  </div>
+                ) : propertyEstimates.length === 0 ? (
+                  <div className="bg-gray-50 rounded-lg p-8 text-center">
+                    <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No estimates for this property</p>
+                    <p className="text-xs text-gray-400 mt-1">Create an estimate from the Estimates section</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {propertyEstimates.map((est) => (
+                      <div key={est.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-mono text-sm text-gray-700">{est.estimate_id}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            est.status === 'approved' ? 'bg-green-100 text-green-700' :
+                            est.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                            est.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>{est.status || 'draft'}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">Package:</span>
+                            <span className="ml-1 font-medium">{est.package_name || '-'}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Total:</span>
+                            <span className="ml-1 font-semibold text-green-600">₹{Number(est.total_amount || 0).toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Created:</span>
+                            <span className="ml-1">{est.created_at ? new Date(est.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-'}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">By:</span>
+                            <span className="ml-1">{est.created_by_name || '-'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

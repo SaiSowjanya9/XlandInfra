@@ -194,7 +194,7 @@ const CoordinatorVendors = ({ user }) => {
         vendor.city || '',
         vendor.state || '',
         vendor.is_active ? 'Active' : 'Inactive',
-        vendor.created_at ? new Date(vendor.created_at).toLocaleDateString() : ''
+        vendor.created_at ? new Date(vendor.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : ''
       ]
     ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
 

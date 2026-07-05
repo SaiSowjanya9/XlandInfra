@@ -298,7 +298,7 @@ const ExecutiveProperties = ({ user }) => {
       property.contact_phone || '',
       property.contact_email || '',
       property.created_by_name || 'System',
-      property.created_at ? new Date(property.created_at).toLocaleDateString() : '',
+      property.created_at ? new Date(property.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
       property.status === 'inactive' ? 'Inactive' : 'Active'
     ];
     
@@ -335,7 +335,7 @@ const ExecutiveProperties = ({ user }) => {
       'Phone': property.contact_phone || '',
       'Email': property.contact_email || '',
       'Created By': property.created_by_name || 'System',
-      'Created Date': property.created_at ? new Date(property.created_at).toLocaleDateString() : '',
+      'Created Date': property.created_at ? new Date(property.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
       'Status': property.is_active !== false ? 'Active' : 'Inactive'
     }));
 
@@ -1132,7 +1132,7 @@ const ExecutiveProperties = ({ user }) => {
                           </div>
                           <div>
                             <span className="text-gray-500">Created:</span>
-                            <span className="ml-1">{est.created_at ? new Date(est.created_at).toLocaleDateString() : '-'}</span>
+                            <span className="ml-1">{est.created_at ? new Date(est.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-'}</span>
                           </div>
                           <div>
                             <span className="text-gray-500">By:</span>

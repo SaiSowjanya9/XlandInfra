@@ -581,7 +581,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                           <td className="px-4 py-3 font-mono text-xs">{e.estimate_id || `EST-${e.id}`}</td>
                           <td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td>
                           <td className="px-4 py-3">{e.client_name || '-'}</td>
-                          <td className="px-4 py-3 text-gray-500">{e.archived_at ? new Date(e.archived_at).toLocaleDateString() : '-'}</td>
+                          <td className="px-4 py-3 text-gray-500">{e.archived_at ? new Date(e.archived_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-'}</td>
                           <td className="px-4 py-3 font-semibold">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(e.total_amount || 0)}</td>
                           <td className="px-4 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewEstimate(e)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td>
                         </tr>
@@ -1045,7 +1045,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   }`}>{viewEstimate.status || 'draft'}</span>
                 </div>
                 <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
-                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{viewEstimate.created_at ? new Date(viewEstimate.created_at).toLocaleDateString() : '-'}</p></div>
+                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{viewEstimate.created_at ? new Date(viewEstimate.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-'}</p></div>
               </div>
 
               {/* Property Details */}

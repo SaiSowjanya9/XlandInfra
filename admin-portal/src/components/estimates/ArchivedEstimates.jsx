@@ -178,8 +178,8 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                       <div className="flex items-center gap-1 text-sm text-gray-600">
                         <Calendar className="w-4 h-4" />
                         {estimate.archivedAt 
-                          ? new Date(estimate.archivedAt).toLocaleDateString()
-                          : new Date(estimate.createdAt).toLocaleDateString()}
+                          ? new Date(estimate.archivedAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
+                          : new Date(estimate.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -258,8 +258,8 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                   <p className="text-sm text-gray-500">Archived On</p>
                   <p className="font-medium">
                     {viewEstimate.archivedAt 
-                      ? new Date(viewEstimate.archivedAt).toLocaleDateString()
-                      : new Date(viewEstimate.createdAt).toLocaleDateString()}
+                      ? new Date(viewEstimate.archivedAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
+                      : new Date(viewEstimate.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                   </p>
                 </div>
               </div>

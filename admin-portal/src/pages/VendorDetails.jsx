@@ -236,7 +236,7 @@ const VendorDetails = () => {
       'Coverage Per Day': vendor.coveragePerDay || vendor.coverage_per_day || 0,
       'Created By': vendor.created_by_name || vendor.createdBy || 'System',
       'Status': vendor.status || 'active',
-      'Created': new Date(vendor.createdAt || vendor.created_at).toLocaleDateString()
+      'Created': new Date(vendor.createdAt || vendor.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
     }];
     
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -259,7 +259,7 @@ const VendorDetails = () => {
       'Coverage Per Day': v.coveragePerDay || v.coverage_per_day || 0,
       'Created By': v.created_by_name || v.createdBy || 'System',
       'Status': v.status || 'active',
-      'Created': new Date(v.createdAt || v.created_at).toLocaleDateString()
+      'Created': new Date(v.createdAt || v.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
     }));
     
     const ws = XLSX.utils.json_to_sheet(exportData);
