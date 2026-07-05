@@ -166,7 +166,7 @@ const AddVendor = ({ admin }) => {
   };
 
   const filteredServices = serviceTypeData.filter(s =>
-    s.name?.toLowerCase().includes((formData.serviceType || '').toLowerCase())
+    s.name?.toLowerCase().startsWith((formData.serviceType || '').toLowerCase())
   );
 
   useEffect(() => {
