@@ -553,7 +553,9 @@ const ManagerEmployeeZones = ({ user }) => {
                   {zones.map((zone) => {
                     const empRole = selectedEmployee.role || selectedEmployee.employee_type || 'employee';
                     const isSelected = selectedZones.includes(zone.name);
-                    const isLocked = isZoneLockedForEmployee(zone.name, selectedEmployee.id, empRole);
+                    const allZonesSelected = isAllAvailableSelected();
+                    // When "All Zones" is selected, zones are NOT locked (All Zones can coexist)
+                    const isLocked = !allZonesSelected && isZoneLockedForEmployee(zone.name, selectedEmployee.id, empRole);
                     const assignedTo = getZoneAssignedTo(zone.name, empRole);
                     
                     return (
