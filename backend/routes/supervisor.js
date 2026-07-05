@@ -1668,7 +1668,7 @@ router.post('/employees', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
-    const { firstName, lastName = null, email, phone, role, assignedZones } = req.body;
+    const { firstName = '', lastName = null, email = '', phone = '', role = 'sup_executive', assignedZones = [] } = req.body || {};
 
     // Generate sequential employee code (EMP-001, EMP-002, EMP-003...)
     const [maxEmpCode] = await pool.query(
@@ -1708,7 +1708,7 @@ router.put('/employees/:id', requireSupervisorScope, async (req, res) => {
   try {
     const { id } = req.params;
     const supervisorId = req.supervisorId;
-    const { firstName, lastName = null, email, phone, role, assignedZones } = req.body;
+    const { firstName = '', lastName = null, email = '', phone = '', role = 'sup_executive', assignedZones = [] } = req.body || {};
 
     // Verify ownership
     const [existing] = await pool.query(
