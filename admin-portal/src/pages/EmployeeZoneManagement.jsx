@@ -118,12 +118,14 @@ const EmployeeZoneManagement = () => {
         
         // Build a map of which zones are assigned to which employees (by role)
         // Structure: { zoneName: { role: { employeeId, employeeName, role } } }
+        // NOTE: "All Zones" employees do NOT block specific zone assignments
         const zoneMap = {};
         allEmployees.forEach(emp => {
           const empZones = emp.zone_names;
           const empRole = emp.role || emp.employee_type || 'employee';
           
-          if (empZones && empZones !== 'No zones assigned') {
+          // Skip "All Zones" employees - they don't block specific zone assignments
+          if (empZones && empZones !== 'No zones assigned' && empZones !== 'All Zones') {
             empZones.split(',').forEach(zoneName => {
               const trimmedName = zoneName.trim();
               if (!zoneMap[trimmedName]) {

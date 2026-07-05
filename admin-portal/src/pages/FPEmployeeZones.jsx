@@ -82,7 +82,8 @@ const FPEmployeeZones = ({ user }) => {
       setZones(allZones);
 
       // Build a map of which zones are assigned to which employees (by role)
-      // Structure: { zoneName: { role: { employeeId, employeeName, role } } }
+      // Structure: { zoneName: { role: { employeeId, employeeName, role, isAllZones } } }
+      // NOTE: "All Zones" employees do NOT block specific zone assignments
       const zoneMap = {};
       allEmployees.forEach(emp => {
         // Handle multiple formats: assignedZones (array), assigned_zones (array), zone_names (string)
@@ -94,21 +95,25 @@ const FPEmployeeZones = ({ user }) => {
         }
         
         const empRole = emp.role || emp.employee_type || 'employee';
+        const isAllZones = empZones === 'all';
         
         const addZoneAssignment = (zoneName) => {
           if (!zoneName) return;
           if (!zoneMap[zoneName]) {
             zoneMap[zoneName] = {};
           }
-          // Store by role - only one employee per role per zone
-          zoneMap[zoneName][empRole] = { employeeId: emp.id, employeeName: emp.name, role: empRole };
+          // Only add specific zone assignments (not "All Zones") to block others
+          // "All Zones" employees don't block specific zone assignments
+          if (!isAllZones) {
+            zoneMap[zoneName][empRole] = { employeeId: emp.id, employeeName: emp.name, role: empRole, isAllZones: false };
+          }
         };
         
-        if (empZones === 'all') {
-          allZones.forEach(zone => addZoneAssignment(zone.name));
-        } else if (Array.isArray(empZones)) {
+        // Only track specific zone assignments, skip "All Zones"
+        if (Array.isArray(empZones)) {
           empZones.forEach(zoneName => addZoneAssignment(zoneName));
         }
+        // "All Zones" employees are NOT added to the map - they don't block zones
       });
       setAssignedZonesMap(zoneMap);
     } catch (error) {
