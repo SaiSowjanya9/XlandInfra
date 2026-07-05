@@ -22,7 +22,6 @@ const FPEditEmployee = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     firstName: '',
-    lastName: '',
     email: '',
     phone: '',
     countryCode: '+91',
@@ -46,7 +45,6 @@ const FPEditEmployee = ({ user }) => {
           const emp = result.data;
           setFormData({
             firstName: emp.first_name || '',
-            lastName: emp.last_name || '',
             email: emp.email || '',
             phone: emp.phone || '',
             countryCode: emp.country_code || '+91',
@@ -75,7 +73,6 @@ const FPEditEmployee = ({ user }) => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
     setErrors(newErrors);
@@ -179,21 +176,6 @@ const FPEditEmployee = ({ user }) => {
               placeholder="Enter first name"
             />
             {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Last Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.lastName}
-              onChange={(e) => updateField('lastName', e.target.value)}
-              className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                errors.lastName ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="Enter last name"
-            />
-            {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
           </div>
         </div>
 
