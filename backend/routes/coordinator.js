@@ -409,7 +409,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
                   op.zone as zone_name, op.area_name as area, 
                   COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
                   op.total_units, op.number_of_units,
-                  op.number_of_blocks, op.block_names, op.units_per_block,
+                  op.number_of_blocks, op.block_names, op.units_per_block, op.block_unit_types,
                   op.block_info, op.block_na, op.flat_block_info, op.flat_block_na,
                   op.villa_plot_number, op.plot_na,
                   op.address, op.city, op.state, op.postal_code as zip_code,
@@ -432,7 +432,7 @@ router.get('/properties', requireCoordinatorScope, async (req, res) => {
                   op.zone as zone_name, op.area_name as area, 
                   COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
                   op.total_units, op.number_of_units,
-                  op.number_of_blocks, op.block_names, op.units_per_block,
+                  op.number_of_blocks, op.block_names, op.units_per_block, op.block_unit_types,
                   op.block_info, op.block_na, op.flat_block_info, op.flat_block_na,
                   op.villa_plot_number, op.plot_na,
                   op.address, op.city, op.state, op.postal_code as zip_code,
@@ -1795,35 +1795,45 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
           } catch(e) {}
         }
         
-        // Get original property_code from onboarded_properties or properties table
+        // Get original property_code and contact info from onboarded_properties or properties table
         let property_code = est.property_code;
+        let client_phone = est.client_phone;
+        let client_email = est.client_email;
         const propId = est.property_id;
         const propName = est.property_name || '';
         
-        // Always try to fetch the original property_id from the property tables
+        // Always try to fetch the original property_id and contact info from the property tables
         if (propId || propName) {
           try {
             // Try onboarded_properties first (admin-created properties visible to FP)
             let [props] = await pool.query(
-              `SELECT property_id as orig_code FROM onboarded_properties 
+              `SELECT property_id as orig_code, contact_phone, contact_email FROM onboarded_properties 
                WHERE (id = ? OR community_name = ?) LIMIT 1`,
               [propId || 0, propName]
             );
-            if (props.length > 0 && props[0].orig_code) {
-              property_code = props[0].orig_code;
-            } else {
-              // Try properties table (FP-created properties)
+            if (props.length > 0) {
+              if (props[0].orig_code) property_code = props[0].orig_code;
+              if (!client_phone && props[0].contact_phone) client_phone = props[0].contact_phone;
+              if (!client_email && props[0].contact_email) client_email = props[0].contact_email;
+            }
+            
+            // Try properties table (FP-created properties) if still missing
+            if (!property_code || !client_phone || !client_email) {
               [props] = await pool.query(
-                `SELECT property_id as orig_code FROM properties 
+                `SELECT property_id as orig_code, contact_phone, contact_email FROM properties 
                  WHERE (id = ? OR name = ?) AND franchise_partner_id = ? LIMIT 1`,
                 [propId || 0, propName, franchisePartnerId]
               );
-              if (props.length > 0 && props[0].orig_code) property_code = props[0].orig_code;
+              if (props.length > 0) {
+                if (!property_code && props[0].orig_code) property_code = props[0].orig_code;
+                if (!client_phone && props[0].contact_phone) client_phone = props[0].contact_phone;
+                if (!client_email && props[0].contact_email) client_email = props[0].contact_email;
+              }
             }
           } catch (e) { console.log('Property lookup error:', e.message); }
         }
         
-        return { ...est, addons, property_code, created_by_name: est.created_by_name || 'Franchise Partner' };
+        return { ...est, addons, property_code, client_phone, client_email, created_by_name: est.created_by_name || 'Franchise Partner' };
       }));
       
       console.log(`Coordinator ${coordinatorId} (FP: ${franchisePartnerId}) - Found ${estimates.length} FP estimates`);

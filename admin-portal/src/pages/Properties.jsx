@@ -993,13 +993,13 @@ const Properties = () => {
                       return (
                         <div className="space-y-3">
                           {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
-                            const unitTypes = blockUnitTypes[blockNum] || {};
+                            const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || {};
                             const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                             return (
                               <div key={blockNum} className="bg-blue-50 p-3 rounded-lg border border-blue-100">
                                 <div className="flex justify-between items-center mb-2">
-                                  <span className="text-sm font-semibold text-blue-600">{blockNames[blockNum] || `Block ${blockNum}`}</span>
-                                  <span className="text-sm font-medium text-gray-700">{unitsPerBlock[blockNum] || 0} units</span>
+                                  <span className="text-sm font-semibold text-blue-600">{blockNames[blockNum] || blockNames[String(blockNum)] || `Block ${blockNum}`}</span>
+                                  <span className="text-sm font-medium text-gray-700">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0} units</span>
                                 </div>
                                 {hasUnitTypes && (
                                   <div className="flex flex-wrap gap-2 pt-2 border-t border-blue-100">
@@ -1037,7 +1037,7 @@ const Properties = () => {
                   {(() => {
                     try {
                       const blockUnitTypes = viewProperty.blockUnitTypes || (typeof viewProperty.block_unit_types === 'string' ? JSON.parse(viewProperty.block_unit_types) : viewProperty.block_unit_types) || {};
-                      const unitTypes = blockUnitTypes['apt'] || {};
+                      const unitTypes = blockUnitTypes['apt'] || blockUnitTypes['1'] || blockUnitTypes[1] || {};
                       const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                       if (!hasUnitTypes) return null;
                       const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };

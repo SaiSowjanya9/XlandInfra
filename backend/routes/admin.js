@@ -333,13 +333,19 @@ router.get('/properties', authenticate, dataEntryRoles, async (req, res) => {
     let onboardedProperties = [];
     try {
       const [rows] = await pool.execute(
-        `SELECT op.id, op.property_id, op.community_name as name, op.property_type,
-                op.zone as zone, op.division, op.total_units, 0 as occupied_units,
+        `SELECT op.id, op.property_id, op.community_name as name, op.property_type, op.entry_type,
+                op.zone as zone, op.division, op.area_name as area, op.total_units, op.number_of_units, 0 as occupied_units,
                 op.address, op.city, op.state, op.postal_code as zip_code,
+                op.landmark, COALESCE(op.latitude, op.map_lat) as latitude, COALESCE(op.longitude, op.map_lng) as longitude, op.map_address,
                 op.association_contacts,
+                op.number_of_blocks, op.block_names, op.units_per_block, op.block_unit_types,
+                op.block_info, op.block_na, op.flat_block_info, op.flat_block_na,
+                op.villa_plot_number, op.plot_na,
+                op.watchman_name, op.watchman_contact,
+                op.notes,
                 op.contact_person, op.contact_phone, op.contact_email as email,
                 COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), op.created_by, 'System') as created_by_name,
-                op.created_at, op.status,
+                op.created_at, op.status, op.franchise_partner_id,
                 'onboarded_properties' as source_table
          FROM onboarded_properties op
          LEFT JOIN users u ON op.created_by = u.email OR op.created_by = u.user_id OR op.created_by = u.id

@@ -865,26 +865,27 @@ const ExecutiveProperties = ({ user }) => {
                         return (
                           <div className="space-y-4">
                             {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
-                              const unitTypes = blockUnitTypes[blockNum] || {};
+                              const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || {};
+                              const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                               return (
                                 <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                                   <div className="flex gap-4 mb-3">
                                     <div>
                                       <p className="text-xs text-gray-500 mb-1">Block Name</p>
-                                      <p className="text-sm font-medium text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</p>
+                                      <p className="text-sm font-medium text-gray-900">{blockNames[blockNum] || blockNames[String(blockNum)] || `Block ${blockNum}`}</p>
                                     </div>
                                     <div>
                                       <p className="text-xs text-gray-500 mb-1">Total Units</p>
-                                      <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || 0}</p>
+                                      <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0}</p>
                                     </div>
                                   </div>
-                                  {Object.keys(unitTypes).length > 0 && (
-                                    <div className="grid grid-cols-5 gap-2 pt-2 border-t border-gray-200">
-                                      <div><p className="text-xs text-gray-500">Studio</p><p className="text-sm font-medium">{unitTypes.studio || 0}</p></div>
-                                      <div><p className="text-xs text-gray-500">1 Bed</p><p className="text-sm font-medium">{unitTypes.oneBed || 0}</p></div>
-                                      <div><p className="text-xs text-gray-500">2 Bed</p><p className="text-sm font-medium">{unitTypes.twoBed || 0}</p></div>
-                                      <div><p className="text-xs text-gray-500">3 Bed</p><p className="text-sm font-medium">{unitTypes.threeBed || 0}</p></div>
-                                      <div><p className="text-xs text-gray-500">4 Bed</p><p className="text-sm font-medium">{unitTypes.fourBed || 0}</p></div>
+                                  {hasUnitTypes && (
+                                    <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200">
+                                      {unitTypes.studio > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio}</span>}
+                                      {unitTypes.oneBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed}</span>}
+                                      {unitTypes.twoBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">2 BHK: {unitTypes.twoBed}</span>}
+                                      {unitTypes.threeBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed}</span>}
+                                      {unitTypes.fourBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed}</span>}
                                     </div>
                                   )}
                                 </div>
@@ -919,17 +920,18 @@ const ExecutiveProperties = ({ user }) => {
                   {(() => {
                     try {
                       const blockUnitTypes = typeof selectedProperty.block_unit_types === 'string' ? JSON.parse(selectedProperty.block_unit_types) : selectedProperty.block_unit_types || {};
-                      const unitTypes = blockUnitTypes['apt'] || {};
-                      if (Object.keys(unitTypes).length > 0 && Object.values(unitTypes).some(v => v > 0)) {
+                      const unitTypes = blockUnitTypes['apt'] || blockUnitTypes['1'] || blockUnitTypes[1] || {};
+                      const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                      if (hasUnitTypes) {
                         return (
                           <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <p className="text-xs text-gray-500 mb-2 font-medium">Unit Types</p>
-                            <div className="grid grid-cols-5 gap-2">
-                              <div><p className="text-xs text-gray-500">Studio</p><p className="text-sm font-medium">{unitTypes.studio || 0}</p></div>
-                              <div><p className="text-xs text-gray-500">1 Bed</p><p className="text-sm font-medium">{unitTypes.oneBed || 0}</p></div>
-                              <div><p className="text-xs text-gray-500">2 Bed</p><p className="text-sm font-medium">{unitTypes.twoBed || 0}</p></div>
-                              <div><p className="text-xs text-gray-500">3 Bed</p><p className="text-sm font-medium">{unitTypes.threeBed || 0}</p></div>
-                              <div><p className="text-xs text-gray-500">4 Bed</p><p className="text-sm font-medium">{unitTypes.fourBed || 0}</p></div>
+                            <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
+                            <div className="flex flex-wrap gap-2">
+                              {unitTypes.studio > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio}</span>}
+                              {unitTypes.oneBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed}</span>}
+                              {unitTypes.twoBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">2 BHK: {unitTypes.twoBed}</span>}
+                              {unitTypes.threeBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed}</span>}
+                              {unitTypes.fourBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed}</span>}
                             </div>
                           </div>
                         );

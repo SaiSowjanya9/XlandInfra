@@ -348,7 +348,7 @@ router.get('/properties', requireFPScope, async (req, res) => {
                 op.landmark, COALESCE(op.latitude, op.map_lat) as latitude, COALESCE(op.longitude, op.map_lng) as longitude, op.map_address,
                 op.association_contacts,
                 op.contact_person, op.contact_phone, op.contact_email,
-                op.number_of_blocks, op.block_names, op.units_per_block,
+                op.number_of_blocks, op.block_names, op.units_per_block, op.block_unit_types,
                 op.block_info, op.block_na, op.flat_block_info, op.flat_block_na,
                 op.villa_plot_number, op.plot_na,
                 op.watchman_name, op.watchman_contact,
@@ -3670,34 +3670,40 @@ router.get('/estimates', requireFPScope, async (req, res) => {
         creatorName = fpContactName;
       }
       
-      // If division or property_code is missing, try to fetch from property tables
+      // If division, property_code, phone or email is missing, try to fetch from property tables
       let division = est.division;
       let property_code = est.property_code;
+      let client_phone = est.client_phone;
+      let client_email = est.client_email;
       const propName = est.property_name || '';
       
-      if ((!division || !property_code) && propName) {
+      if (propName && (!division || !property_code || !client_phone || !client_email)) {
         try {
           // Try properties table first
           let [props] = await pool.execute(
-            `SELECT property_id as property_code, division_id as division FROM properties 
+            `SELECT property_id as property_code, division_id as division, contact_phone, contact_email FROM properties 
              WHERE name = ? AND franchise_partner_id = ? LIMIT 1`,
             [propName, req.fpId]
           );
           if (props.length > 0) {
             if (!division && props[0].division) division = props[0].division;
             if (!property_code && props[0].property_code) property_code = props[0].property_code;
+            if (!client_phone && props[0].contact_phone) client_phone = props[0].contact_phone;
+            if (!client_email && props[0].contact_email) client_email = props[0].contact_email;
           }
           
           // If still not found, try onboarded_properties
-          if (!division || !property_code) {
+          if (!division || !property_code || !client_phone || !client_email) {
             [props] = await pool.execute(
-              `SELECT property_id as property_code, division FROM onboarded_properties 
+              `SELECT property_id as property_code, division, contact_phone, contact_email FROM onboarded_properties 
                WHERE community_name = ? AND franchise_partner_id = ? LIMIT 1`,
               [propName, req.fpId]
             );
             if (props.length > 0) {
               if (!division && props[0].division) division = props[0].division;
               if (!property_code && props[0].property_code) property_code = props[0].property_code;
+              if (!client_phone && props[0].contact_phone) client_phone = props[0].contact_phone;
+              if (!client_email && props[0].contact_email) client_email = props[0].contact_email;
             }
           }
         } catch (e) { 
@@ -3705,7 +3711,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
         }
       }
       
-      return { ...est, addons, created_by_name: creatorName, division, property_code };
+      return { ...est, addons, created_by_name: creatorName, division, property_code, client_phone, client_email };
     }));
 
     res.json({ success: true, data: enrichedEstimates });
