@@ -5057,27 +5057,53 @@ router.post('/service-types', requireFPScope, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Service type name is required' });
     }
 
-    // Check if already exists (global or FP-specific)
-    const [existing] = await pool.execute(
+    // Capitalize first letter of each word for UI consistency
+    const capitalizedName = name.trim().split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+
+    // Check if already exists and is active (global or FP-specific)
+    const [existingActive] = await pool.execute(
       `SELECT id FROM service_types 
        WHERE LOWER(name) = LOWER(?) AND is_active = 1 
        AND (is_global = 1 OR franchise_partner_id = ?)`,
-      [name.trim(), req.fpId]
+      [capitalizedName, req.fpId]
     );
     
-    if (existing.length > 0) {
+    if (existingActive.length > 0) {
       return res.status(400).json({ success: false, message: 'Service type already exists' });
+    }
+
+    // Check if there's a soft-deleted service type with the same name - reactivate it
+    const [existingDeleted] = await pool.execute(
+      `SELECT id FROM service_types 
+       WHERE LOWER(name) = LOWER(?) AND is_active = 0 
+       AND franchise_partner_id = ?`,
+      [capitalizedName, req.fpId]
+    );
+
+    if (existingDeleted.length > 0) {
+      // Reactivate the soft-deleted service type and update the name to capitalized version
+      await pool.execute(
+        `UPDATE service_types SET is_active = 1, name = ? WHERE id = ?`,
+        [capitalizedName, existingDeleted[0].id]
+      );
+      return res.json({ 
+        success: true, 
+        message: 'Service type reactivated successfully',
+        data: { id: existingDeleted[0].id, name: capitalizedName }
+      });
     }
 
     const [result] = await pool.execute(
       `INSERT INTO service_types (name, franchise_partner_id, is_global, created_by) VALUES (?, ?, FALSE, ?)`,
-      [name.trim(), req.fpId, req.user?.username || req.user?.email || 'FP User']
+      [capitalizedName, req.fpId, req.user?.username || req.user?.email || 'FP User']
     );
 
     res.json({ 
       success: true, 
       message: 'Service type added successfully',
-      data: { id: result.insertId, name: name.trim() }
+      data: { id: result.insertId, name: capitalizedName }
     });
   } catch (error) {
     console.error('Add service type error:', error);

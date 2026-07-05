@@ -3068,6 +3068,11 @@ router.post('/service-types', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Service type name is required' });
     }
 
+    // Capitalize first letter of each word for UI consistency
+    const capitalizedName = name.trim().split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+
     const userId = req.user?.id || req.user?.userId;
     const userRole = req.user?.role;
     const isAdmin = userRole === 'admin' || userRole === 'super_admin';
@@ -3084,9 +3089,9 @@ router.post('/service-types', authenticate, async (req, res) => {
       }
     }
 
-    // Check if already exists (within same scope)
+    // Check if already exists and is active (within same scope)
     let checkQuery = 'SELECT id FROM service_types WHERE LOWER(name) = LOWER(?) AND is_active = 1';
-    const checkParams = [name.trim()];
+    const checkParams = [capitalizedName];
     
     if (fpId) {
       // For employees, check within their FP's service types
@@ -3100,16 +3105,42 @@ router.post('/service-types', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Service type already exists' });
     }
 
+    // Check if there's a soft-deleted service type with the same name - reactivate it
+    let deletedCheckQuery = 'SELECT id FROM service_types WHERE LOWER(name) = LOWER(?) AND is_active = 0';
+    const deletedCheckParams = [capitalizedName];
+    
+    if (fpId) {
+      deletedCheckQuery += ' AND franchise_partner_id = ?';
+      deletedCheckParams.push(fpId);
+    } else if (isAdmin) {
+      deletedCheckQuery += ' AND is_global = 1';
+    }
+
+    const [existingDeleted] = await pool.execute(deletedCheckQuery, deletedCheckParams);
+
+    if (existingDeleted.length > 0) {
+      // Reactivate the soft-deleted service type and update the name to capitalized version
+      await pool.execute(
+        'UPDATE service_types SET is_active = 1, name = ? WHERE id = ?',
+        [capitalizedName, existingDeleted[0].id]
+      );
+      return res.json({ 
+        success: true, 
+        message: 'Service type reactivated successfully',
+        data: { id: existingDeleted[0].id, name: capitalizedName }
+      });
+    }
+
     // Admin creates global; employees create FP-scoped (visible to all employees in same FP)
     const [result] = await pool.execute(
       `INSERT INTO service_types (name, is_global, franchise_partner_id, created_by, created_by_user_id) VALUES (?, ?, ?, ?, ?)`,
-      [name.trim(), isAdmin ? 1 : 0, fpId, req.user?.username || req.user?.email || 'User', userId]
+      [capitalizedName, isAdmin ? 1 : 0, fpId, req.user?.username || req.user?.email || 'User', userId]
     );
 
     res.json({ 
       success: true, 
       message: 'Service type added successfully',
-      data: { id: result.insertId, name: name.trim() }
+      data: { id: result.insertId, name: capitalizedName }
     });
   } catch (error) {
     console.error('Add service type error:', error);

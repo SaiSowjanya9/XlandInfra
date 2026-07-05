@@ -131,7 +131,6 @@ const AddVendor = ({ admin }) => {
       }
     } catch (error) {
       console.error('Error adding service type:', error);
-      setServiceTypes(prev => [...prev, newType.trim()]);
     }
   };
 
