@@ -1792,45 +1792,36 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
     
     // If manager is linked to an FP, fetch from fp_estimates table
     if (franchisePartnerId) {
-      // Get assigned zones
-      const assignedZones = await getAssignedZones(employeeId, creatorEmail);
-      
-      // Build property filter clause if property_id is provided
+      // Build property filter if property_id is provided
       let propertyClause = '';
       let propertyParams = [];
       if (property_id) {
-        // Get property_code for this property
-        let propertyCode = null;
-        try {
-          const [propResult] = await pool.execute(
-            `SELECT property_code FROM fp_properties WHERE id = ? AND franchise_partner_id = ?`,
-            [property_id, franchisePartnerId]
-          );
-          if (propResult.length > 0) {
-            propertyCode = propResult[0].property_code;
-          }
-        } catch (e) {}
-        
-        if (propertyCode) {
-          propertyClause = ' AND (e.property_id = ? OR e.property_code = ?)';
-          propertyParams = [property_id, propertyCode];
-        } else {
-          propertyClause = ' AND e.property_id = ?';
+        // Filter by property_code (the actual property ID like GC-xxx, APT-xxx, etc.)
+        // property_id column is INT, so only compare property_code for string codes
+        const numericId = parseInt(property_id);
+        if (isNaN(numericId)) {
+          // String property code like GC-xxx, APT-xxx
+          propertyClause = ` AND e.property_code = ?`;
           propertyParams = [property_id];
+        } else {
+          // Numeric property ID
+          propertyClause = ` AND (e.property_code = ? OR e.property_id = ?)`;
+          propertyParams = [property_id, numericId];
         }
-      }
-      
-      // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
-      let zoneClause = '';
-      let zoneParams = [];
-      if (assignedZones.length > 0) {
-        const placeholders = assignedZones.map(() => '?').join(',');
-        zoneClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
-        zoneParams = [...assignedZones, managerId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
       } else {
-        // No zones = only see own created (by ID or by name/email/username)
-        zoneClause = ` AND (e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
-        zoneParams = [managerId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
+        // Get assigned zones only when not filtering by property
+        const assignedZones = await getAssignedZones(employeeId, creatorEmail);
+        
+        // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
+        if (assignedZones.length > 0) {
+          const placeholders = assignedZones.map(() => '?').join(',');
+          propertyClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
+          propertyParams = [...assignedZones, managerId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
+        } else {
+          // No zones = only see own created (by ID or by name/email/username)
+          propertyClause = ` AND (e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
+          propertyParams = [managerId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
+        }
       }
       
       const [fpEstimates] = await pool.execute(
@@ -1845,9 +1836,9 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
          LEFT JOIN fp_employees fpe ON e.created_by_name = fpe.email OR e.created_by_name = fpe.username
          LEFT JOIN users u ON e.created_by_name = u.email
          LEFT JOIN fp_amc_packages fpamc ON e.package_id = fpamc.id
-         WHERE e.franchise_partner_id = ? AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}${propertyClause}${zoneClause}
+         WHERE e.franchise_partner_id = ? AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}${propertyClause}
          ORDER BY e.created_at DESC`,
-        [franchisePartnerId, ...propertyParams, ...zoneParams]
+        [franchisePartnerId, ...propertyParams]
       );
       
       // Get FP addons for description lookup
