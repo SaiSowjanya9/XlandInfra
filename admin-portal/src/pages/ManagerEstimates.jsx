@@ -742,7 +742,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               )}
             </div>
           </div>
-          {renderAmcAndPriceSummary(false)}
+          {renderAmcAndPriceSummary(true)}
         </>
       )}
 
