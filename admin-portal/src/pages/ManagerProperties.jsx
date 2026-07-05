@@ -305,7 +305,7 @@ const ManagerProperties = ({ user }) => {
     setAssignType(type);
     setShowAssignModal(true);
     if (type === 'vendor') {
-      fetchPropertyEstimates(property.id);
+      fetchPropertyEstimates(property.property_id || property.id);
     }
   };
 

@@ -404,7 +404,7 @@ const FPProperties = ({ user }) => {
     setShowAssignModal(true);
     // Fetch estimates for the property when assigning vendors
     if (type === 'vendor') {
-      fetchPropertyEstimates(property.id);
+      fetchPropertyEstimates(property.property_id || property.id);
     }
   };
 
