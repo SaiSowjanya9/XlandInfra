@@ -840,8 +840,8 @@ const SupervisorWorkOrders = ({ user }) => {
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
-              <button onClick={() => { setSearchTerm(''); setStatusFilter(''); }} className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-2">
-                <RefreshCw className="w-4 h-4" /> Clear
+              <button onClick={() => { setSearchTerm(''); setStatusFilter(''); fetchWorkOrders(); }} className="p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50" title="Refresh">
+                <RefreshCw className="w-4 h-4" />
               </button>
             </div>
           </div>
