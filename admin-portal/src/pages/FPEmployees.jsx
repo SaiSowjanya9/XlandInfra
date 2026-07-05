@@ -43,7 +43,7 @@ const FPEmployees = ({ user }) => {
     setLoading(true);
     try {
       const [empResponse, zoneResponse] = await Promise.all([
-        fetch('/api/fp/employees', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`/api/fp/employees?status=${statusFilter}`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/fp/zones', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       
@@ -392,13 +392,16 @@ const FPEmployees = ({ user }) => {
                           {/* Modify/Deactivate/Reactivate/Delete buttons - Hidden for FP Manager */}
                           {!isFPManager && (
                             <>
-                              <button
-                                onClick={() => navigate(`/fp/employees/edit/${employee.id}`)}
-                                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                                title="Modify"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
+                              {/* Edit button - only for active employees */}
+                              {empStatus === 'active' && (
+                                <button
+                                  onClick={() => navigate(`/fp/employees/edit/${employee.id}`)}
+                                  className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                  title="Modify"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                              )}
                               {empStatus === 'active' ? (
                                 <button
                                   onClick={() => handleDeactivate(employee)}
@@ -408,21 +411,23 @@ const FPEmployees = ({ user }) => {
                                   <UserX className="w-4 h-4" />
                                 </button>
                               ) : (
-                                <button
-                                  onClick={() => handleReactivate(employee)}
-                                  className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                                  title="Reactivate"
-                                >
-                                  <RotateCcw className="w-4 h-4" />
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => handleReactivate(employee)}
+                                    className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                                    title="Restore"
+                                  >
+                                    <RotateCcw className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteConfirm(employee)}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                    title="Permanently Delete"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </>
                               )}
-                              <button
-                                onClick={() => setDeleteConfirm(employee)}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
                             </>
                           )}
                         </div>

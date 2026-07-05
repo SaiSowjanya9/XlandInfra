@@ -2367,15 +2367,17 @@ router.delete('/vendors/:id/permanent', requireFPScope, async (req, res) => {
 router.get('/employees', requireFPScope, async (req, res) => {
   try {
     console.log('Fetching FP employees for FP ID:', req.fpId);
+    const { status = 'active' } = req.query;
+    const isActiveFilter = status === 'inactive' ? 0 : 1;
     
     // Get employees first - JOIN with users to get formatted user_id (MGR001, COORD001, etc.)
     const [employees] = await pool.execute(
       `SELECT e.*, u.user_id as formatted_user_id, TRIM(CONCAT(e.first_name, ' ', COALESCE(e.last_name, ''))) as name
        FROM fp_employees e
        LEFT JOIN users u ON e.user_id = u.id
-       WHERE e.franchise_partner_id = ? AND e.is_active = 1
+       WHERE e.franchise_partner_id = ? AND e.is_active = ?
        ORDER BY e.created_at DESC`,
-      [req.fpId]
+      [req.fpId, isActiveFilter]
     );
 
     // Get zone assignments separately
@@ -2854,10 +2856,10 @@ router.put('/employees/:id/status', requireFPScope, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Employee not found' });
     }
 
-    // Update fp_employees table
+    // Update fp_employees table (only is_active column exists)
     await pool.execute(
-      `UPDATE fp_employees SET status = ?, is_active = ? WHERE id = ? AND franchise_partner_id = ?`,
-      [status, isActive, id, req.fpId]
+      `UPDATE fp_employees SET is_active = ? WHERE id = ? AND franchise_partner_id = ?`,
+      [isActive, id, req.fpId]
     );
 
     // Also update linked user account if exists
