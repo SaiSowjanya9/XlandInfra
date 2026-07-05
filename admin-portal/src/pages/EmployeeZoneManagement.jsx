@@ -169,10 +169,13 @@ const EmployeeZoneManagement = () => {
           setZones(freshZones);
           
           setSelectedEmployee(employee);
+          const validZoneNames = freshZones.map(z => z.name);
           if (employee.assignedZones === 'all') {
-            setSelectedZones(freshZones.map(z => z.name));
+            setSelectedZones(validZoneNames);
           } else if (Array.isArray(employee.assignedZones)) {
-            setSelectedZones([...employee.assignedZones]);
+            // Only include zones that still exist in the system
+            const filteredZones = employee.assignedZones.filter(z => validZoneNames.includes(z));
+            setSelectedZones(filteredZones);
           } else {
             setSelectedZones([]);
           }
@@ -183,10 +186,13 @@ const EmployeeZoneManagement = () => {
     
     // Fallback
     setSelectedEmployee(employee);
+    const validZoneNames = zones.map(z => z.name);
     if (employee.assignedZones === 'all') {
-      setSelectedZones(zones.map(z => z.name));
+      setSelectedZones(validZoneNames);
     } else if (Array.isArray(employee.assignedZones)) {
-      setSelectedZones([...employee.assignedZones]);
+      // Only include zones that still exist in the system
+      const filteredZones = employee.assignedZones.filter(z => validZoneNames.includes(z));
+      setSelectedZones(filteredZones);
     } else {
       setSelectedZones([]);
     }
