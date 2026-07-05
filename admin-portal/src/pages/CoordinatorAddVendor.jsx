@@ -171,7 +171,7 @@ const CoordinatorAddVendor = ({ user }) => {
     a.toLowerCase().includes((formData.areaName || '').toLowerCase())
   );
   const filteredServices = serviceTypeData.filter(s =>
-    s.name?.toLowerCase().includes((formData.serviceType || '').toLowerCase())
+    s.name?.toLowerCase().startsWith((formData.serviceType || '').toLowerCase())
   );
 
   const handleAddServiceType = async () => {
