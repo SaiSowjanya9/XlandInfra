@@ -2801,7 +2801,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const handleRestoreEstimate = async (id) => { try { const res = await fetch(`/api/fp/estimates/${id}/restore`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate restored'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
   const handleDeletePermanent = async (id) => { try { const res = await fetch(`/api/fp/estimates/${id}/permanent`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted permanently'); setDeleteConfirm(null); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
   const handleDeleteAllArchived = async () => { try { const res = await fetch('/api/fp/estimates/archived/delete-all', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); const result = await res.json(); if (result.success || res.status === 201) { showToast(`${result.deletedCount || archivedEstimates.length} archived deleted`); setShowDeleteAllConfirm(false); loadData(); } else { showToast(result.message || 'Failed', 'error'); } } catch (e) { showToast('Failed to delete all', 'error'); } };
-  const handleDownloadPDF = (estimate) => { try { exportEstimateToPDF(estimate); showToast('PDF downloaded!'); } catch (e) { showToast('PDF failed', 'error'); } };
+  const handleDownloadPDF = (estimate) => { 
+    try { 
+      // Use the same export logic as handleExportPDF for consistency
+      handleExportPDF(estimate);
+      showToast('PDF downloaded!'); 
+    } catch (e) { 
+      showToast('PDF failed', 'error'); 
+    } 
+  };
 
   const renderArchived = () => (
     <div className="space-y-4">
