@@ -151,7 +151,37 @@ const EmployeeZoneManagement = () => {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const openAssignModal = (employee) => {
+  const openAssignModal = async (employee) => {
+    // Refresh zones to get any newly created zones
+    try {
+      let url;
+      if (selectedFp?.id === 'all') {
+        url = `${API_BASE}/api/admin/all-employee-zones`;
+      } else if (selectedFp?.id) {
+        url = `${API_BASE}/api/admin/fp-view/${selectedFp.id}/employee-zones`;
+      }
+      
+      if (url) {
+        const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        const result = await response.json();
+        if (result.success) {
+          const freshZones = result.data.zones || [];
+          setZones(freshZones);
+          
+          setSelectedEmployee(employee);
+          if (employee.assignedZones === 'all') {
+            setSelectedZones(freshZones.map(z => z.name));
+          } else if (Array.isArray(employee.assignedZones)) {
+            setSelectedZones([...employee.assignedZones]);
+          } else {
+            setSelectedZones([]);
+          }
+          return;
+        }
+      }
+    } catch (e) {}
+    
+    // Fallback
     setSelectedEmployee(employee);
     if (employee.assignedZones === 'all') {
       setSelectedZones(zones.map(z => z.name));
