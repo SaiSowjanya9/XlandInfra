@@ -56,8 +56,30 @@ const SupervisorProperties = ({ user }) => {
   const [employees, setEmployees] = useState([]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({});
+  const [propertyEstimates, setPropertyEstimates] = useState([]);
+  const [loadingEstimates, setLoadingEstimates] = useState(false);
 
   const token = sessionStorage.getItem('pm_auth_token');
+
+  const fetchPropertyEstimates = async (propertyId) => {
+    setLoadingEstimates(true);
+    try {
+      const response = await fetch(`/api/supervisor/estimates?property_id=${propertyId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setPropertyEstimates(result.data || []);
+      } else {
+        setPropertyEstimates([]);
+      }
+    } catch (error) {
+      console.error('Fetch property estimates error:', error);
+      setPropertyEstimates([]);
+    } finally {
+      setLoadingEstimates(false);
+    }
+  };
 
   const fetchProperties = async () => {
     setLoading(true);
@@ -705,6 +727,7 @@ const SupervisorProperties = ({ user }) => {
                             onClick={() => {
                               setSelectedProperty(property);
                               setShowDetailsModal(true);
+                              fetchPropertyEstimates(property.property_id || property.id);
                             }}
                             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                             title="View Details"
@@ -777,7 +800,7 @@ const SupervisorProperties = ({ user }) => {
                 <p className="text-sm text-gray-500 mt-1">{selectedProperty.property_id}</p>
               </div>
               <button
-                onClick={() => { setShowDetailsModal(false); setSelectedProperty(null); }}
+                onClick={() => { setShowDetailsModal(false); setSelectedProperty(null); setPropertyEstimates([]); }}
                 className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
@@ -1097,13 +1120,54 @@ const SupervisorProperties = ({ user }) => {
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <FileText className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-base font-semibold text-gray-900">Estimates (0)</h3>
+                  <h3 className="text-base font-semibold text-gray-900">Estimates ({propertyEstimates.length})</h3>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-8 text-center">
-                  <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                  <p className="text-sm text-gray-500">No estimates for this property</p>
-                  <p className="text-xs text-gray-400 mt-1">Create an estimate from the Estimates section</p>
-                </div>
+                {loadingEstimates ? (
+                  <div className="bg-gray-50 rounded-lg p-8 text-center">
+                    <RefreshCw className="w-8 h-8 text-gray-400 mx-auto mb-3 animate-spin" />
+                    <p className="text-sm text-gray-500">Loading estimates...</p>
+                  </div>
+                ) : propertyEstimates.length === 0 ? (
+                  <div className="bg-gray-50 rounded-lg p-8 text-center">
+                    <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No estimates for this property</p>
+                    <p className="text-xs text-gray-400 mt-1">Create an estimate from the Estimates section</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {propertyEstimates.map((est) => (
+                      <div key={est.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-mono text-sm text-gray-700">{est.estimate_id}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            est.status === 'approved' ? 'bg-green-100 text-green-700' :
+                            est.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                            est.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>{est.status || 'draft'}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">Package:</span>
+                            <span className="ml-1 font-medium">{est.package_name || '-'}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Total:</span>
+                            <span className="ml-1 font-semibold text-green-600">₹{Number(est.total_amount || 0).toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Created:</span>
+                            <span className="ml-1">{est.created_at ? new Date(est.created_at).toLocaleDateString() : '-'}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">By:</span>
+                            <span className="ml-1">{est.created_by_name || '-'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
