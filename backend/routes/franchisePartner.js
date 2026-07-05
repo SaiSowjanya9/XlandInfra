@@ -3681,7 +3681,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
         try {
           // Try properties table first
           let [props] = await pool.execute(
-            `SELECT property_id as property_code, division_id as division, contact_phone, contact_email FROM properties 
+            `SELECT property_id as property_code, division_id as division, contact_phone, contact_email, association_contacts FROM properties 
              WHERE name = ? AND franchise_partner_id = ? LIMIT 1`,
             [propName, req.fpId]
           );
@@ -3690,12 +3690,23 @@ router.get('/estimates', requireFPScope, async (req, res) => {
             if (!property_code && props[0].property_code) property_code = props[0].property_code;
             if (!client_phone && props[0].contact_phone) client_phone = props[0].contact_phone;
             if (!client_email && props[0].contact_email) client_email = props[0].contact_email;
+            // Check association_contacts JSON if still missing
+            if ((!client_phone || !client_email) && props[0].association_contacts) {
+              try {
+                const contacts = typeof props[0].association_contacts === 'string' 
+                  ? JSON.parse(props[0].association_contacts) : props[0].association_contacts;
+                if (Array.isArray(contacts) && contacts.length > 0) {
+                  if (!client_phone && contacts[0].phone) client_phone = contacts[0].phone;
+                  if (!client_email && contacts[0].email) client_email = contacts[0].email;
+                }
+              } catch (e) {}
+            }
           }
           
           // If still not found, try onboarded_properties
           if (!division || !property_code || !client_phone || !client_email) {
             [props] = await pool.execute(
-              `SELECT property_id as property_code, division, contact_phone, contact_email FROM onboarded_properties 
+              `SELECT property_id as property_code, division, contact_phone, contact_email, association_contacts FROM onboarded_properties 
                WHERE community_name = ? AND franchise_partner_id = ? LIMIT 1`,
               [propName, req.fpId]
             );
@@ -3704,6 +3715,17 @@ router.get('/estimates', requireFPScope, async (req, res) => {
               if (!property_code && props[0].property_code) property_code = props[0].property_code;
               if (!client_phone && props[0].contact_phone) client_phone = props[0].contact_phone;
               if (!client_email && props[0].contact_email) client_email = props[0].contact_email;
+              // Check association_contacts JSON if still missing
+              if ((!client_phone || !client_email) && props[0].association_contacts) {
+                try {
+                  const contacts = typeof props[0].association_contacts === 'string' 
+                    ? JSON.parse(props[0].association_contacts) : props[0].association_contacts;
+                  if (Array.isArray(contacts) && contacts.length > 0) {
+                    if (!client_phone && contacts[0].phone) client_phone = contacts[0].phone;
+                    if (!client_email && contacts[0].email) client_email = contacts[0].email;
+                  }
+                } catch (e) {}
+              }
             }
           }
         } catch (e) { 

@@ -588,8 +588,22 @@ router.put('/properties/:id', requireCoordinatorScope, async (req, res) => {
     }
 
     const allowedFieldsMap = {
-      properties: ['name', 'property_type', 'address', 'city', 'state', 'zip_code', 'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active'],
-      onboarded_properties: ['community_name', 'property_type', 'address', 'city', 'state', 'postal_code', 'zone', 'division', 'area_name', 'status', 'number_of_units', 'total_units']
+      properties: [
+        'name', 'property_type', 'address', 'city', 'state', 'zip_code',
+        'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active',
+        'notes', 'landmark', 'latitude', 'longitude',
+        'number_of_blocks', 'block_names', 'units_per_block', 'block_unit_types',
+        'number_of_units', 'villa_plot_number', 'block_info', 'block_na',
+        'watchman_name', 'watchman_contact', 'association_contacts', 'total_units'
+      ],
+      onboarded_properties: [
+        'community_name', 'property_type', 'address', 'city', 'state', 'postal_code',
+        'zone', 'division', 'area_name', 'status', 'number_of_units', 'total_units',
+        'notes', 'landmark', 'map_lat', 'map_lng', 'map_address',
+        'number_of_blocks', 'block_names', 'units_per_block', 'block_unit_types',
+        'villa_plot_number', 'block_info', 'block_na',
+        'watchman_name', 'watchman_contact', 'association_contacts'
+      ]
     };
 
     const fieldMapping = {
@@ -599,8 +613,23 @@ router.put('/properties/:id', requireCoordinatorScope, async (req, res) => {
       zoneId: tableName === 'onboarded_properties' ? 'zone' : 'zone_id',
       zone_id: tableName === 'onboarded_properties' ? 'zone' : 'zone_id',
       divisionId: tableName === 'onboarded_properties' ? 'division' : 'division_id',
-      division_id: tableName === 'onboarded_properties' ? 'division' : 'division_id'
+      division_id: tableName === 'onboarded_properties' ? 'division' : 'division_id',
+      numberOfBlocks: 'number_of_blocks',
+      blockNames: 'block_names',
+      unitsPerBlock: 'units_per_block',
+      blockUnitTypes: 'block_unit_types',
+      numberOfUnits: 'number_of_units',
+      villaPlotNumber: 'villa_plot_number',
+      blockInfo: 'block_info',
+      blockNA: 'block_na',
+      watchmanName: 'watchman_name',
+      watchmanContact: 'watchman_contact',
+      associationContacts: 'association_contacts',
+      totalUnits: 'total_units',
+      areaName: 'area_name'
     };
+
+    const jsonFields = ['block_names', 'units_per_block', 'block_unit_types', 'association_contacts'];
 
     const allowedFields = allowedFieldsMap[tableName];
     const setClauses = [];
@@ -616,6 +645,11 @@ router.put('/properties/:id', requireCoordinatorScope, async (req, res) => {
       if (tableName === 'onboarded_properties' && (key === 'isActive' || key === 'is_active')) {
         dbKey = 'status';
         finalValue = value ? 'active' : 'inactive';
+      }
+      
+      // Serialize JSON fields
+      if (jsonFields.includes(dbKey) && finalValue && typeof finalValue === 'object') {
+        finalValue = JSON.stringify(finalValue);
       }
       
       if (allowedFields.includes(dbKey)) {
@@ -1807,7 +1841,7 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
           try {
             // Try onboarded_properties first (admin-created properties visible to FP)
             let [props] = await pool.query(
-              `SELECT property_id as orig_code, contact_phone, contact_email FROM onboarded_properties 
+              `SELECT property_id as orig_code, contact_phone, contact_email, association_contacts FROM onboarded_properties 
                WHERE (id = ? OR community_name = ?) LIMIT 1`,
               [propId || 0, propName]
             );
@@ -1815,12 +1849,22 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
               if (props[0].orig_code) property_code = props[0].orig_code;
               if (!client_phone && props[0].contact_phone) client_phone = props[0].contact_phone;
               if (!client_email && props[0].contact_email) client_email = props[0].contact_email;
+              if ((!client_phone || !client_email) && props[0].association_contacts) {
+                try {
+                  const contacts = typeof props[0].association_contacts === 'string' 
+                    ? JSON.parse(props[0].association_contacts) : props[0].association_contacts;
+                  if (Array.isArray(contacts) && contacts.length > 0) {
+                    if (!client_phone && contacts[0].phone) client_phone = contacts[0].phone;
+                    if (!client_email && contacts[0].email) client_email = contacts[0].email;
+                  }
+                } catch (e) {}
+              }
             }
             
             // Try properties table (FP-created properties) if still missing
             if (!property_code || !client_phone || !client_email) {
               [props] = await pool.query(
-                `SELECT property_id as orig_code, contact_phone, contact_email FROM properties 
+                `SELECT property_id as orig_code, contact_phone, contact_email, association_contacts FROM properties 
                  WHERE (id = ? OR name = ?) AND franchise_partner_id = ? LIMIT 1`,
                 [propId || 0, propName, franchisePartnerId]
               );
@@ -1828,6 +1872,16 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
                 if (!property_code && props[0].orig_code) property_code = props[0].orig_code;
                 if (!client_phone && props[0].contact_phone) client_phone = props[0].contact_phone;
                 if (!client_email && props[0].contact_email) client_email = props[0].contact_email;
+                if ((!client_phone || !client_email) && props[0].association_contacts) {
+                  try {
+                    const contacts = typeof props[0].association_contacts === 'string' 
+                      ? JSON.parse(props[0].association_contacts) : props[0].association_contacts;
+                    if (Array.isArray(contacts) && contacts.length > 0) {
+                      if (!client_phone && contacts[0].phone) client_phone = contacts[0].phone;
+                      if (!client_email && contacts[0].email) client_email = contacts[0].email;
+                    }
+                  } catch (e) {}
+                }
               }
             }
           } catch (e) { console.log('Property lookup error:', e.message); }
