@@ -201,15 +201,13 @@ const ManagerAddVendor = ({ user }) => {
       });
       const result = await response.json();
       if (result.success) {
-        setServiceTypes([...serviceTypes, newServiceType.trim()]);
+        fetchServiceTypes(); // Refresh from server to get proper data
         updateField('serviceType', newServiceType.trim());
         setNewServiceType('');
         setShowAddServiceModal(false);
       }
     } catch (error) {
       console.error('Error adding service type:', error);
-      setServiceTypes([...serviceTypes, newServiceType.trim()]);
-      updateField('serviceType', newServiceType.trim());
       setNewServiceType('');
       setShowAddServiceModal(false);
     }
