@@ -351,7 +351,7 @@ const ManagerVendors = ({ user }) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -390,7 +390,7 @@ const ManagerVendors = ({ user }) => {
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <div className="flex items-center justify-end">
+                        <div className="flex items-center justify-center">
                           <button
                             onClick={() => { setSelectedVendor(vendor); setShowViewModal(true); }}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -583,11 +583,7 @@ const ManagerVendors = ({ user }) => {
               {/* Location */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Location</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Division</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.division || '-'}</p>
-                  </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500">Zone</p>
                     <p className="font-medium text-gray-900">{selectedVendor.zone_name || selectedVendor.zone || '-'}</p>

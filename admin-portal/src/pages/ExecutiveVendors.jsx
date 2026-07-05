@@ -154,13 +154,15 @@ const ExecutiveVendors = ({ user }) => {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <button
-                        onClick={() => viewVendorDetails(vendor)}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        title="View"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center">
+                        <button
+                          onClick={() => viewVendorDetails(vendor)}
+                          className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="View"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -212,11 +214,7 @@ const ExecutiveVendors = ({ user }) => {
               {/* Location */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Location</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Division</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.division || '-'}</p>
-                  </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500">Zone</p>
                     <p className="font-medium text-gray-900">{selectedVendor.zone_name || selectedVendor.zone || '-'}</p>

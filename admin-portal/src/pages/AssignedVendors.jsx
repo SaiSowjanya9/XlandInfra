@@ -528,7 +528,7 @@ const AssignedVendors = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Assigned</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -573,7 +573,7 @@ const AssignedVendors = ({ user }) => {
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => setViewAssignment(assignment)}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"

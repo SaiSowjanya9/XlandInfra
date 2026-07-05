@@ -404,7 +404,7 @@ const CoordinatorVendors = ({ user }) => {
                   <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Created By</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -442,7 +442,7 @@ const CoordinatorVendors = ({ user }) => {
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-center gap-1">
                         {/* View Details - Only action available for Coordinators */}
                         <button
                           onClick={() => { setSelectedVendor(vendor); setShowViewModal(true); }}
@@ -612,28 +612,24 @@ const CoordinatorVendors = ({ user }) => {
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Company Name</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.company_name}</p>
+                  <p className="text-sm text-gray-500">Owner Name</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.owner_name || selectedVendor.company_name || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Contact Person</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.contact_person || '-'}</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.contact_person || selectedVendor.owner_name || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.email || '-'}</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.owner_email || selectedVendor.email || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Phone</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.phone || '-'}</p>
+                  <p className="font-medium text-gray-900">{selectedVendor.owner_mobile || selectedVendor.phone || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Service Type</p>
                   <p className="font-medium text-gray-900">{selectedVendor.service_type || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Division</p>
-                  <p className="font-medium text-gray-900">{selectedVendor.division || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Zone</p>
