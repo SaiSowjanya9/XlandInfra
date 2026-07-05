@@ -667,7 +667,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
               )}
             </div>
           </div>
-          {renderAmcAndPriceSummary(false)}
+          {renderAmcAndPriceSummary(true)}
         </>
       )}
 
