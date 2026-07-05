@@ -128,7 +128,7 @@ router.post('/', authenticate, async (req, res) => {
         entryType === 'GC' ? (numberOfBlocks || null) : null,
         entryType === 'GC' && blockNames ? JSON.stringify(blockNames) : null,
         entryType === 'GC' && unitsPerBlock ? JSON.stringify(unitsPerBlock) : null,
-        entryType === 'GC' && blockUnitTypes ? JSON.stringify(blockUnitTypes) : null,
+        (entryType === 'GC' || entryType === 'APT') && blockUnitTypes ? JSON.stringify(blockUnitTypes) : null,
         entryType === 'APT' ? (blockInfo || null) : null,
         entryType === 'APT' ? (blockNA ? 1 : 0) : 0,
         entryType === 'APT' ? (parseInt(numberOfUnits) || null) : null,
