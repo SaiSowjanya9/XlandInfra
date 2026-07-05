@@ -986,20 +986,33 @@ const Properties = () => {
                     try {
                       const blockNames = viewProperty.blockNames || (typeof viewProperty.block_names === 'string' ? JSON.parse(viewProperty.block_names) : viewProperty.block_names) || {};
                       const unitsPerBlock = viewProperty.unitsPerBlock || (typeof viewProperty.units_per_block === 'string' ? JSON.parse(viewProperty.units_per_block) : viewProperty.units_per_block) || {};
+                      const blockUnitTypes = viewProperty.blockUnitTypes || (typeof viewProperty.block_unit_types === 'string' ? JSON.parse(viewProperty.block_unit_types) : viewProperty.block_unit_types) || {};
                       const numBlocks = viewProperty.numberOfBlocks || viewProperty.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
+                      const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
                       // Always show block table for GC properties
                       return (
-                        <div className="bg-blue-50 rounded-lg border border-blue-100 overflow-hidden">
-                          <div className="grid grid-cols-2 gap-4 px-4 py-2 bg-blue-100/50 text-xs font-medium text-blue-700">
-                            <span>Block Name</span>
-                            <span>Total Units</span>
-                          </div>
-                          {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
-                            <div key={blockNum} className="grid grid-cols-2 gap-4 px-4 py-3 border-t border-blue-100">
-                              <span className="text-sm font-medium text-gray-900">{blockNames[blockNum] || `Block ${blockNum}`}</span>
-                              <span className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || 0}</span>
-                            </div>
-                          ))}
+                        <div className="space-y-3">
+                          {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
+                            const unitTypes = blockUnitTypes[blockNum] || {};
+                            const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                            return (
+                              <div key={blockNum} className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-sm font-semibold text-blue-600">{blockNames[blockNum] || `Block ${blockNum}`}</span>
+                                  <span className="text-sm font-medium text-gray-700">{unitsPerBlock[blockNum] || 0} units</span>
+                                </div>
+                                {hasUnitTypes && (
+                                  <div className="flex flex-wrap gap-2 pt-2 border-t border-blue-100">
+                                    {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
+                                      <span key={type} className="px-2 py-1 bg-white text-blue-700 text-xs rounded-full border border-blue-200">
+                                        {unitTypeLabels[type] || type}: {count}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     } catch { return null; }
@@ -1011,7 +1024,7 @@ const Properties = () => {
               {(normalizePropertyType(viewProperty.entryType || viewProperty.propertyType) === 'APT') && (
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Block Information</p>
                       <p className="text-sm font-medium text-gray-900">{viewProperty.blockNA ? 'N/A' : (viewProperty.blockInfo || viewProperty.block_info || '-')}</p>
@@ -1021,6 +1034,27 @@ const Properties = () => {
                       <p className="text-sm font-medium text-gray-900">{viewProperty.numberOfUnits || viewProperty.number_of_units || '-'}</p>
                     </div>
                   </div>
+                  {(() => {
+                    try {
+                      const blockUnitTypes = viewProperty.blockUnitTypes || (typeof viewProperty.block_unit_types === 'string' ? JSON.parse(viewProperty.block_unit_types) : viewProperty.block_unit_types) || {};
+                      const unitTypes = blockUnitTypes['apt'] || {};
+                      const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                      if (!hasUnitTypes) return null;
+                      const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
+                      return (
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                          <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
+                              <span key={type} className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 text-sm rounded-full font-medium">
+                                {unitTypeLabels[type] || type}: {count}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    } catch { return null; }
+                  })()}
                 </div>
               )}
 

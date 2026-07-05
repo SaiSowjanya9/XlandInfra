@@ -3721,7 +3721,7 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     const {
       estimate_type, property_id, property_code, client_name, client_phone, client_email,
       property_type, property_name, zone, division, city, address,
-      number_of_blocks, units_per_block, block_names, total_units,
+      number_of_blocks, units_per_block, block_names, block_unit_types, total_units,
       tower_name, block_number, villa_plot_number,
       package_id, package_name, package_price, amc_package_description, package_services, billing_duration,
       addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
@@ -3830,6 +3830,7 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     // Stringify block data for storage
     const unitsPerBlockJson = units_per_block ? JSON.stringify(units_per_block) : null;
     const blockNamesJson = block_names ? JSON.stringify(block_names) : null;
+    const blockUnitTypesJson = block_unit_types ? JSON.stringify(block_unit_types) : null;
     
     console.log('Creating FP estimate:', { estimateId, client_name, package_name, creatorName, fpId: req.fpId });
 
@@ -3852,6 +3853,9 @@ router.post('/estimates', requireFPScope, async (req, res) => {
     try {
       await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN billing_duration VARCHAR(50) DEFAULT 'yearly'`);
     } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN block_unit_types JSON`);
+    } catch (e) { /* Column exists */ }
 
     // Stringify package_services for storage
     const packageServicesJson = package_services ? JSON.stringify(package_services) : null;
@@ -3862,18 +3866,18 @@ router.post('/estimates', requireFPScope, async (req, res) => {
         estimate_id, franchise_partner_id, property_id, estimate_type,
         client_name, client_phone, client_email,
         property_name, property_code, property_type, zone, division, city, address,
-        number_of_blocks, units_per_block, block_names, total_units,
+        number_of_blocks, units_per_block, block_names, block_unit_types, total_units,
         tower_name, block_number, villa_plot_number,
         package_id, package_name, package_price, amc_package_description, package_services, billing_duration,
         subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
         addons_data, description, status,
         created_by_id, created_by_name, created_by_role
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
       [
         estimateId, req.fpId, property_id || null, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
         property_name || '', property_code || '', property_type || '', zone || '', division || '', city || '', address || '',
-        safeNum(number_of_blocks, 1), unitsPerBlockJson, blockNamesJson, safeNum(total_units, 0),
+        safeNum(number_of_blocks, 1), unitsPerBlockJson, blockNamesJson, blockUnitTypesJson, safeNum(total_units, 0),
         tower_name || '', block_number || '', villa_plot_number || '',
         package_id || null, package_name || '', safeNum(package_price, 0), amc_package_description || '', packageServicesJson, billing_duration || 'yearly',
         finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,

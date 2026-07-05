@@ -256,13 +256,16 @@ const EmployeeZoneManagement = () => {
     if (!selectedEmployee) return;
 
     try {
+      // If ALL zones are selected, save as 'all' so new zones are auto-included
+      const zonesToSave = isAllAvailableSelected() ? 'all' : selectedZones;
+      
       const response = await fetch(`/api/staff/${selectedEmployee.id}/zones`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ zones: selectedZones })
+        body: JSON.stringify({ zones: zonesToSave })
       });
       const result = await response.json();
       if (result.success) {
