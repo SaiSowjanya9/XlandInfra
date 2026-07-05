@@ -597,7 +597,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const handleSaveEstimate = async () => {
     // Validation
     const clientName = selectedProperty?.contact_person || selectedProperty?.contact_name || selectedProperty?.customer_name || estimateForm.customerName;
-    const clientPhone = selectedProperty?.contact_phone || selectedProperty?.phone || `${estimateForm.countryCode || '+91'} ${estimateForm.phone}`;
+    // Build phone - prioritize property contact, then form input
+    let clientPhone = selectedProperty?.contact_phone || selectedProperty?.phone || '';
+    if (!clientPhone && estimateForm.phone?.trim()) {
+      clientPhone = `${estimateForm.countryCode || '+91'} ${estimateForm.phone}`;
+    }
+    // Build email - prioritize property contact, then form input
+    let clientEmail = selectedProperty?.contact_email || selectedProperty?.email || estimateForm.email || '';
+    
     if (!clientName?.trim()) { showToast('Customer name is required', 'error'); return; }
     if (!clientPhone?.trim()) { showToast('Phone number is required', 'error'); return; }
     if (!estimateForm.selectedPackage) { showToast('Please select an AMC package', 'error'); return; }
@@ -618,7 +625,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         property_code: selectedProperty?.property_id || selectedProperty?.property_code || '',
         client_name: clientName,
         client_phone: clientPhone,
-        client_email: selectedProperty?.contact_email || selectedProperty?.email || estimateForm.email || '',
+        client_email: clientEmail,
         property_type: selectedProperty?.property_type || selectedProperty?.entry_type || estimateForm.propertyType || '',
         property_name: selectedProperty?.name || selectedProperty?.community_name || estimateForm.propertyName || '',
         zone: selectedProperty?.zone_name || selectedProperty?.zoneName || selectedProperty?.zone || estimateForm.zone || '',
