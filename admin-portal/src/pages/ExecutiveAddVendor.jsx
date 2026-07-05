@@ -77,12 +77,7 @@ const ExecutiveAddVendor = ({ user }) => {
   // Zone & Area autocomplete
   const [zoneSuggestions, setZoneSuggestions] = useState([]);
   const [areaSuggestions, setAreaSuggestions] = useState([]);
-  const [divisions, setDivisions] = useState([]);
-  const [showZoneDropdown, setShowZoneDropdown] = useState(false);
-  const [showAreaDropdown, setShowAreaDropdown] = useState(false);
-  const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
-  const [showAddDivisionModal, setShowAddDivisionModal] = useState(false);
-  const [newDivision, setNewDivision] = useState('');
+  
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -404,8 +399,8 @@ const ExecutiveAddVendor = ({ user }) => {
               <MapPin className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Location & Division</h2>
-              <p className="text-sm text-gray-500">Assign vendor to operational zone and division</p>
+              <h2 className="text-lg font-semibold text-gray-900">Location</h2>
+              <p className="text-sm text-gray-500">Assign vendor to operational zone</p>
             </div>
           </div>
 
