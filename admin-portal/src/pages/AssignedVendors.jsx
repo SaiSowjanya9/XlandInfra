@@ -476,21 +476,9 @@ const AssignedVendors = ({ user }) => {
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           </div>
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-200 focus:border-amber-500 outline-none"
-            >
-              <option value="active">Active Assignments</option>
-              <option value="removed">Removed Assignments</option>
-              <option value="all">All Assignments</option>
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-          </div>
-          {(searchTerm || zoneFilter || serviceTypeFilter || statusFilter !== 'active') && (
+          {(searchTerm || zoneFilter || serviceTypeFilter) && (
             <button
-              onClick={() => { setSearchTerm(''); setZoneFilter(''); setServiceTypeFilter(''); setStatusFilter('active'); }}
+              onClick={() => { setSearchTerm(''); setZoneFilter(''); setServiceTypeFilter(''); }}
               className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Clear

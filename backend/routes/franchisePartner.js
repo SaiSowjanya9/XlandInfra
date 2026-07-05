@@ -2370,7 +2370,7 @@ router.get('/employees', requireFPScope, async (req, res) => {
     
     // Get employees first - JOIN with users to get formatted user_id (MGR001, COORD001, etc.)
     const [employees] = await pool.execute(
-      `SELECT e.*, u.user_id as formatted_user_id, CONCAT(e.first_name, ' ', e.last_name) as name
+      `SELECT e.*, u.user_id as formatted_user_id, TRIM(CONCAT(e.first_name, ' ', COALESCE(e.last_name, ''))) as name
        FROM fp_employees e
        LEFT JOIN users u ON e.user_id = u.id
        WHERE e.franchise_partner_id = ? AND e.is_active = 1
@@ -2743,7 +2743,7 @@ router.put('/employees/:id', requireFPScope, async (req, res) => {
     const { id } = req.params;
     const { 
       firstName = '', 
-      lastName = null, 
+      lastName = '', 
       email = '', 
       phone = '', 
       countryCode = '+91', 
