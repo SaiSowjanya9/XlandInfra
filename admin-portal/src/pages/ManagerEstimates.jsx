@@ -707,34 +707,70 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                       // GC/APT - Show Block Details
                       let blockNames = selectedProperty.block_names || selectedProperty.blockNames;
                       let unitsPerBlock = selectedProperty.units_per_block || selectedProperty.unitsPerBlock;
+                      let blockUnitTypes = selectedProperty.block_unit_types || selectedProperty.blockUnitTypes;
                       if (typeof blockNames === 'string') try { blockNames = JSON.parse(blockNames); } catch(e) { blockNames = {}; }
                       if (typeof unitsPerBlock === 'string') try { unitsPerBlock = JSON.parse(unitsPerBlock); } catch(e) { unitsPerBlock = {}; }
+                      if (typeof blockUnitTypes === 'string') try { blockUnitTypes = JSON.parse(blockUnitTypes); } catch(e) { blockUnitTypes = {}; }
                       const numBlocks = selectedProperty.number_of_blocks || selectedProperty.numberOfBlocks || Object.keys(blockNames || {}).length || 1;
+                      const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
                       
                       if (numBlocks > 1 || Object.keys(blockNames || {}).length > 0) {
                         return (
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => (
-                              <div key={blockNum} className="bg-white border border-gray-200 rounded-lg p-3">
-                                <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
-                                <p className="text-sm font-medium text-gray-800">{blockNames?.[blockNum] || blockNames?.[String(blockNum)] || `Block ${blockNum}`}</p>
-                                <label className="block text-xs font-medium text-slate-500 mt-2 mb-1">Units</label>
-                                <p className="text-sm text-gray-700">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</p>
-                              </div>
-                            ))}
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
+                              const unitTypes = blockUnitTypes?.[blockNum] || blockUnitTypes?.[String(blockNum)] || {};
+                              const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                              return (
+                                <div key={blockNum} className="bg-white border border-gray-200 rounded-lg p-3">
+                                  <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                      <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
+                                      <p className="text-sm font-semibold text-gray-800">{blockNames?.[blockNum] || blockNames?.[String(blockNum)] || `Block ${blockNum}`}</p>
+                                    </div>
+                                    <div className="text-right">
+                                      <label className="block text-xs font-medium text-slate-500 mb-1">Units</label>
+                                      <p className="text-sm font-medium text-gray-700">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</p>
+                                    </div>
+                                  </div>
+                                  {hasUnitTypes && (
+                                    <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-100">
+                                      {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
+                                        <span key={type} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">
+                                          {unitTypeLabels[type] || type}: {count}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         );
                       } else {
+                        const unitTypes = blockUnitTypes?.[1] || blockUnitTypes?.['1'] || blockUnitTypes?.['apt'] || {};
+                        const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                         return (
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
-                              <input type="text" value={blockNames?.[1] || blockNames?.['1'] || selectedProperty.block_name || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
+                                <input type="text" value={blockNames?.[1] || blockNames?.['1'] || selectedProperty.block_name || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
+                                <input type="text" value={`${selectedProperty.units || selectedProperty.total_units || unitsPerBlock?.[1] || 1} Units`} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                              </div>
                             </div>
-                            <div>
-                              <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
-                              <input type="text" value={`${selectedProperty.units || selectedProperty.total_units || unitsPerBlock?.[1] || 1} Units`} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
-                            </div>
+                            {hasUnitTypes && (
+                              <div className="flex flex-wrap gap-2 p-3 bg-white border border-gray-200 rounded-lg">
+                                <span className="text-xs font-medium text-slate-500 mr-2">Unit Types:</span>
+                                {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
+                                  <span key={type} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">
+                                    {unitTypeLabels[type] || type}: {count}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         );
                       }

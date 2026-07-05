@@ -414,7 +414,7 @@ router.get('/properties', requireExecutiveScope, async (req, res) => {
                 op.address, op.city, op.state, op.postal_code as zip_code,
                 op.landmark, COALESCE(op.latitude, op.map_lat) as latitude, COALESCE(op.longitude, op.map_lng) as longitude, op.map_address,
                 op.association_contacts,
-                op.number_of_blocks, op.block_names, op.units_per_block,
+                op.number_of_blocks, op.block_names, op.units_per_block, op.block_unit_types,
                 op.block_info, op.block_na, op.flat_block_info, op.flat_block_na,
                 op.villa_plot_number, op.plot_na,
                 op.watchman_name, op.watchman_contact,
@@ -1618,7 +1618,7 @@ router.get('/estimates', requireExecutiveScope, async (req, res) => {
         fpAddons = addonResults;
       } catch (e) {}
 
-      // Enrich estimates with property_code and parse addons
+      // Enrich estimates with property_code, phone, email and parse addons
       estimates = await Promise.all(fpEstimates.map(async (est) => {
         let addons = [];
         if (est.addons_data) {
@@ -1643,7 +1643,36 @@ router.get('/estimates', requireExecutiveScope, async (req, res) => {
             });
           } catch(e) {}
         }
-        return { ...est, addons };
+        
+        // Fetch missing phone/email from property tables
+        let client_phone = est.client_phone;
+        let client_email = est.client_email;
+        const propName = est.property_name || '';
+        
+        if (propName && (!client_phone || !client_email)) {
+          try {
+            let [props] = await pool.query(
+              `SELECT contact_phone, contact_email FROM properties WHERE name = ? AND franchise_partner_id = ? LIMIT 1`,
+              [propName, franchisePartnerId]
+            );
+            if (props.length > 0) {
+              if (!client_phone && props[0].contact_phone) client_phone = props[0].contact_phone;
+              if (!client_email && props[0].contact_email) client_email = props[0].contact_email;
+            }
+            if (!client_phone || !client_email) {
+              [props] = await pool.query(
+                `SELECT contact_phone, contact_email FROM onboarded_properties WHERE community_name = ? AND franchise_partner_id = ? LIMIT 1`,
+                [propName, franchisePartnerId]
+              );
+              if (props.length > 0) {
+                if (!client_phone && props[0].contact_phone) client_phone = props[0].contact_phone;
+                if (!client_email && props[0].contact_email) client_email = props[0].contact_email;
+              }
+            }
+          } catch(e) {}
+        }
+        
+        return { ...est, addons, client_phone, client_email };
       }));
     }
     
