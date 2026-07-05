@@ -323,7 +323,11 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
     if (!zoneName?.trim()) return;
     const exists = zones.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
     if (!exists) {
-      try { await fetch('/api/fp/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); } catch (e) {}
+      try { 
+        await fetch('/api/fp/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
+        // Refresh zones list to include the new zone
+        fetchZones();
+      } catch (e) {}
     }
   };
 
@@ -588,7 +592,7 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
               type="text"
               placeholder="Search customers by name, email, phone..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value.trim())}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>

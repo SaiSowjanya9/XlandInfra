@@ -446,7 +446,7 @@ const AssignedVendors = ({ user }) => {
               type="text"
               placeholder="Search by vendor name, ID, property, or service type..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value.trim())}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 outline-none"
             />
           </div>
