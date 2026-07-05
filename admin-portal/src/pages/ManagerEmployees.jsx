@@ -32,7 +32,6 @@ const ManagerEmployees = ({ user }) => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formData, setFormData] = useState({
     firstName: '',
-    lastName: '',
     email: '',
     phone: '',
     role: 'mgr_executive',
@@ -168,7 +167,6 @@ const ManagerEmployees = ({ user }) => {
     setEditingEmployee(employee);
     setFormData({
       firstName: employee.first_name || '',
-      lastName: employee.last_name || '',
       email: employee.email || '',
       phone: employee.phone || '',
       role: employee.role || 'mgr_executive',
@@ -181,7 +179,6 @@ const ManagerEmployees = ({ user }) => {
     setEditingEmployee(null);
     setFormData({
       firstName: '',
-      lastName: '',
       email: '',
       phone: '',
       role: 'mgr_executive',
@@ -218,7 +215,6 @@ const ManagerEmployees = ({ user }) => {
 
   const filteredEmployees = employees.filter(e =>
     e.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     e.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     e.employee_code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -331,7 +327,7 @@ const ManagerEmployees = ({ user }) => {
                     <td className="py-4 px-4">
                       <div>
                         <p className="font-medium text-gray-900">
-                          {employee.first_name} {employee.last_name}
+                          {employee.first_name}
                         </p>
                         <p className="text-sm text-gray-500">{employee.employee_code}</p>
                       </div>
@@ -418,17 +414,6 @@ const ManagerEmployees = ({ user }) => {
                     required
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>

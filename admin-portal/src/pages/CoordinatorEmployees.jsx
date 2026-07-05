@@ -38,7 +38,6 @@ const CoordinatorEmployees = ({ user }) => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formData, setFormData] = useState({
     firstName: '',
-    lastName: '',
     email: '',
     phone: '',
     role: 'coord_executive',
@@ -219,7 +218,6 @@ const CoordinatorEmployees = ({ user }) => {
     setEditingEmployee(employee);
     setFormData({
       firstName: employee.first_name || '',
-      lastName: employee.last_name || '',
       email: employee.email || '',
       phone: employee.phone || '',
       role: employee.role || 'coord_executive',
@@ -232,7 +230,6 @@ const CoordinatorEmployees = ({ user }) => {
     setEditingEmployee(null);
     setFormData({
       firstName: '',
-      lastName: '',
       email: '',
       phone: '',
       role: 'coord_executive',
@@ -274,7 +271,6 @@ const CoordinatorEmployees = ({ user }) => {
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch = !searchTerm ||
       emp.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.employee_code?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -406,7 +402,7 @@ const CoordinatorEmployees = ({ user }) => {
                     <td className="py-4 px-4">
                       <div>
                         <p className="font-medium text-gray-900">
-                          {employee.first_name} {employee.last_name}
+                          {employee.first_name}
                         </p>
                         <p className="text-sm text-gray-500">{employee.employee_code}</p>
                       </div>
@@ -501,28 +497,15 @@ const CoordinatorEmployees = ({ user }) => {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
+                />
               </div>
 
               <div>
@@ -622,7 +605,7 @@ const CoordinatorEmployees = ({ user }) => {
             <div className="p-6 space-y-4">
               <div className="text-center">
                 <h3 className="font-semibold text-lg text-gray-900">
-                  {selectedEmployee.name || `${selectedEmployee.first_name || ''} ${selectedEmployee.last_name || ''}`.trim()}
+                  {selectedEmployee.name || selectedEmployee.first_name || ''}
                 </h3>
                 <p className="text-sm text-gray-500">ID: {selectedEmployee.id}</p>
                 <span className={`inline-block mt-2 px-2 py-1 rounded-full text-xs font-medium capitalize ${getRoleColor(selectedEmployee.role)}`}>

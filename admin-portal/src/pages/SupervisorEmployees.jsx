@@ -11,7 +11,7 @@ const SupervisorEmployees = ({ user }) => {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', phone: '', role: 'sup_executive', assignedZones: [] });
+  const [formData, setFormData] = useState({ firstName: '', email: '', phone: '', role: 'sup_executive', assignedZones: [] });
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -96,7 +96,7 @@ const SupervisorEmployees = ({ user }) => {
   const openEditModal = (employee) => {
     setEditingEmployee(employee);
     setFormData({
-      firstName: employee.first_name || '', lastName: employee.last_name || '',
+      firstName: employee.first_name || '',
       email: employee.email || '', phone: employee.phone || '',
       role: employee.role || 'sup_executive',
       assignedZones: employee.zone_ids ? employee.zone_ids.split(',').map(id => parseInt(id)) : []
@@ -104,7 +104,7 @@ const SupervisorEmployees = ({ user }) => {
     setShowModal(true);
   };
 
-  const resetForm = () => { setEditingEmployee(null); setFormData({ firstName: '', lastName: '', email: '', phone: '', role: 'sup_executive', assignedZones: [] }); };
+  const resetForm = () => { setEditingEmployee(null); setFormData({ firstName: '', email: '', phone: '', role: 'sup_executive', assignedZones: [] }); };
 
   const toggleZone = (zoneId) => {
     setFormData(prev => ({
@@ -117,7 +117,6 @@ const SupervisorEmployees = ({ user }) => {
 
   const filteredEmployees = employees.filter(e =>
     e.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     e.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     e.employee_code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -166,7 +165,7 @@ const SupervisorEmployees = ({ user }) => {
                 {filteredEmployees.map((employee) => (
                   <tr key={employee.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-4 px-4">
-                      <p className="font-medium text-gray-900">{employee.first_name} {employee.last_name}</p>
+                      <p className="font-medium text-gray-900">{employee.first_name}</p>
                       <p className="text-sm text-gray-500">{employee.employee_code}</p>
                     </td>
                     <td className="py-4 px-4"><span className="inline-block px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium capitalize">{employee.role?.replace('sup_', '')}</span></td>
@@ -196,7 +195,6 @@ const SupervisorEmployees = ({ user }) => {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label><input type="text" required value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label><input type="text" value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label><input type="tel" required value={formData.phone} onChange={(e) => {
@@ -234,7 +232,7 @@ const SupervisorEmployees = ({ user }) => {
             <div className="p-6 space-y-4">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center"><Users className="w-8 h-8 text-amber-600" /></div>
-                <div><p className="text-xl font-semibold text-gray-900">{selectedEmployee.first_name} {selectedEmployee.last_name}</p><p className="text-sm text-gray-500">{selectedEmployee.employee_code}</p><span className="inline-block mt-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium capitalize">{selectedEmployee.role?.replace('sup_', '')}</span></div>
+                <div><p className="text-xl font-semibold text-gray-900">{selectedEmployee.first_name}</p><p className="text-sm text-gray-500">{selectedEmployee.employee_code}</p><span className="inline-block mt-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium capitalize">{selectedEmployee.role?.replace('sup_', '')}</span></div>
               </div>
               <div className="space-y-3 pt-4 border-t border-gray-100">
                 {selectedEmployee.email && <div className="flex items-center gap-3"><Mail className="w-5 h-5 text-gray-400" /><span className="text-gray-600">{selectedEmployee.email}</span></div>}
