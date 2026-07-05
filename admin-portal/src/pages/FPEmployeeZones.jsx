@@ -180,31 +180,24 @@ const FPEmployeeZones = ({ user }) => {
     return zones.filter(zone => !isZoneLockedForEmployee(zone.name, selectedEmployee.id, empRole));
   };
 
+  // "All Zones" should select ALL zones (including locked ones) - All Zones can coexist
   const handleSelectAllAvailable = () => {
-    const availableZones = getAvailableZonesForCurrentEmployee();
-    const availableZoneNames = availableZones.map(z => z.name);
+    const allZoneNames = zones.map(z => z.name);
+    const allSelected = allZoneNames.every(name => selectedZones.includes(name));
     
-    const allAvailableSelected = availableZoneNames.every(name => selectedZones.includes(name));
-    
-    if (allAvailableSelected) {
-      setSelectedZones(prev => prev.filter(z => !availableZoneNames.includes(z)));
+    if (allSelected) {
+      // Deselect all
+      setSelectedZones([]);
     } else {
-      setSelectedZones(prev => {
-        const newSelection = [...prev];
-        availableZoneNames.forEach(name => {
-          if (!newSelection.includes(name)) {
-            newSelection.push(name);
-          }
-        });
-        return newSelection;
-      });
+      // Select ALL zones (not just available)
+      setSelectedZones(allZoneNames);
     }
   };
 
   const isAllAvailableSelected = () => {
-    const availableZones = getAvailableZonesForCurrentEmployee();
-    if (availableZones.length === 0) return false;
-    return availableZones.every(zone => selectedZones.includes(zone.name));
+    if (zones.length === 0) return false;
+    // Check if ALL zones are selected (not just available)
+    return zones.every(zone => selectedZones.includes(zone.name));
   };
 
   const handleSaveZones = async () => {
@@ -510,7 +503,7 @@ const FPEmployeeZones = ({ user }) => {
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               {/* All Zones Option */}
-              {getAvailableZonesForCurrentEmployee().length > 0 && (
+              {zones.length > 0 && (
                 <button
                   type="button"
                   onClick={handleSelectAllAvailable}
@@ -533,7 +526,7 @@ const FPEmployeeZones = ({ user }) => {
                         All Zones
                       </p>
                       <p className="text-xs text-gray-500">
-                        Select all {getAvailableZonesForCurrentEmployee().length} available zones
+                        Select all {zones.length} zones
                       </p>
                     </div>
                   </div>
