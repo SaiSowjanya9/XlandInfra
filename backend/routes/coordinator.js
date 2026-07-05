@@ -1845,7 +1845,8 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
       property_name, property_type, zone, city, address, package_id, package_name, package_price,
       amc_package_description, package_services, billing_duration,
       addons, subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
-      description
+      description, number_of_blocks, block_names, units_per_block, block_unit_types, total_units,
+      tower_name, block_number, villa_plot_number, division
     } = req.body;
 
     const estimateId = `EST-${Date.now()}`;
@@ -1881,6 +1882,9 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
     try {
       await pool.query(`ALTER TABLE fp_estimates ADD COLUMN billing_duration VARCHAR(50) DEFAULT 'yearly'`);
     } catch (e) { /* Column exists */ }
+    try {
+      await pool.query(`ALTER TABLE fp_estimates ADD COLUMN block_unit_types JSON`);
+    } catch (e) { /* Column exists */ }
 
     const [result] = await pool.query(
       `INSERT INTO fp_estimates (
@@ -1888,8 +1892,9 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
         client_name, client_phone, client_email, property_name, property_code, property_type,
         zone, city, address, package_id, package_name, package_price, amc_package_description, package_services, billing_duration,
         subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
-        addons_data, description, created_by_id, created_by_name, created_by_role, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())`,
+        addons_data, description, created_by_id, created_by_name, created_by_role, status,
+        number_of_blocks, block_names, units_per_block, block_unit_types, total_units, tower_name, block_number, villa_plot_number, division, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         estimateId, franchisePartnerId, propertyIdValue, estimate_type || 'property_based',
         client_name || '', client_phone || '', client_email || '',
@@ -1898,7 +1903,10 @@ router.post('/estimates', requireCoordinatorScope, async (req, res) => {
         package_id || null, package_name || '', package_price || 0, amc_package_description || '', package_services ? JSON.stringify(package_services) : null, billing_duration || 'yearly',
         subtotal || 0, discount_percent || 0, discount_amount || 0,
         gst_percent || 0, gst_amount || 0, total_amount || 0,
-        JSON.stringify(addons || []), description || '', coordinatorId, creatorName, 'coordinator'
+        JSON.stringify(addons || []), description || '', coordinatorId, creatorName, 'coordinator',
+        number_of_blocks || null, block_names ? JSON.stringify(block_names) : null, 
+        units_per_block ? JSON.stringify(units_per_block) : null, block_unit_types ? JSON.stringify(block_unit_types) : null, total_units || null,
+        tower_name || null, block_number || null, villa_plot_number || null, division || null
       ]
     );
 

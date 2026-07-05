@@ -241,6 +241,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         number_of_blocks: directForm.numberOfBlocks,
         block_names: directForm.blockNames ? JSON.stringify(directForm.blockNames) : null,
         units_per_block: directForm.unitsPerBlock ? JSON.stringify(directForm.unitsPerBlock) : null,
+        block_unit_types: directForm.blockUnitTypes ? JSON.stringify(directForm.blockUnitTypes) : null,
         total_units: directForm.totalUnits,
         tower_name: directForm.towerName,
         block_number: directForm.blockNumber,
@@ -272,6 +273,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         number_of_blocks: selectedProperty?.number_of_blocks || selectedProperty?.blocks || 1,
         block_names: selectedProperty?.block_names || null,
         units_per_block: selectedProperty?.units_per_block || null,
+        block_unit_types: selectedProperty?.block_unit_types || selectedProperty?.blockUnitTypes || null,
         total_units: selectedProperty?.total_units || selectedProperty?.units || selectedProperty?.number_of_units || 1,
         tower_name: selectedProperty?.tower_name || '',
         block_number: selectedProperty?.block_number || '',
@@ -1407,7 +1409,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                   <div><p className="text-xs text-gray-500">Division</p><p className="font-medium text-sm">{viewEstimate.division || '-'}</p></div>
                   <div><p className="text-xs text-gray-500">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
                   <div className="col-span-2"><p className="text-xs text-gray-500">Address</p><p className="font-medium text-sm">{viewEstimate.address || viewEstimate.property_address || '-'}</p></div>
-                  {/* GC-specific: Number of Blocks, Block Names, Units per Block */}
+                  {/* GC-specific: Number of Blocks, Block Names, Units per Block with Bedroom Counts */}
                   {['GC', 'gated_community', 'Gated Community'].includes(viewEstimate.property_type) && (
                     <>
                       <div><p className="text-xs text-gray-500">Number of Blocks</p><p className="font-medium text-sm">{viewEstimate.number_of_blocks || '-'}</p></div>
@@ -1415,37 +1417,69 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                       {(() => {
                         const blockNames = viewEstimate.block_names ? (typeof viewEstimate.block_names === 'string' ? JSON.parse(viewEstimate.block_names) : viewEstimate.block_names) : {};
                         const unitsPerBlock = viewEstimate.units_per_block ? (typeof viewEstimate.units_per_block === 'string' ? JSON.parse(viewEstimate.units_per_block) : viewEstimate.units_per_block) : {};
-                        const hasBlockData = Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0;
+                        const blockUnitTypes = viewEstimate.block_unit_types ? (typeof viewEstimate.block_unit_types === 'string' ? JSON.parse(viewEstimate.block_unit_types) : viewEstimate.block_unit_types) : {};
+                        const hasBlockData = Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0 || Object.keys(blockUnitTypes).length > 0;
                         if (!hasBlockData) return null;
+                        const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
+                        const numBlocks = viewEstimate.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || Object.keys(blockUnitTypes).length || 1;
                         return (
                           <div className="col-span-2 mt-2">
                             <p className="text-xs text-gray-500 mb-2">Block Details</p>
-                            <div className="bg-blue-50 p-3 rounded-lg">
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {Object.keys(blockNames).length > 0 ? Object.entries(blockNames).map(([key, name]) => (
-                                  <div key={key} className="bg-white p-2 rounded border border-blue-100">
-                                    <p className="text-xs text-blue-600 font-medium">{name || `Block ${key}`}</p>
-                                    <p className="text-sm text-gray-700">{unitsPerBlock[key] || 0} units</p>
+                            <div className="bg-blue-50 p-3 rounded-lg space-y-3">
+                              {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
+                                const blockName = blockNames[blockNum] || `Block ${blockNum}`;
+                                const blockUnits = unitsPerBlock[blockNum] || 0;
+                                const unitTypes = blockUnitTypes[blockNum] || {};
+                                const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                                return (
+                                  <div key={blockNum} className="bg-white p-3 rounded border border-blue-100">
+                                    <div className="flex justify-between items-center mb-2">
+                                      <p className="text-sm text-blue-600 font-semibold">{blockName}</p>
+                                      <p className="text-sm text-gray-700 font-medium">{blockUnits} units</p>
+                                    </div>
+                                    {hasUnitTypes && (
+                                      <div className="flex flex-wrap gap-2 pt-2 border-t border-blue-50">
+                                        {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
+                                          <span key={type} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                            {unitTypeLabels[type] || type}: {count}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
-                                )) : Object.entries(unitsPerBlock).map(([key, units]) => (
-                                  <div key={key} className="bg-white p-2 rounded border border-blue-100">
-                                    <p className="text-xs text-blue-600 font-medium">Block {key}</p>
-                                    <p className="text-sm text-gray-700">{units || 0} units</p>
-                                  </div>
-                                ))}
-                              </div>
+                                );
+                              })}
                             </div>
                           </div>
                         );
                       })()}
                     </>
                   )}
-                  {/* Apartment-specific fields */}
+                  {/* Apartment-specific: Tower/Building Name, Block Number, Number of Units with Bedroom Counts */}
                   {['APT', 'apartment', 'Apartment'].includes(viewEstimate.property_type) && (
                     <>
                       {viewEstimate.tower_name && <div><p className="text-xs text-gray-500">Tower/Building Name</p><p className="font-medium text-sm">{viewEstimate.tower_name}</p></div>}
                       {viewEstimate.block_number && <div><p className="text-xs text-gray-500">Block Number</p><p className="font-medium text-sm">{viewEstimate.block_number}</p></div>}
                       <div><p className="text-xs text-gray-500">Number of Units</p><p className="font-medium text-sm">{viewEstimate.total_units || '-'}</p></div>
+                      {(() => {
+                        const blockUnitTypes = viewEstimate.block_unit_types ? (typeof viewEstimate.block_unit_types === 'string' ? JSON.parse(viewEstimate.block_unit_types) : viewEstimate.block_unit_types) : {};
+                        const unitTypes = blockUnitTypes['apt'] || {};
+                        const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                        if (!hasUnitTypes) return null;
+                        const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
+                        return (
+                          <div className="col-span-2 mt-2">
+                            <p className="text-xs text-gray-500 mb-2">Unit Type Breakdown</p>
+                            <div className="flex flex-wrap gap-2 p-3 bg-blue-50 rounded-lg">
+                              {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
+                                <span key={type} className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 text-sm rounded-full font-medium">
+                                  {unitTypeLabels[type] || type}: {count}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </>
                   )}
                   {/* Villa-specific fields */}
