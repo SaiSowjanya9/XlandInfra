@@ -740,7 +740,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       }
                     }} 
                     placeholder="GC-DMMN-20260520" 
-                    className="w-full pl-10 pr-4 py-2.5 border-2 border-amber-500 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-600 text-sm"
+                    className="w-full pl-10 pr-4 py-2.5 border-2 border-blue-500 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-600 text-sm"
                   />
                 </div>
               </div>
@@ -930,19 +930,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 if (typeof svcData === 'string') { try { svcData = JSON.parse(svcData); } catch(e) { svcData = {}; } }
                 const billingDuration = svcData?.billing_duration || pkg.billing_duration || 'monthly';
                 return (
-                  <div className="border border-amber-200 rounded-xl overflow-hidden bg-amber-50/30">
+                  <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30">
                     <div className="px-5 py-3 flex items-center gap-3">
-                      <Package className="w-5 h-5 text-amber-600" />
+                      <Package className="w-5 h-5 text-blue-600" />
                       <span className="font-semibold text-gray-900">{pkg.name}</span>
                       <span className="px-2 py-0.5 bg-slate-700 text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
                     </div>
                     <table className="w-full text-sm bg-white">
                       <thead>
-                        <tr className="border-y border-amber-100">
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[12%]">Service</th>
-                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[53%]">Description</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[20%]">Frequency</th>
-                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[15%]">Visits</th>
+                        <tr className="border-y border-blue-100">
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[12%]">Service</th>
+                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[53%]">Description</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[20%]">Frequency</th>
+                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[15%]">Visits</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -960,12 +960,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         }) : <tr><td colSpan={4} className="px-3 py-3 text-center text-gray-400">No services in package</td></tr>}
                       </tbody>
                     </table>
-                    <div className="px-5 py-3 bg-amber-50 border-t border-amber-100">
+                    <div className="px-5 py-3 bg-blue-50 border-t border-blue-100">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-amber-700">Total Package Price</span>
+                        <span className="text-sm font-semibold text-blue-700">Total Package Price</span>
                         <span className="text-lg font-bold text-gray-900">{formatCurrency(pkg.price)}</span>
                       </div>
-                      <div className="text-xs text-amber-600 mt-1">Service Period: <span className="capitalize whitespace-nowrap">{billingDuration?.replace('-', ' ')}</span></div>
+                      <div className="text-xs text-blue-600 mt-1">Service Period: <span className="capitalize whitespace-nowrap">{billingDuration?.replace('-', ' ')}</span></div>
                     </div>
                   </div>
                 );
@@ -1063,7 +1063,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">GST (%)</span>
                       <div className="flex items-center gap-2">
-                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="w-16 px-2 py-1 border border-amber-300 bg-amber-50 rounded text-sm text-center text-amber-700" placeholder="0" />
+                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="w-16 px-2 py-1 border border-blue-300 bg-blue-50 rounded text-sm text-center text-blue-700" placeholder="0" />
                         <span className="text-gray-500">+ {formatCurrency(pricing.gstAmt)}</span>
                       </div>
                     </div>
@@ -1095,7 +1095,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Actions */}
           <div className="flex justify-end gap-3">
             <button onClick={() => { setEstimateType(null); setSelectedProperty(null); setPropertyIdInput(''); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg text-sm font-medium hover:from-amber-600 hover:to-yellow-600">Save</button>
+            <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
           </div>
         </div>
       )}
@@ -1209,7 +1209,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
               {/* Villa */}
               {estimateForm.propertyType === 'VILLA' && (
-                <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="max-w-xs">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Villa Number <span className="text-red-500">*</span></label>
                     <input type="text" value={estimateForm.villaNumber} onChange={(e) => setEstimateForm({...estimateForm, villaNumber: e.target.value})} placeholder="Enter villa number" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
@@ -1272,19 +1272,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 if (typeof svcData === 'string') { try { svcData = JSON.parse(svcData); } catch(e) { svcData = {}; } }
                 const billingDuration = svcData?.billing_duration || pkg.billing_duration || 'monthly';
                 return (
-                  <div className="border border-amber-200 rounded-xl overflow-hidden bg-amber-50/30">
+                  <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30">
                     <div className="px-5 py-3 flex items-center gap-3">
-                      <Package className="w-5 h-5 text-amber-600" />
+                      <Package className="w-5 h-5 text-blue-600" />
                       <span className="font-semibold text-gray-900">{pkg.name}</span>
                       <span className="px-2 py-0.5 bg-slate-700 text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
                     </div>
                     <table className="w-full text-sm bg-white">
                       <thead>
-                        <tr className="border-y border-amber-100">
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[12%]">Service</th>
-                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[53%]">Description</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-amber-600 uppercase w-[20%]">Frequency</th>
-                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-amber-600 uppercase w-[15%]">Visits</th>
+                        <tr className="border-y border-blue-100">
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[12%]">Service</th>
+                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[53%]">Description</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[20%]">Frequency</th>
+                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[15%]">Visits</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -1302,12 +1302,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         }) : <tr><td colSpan={4} className="px-3 py-3 text-center text-gray-400">No services in package</td></tr>}
                       </tbody>
                     </table>
-                    <div className="px-5 py-3 bg-amber-50 border-t border-amber-100">
+                    <div className="px-5 py-3 bg-blue-50 border-t border-blue-100">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-amber-700">Total Package Price</span>
+                        <span className="text-sm font-semibold text-blue-700">Total Package Price</span>
                         <span className="text-lg font-bold text-gray-900">{formatCurrency(pkg.price)}</span>
                       </div>
-                      <div className="text-xs text-amber-600 mt-1">Service Period: <span className="capitalize whitespace-nowrap">{billingDuration?.replace('-', ' ')}</span></div>
+                      <div className="text-xs text-blue-600 mt-1">Service Period: <span className="capitalize whitespace-nowrap">{billingDuration?.replace('-', ' ')}</span></div>
                     </div>
                   </div>
                 );
@@ -1406,7 +1406,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">GST (%)</span>
                       <div className="flex items-center gap-2">
-                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="w-16 px-2 py-1 border border-amber-300 bg-amber-50 rounded text-sm text-center text-amber-700" placeholder="0" />
+                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="w-16 px-2 py-1 border border-blue-300 bg-blue-50 rounded text-sm text-center text-blue-700" placeholder="0" />
                         <span className="text-gray-500">+ {formatCurrency(pricing.gstAmt)}</span>
                       </div>
                     </div>
@@ -1444,7 +1444,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Actions */}
           <div className="flex justify-end gap-3">
             <button onClick={() => setEstimateType(null)} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg text-sm font-medium hover:from-amber-600 hover:to-yellow-600">Save</button>
+            <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
           </div>
         </div>
       )}
@@ -1768,7 +1768,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <input type="date" value={filterToDate} onChange={(e) => setFilterToDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
               </div>
             </div>
-            <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); }} className="mt-3 text-sm text-amber-600 hover:text-blue-800 font-medium">Clear all filters</button>
+            <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); }} className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium">Clear all filters</button>
           </div>
         )}
       </div>
@@ -1793,7 +1793,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <tr key={est.id} className="hover:bg-gray-50">
                     <td className="px-4 py-4 font-mono text-sm text-gray-900">{est.estimate_id}</td>
                     <td className="px-4 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-amber-50 text-amber-600' : 'bg-purple-50 text-purple-600'}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
                         <Link2 className="w-3 h-3" />
                         {est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}
                       </span>
@@ -1818,7 +1818,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         const status = (est.status || 'draft').toLowerCase().trim();
                         const colors = {
                           approved: 'bg-green-100 text-green-700 border border-green-200',
-                          sent: 'bg-amber-100 text-amber-700 border border-amber-200',
+                          sent: 'bg-blue-100 text-blue-700 border border-blue-200',
                           rejected: 'bg-red-100 text-red-700 border border-red-200',
                           pending: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
                           expired: 'bg-orange-100 text-orange-700 border border-orange-200',
@@ -1833,7 +1833,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => openViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="View"><Eye className="w-4 h-4" /></button>
+                        <button onClick={() => openViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye className="w-4 h-4" /></button>
                         <button onClick={() => handleExportPDF(est)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button>
                         <button onClick={() => handleSendEmail(est)} disabled={sendingEmailId === est.id} className={`p-1.5 rounded ${sendingEmailId === est.id ? 'text-indigo-400 cursor-wait' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`} title="Send Email"><Send className={`w-4 h-4 ${sendingEmailId === est.id ? 'animate-pulse' : ''}`} /></button>
                         <button onClick={() => handleArchiveEstimate(est.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
@@ -1876,11 +1876,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); setEditingAmcPackage(null); };
   const getBillingBadgeColor = (billing) => {
     switch (billing) {
-      case 'monthly': return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'monthly': return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'quarterly': return 'bg-purple-50 text-purple-700 border-purple-200';
       case 'half-yearly': return 'bg-orange-50 text-orange-700 border-orange-200';
       case 'yearly': return 'bg-green-50 text-green-700 border-green-200';
-      default: return 'bg-amber-50 text-amber-700 border-amber-200';
+      default: return 'bg-blue-50 text-blue-700 border-blue-200';
     }
   };
 
@@ -1973,7 +1973,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           ) : filteredAmcPackages.length === 0 ? (
             <div className="p-8 text-center">
               <p className="text-gray-500">No packages found for this property type</p>
-              <button onClick={() => setFilterPropertyType('all')} className="mt-2 text-sm text-amber-600 hover:underline">
+              <button onClick={() => setFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">
                 Show all packages
               </button>
             </div>
@@ -2036,7 +2036,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                   e.stopPropagation();
                                   openViewPackage({ ...pkg, servicesData: serviceRows, propertyType, billingDuration });
                                 }}
-                                className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer" 
+                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer" 
                                 title="View"
                               >
                                 <Eye className="w-4 h-4" />
@@ -2557,7 +2557,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                         {!isFPManager && (
                           <div className="flex items-center gap-1">
-                            <button onClick={() => openEditAddon(a)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                            <button onClick={() => openEditAddon(a)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button onClick={() => handleDeleteAddon(a.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
@@ -2634,7 +2634,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="col-span-1 flex justify-center gap-1">
                         {!isFPManager && (
                           <>
-                            <button onClick={() => openEditAddon(a)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                            <button onClick={() => openEditAddon(a)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button onClick={() => handleDeleteAddon(a.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
@@ -2762,7 +2762,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const renderArchived = () => (
     <div className="space-y-4">
       {archivedEstimates.length > 0 && !isFPManager && <div className="flex justify-end"><button onClick={() => setShowDeleteAllConfirm(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"><Trash2 className="w-4 h-4" />Delete All ({archivedEstimates.length})</button></div>}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <tr key={e.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-mono text-xs">{e.estimate_id}</td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3">{e.client_name}</td><td className="px-4 py-3 text-gray-500">{e.archived_at ? new Date(e.archived_at).toLocaleDateString() : '-'}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => openViewEstimate(e)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="View"><Eye className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <tr key={e.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-mono text-xs">{e.estimate_id}</td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3">{e.client_name}</td><td className="px-4 py-3 text-gray-500">{e.archived_at ? new Date(e.archived_at).toLocaleDateString() : '-'}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => openViewEstimate(e)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
       {deleteConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Permanently?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></div></div>}
       {showDeleteAllConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-red-600 mb-2">⚠️ Delete All Archived?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete <strong>all {archivedEstimates.length} archived estimates</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setShowDeleteAllConfirm(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={handleDeleteAllArchived} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete All</button></div></div></div>}
     </div>
@@ -2818,7 +2818,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <div><p className="text-xs text-gray-500">Status</p>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
-                    viewEstimate.status === 'sent' ? 'bg-amber-100 text-amber-700' : 
+                    viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
                     viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
                   }`}>{viewEstimate.status || 'draft'}</span>
                 </div>
@@ -2896,7 +2896,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               {/* Customer Details */}
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p>
-                <div className="bg-amber-50 p-4 rounded-lg grid grid-cols-2 gap-3">
+                <div className="bg-blue-50 p-4 rounded-lg grid grid-cols-2 gap-3">
                   <div><p className="text-xs text-gray-500">Contact Name</p><p className="font-medium text-sm">{viewEstimate.client_name || viewEstimate.customer_name || '-'}</p></div>
                   <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium text-sm">{viewEstimate.client_phone || '-'}</p></div>
                   <div className="col-span-2"><p className="text-xs text-gray-500">Email</p><p className="font-medium text-sm">{viewEstimate.client_email || '-'}</p></div>
