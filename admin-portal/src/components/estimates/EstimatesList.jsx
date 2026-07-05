@@ -388,7 +388,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                     <td className="px-3 sm:px-6 py-3 sm:py-4 hidden md:table-cell">
                       <div className="flex items-center gap-1 text-sm text-gray-600 whitespace-nowrap">
                         <Calendar className="w-4 h-4" />
-                        {new Date(estimate.createdAt).toLocaleDateString()}
+                        {new Date(estimate.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                       </div>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
@@ -459,7 +459,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[viewEstimate.status] || 'bg-gray-100 text-gray-700'}`}>{viewEstimate.status?.charAt(0).toUpperCase() + viewEstimate.status?.slice(1) || 'Draft'}</span>
                 </div>
                 <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{(viewEstimate.estimateType || viewEstimate.estimate_type)?.replace('_', ' ') || '-'}</p></div>
-                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{new Date(viewEstimate.createdAt || viewEstimate.created_at).toLocaleDateString()}</p></div>
+                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{new Date(viewEstimate.createdAt || viewEstimate.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</p></div>
               </div>
 
               {/* Property Details */}

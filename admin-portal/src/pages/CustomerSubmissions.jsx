@@ -1383,7 +1383,7 @@ const CustomerSubmissions = () => {
                           </div>
                           <div className="col-span-2">
                             <span className="text-gray-500">Created:</span>
-                            <span className="ml-1 text-gray-700">{new Date(estimate.createdAt).toLocaleDateString()}</span>
+                            <span className="ml-1 text-gray-700">{new Date(estimate.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
                           </div>
                         </div>
                         {estimate.services && estimate.services.length > 0 && (
@@ -1709,7 +1709,7 @@ const CustomerSubmissions = () => {
                       <p className="text-xs text-indigo-600 mb-1">Created</p>
                       <p className="font-medium text-indigo-900 text-sm">
                         {viewAMCDetails.amcPackage.createdAt 
-                          ? new Date(viewAMCDetails.amcPackage.createdAt).toLocaleDateString() 
+                          ? new Date(viewAMCDetails.amcPackage.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) 
                           : '-'}
                       </p>
                     </div>

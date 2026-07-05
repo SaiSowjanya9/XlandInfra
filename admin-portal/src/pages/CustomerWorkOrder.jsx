@@ -1031,7 +1031,7 @@ const CustomerWorkOrder = ({ user }) => {
                     </div>
                     <div className="text-right ml-4">
                       <p className="text-sm text-gray-500">
-                        {new Date(wo.created_at).toLocaleDateString()}
+                        {new Date(wo.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                       </p>
                       <button className="mt-2 p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
                         <Eye className="w-5 h-5" />

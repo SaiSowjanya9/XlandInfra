@@ -1372,7 +1372,7 @@ function formatTimeAgo(date) {
   if (diffMins < 60) return `${diffMins} min ago`;
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  return past.toLocaleDateString();
+  return past.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
 }
 
 // ============================================

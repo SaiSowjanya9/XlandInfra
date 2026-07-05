@@ -358,7 +358,7 @@ const CoordinatorWorkOrders = ({ user }) => {
         wo.category_name || '',
         wo.status,
         wo.priority || 'medium',
-        wo.created_at ? new Date(wo.created_at).toLocaleDateString() : ''
+        wo.created_at ? new Date(wo.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : ''
       ];
       
       const csvContent = [headers.join(','), values.map(v => `"${v}"`).join(',')].join('\n');

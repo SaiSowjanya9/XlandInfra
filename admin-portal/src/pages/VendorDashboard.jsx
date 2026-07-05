@@ -224,7 +224,7 @@ const VendorDashboard = ({ user }) => {
                       {order.status?.replace('_', ' ')}
                     </span>
                     <p className="text-xs text-slate-500 mt-1">
-                      {order.created_at ? new Date(order.created_at).toLocaleDateString() : '-'}
+                      {order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-'}
                     </p>
                   </div>
                 </div>
