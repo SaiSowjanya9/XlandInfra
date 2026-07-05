@@ -2741,7 +2741,15 @@ router.get('/employees/:id', requireFPScope, async (req, res) => {
 router.put('/employees/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
-    const { firstName, lastName = null, email, phone, countryCode, aadhaar, role } = req.body;
+    const { 
+      firstName = '', 
+      lastName = null, 
+      email = '', 
+      phone = '', 
+      countryCode = '+91', 
+      aadhaar = null, 
+      role = 'field_staff' 
+    } = req.body || {};
     
     // Verify employee belongs to this FP and get current details
     const [existing] = await pool.execute(
