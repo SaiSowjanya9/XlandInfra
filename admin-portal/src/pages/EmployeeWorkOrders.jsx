@@ -916,7 +916,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                   type="text"
                   placeholder="Search by Work Order ID, category, or name..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => setSearchTerm(e.target.value.trim())}
                   onKeyPress={handleSearchKeyPress}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
