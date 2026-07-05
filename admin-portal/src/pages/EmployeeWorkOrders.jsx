@@ -942,10 +942,10 @@ const EmployeeWorkOrders = ({ admin }) => {
               </select>
               <button
                 onClick={() => { setSearchTerm(''); setStatusFilter('all'); fetchWorkOrders(); }}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700"
+                className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700"
+                title="Refresh"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>Clear</span>
               </button>
             </div>
           </div>

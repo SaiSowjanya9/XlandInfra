@@ -161,6 +161,7 @@ const ManagerWorkOrders = ({ user }) => {
     setSearchInput('');
     setSearchTerm('');
     setStatusFilter('all');
+    fetchWorkOrders();
   };
 
   const handleSubmit = async (e) => {
@@ -541,10 +542,10 @@ const ManagerWorkOrders = ({ user }) => {
             </select>
             <button
               onClick={handleClear}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+              className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+              title="Refresh"
             >
               <RefreshCw className="w-4 h-4" />
-              <span>Clear</span>
             </button>
           </div>
         </div>

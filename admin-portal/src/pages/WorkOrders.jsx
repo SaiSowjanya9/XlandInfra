@@ -862,11 +862,11 @@ const WorkOrders = ({ admin }) => {
             <option value="cancelled">Cancelled</option>
           </select>
           <button 
-            onClick={() => { setSearchInput(''); setSearchTerm(''); setStatusFilter(''); }} 
-            className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50"
+            onClick={() => { setSearchInput(''); setSearchTerm(''); setStatusFilter(''); fetchWorkOrders(); }} 
+            className="p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50"
+            title="Refresh"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Clear</span>
           </button>
         </div>
       </div>
