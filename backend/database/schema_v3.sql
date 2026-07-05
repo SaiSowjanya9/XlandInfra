@@ -431,20 +431,7 @@ INSERT INTO priorities (name, code, color, sort_order) VALUES
 ('High', 'HIGH', '#fd7e14', 3),
 ('Urgent', 'URGENT', '#dc3545', 4);
 
--- Insert sample zones
-INSERT INTO zones (name, code, description) VALUES
-('North Zone', 'NORTH', 'Northern region'),
-('South Zone', 'SOUTH', 'Southern region'),
-('East Zone', 'EAST', 'Eastern region'),
-('West Zone', 'WEST', 'Western region');
-
--- Insert sample divisions
-INSERT INTO divisions (zone_id, name, code) VALUES
-(1, 'North Division 1', 'N1'),
-(1, 'North Division 2', 'N2'),
-(2, 'South Division 1', 'S1'),
-(3, 'East Division 1', 'E1'),
-(4, 'West Division 1', 'W1');
+-- Sample zones and divisions removed - create zones via the application UI
 
 -- ============================================
 -- CREATE INDEXES FOR PERFORMANCE
