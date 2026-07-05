@@ -82,6 +82,7 @@ const ManagerEmployeeZones = ({ user }) => {
       setZones(allZones);
 
       // Build a map of which zones are assigned to which employees (by role)
+      // NOTE: "All Zones" employees do NOT block specific zone assignments
       const zoneMap = {};
       allEmployees.forEach(emp => {
         let empZones = emp.assignedZones || emp.assigned_zones;
@@ -92,20 +93,24 @@ const ManagerEmployeeZones = ({ user }) => {
         }
         
         const empRole = emp.role || emp.employee_type || 'employee';
+        const isAllZones = empZones === 'all';
         
         const addZoneAssignment = (zoneName) => {
           if (!zoneName) return;
           if (!zoneMap[zoneName]) {
             zoneMap[zoneName] = {};
           }
-          zoneMap[zoneName][empRole] = { employeeId: emp.id, employeeName: emp.name, role: empRole };
+          // Only add specific zone assignments (not "All Zones") to block others
+          if (!isAllZones) {
+            zoneMap[zoneName][empRole] = { employeeId: emp.id, employeeName: emp.name, role: empRole };
+          }
         };
         
-        if (empZones === 'all') {
-          allZones.forEach(zone => addZoneAssignment(zone.name));
-        } else if (Array.isArray(empZones)) {
+        // Only track specific zone assignments, skip "All Zones"
+        if (Array.isArray(empZones)) {
           empZones.forEach(zoneName => addZoneAssignment(zoneName));
         }
+        // "All Zones" employees don't block zones
       });
       setAssignedZonesMap(zoneMap);
     } catch (error) {
