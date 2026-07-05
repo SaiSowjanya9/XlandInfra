@@ -114,6 +114,18 @@ const SupervisorProperties = ({ user }) => {
     }
   };
 
+  // Auto-save zone to fp_zones if it doesn't exist
+  const autoSaveZone = async (zoneName) => {
+    if (!zoneName?.trim()) return;
+    const exists = zones.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
+    if (!exists) {
+      try { 
+        await fetch('/api/supervisor/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
+        fetchZones();
+      } catch (e) {}
+    }
+  };
+
   const fetchVendors = async () => {
     try {
       const response = await fetch('/api/supervisor/vendors', {
@@ -235,6 +247,9 @@ const SupervisorProperties = ({ user }) => {
 
   const handleSaveEdit = async () => {
     try {
+      // Auto-save zone if it's new
+      if (editFormData.zone) await autoSaveZone(editFormData.zone);
+      
       const response = await fetch(`/api/supervisor/properties/${editFormData.id}`, {
         method: 'PUT',
         headers: {

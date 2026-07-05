@@ -128,15 +128,37 @@ const FPEmployeeZones = ({ user }) => {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const openAssignModal = (employee) => {
-    setSelectedEmployee(employee);
-    const empZones = employee.assignedZones || employee.assigned_zones;
-    if (empZones === 'all') {
-      setSelectedZones(zones.map(z => z.name));
-    } else if (Array.isArray(empZones)) {
-      setSelectedZones([...empZones]);
-    } else {
-      setSelectedZones([]);
+  const openAssignModal = async (employee) => {
+    // Refresh zones to get any newly created zones
+    try {
+      const zoneResponse = await fetch('/api/fp/zones', { headers: { 'Authorization': `Bearer ${token}` } });
+      const zoneResult = await zoneResponse.json();
+      if (zoneResult.success) {
+        const freshZones = Array.isArray(zoneResult.data) ? zoneResult.data : [];
+        setZones(freshZones);
+        
+        setSelectedEmployee(employee);
+        const empZones = employee.assignedZones || employee.assigned_zones;
+        if (empZones === 'all') {
+          // "All Zones" means ALL available zones
+          setSelectedZones(freshZones.map(z => z.name));
+        } else if (Array.isArray(empZones)) {
+          setSelectedZones([...empZones]);
+        } else {
+          setSelectedZones([]);
+        }
+      }
+    } catch (e) {
+      // Fallback to existing zones
+      setSelectedEmployee(employee);
+      const empZones = employee.assignedZones || employee.assigned_zones;
+      if (empZones === 'all') {
+        setSelectedZones(zones.map(z => z.name));
+      } else if (Array.isArray(empZones)) {
+        setSelectedZones([...empZones]);
+      } else {
+        setSelectedZones([]);
+      }
     }
   };
 

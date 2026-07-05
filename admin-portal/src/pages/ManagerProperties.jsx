@@ -155,11 +155,35 @@ const ManagerProperties = ({ user }) => {
     fetchData();
   }, [statusFilter]);
 
+  // Fetch zones separately for refreshing after creation
+  const fetchZones = async () => {
+    try {
+      const response = await fetch('/api/manager/zones', { headers: { 'Authorization': `Bearer ${token}` } });
+      const result = await response.json();
+      if (result.success) setZones(result.data);
+    } catch (e) {}
+  };
+
+  // Auto-save zone to fp_zones if it doesn't exist
+  const autoSaveZone = async (zoneName) => {
+    if (!zoneName?.trim()) return;
+    const exists = zones.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
+    if (!exists) {
+      try { 
+        await fetch('/api/manager/zones', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); 
+        fetchZones();
+      } catch (e) {}
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
 
     try {
+      // Auto-save zone if it's new
+      if (formData.zoneId) await autoSaveZone(formData.zoneId);
+      
       const url = editingProperty 
         ? `/api/manager/properties/${editingProperty.id}`
         : '/api/manager/properties';
