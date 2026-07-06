@@ -620,14 +620,10 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-5 gap-4">
+                  <div className="grid grid-cols-4 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Community Name</label>
                       <input type="text" value={selectedProperty.name || selectedProperty.community_name || selectedProperty.property_name || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Division</label>
-                      <input type="text" value={selectedProperty.division_name || selectedProperty.division || ''} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">Property Type</label>
