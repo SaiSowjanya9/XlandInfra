@@ -1001,15 +1001,20 @@ const Properties = () => {
                                   <span className="text-sm font-semibold text-blue-600">{blockNames[blockNum] || blockNames[String(blockNum)] || `Block ${blockNum}`}</span>
                                   <span className="text-sm font-medium text-gray-700">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0} units</span>
                                 </div>
-                                {hasUnitTypes && (
-                                  <div className="flex flex-wrap gap-2 pt-2 border-t border-blue-100">
-                                    {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                      <span key={type} className="px-2 py-1 bg-white text-blue-700 text-xs rounded-full border border-blue-200">
-                                        {unitTypeLabels[type] || type}: {count}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
+                                <div className="pt-2 border-t border-blue-100">
+                                  <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
+                                  {hasUnitTypes ? (
+                                    <div className="flex flex-wrap gap-2">
+                                      {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
+                                        <span key={type} className="px-2 py-1 bg-white text-blue-700 text-xs rounded-full border border-blue-200">
+                                          {unitTypeLabels[type] || type}: {count}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-gray-400 italic">Not specified</p>
+                                  )}
+                                </div>
                               </div>
                             );
                           })}
@@ -1039,18 +1044,21 @@ const Properties = () => {
                       const blockUnitTypes = viewProperty.blockUnitTypes || (typeof viewProperty.block_unit_types === 'string' ? JSON.parse(viewProperty.block_unit_types) : viewProperty.block_unit_types) || {};
                       const unitTypes = blockUnitTypes['apt'] || blockUnitTypes['1'] || blockUnitTypes[1] || {};
                       const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
-                      if (!hasUnitTypes) return null;
                       const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
                       return (
                         <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
                           <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
-                          <div className="flex flex-wrap gap-2">
-                            {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                              <span key={type} className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 text-sm rounded-full font-medium">
-                                {unitTypeLabels[type] || type}: {count}
-                              </span>
-                            ))}
-                          </div>
+                          {hasUnitTypes ? (
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
+                                <span key={type} className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 text-sm rounded-full font-medium">
+                                  {unitTypeLabels[type] || type}: {count}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-400 italic">Not specified</p>
+                          )}
                         </div>
                       );
                     } catch { return null; }

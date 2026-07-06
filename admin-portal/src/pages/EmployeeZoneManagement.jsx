@@ -287,19 +287,31 @@ const EmployeeZoneManagement = () => {
     }
   };
 
+  const isAllZones = (empZones) => {
+    return empZones === 'all' || (Array.isArray(empZones) && empZones.length === 1 && empZones[0] === 'all');
+  };
+
   const getEmployeeZoneCount = (employee) => {
-    if (employee.assignedZones === 'all') return zones.length;
-    if (Array.isArray(employee.assignedZones)) return employee.assignedZones.length;
+    const empZones = employee.assignedZones || employee.assigned_zones;
+    if (isAllZones(empZones)) return zones.length;
+    if (Array.isArray(empZones)) return empZones.length;
     return 0;
   };
 
   const getEmployeeZoneDisplay = (employee) => {
-    if (employee.assignedZones === 'all') return 'All Zones';
-    if (Array.isArray(employee.assignedZones) && employee.assignedZones.length > 0) {
-      if (employee.assignedZones.length <= 2) {
-        return employee.assignedZones.join(', ');
+    const empZones = employee.assignedZones || employee.assigned_zones;
+    if (isAllZones(empZones)) {
+      if (zones.length <= 2) {
+        return zones.map(z => z.name).join(', ');
       }
-      return `${employee.assignedZones.slice(0, 2).join(', ')} +${employee.assignedZones.length - 2} more`;
+      return `${zones.slice(0, 2).map(z => z.name).join(', ')} +${zones.length - 2} more`;
+    }
+    if (Array.isArray(empZones) && empZones.length > 0) {
+      const validZones = empZones.filter(z => z !== 'all');
+      if (validZones.length <= 2) {
+        return validZones.join(', ');
+      }
+      return `${validZones.slice(0, 2).join(', ')} +${validZones.length - 2} more`;
     }
     return 'No zones assigned';
   };
@@ -316,8 +328,9 @@ const EmployeeZoneManagement = () => {
     }
     
     // Zone assignment status filter
+    const empZones = e.assignedZones || e.assigned_zones;
     if (statusFilter === 'assigned') {
-      return (e.assignedZones === 'all' || (Array.isArray(e.assignedZones) && e.assignedZones.length > 0));
+      return (isAllZones(empZones) || (Array.isArray(empZones) && empZones.length > 0));
     }
     if (statusFilter === 'unassigned') {
       return !e.assignedZones || (Array.isArray(e.assignedZones) && e.assignedZones.length === 0);
@@ -330,9 +343,10 @@ const EmployeeZoneManagement = () => {
     !e.assignedZones || (Array.isArray(e.assignedZones) && e.assignedZones.length === 0)
   ).length;
 
-  const assignedCount = employees.filter(e => 
-    e.assignedZones === 'all' || (Array.isArray(e.assignedZones) && e.assignedZones.length > 0)
-  ).length;
+  const assignedCount = employees.filter(e => {
+    const empZones = e.assignedZones || e.assigned_zones;
+    return isAllZones(empZones) || (Array.isArray(empZones) && empZones.length > 0);
+  }).length;
 
 
   return (
@@ -774,10 +788,14 @@ const EmployeeZoneManagement = () => {
                 {(() => {
                   const empZones = viewZonesEmployee.assignedZones || viewZonesEmployee.assigned_zones || [];
                   let zoneList = [];
-                  if (empZones === 'all') {
+                  // Check for "all" zones - either string 'all' or array ['all']
+                  if (isAllZones(empZones)) {
                     zoneList = zones.map(z => z.name);
                   } else if (Array.isArray(empZones)) {
-                    zoneList = empZones.map(z => typeof z === 'object' ? (z.name || z.zone_name || JSON.stringify(z)) : z);
+                    // Filter out 'all' and map to names
+                    zoneList = empZones
+                      .filter(z => z !== 'all')
+                      .map(z => typeof z === 'object' ? (z.name || z.zone_name || JSON.stringify(z)) : z);
                   } else if (typeof empZones === 'string' && empZones.includes(',')) {
                     zoneList = empZones.split(',').map(s => s.trim());
                   }

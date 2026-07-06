@@ -3287,4 +3287,145 @@ router.delete('/subcategories/:id', authenticate, async (req, res) => {
   }
 });
 
+// ============================================
+// MIGRATION: Populate block_unit_types for GC and APT properties
+// ============================================
+router.post('/migrate/block-unit-types', authenticate, adminOnly, async (req, res) => {
+  try {
+    const results = {
+      onboarded_gc: 0,
+      onboarded_apt: 0,
+      properties_gc: 0,
+      properties_apt: 0,
+      estimates_gc: 0,
+      estimates_apt: 0
+    };
+
+    // 1. Update GC properties in onboarded_properties with proper block_unit_types
+    const [gcOnboarded] = await pool.execute(
+      `SELECT id, property_id, community_name, number_of_blocks, units_per_block, block_unit_types 
+       FROM onboarded_properties 
+       WHERE (entry_type = 'GC' OR property_type = 'gated_community') 
+       AND (block_unit_types IS NULL OR block_unit_types = '{}' OR block_unit_types = 'null' OR block_unit_types = '')`
+    );
+
+    for (const prop of gcOnboarded) {
+      try {
+        let unitsPerBlock = prop.units_per_block;
+        if (typeof unitsPerBlock === 'string') {
+          try { unitsPerBlock = JSON.parse(unitsPerBlock); } catch { unitsPerBlock = {}; }
+        }
+        const blockUnitTypes = {};
+        const numBlocks = prop.number_of_blocks || Object.keys(unitsPerBlock || {}).length || 1;
+        for (let i = 1; i <= numBlocks; i++) {
+          blockUnitTypes[i] = { studio: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourBed: 0 };
+        }
+        await pool.execute('UPDATE onboarded_properties SET block_unit_types = ? WHERE id = ?', [JSON.stringify(blockUnitTypes), prop.id]);
+        results.onboarded_gc++;
+      } catch (e) { console.log('GC onboarded error:', e.message); }
+    }
+
+    // 2. Update APT properties in onboarded_properties
+    const [aptOnboarded] = await pool.execute(
+      `SELECT id, property_id, community_name FROM onboarded_properties 
+       WHERE (entry_type = 'APT' OR property_type = 'apartment') 
+       AND (block_unit_types IS NULL OR block_unit_types = '{}' OR block_unit_types = 'null' OR block_unit_types = '')`
+    );
+
+    for (const prop of aptOnboarded) {
+      try {
+        const blockUnitTypes = { apt: { studio: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourBed: 0 } };
+        await pool.execute('UPDATE onboarded_properties SET block_unit_types = ? WHERE id = ?', [JSON.stringify(blockUnitTypes), prop.id]);
+        results.onboarded_apt++;
+      } catch (e) { console.log('APT onboarded error:', e.message); }
+    }
+
+    // 3. Update GC properties in properties table
+    const [gcProperties] = await pool.execute(
+      `SELECT id, property_id, name, number_of_blocks, units_per_block FROM properties 
+       WHERE (property_type = 'gated_community' OR property_type = 'GC') 
+       AND (block_unit_types IS NULL OR block_unit_types = '{}' OR block_unit_types = 'null' OR block_unit_types = '')`
+    );
+
+    for (const prop of gcProperties) {
+      try {
+        let unitsPerBlock = prop.units_per_block;
+        if (typeof unitsPerBlock === 'string') {
+          try { unitsPerBlock = JSON.parse(unitsPerBlock); } catch { unitsPerBlock = {}; }
+        }
+        const blockUnitTypes = {};
+        const numBlocks = prop.number_of_blocks || Object.keys(unitsPerBlock || {}).length || 1;
+        for (let i = 1; i <= numBlocks; i++) {
+          blockUnitTypes[i] = { studio: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourBed: 0 };
+        }
+        await pool.execute('UPDATE properties SET block_unit_types = ? WHERE id = ?', [JSON.stringify(blockUnitTypes), prop.id]);
+        results.properties_gc++;
+      } catch (e) { console.log('GC properties error:', e.message); }
+    }
+
+    // 4. Update APT properties in properties table
+    const [aptProperties] = await pool.execute(
+      `SELECT id, property_id, name FROM properties 
+       WHERE (property_type = 'apartment' OR property_type = 'APT') 
+       AND (block_unit_types IS NULL OR block_unit_types = '{}' OR block_unit_types = 'null' OR block_unit_types = '')`
+    );
+
+    for (const prop of aptProperties) {
+      try {
+        const blockUnitTypes = { apt: { studio: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourBed: 0 } };
+        await pool.execute('UPDATE properties SET block_unit_types = ? WHERE id = ?', [JSON.stringify(blockUnitTypes), prop.id]);
+        results.properties_apt++;
+      } catch (e) { console.log('APT properties error:', e.message); }
+    }
+
+    // 5. Update GC estimates in fp_estimates table
+    const [gcEstimates] = await pool.execute(
+      `SELECT id, estimate_id, number_of_blocks, units_per_block FROM fp_estimates 
+       WHERE (property_type = 'gated_community' OR property_type = 'GC')
+       AND (block_unit_types IS NULL OR block_unit_types = '{}' OR block_unit_types = 'null' OR block_unit_types = '')`
+    );
+
+    for (const est of gcEstimates) {
+      try {
+        let unitsPerBlock = est.units_per_block;
+        if (typeof unitsPerBlock === 'string') {
+          try { unitsPerBlock = JSON.parse(unitsPerBlock); } catch { unitsPerBlock = {}; }
+        }
+        const blockUnitTypes = {};
+        const numBlocks = est.number_of_blocks || Object.keys(unitsPerBlock || {}).length || 1;
+        for (let i = 1; i <= numBlocks; i++) {
+          blockUnitTypes[i] = { studio: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourBed: 0 };
+        }
+        await pool.execute('UPDATE fp_estimates SET block_unit_types = ? WHERE id = ?', [JSON.stringify(blockUnitTypes), est.id]);
+        results.estimates_gc++;
+      } catch (e) { console.log('GC estimates error:', e.message); }
+    }
+
+    // 6. Update APT estimates in fp_estimates table
+    const [aptEstimates] = await pool.execute(
+      `SELECT id, estimate_id FROM fp_estimates 
+       WHERE (property_type = 'apartment' OR property_type = 'APT')
+       AND (block_unit_types IS NULL OR block_unit_types = '{}' OR block_unit_types = 'null' OR block_unit_types = '')`
+    );
+
+    for (const est of aptEstimates) {
+      try {
+        const blockUnitTypes = { apt: { studio: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourBed: 0 } };
+        await pool.execute('UPDATE fp_estimates SET block_unit_types = ? WHERE id = ?', [JSON.stringify(blockUnitTypes), est.id]);
+        results.estimates_apt++;
+      } catch (e) { console.log('APT estimates error:', e.message); }
+    }
+
+    const totalUpdated = Object.values(results).reduce((sum, val) => sum + val, 0);
+    res.json({ 
+      success: true, 
+      message: `Migration completed. Updated ${totalUpdated} records.`,
+      data: results
+    });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;

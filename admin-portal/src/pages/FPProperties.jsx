@@ -1325,15 +1325,20 @@ const FPProperties = ({ user }) => {
                                       <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0}</p>
                                     </div>
                                   </div>
-                                  {hasUnitTypes && (
-                                    <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200">
-                                      {unitTypes.studio > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio}</span>}
-                                      {unitTypes.oneBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed}</span>}
-                                      {unitTypes.twoBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">2 BHK: {unitTypes.twoBed}</span>}
-                                      {unitTypes.threeBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed}</span>}
-                                      {unitTypes.fourBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed}</span>}
-                                    </div>
-                                  )}
+                                  <div className="pt-2 border-t border-gray-200">
+                                    <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
+                                    {hasUnitTypes ? (
+                                      <div className="flex flex-wrap gap-2">
+                                        {unitTypes.studio > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio}</span>}
+                                        {unitTypes.oneBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed}</span>}
+                                        {unitTypes.twoBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">2 BHK: {unitTypes.twoBed}</span>}
+                                        {unitTypes.threeBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed}</span>}
+                                        {unitTypes.fourBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed}</span>}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-400 italic">Not specified</p>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}
@@ -1368,10 +1373,10 @@ const FPProperties = ({ user }) => {
                       const blockUnitTypes = typeof selectedProperty.block_unit_types === 'string' ? JSON.parse(selectedProperty.block_unit_types) : selectedProperty.block_unit_types || {};
                       const unitTypes = blockUnitTypes['apt'] || blockUnitTypes['1'] || blockUnitTypes[1] || {};
                       const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
-                      if (hasUnitTypes) {
-                        return (
-                          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
+                      return (
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
+                          {hasUnitTypes ? (
                             <div className="flex flex-wrap gap-2">
                               {unitTypes.studio > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio}</span>}
                               {unitTypes.oneBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed}</span>}
@@ -1379,10 +1384,11 @@ const FPProperties = ({ user }) => {
                               {unitTypes.threeBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed}</span>}
                               {unitTypes.fourBed > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed}</span>}
                             </div>
-                          </div>
-                        );
-                      }
-                      return null;
+                          ) : (
+                            <p className="text-sm text-gray-400 italic">Not specified</p>
+                          )}
+                        </div>
+                      );
                     } catch { return null; }
                   })()}
                 </div>
