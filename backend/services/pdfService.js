@@ -25,10 +25,10 @@ const generateEstimatePDF = async (estimate) => {
         subtotal, discount, discountAmount, tax, gstPercent, total
       });
 
-      // Ensure numeric values are valid (handle NaN, undefined, null)
+      // Ensure numeric values are valid (handle NaN, undefined, null) - round to whole numbers
       const safeNum = (val) => {
         const num = parseFloat(val);
-        return isNaN(num) ? 0 : num;
+        return isNaN(num) ? 0 : Math.round(num);
       };
       const safeSubtotal = safeNum(subtotal);
       const safeDiscount = safeNum(discount);
@@ -43,28 +43,29 @@ const generateEstimatePDF = async (estimate) => {
       const navy = '#1e3a5f';
       const lightGray = '#f8f9fa';
 
-      // Header - Black background with gold accent
-      doc.rect(0, 0, 612, 50).fill(black);
+      // Header - Black background with horizontal logo layout (taller header)
+      doc.rect(0, 0, 612, 70).fill(black);
       
-      // Company Logo - use actual logo image
+      // Company Logo - positioned on left, larger size
       try {
         const logoBase64 = XLAND_LOGO.replace(/^data:image\/\w+;base64,/, '');
         const logoBuffer = Buffer.from(logoBase64, 'base64');
-        doc.image(logoBuffer, 50, 8, { width: 35, height: 35 });
+        doc.image(logoBuffer, 40, 10, { width: 50, height: 50 });
       } catch (logoErr) {
         // Fallback to gold square with XI if logo fails
-        doc.rect(50, 12, 26, 26).fill(gold);
-        doc.fontSize(14).fillColor(black).text('XI', 56, 20);
+        doc.rect(40, 15, 40, 40).fill(gold);
+        doc.fontSize(18).fillColor(black).text('XI', 50, 28);
       }
       
-      // Company name text
-      doc.fontSize(16).fillColor('#ffffff').text('XLAND INFRA', 90, 18);
+      // Company name - horizontal layout to the right of logo
+      doc.fontSize(24).fillColor(gold).text('XLAND INFRA', 100, 18);
+      doc.fontSize(12).fillColor(gold).text('PVT LTD', 100, 45);
       
-      // ESTIMATE badge
-      doc.rect(470, 15, 80, 22).fill(gold);
-      doc.fontSize(10).fillColor(black).text('ESTIMATE', 485, 22);
+      // ESTIMATE badge on the right
+      doc.rect(470, 22, 90, 26).fill(gold);
+      doc.fontSize(11).fillColor(black).text('ESTIMATE', 485, 29);
 
-      let y = 90;
+      let y = 100;
 
       // Estimate Info
       doc.fontSize(9).fillColor('#666666');
@@ -75,7 +76,7 @@ const generateEstimatePDF = async (estimate) => {
       // Package Price Bar (NO package name - per requirement)
       if (packagePrice) {
         doc.rect(50, y, 500, 25).fill(lightGray).stroke('#e0e0e0');
-        doc.fontSize(10).fillColor(navy).text(`Package Price: Rs. ${Number(packagePrice).toLocaleString()}`, 60, y + 8);
+        doc.fontSize(10).fillColor(navy).text(`Package Price: Rs. ${Math.round(Number(packagePrice)).toLocaleString()}`, 60, y + 8);
         doc.fontSize(9).fillColor('#888888').text('Yearly Billing', 450, y + 8);
         y += 35;
       }
