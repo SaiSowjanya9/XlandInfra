@@ -854,7 +854,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
         ${s.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${s.frequencyType} - ${s.frequencyCount || 1} visits</span>` : ''}
         ${s.description ? `<br><span style="font-size: 12px; color: #6b7280;">${s.description}</span>` : ''}
       </td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Number(s.price || s.rate || 0).toLocaleString()}</td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Math.round(Number(s.price || s.rate || 0)).toLocaleString()}</td>
     </tr>
   `).join('');
 
@@ -866,7 +866,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
         ${a.frequency_type || a.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${a.frequency_type || a.frequencyType} - ${a.frequency_count || a.frequencyCount || 1} visits</span>` : ''}
         ${a.description ? `<br><span style="font-size: 12px; color: #6b7280;">${a.description}</span>` : ''}
       </td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Number(a.price || a.totalPrice || a.services?.[0]?.price || 0).toLocaleString()}</td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; vertical-align: top;">₹${Math.round(Number(a.price || a.totalPrice || a.services?.[0]?.price || 0)).toLocaleString()}</td>
     </tr>
   `).join('');
 
@@ -1014,15 +1014,15 @@ const sendEstimateEmail = async (estimate, actionToken) => {
               <table style="width: 100%;">
                 <tr>
                   <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal:</td>
-                  <td style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">₹ ${Number(subtotal || 0).toLocaleString()}</td>
+                  <td style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">₹ ${Math.round(Number(subtotal || 0)).toLocaleString()}</td>
                 </tr>
                 ${discount > 0 ? `<tr>
-                  <td style="padding: 8px 0; color: #059669; font-size: 14px;">Discount (${discount}%):</td>
-                  <td style="padding: 8px 0; text-align: right; color: #059669; font-weight: 500;">- ₹ ${Number(estimate.discountAmount || 0).toLocaleString()}</td>
+                  <td style="padding: 8px 0; color: #059669; font-size: 14px;">Discount (${Math.round(discount)}%):</td>
+                  <td style="padding: 8px 0; text-align: right; color: #059669; font-weight: 500;">- ₹ ${Math.round(Number(estimate.discountAmount || 0)).toLocaleString()}</td>
                 </tr>` : ''}
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">GST (${estimate.gstPercent || 0}%):</td>
-                  <td style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">₹ ${Number(tax || 0).toLocaleString()}</td>
+                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">GST (${Math.round(estimate.gstPercent || 0)}%):</td>
+                  <td style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">₹ ${Math.round(Number(tax || 0)).toLocaleString()}</td>
                 </tr>
               </table>
             </div>
@@ -1030,7 +1030,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             <!-- Total Amount -->
             <div style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); border-radius: 8px; padding: 20px; margin-bottom: 25px; text-align: center;">
               <p style="color: #e0e7ff; margin: 0 0 5px 0; font-size: 14px;">Total Estimate Amount</p>
-              <p style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">₹ ${Number(total || 0).toLocaleString()}</p>
+              <p style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">₹ ${Math.round(Number(total || 0)).toLocaleString()}</p>
             </div>
             
             <!-- PDF Notice -->
@@ -1130,7 +1130,7 @@ const sendEstimateActionNotification = async (estimate, action, customerName) =>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #6b7280;">Total Amount:</td>
-                <td style="padding: 8px 0; color: #1e40af; font-weight: 700; font-size: 18px; text-align: right;">₹${Number(total || 0).toLocaleString()}</td>
+                <td style="padding: 8px 0; color: #1e40af; font-weight: 700; font-size: 18px; text-align: right;">₹${Math.round(Number(total || 0)).toLocaleString()}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #6b7280;">Action Date:</td>
