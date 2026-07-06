@@ -1168,7 +1168,7 @@ const Onboarding = ({ admin }) => {
                           className={inputClass(blockError)}
                           placeholder="No. of units"
                         />
-                        <FieldError show={blockError} message="Required" />
+                        <FieldError show={blockError} message="Please enter number of units (cannot be 0)" />
                       </div>
                     </div>
                   );
@@ -1229,7 +1229,7 @@ const Onboarding = ({ admin }) => {
                   className={inputClass(hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0))}
                   placeholder="Total number of units"
                 />
-                <FieldError show={hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0)} message="Number of units is required" />
+                <FieldError show={hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0)} message="Please enter number of units (cannot be 0)" />
               </div>
             </div>
           </div>
