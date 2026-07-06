@@ -243,6 +243,7 @@ const FPProperties = ({ user }) => {
   const extractServicesFromEstimate = (estimate) => {
     const services = [];
     
+    // Try services_data first
     if (estimate.services_data) {
       try {
         const servicesData = typeof estimate.services_data === 'string' 
@@ -260,6 +261,7 @@ const FPProperties = ({ user }) => {
       } catch (e) { console.error('Error parsing services_data:', e); }
     }
     
+    // Try package_services (from estimate table)
     if (services.length === 0 && estimate.package_services) {
       try {
         const pkgServices = typeof estimate.package_services === 'string'
@@ -269,14 +271,33 @@ const FPProperties = ({ user }) => {
           pkgServices.forEach(s => {
             services.push({
               serviceType: s.service || s.name || s.serviceType,
-              frequencyType: s.frequencyType || 'Monthly',
-              frequencyCount: s.frequencyCount || s.visits || 1
+              frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
+              frequencyCount: s.frequencyCount || s.frequency_count || s.visits || 1
             });
           });
         }
       } catch (e) { console.error('Error parsing package_services:', e); }
     }
 
+    // Try packageServices (from JOIN with fp_amc_packages)
+    if (services.length === 0 && estimate.packageServices) {
+      try {
+        const pkgServices = typeof estimate.packageServices === 'string'
+          ? JSON.parse(estimate.packageServices)
+          : estimate.packageServices;
+        if (Array.isArray(pkgServices)) {
+          pkgServices.forEach(s => {
+            services.push({
+              serviceType: s.service || s.name || s.serviceType,
+              frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
+              frequencyCount: s.frequencyCount || s.frequency_count || s.visits || 1
+            });
+          });
+        }
+      } catch (e) { console.error('Error parsing packageServices:', e); }
+    }
+
+    // Fallback to package_name if no services found
     if (services.length === 0 && estimate.package_name) {
       services.push({
         serviceType: estimate.package_name,
@@ -350,6 +371,10 @@ const FPProperties = ({ user }) => {
 
       if (successCount > 0) {
         setMessage({ type: 'success', text: `${successCount} vendor assignment(s) saved!` });
+        // Refresh the property vendor assignments if modal is still open for viewing
+        if (selectedProperty) {
+          fetchPropertyVendorAssignments(selectedProperty.id);
+        }
         setShowAssignModal(false);
         setSelectedProperty(null);
         setServiceAssignments([]);

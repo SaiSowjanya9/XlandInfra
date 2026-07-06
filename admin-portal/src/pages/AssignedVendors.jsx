@@ -377,7 +377,7 @@ const AssignedVendors = ({ user }) => {
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Assigned Vendors</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {serviceAssignments.length + assignments.length} assignments
+            {isAdmin ? serviceAssignments.length : (serviceAssignments.length + assignments.length)} assignments
             {isAdmin && selectedFp ? (selectedFp.id === 'all' ? ' (All FPs)' : ` for ${selectedFp.companyName}`) : ''}
           </p>
         </div>

@@ -859,7 +859,7 @@ router.delete('/properties/:id/permanent', requireFPScope, async (req, res) => {
 router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
-    const { vendorId } = req.body;
+    const { vendorId, serviceType } = req.body;
 
     if (!vendorId) {
       return res.status(400).json({ success: false, message: 'Vendor ID is required' });
@@ -892,7 +892,7 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
     
-    console.log('[Assign Vendor] Property found in:', propertySource, 'ID:', id);
+    console.log('[Assign Vendor] Property found in:', propertySource, 'ID:', id, 'ServiceType:', serviceType);
 
     // Verify vendor belongs to this FP (check onboarded_vendors table)
     const [vendor] = await pool.execute(
@@ -907,28 +907,34 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
     
     // Use numeric id for assignment
     const numericVendorId = vendor[0].id;
+    const assignedServiceType = serviceType || vendor[0].service_type || 'General';
 
-    // Check if same vendor assignment already exists and is active
+    // Check if same vendor + service type assignment already exists and is active
     const [existingSame] = await pool.execute(
-      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND is_active = 1`,
-      [id, numericVendorId]
+      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND service_type = ? AND is_active = 1`,
+      [id, numericVendorId, assignedServiceType]
     );
 
     if (existingSame.length > 0) {
-      return res.status(400).json({ success: false, message: 'This vendor is already assigned to this property' });
+      return res.status(400).json({ success: false, message: 'This vendor is already assigned to this service' });
     }
 
-    // Deactivate any existing vendor assignments for this property (allow only one vendor per property)
+    // Deactivate any existing vendor assignments for this property + service type only (allow multiple vendors per property for different services)
     await pool.execute(
-      `UPDATE property_vendor_assignments SET is_active = 0 WHERE property_id = ? AND is_active = 1`,
-      [id]
+      `UPDATE property_vendor_assignments SET is_active = 0 WHERE property_id = ? AND service_type = ? AND is_active = 1`,
+      [id, assignedServiceType]
     );
 
-    // Create new assignment
+    // Ensure service_type column exists
+    try {
+      await pool.execute(`ALTER TABLE property_vendor_assignments ADD COLUMN service_type VARCHAR(100)`);
+    } catch (e) { /* Column exists */ }
+
+    // Create new assignment with service type
     await pool.execute(
-      `INSERT INTO property_vendor_assignments (property_id, vendor_id, assigned_by, assigned_at, is_active)
-       VALUES (?, ?, ?, NOW(), TRUE)`,
-      [id, numericVendorId, req.user.id]
+      `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
+       VALUES (?, ?, ?, ?, NOW(), TRUE)`,
+      [id, numericVendorId, assignedServiceType, req.user.id]
     );
 
     // Send email notification to vendor
@@ -1982,16 +1988,22 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
   try {
     console.log('[Vendor Assignments] FP ID:', req.fpId, 'User:', req.user?.email);
     
+    // Ensure service_type column exists in property_vendor_assignments
+    try {
+      await pool.execute(`ALTER TABLE property_vendor_assignments ADD COLUMN service_type VARCHAR(100)`);
+    } catch (e) { /* Column exists */ }
+
     // Get property-vendor assignments for this FP's properties with full vendor details
     // Join with both properties and onboarded_properties to handle both cases
     const [propertyAssignments] = await pool.execute(
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
+        COALESCE(pva.service_type, v.service_type) as service_type,
         COALESCE(p.name, op.community_name) as property_name, 
         COALESCE(p.property_type, op.property_type) as property_type, 
         COALESCE(p.address, op.address) as address, 
         COALESCE(p.city, op.city) as city, 
         COALESCE(p.zone_id, op.zone) as property_zone,
-        v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
+        v.owner_name as vendor_name, v.vendor_id as vendor_code, 
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone as zone_name, v.area_name as area, v.rate_per_visit, v.coverage_per_day
        FROM property_vendor_assignments pva
@@ -3579,7 +3591,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     }
 
     let query = `SELECT fe.*, 
-                        COALESCE(fpamc.services) as packageServices,
+                        COALESCE(fe.package_services, fpamc.services) as packageServices,
                         COALESCE(fe.amc_package_description, fpamc.description) as amc_package_description
                  FROM fp_estimates fe 
                  LEFT JOIN fp_amc_packages fpamc ON fe.package_id = fpamc.id
