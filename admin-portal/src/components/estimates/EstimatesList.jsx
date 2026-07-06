@@ -59,7 +59,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
       est.propertyName?.toLowerCase().includes(search);
     const matchType = filters.estimateType === 'all' || est.estimateType === filters.estimateType;
     const matchStatus = filters.status === 'all' || est.status === filters.status;
-    const matchProperty = filters.propertyType === 'all' || normalizePropertyType(est.propertyType) === filters.propertyType;
+    const matchProperty = filters.propertyType === 'all' || (est.propertyType && normalizePropertyType(est.propertyType) === filters.propertyType);
     
     // Date filtering
     const estDate = new Date(est.createdAt);

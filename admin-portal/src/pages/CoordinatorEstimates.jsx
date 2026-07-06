@@ -864,7 +864,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
     const matchSearch = !searchTerm || (e.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.estimate_id || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.client_name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = filterStatus === 'all' || e.status === filterStatus;
     const matchType = filterType === 'all' || e.estimate_type === filterType || (filterType === 'property_based' && (e.estimate_type === 'property_based' || e.estimate_type === 'property-based'));
-    const matchCategory = filterCategory === 'all' || normalizePropertyType(e.property_type) === filterCategory;
+    const matchCategory = filterCategory === 'all' || (e.property_type && normalizePropertyType(e.property_type) === filterCategory);
     let matchDate = true;
     if (filterFromDate || filterToDate) {
       const estDate = e.created_at ? new Date(e.created_at) : null;
