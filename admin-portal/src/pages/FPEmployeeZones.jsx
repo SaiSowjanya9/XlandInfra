@@ -483,28 +483,27 @@ const FPEmployeeZones = ({ user }) => {
 
                 {/* Zone Assignment Status - Clickable to view all zones */}
                 <div 
-                  onClick={() => hasZones && zoneCount > 2 && setViewZonesEmployee(employee)}
+                  onClick={() => hasZones && (isAllZones(empZones) || zoneCount > 2) && setViewZonesEmployee(employee)}
                   className={`p-3 rounded-lg mb-4 ${
                     hasZones ? 'bg-emerald-50 border border-emerald-100' : 'bg-gray-50 border border-gray-200'
-                  } ${hasZones && zoneCount > 2 ? 'cursor-pointer hover:bg-emerald-100 transition-colors' : ''}`}
+                  } ${hasZones && (isAllZones(empZones) || zoneCount > 2) ? 'cursor-pointer hover:bg-emerald-100 transition-colors' : ''}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <MapPin className={`w-4 h-4 ${hasZones ? 'text-emerald-600' : 'text-gray-500'}`} />
                       <span className={`text-sm font-medium ${hasZones ? 'text-emerald-700' : 'text-gray-600'}`}>
-                        {hasZones ? `${zoneCount} Zone${zoneCount !== 1 ? 's' : ''}` : 'No Zones'}
+                        {!hasZones ? 'No Zones' : isAllZones(empZones) ? 'All Zones' : `${zoneCount} Zone${zoneCount !== 1 ? 's' : ''}`}
                       </span>
                     </div>
-                    {hasZones && isAllZones(empZones) && (
-                      <span className="text-xs text-emerald-600">All Zones</span>
-                    )}
-                    {hasZones && zoneCount > 2 && (
+                    {hasZones && (isAllZones(empZones) || zoneCount > 2) && (
                       <span className="text-xs text-emerald-500 underline">View all</span>
                     )}
                   </div>
-                  <p className={`text-xs mt-1 ${hasZones ? 'text-emerald-600' : 'text-gray-500'}`}>
-                    {getEmployeeZoneDisplay(employee)}
-                  </p>
+                  {hasZones && !isAllZones(empZones) && (
+                    <p className={`text-xs mt-1 text-emerald-600`}>
+                      {getEmployeeZoneDisplay(employee)}
+                    </p>
+                  )}
                 </div>
 
                 {/* Action Button */}

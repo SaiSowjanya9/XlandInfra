@@ -566,6 +566,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     return normalizePropertyType(svc?.property_type || pkg.property_type || '');
   };
 
+  // Back navigation handler for estimate subsections
+  const handleBackFromEstimate = () => {
+    if (estimateType === 'property-based' && selectedProperty) {
+      // If property is selected, go back to property ID entry
+      setSelectedProperty(null);
+      setPropertyIdInput('');
+      setEstimateForm({ customerName: '', phone: '', countryCode: '+91', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: '', gst: '', description: '', numberOfBlocks: '', blockNumber: '', blockName: '', numberOfUnits: '', villaNumber: '', flatNumber: '', plotNumber: '' });
+    } else {
+      // Otherwise go back to estimate type selection
+      setEstimateType(null);
+      setSelectedProperty(null);
+      setPropertyIdInput('');
+      setEstimateForm({ customerName: '', phone: '', countryCode: '+91', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: '', gst: '', description: '', numberOfBlocks: '', blockNumber: '', blockName: '', numberOfUnits: '', villaNumber: '', flatNumber: '', plotNumber: '' });
+    }
+  };
+
   const calculatePricing = () => {
     const pkg = amcPackages.find(p => p.id == estimateForm.selectedPackage);
     const pkgPrice = parseFloat(pkg?.price) || 0;
@@ -1136,7 +1152,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
           {/* Actions */}
           <div className="flex justify-end gap-3">
-            <button onClick={() => { setEstimateType(null); setSelectedProperty(null); setPropertyIdInput(''); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button onClick={handleBackFromEstimate} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Back</button>
             <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
           </div>
         </div>
@@ -1485,7 +1501,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
           {/* Actions */}
           <div className="flex justify-end gap-3">
-            <button onClick={() => setEstimateType(null)} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button onClick={() => setEstimateType(null)} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Back</button>
             <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save</button>
           </div>
         </div>
