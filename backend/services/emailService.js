@@ -829,7 +829,7 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
 // Send estimate email to customer with Approve/Reject buttons
 const sendEstimateEmail = async (estimate, actionToken) => {
   const { 
-    customerName, customerEmail, estimateId, propertyName, propertyType,
+    customerName, customerEmail, customerPhone, estimateId, propertyName, propertyType,
     zone, division, city, address,
     numberOfBlocks, blockNames, unitsPerBlock, totalUnits,
     towerName, blockNumber, villaPlotNumber,
@@ -986,10 +986,6 @@ const sendEstimateEmail = async (estimate, actionToken) => {
                   <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Valid Until:</td>
                   <td style="padding: 8px 0; padding-left: 15px; color: #dc2626; font-weight: 600;">${expiryDate.toLocaleDateString('en-IN')}</td>
                 </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">AMC Package:</td>
-                  <td style="padding: 8px 0; padding-left: 15px; color: #4338ca; font-weight: 600;">${packageName || '-'}</td>
-                </tr>
               </table>
             </div>
             
@@ -1008,6 +1004,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
               <table style="width: 100%;">
                 <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Name:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937; font-weight: 500;">${customerName || '-'}</td></tr>
                 <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Email:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${customerEmail || '-'}</td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Phone:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${customerPhone || '-'}</td></tr>
               </table>
             </div>
             

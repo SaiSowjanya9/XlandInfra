@@ -41,6 +41,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const urlFilterType = searchParams.get('type') || 'all';
   const viewEstimateId = searchParams.get('viewEstimate');
   const viewPackageId = searchParams.get('viewPackage');
+  const urlEstimateStep = searchParams.get('estimateStep'); // For browser back navigation
   
   // Helper to update URL params
   const updateUrlParam = useCallback((key, value, defaultValue = '') => {
@@ -136,6 +137,53 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const token = sessionStorage.getItem('pm_auth_token');
 
   useEffect(() => { loadData(); }, [defaultTab]);
+  
+  // Sync estimate creation step with URL for browser back button support
+  useEffect(() => {
+    // When state changes, update URL
+    if (defaultTab === 'create') {
+      if (estimateType === 'property-based' && selectedProperty) {
+        updateUrlParam('estimateStep', 'property-form');
+      } else if (estimateType === 'property-based') {
+        updateUrlParam('estimateStep', 'property-id');
+      } else if (estimateType === 'direct') {
+        updateUrlParam('estimateStep', 'direct-form');
+      } else {
+        updateUrlParam('estimateStep', '');
+      }
+    }
+  }, [estimateType, selectedProperty, defaultTab]);
+  
+  // Handle browser back button - sync URL to state
+  useEffect(() => {
+    if (defaultTab === 'create') {
+      if (!urlEstimateStep) {
+        // No step in URL = type selection
+        if (estimateType !== null) {
+          setEstimateType(null);
+          setSelectedProperty(null);
+          setPropertyIdInput('');
+        }
+      } else if (urlEstimateStep === 'property-id') {
+        // Property ID entry step
+        if (estimateType !== 'property-based' || selectedProperty !== null) {
+          setEstimateType('property-based');
+          setSelectedProperty(null);
+          setPropertyIdInput('');
+        }
+      } else if (urlEstimateStep === 'property-form') {
+        // Property form step - keep current state if already there
+        if (estimateType !== 'property-based') {
+          setEstimateType('property-based');
+        }
+      } else if (urlEstimateStep === 'direct-form') {
+        // Direct form step
+        if (estimateType !== 'direct') {
+          setEstimateType('direct');
+        }
+      }
+    }
+  }, [urlEstimateStep, defaultTab]);
   
   // Sync viewEstimate and viewAmcPackage from URL params
   useEffect(() => {
