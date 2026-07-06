@@ -22,7 +22,9 @@ import {
   FileText,
   Eye,
   Users,
-  ExternalLink
+  ExternalLink,
+  ChevronDown,
+  Loader2
 } from 'lucide-react';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
@@ -53,6 +55,8 @@ const ManagerProperties = ({ user }) => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [propertyEstimates, setPropertyEstimates] = useState([]);
   const [loadingEstimates, setLoadingEstimates] = useState(false);
+  const [serviceAssignments, setServiceAssignments] = useState([]); // {serviceType, frequencyType, frequencyCount, vendorId}
+  const [savingAssignments, setSavingAssignments] = useState(false);
 
   // Property type tabs config
   const propertyTabs = [
