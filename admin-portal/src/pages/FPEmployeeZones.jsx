@@ -702,13 +702,20 @@ const FPEmployeeZones = ({ user }) => {
               <div className="flex flex-wrap gap-2">
                 {(() => {
                   const empZones = viewZonesEmployee.assignedZones || viewZonesEmployee.assigned_zones || [];
-                  const zoneList = empZones === 'all' ? zones.map(z => z.name) : (Array.isArray(empZones) ? empZones : []);
-                  return zoneList.map((zoneName, idx) => (
+                  let zoneList = [];
+                  if (empZones === 'all') {
+                    zoneList = zones.map(z => z.name);
+                  } else if (Array.isArray(empZones)) {
+                    zoneList = empZones.map(z => typeof z === 'object' ? (z.name || z.zone_name || JSON.stringify(z)) : z);
+                  } else if (typeof empZones === 'string' && empZones.includes(',')) {
+                    zoneList = empZones.split(',').map(s => s.trim());
+                  }
+                  return zoneList.length > 0 ? zoneList.map((zoneName, idx) => (
                     <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium border border-emerald-200">
                       <MapPin className="w-3.5 h-3.5" />
                       {zoneName}
                     </span>
-                  ));
+                  )) : <p className="text-gray-500 text-sm">No zones assigned</p>;
                 })()}
               </div>
             </div>
