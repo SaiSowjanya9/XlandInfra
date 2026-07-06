@@ -405,20 +405,29 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 }`}
               >
                 All
+                {amcPackages.length > 0 && (
+                  <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${filterPropertyType === 'all' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>{amcPackages.length}</span>
+                )}
               </button>
-              {PROPERTY_TYPE_OPTIONS.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => setFilterPropertyType(type.id)}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
-                    filterPropertyType === type.id
-                      ? 'bg-slate-700 text-white border-slate-700'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {type.label}
-                </button>
-              ))}
+              {PROPERTY_TYPE_OPTIONS.map((type) => {
+                const count = amcPackages.filter(p => normalizePropertyType(p.propertyType) === type.id).length;
+                return (
+                  <button
+                    key={type.id}
+                    onClick={() => setFilterPropertyType(type.id)}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
+                      filterPropertyType === type.id
+                        ? 'bg-slate-700 text-white border-slate-700'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {type.label}
+                    {count > 0 && (
+                      <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${filterPropertyType === type.id ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>{count}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

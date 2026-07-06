@@ -802,20 +802,46 @@ export const exportPackageToPDF = (pkg) => {
     if (pkg.serviceRows && Array.isArray(pkg.serviceRows)) {
       services = pkg.serviceRows.map(sr => ({
         name: sr.service || sr.name || sr.serviceType || 'Service',
+        description: sr.description || '',
         frequencyCount: sr.frequencyCount || sr.frequency || 1,
         frequencyType: sr.frequencyType || 'Monthly',
         price: parseFloat(sr.price || sr.rate || 0)
       }));
     } else if (typeof pkg.services === 'string') {
-      services = pkg.services.split(',').map(s => ({
-        name: s.trim() || 'Service',
-        frequencyCount: 1,
-        frequencyType: 'Monthly',
-        price: 0
-      }));
+      // Try to parse JSON first
+      try {
+        const parsed = JSON.parse(pkg.services);
+        if (parsed.serviceRows && Array.isArray(parsed.serviceRows)) {
+          services = parsed.serviceRows.map(sr => ({
+            name: sr.service || sr.name || sr.serviceType || 'Service',
+            description: sr.description || '',
+            frequencyCount: sr.frequencyCount || sr.frequency || 1,
+            frequencyType: sr.frequencyType || 'Monthly',
+            price: parseFloat(sr.price || sr.rate || 0)
+          }));
+        } else if (Array.isArray(parsed)) {
+          services = parsed.map(s => ({
+            name: s.name || s.service || s.serviceType || 'Service',
+            description: s.description || '',
+            frequencyCount: s.frequencyCount || s.frequency || 1,
+            frequencyType: s.frequencyType || 'Monthly',
+            price: parseFloat(s.price || 0)
+          }));
+        }
+      } catch (e) {
+        // Fallback to comma-separated
+        services = pkg.services.split(',').map(s => ({
+          name: s.trim() || 'Service',
+          description: '',
+          frequencyCount: 1,
+          frequencyType: 'Monthly',
+          price: 0
+        }));
+      }
     } else if (Array.isArray(pkg.services)) {
       services = pkg.services.map(s => ({
         name: typeof s === 'string' ? s : (s.name || s.service || s.serviceType || 'Service'),
+        description: typeof s === 'string' ? '' : (s.description || ''),
         frequencyCount: s.frequencyCount || s.frequency || 1,
         frequencyType: s.frequencyType || 'Monthly',
         price: parseFloat(s.price || 0)

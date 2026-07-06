@@ -2054,16 +2054,25 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${filterPropertyType === 'all' ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
               >
                 All
+                {amcPackages.length > 0 && (
+                  <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${filterPropertyType === 'all' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>{amcPackages.length}</span>
+                )}
               </button>
-              {PROPERTY_TYPE_OPTIONS.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => setFilterPropertyType(type.id)}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${filterPropertyType === type.id ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
-                >
-                  {type.label}
-                </button>
-              ))}
+              {PROPERTY_TYPE_OPTIONS.map((type) => {
+                const count = amcPackages.filter(p => getPkgPropertyType(p) === type.id).length;
+                return (
+                  <button
+                    key={type.id}
+                    onClick={() => setFilterPropertyType(type.id)}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${filterPropertyType === type.id ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                  >
+                    {type.label}
+                    {count > 0 && (
+                      <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${filterPropertyType === type.id ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>{count}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -2181,6 +2190,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                     console.log('[PDF Export] Mapping service:', s);
                                     return {
                                       name: s.name || s.service || 'Service',
+                                      description: s.description || '',
                                       frequencyCount: s.frequency_count || s.frequencyCount || 1,
                                       frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
                                     };
@@ -2689,11 +2699,20 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <h3 className="font-semibold text-gray-900">All Add-ons</h3>
                 <p className="text-sm text-gray-500">{addons.length} add-on(s) available</p>
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => setAddonFilterPropertyType('all')} className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${addonFilterPropertyType === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>All</button>
-                {PROPERTY_TYPE_OPTIONS.map(t => (
-                  <button key={t.id} onClick={() => setAddonFilterPropertyType(t.id)} className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${addonFilterPropertyType === t.id ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{t.label}</button>
-                ))}
+              <div className="flex gap-2 flex-wrap">
+                <button onClick={() => setAddonFilterPropertyType('all')} className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${addonFilterPropertyType === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                  All
+                  {addons.length > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === 'all' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>{addons.length}</span>}
+                </button>
+                {PROPERTY_TYPE_OPTIONS.map(t => {
+                  const count = addons.filter(a => normalizePropertyType(a.property_type) === t.id).length;
+                  return (
+                    <button key={t.id} onClick={() => setAddonFilterPropertyType(t.id)} className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${addonFilterPropertyType === t.id ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                      {t.label}
+                      {count > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === t.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
