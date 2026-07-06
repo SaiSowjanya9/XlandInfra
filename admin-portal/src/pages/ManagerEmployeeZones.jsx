@@ -68,6 +68,13 @@ const ManagerEmployeeZones = ({ user }) => {
       const empResponse = await fetch('/api/manager/employees', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      if (!empResponse.ok) {
+        console.error('Employee fetch failed:', empResponse.status);
+        setEmployees([]);
+        setZones([]);
+        setLoading(false);
+        return;
+      }
       const empResult = await empResponse.json();
       const allEmployees = empResult.success ? (Array.isArray(empResult.data) ? empResult.data : []) : [];
       
@@ -75,6 +82,13 @@ const ManagerEmployeeZones = ({ user }) => {
       const zoneResponse = await fetch('/api/manager/zones', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      if (!zoneResponse.ok) {
+        console.error('Zones fetch failed:', zoneResponse.status);
+        setEmployees(allEmployees);
+        setZones([]);
+        setLoading(false);
+        return;
+      }
       const zoneResult = await zoneResponse.json();
       const allZones = zoneResult.success ? (Array.isArray(zoneResult.data) ? zoneResult.data : []) : [];
 
