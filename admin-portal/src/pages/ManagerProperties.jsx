@@ -310,21 +310,149 @@ const ManagerProperties = ({ user }) => {
 
   const fetchPropertyEstimates = async (propertyId) => {
     setLoadingEstimates(true);
+    setServiceAssignments([]);
     try {
       const response = await fetch(`/api/manager/estimates?property_id=${propertyId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
-      if (result.success) {
+      if (result.success && result.data?.length > 0) {
         setPropertyEstimates(result.data || []);
+        // Extract services from the first estimate to set up service assignments
+        const estimate = result.data[0];
+        const services = extractServicesFromEstimate(estimate);
+        setServiceAssignments(services.map(s => ({
+          serviceType: s.serviceType,
+          frequencyType: s.frequencyType || 'Monthly',
+          frequencyCount: s.frequencyCount || 1,
+          vendorId: ''
+        })));
       } else {
         setPropertyEstimates([]);
+        setServiceAssignments([]);
       }
     } catch (error) {
       console.error('Fetch property estimates error:', error);
       setPropertyEstimates([]);
+      setServiceAssignments([]);
     } finally {
       setLoadingEstimates(false);
+    }
+  };
+
+  // Extract services from estimate (handles different data structures)
+  const extractServicesFromEstimate = (estimate) => {
+    const services = [];
+    
+    // Try services_data JSON field first (from database)
+    if (estimate.services_data) {
+      try {
+        const servicesData = typeof estimate.services_data === 'string' 
+          ? JSON.parse(estimate.services_data) 
+          : estimate.services_data;
+        if (Array.isArray(servicesData)) {
+          servicesData.forEach(s => {
+            services.push({
+              serviceType: s.service || s.name || s.serviceType,
+              frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
+              frequencyCount: s.frequencyCount || s.frequency_count || s.visits || 1
+            });
+          });
+        }
+      } catch (e) { console.error('Error parsing services_data:', e); }
+    }
+    
+    // Try package_services field
+    if (services.length === 0 && estimate.package_services) {
+      try {
+        const pkgServices = typeof estimate.package_services === 'string'
+          ? JSON.parse(estimate.package_services)
+          : estimate.package_services;
+        if (Array.isArray(pkgServices)) {
+          pkgServices.forEach(s => {
+            services.push({
+              serviceType: s.service || s.name || s.serviceType,
+              frequencyType: s.frequencyType || 'Monthly',
+              frequencyCount: s.frequencyCount || s.visits || 1
+            });
+          });
+        }
+      } catch (e) { console.error('Error parsing package_services:', e); }
+    }
+
+    // If still no services, use package_name as a single service
+    if (services.length === 0 && estimate.package_name) {
+      services.push({
+        serviceType: estimate.package_name,
+        frequencyType: 'Monthly',
+        frequencyCount: 12
+      });
+    }
+    
+    return services;
+  };
+
+  // Get vendors filtered by property zone
+  const getZoneFilteredVendors = (propertyZone) => {
+    if (!propertyZone) return vendors;
+    const normalizedZone = propertyZone.toLowerCase().trim();
+    return vendors.filter(v => {
+      const vendorZone = (v.zone_name || v.zone || '').toLowerCase().trim();
+      return vendorZone === normalizedZone || !vendorZone; // Include vendors without zone
+    });
+  };
+
+  // Handle vendor selection for a service row
+  const handleServiceVendorSelect = (index, vendorId) => {
+    setServiceAssignments(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], vendorId };
+      return updated;
+    });
+  };
+
+  // Save all service-vendor assignments
+  const handleSaveAssignments = async () => {
+    const assignmentsToSave = serviceAssignments.filter(s => s.vendorId);
+    if (assignmentsToSave.length === 0) {
+      setMessage({ type: 'error', text: 'Please select at least one vendor' });
+      return;
+    }
+
+    setSavingAssignments(true);
+    try {
+      // Save each assignment
+      let successCount = 0;
+      for (const assignment of assignmentsToSave) {
+        const response = await fetch(`/api/manager/properties/${selectedProperty.id}/assign-vendor`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            vendorId: assignment.vendorId,
+            serviceType: assignment.serviceType
+          })
+        });
+        const result = await response.json();
+        if (result.success) successCount++;
+      }
+
+      if (successCount > 0) {
+        setMessage({ type: 'success', text: `${successCount} vendor assignment(s) saved successfully!` });
+        setShowAssignModal(false);
+        setSelectedProperty(null);
+        setServiceAssignments([]);
+        fetchData();
+      } else {
+        setMessage({ type: 'error', text: 'Failed to save assignments' });
+      }
+    } catch (error) {
+      console.error('Save assignments error:', error);
+      setMessage({ type: 'error', text: 'Failed to save assignments' });
+    } finally {
+      setSavingAssignments(false);
     }
   };
 
@@ -1293,30 +1421,42 @@ const ManagerProperties = ({ user }) => {
         </div>
       )}
 
-      {/* Assign Modal */}
+      {/* Assign Modal - Table Layout for Vendor Assignment */}
       {showAssignModal && selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
-            <div className="p-6 border-b border-gray-100">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowAssignModal(false); setSelectedProperty(null); setServiceAssignments([]); }}>
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-purple-500">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Assign {assignType === 'vendor' ? 'Vendor' : 'Employee'}
-                </h2>
-                <button onClick={() => { setShowAssignModal(false); setSelectedProperty(null); setPropertyEstimates([]); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Store className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-white">
+                      Assign {assignType === 'vendor' ? 'Vendor' : 'Employee'}
+                    </h2>
+                    <p className="text-sm text-purple-100">Property: {selectedProperty.name}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => { setShowAssignModal(false); setSelectedProperty(null); setServiceAssignments([]); }} 
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <p className="text-sm text-gray-500 mt-1">Property: {selectedProperty.name}</p>
             </div>
 
-            <div className="p-6">
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
               {loadingEstimates ? (
-                <div className="text-center py-8">
-                  <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-3" />
-                  <p className="text-gray-500">Checking estimates...</p>
+                <div className="text-center py-12">
+                  <RefreshCw className="w-8 h-8 text-purple-500 animate-spin mx-auto mb-3" />
+                  <p className="text-gray-500">Loading services...</p>
                 </div>
               ) : assignType === 'vendor' && propertyEstimates.length === 0 ? (
-                <div className="text-center py-6">
+                <div className="text-center py-8">
                   <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <FileText className="w-8 h-8 text-amber-600" />
                   </div>
@@ -1331,38 +1471,140 @@ const ManagerProperties = ({ user }) => {
                     Close
                   </button>
                 </div>
-              ) : (assignType === 'vendor' ? vendors : employees).length === 0 ? (
-                <p className="text-gray-500 text-center py-4">
-                  No {assignType === 'vendor' ? 'vendors' : 'employees'} available
-                </p>
-              ) : (
+              ) : assignType === 'vendor' && serviceAssignments.length > 0 ? (
+                <>
+                  {/* Zone Info */}
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm font-medium text-gray-700">Assign vendors to each service</span>
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                      {getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone).length} vendor(s) in zone
+                    </span>
+                  </div>
+
+                  {/* Services Table */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700 w-2/5">Service Type</th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">Select Vendor</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {serviceAssignments.map((service, idx) => {
+                          const zoneVendors = getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone);
+                          const hasSelection = !!service.vendorId;
+                          
+                          return (
+                            <tr key={idx} className="hover:bg-gray-50">
+                              <td className="px-4 py-3">
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-gray-900">{service.serviceType}</span>
+                                  <span className="text-xs text-gray-500">
+                                    {service.frequencyType} - {service.frequencyCount} visits
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="relative">
+                                  <select
+                                    value={service.vendorId || ''}
+                                    onChange={(e) => handleServiceVendorSelect(idx, e.target.value)}
+                                    className={`w-full appearance-none px-3 py-2 border rounded-lg text-sm pr-8 outline-none transition-colors cursor-pointer ${
+                                      hasSelection 
+                                        ? 'border-green-400 bg-green-50 text-green-800 focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                        : 'border-gray-300 bg-white text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100'
+                                    }`}
+                                  >
+                                    <option value="">-- Select Vendor --</option>
+                                    {zoneVendors.map(v => (
+                                      <option key={v.id} value={v.id}>
+                                        {v.company_name || v.owner_name || v.name} ({v.service_type || v.serviceType || 'General'})
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-gray-400" />
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Assignment Summary */}
+                  <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between">
+                    <span className="text-sm text-gray-600">
+                      {serviceAssignments.filter(s => s.vendorId).length} of {serviceAssignments.length} services assigned
+                    </span>
+                    {serviceAssignments.filter(s => s.vendorId).length === serviceAssignments.length && (
+                      <span className="flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                        <CheckCircle className="w-3 h-3" /> All Assigned
+                      </span>
+                    )}
+                  </div>
+                </>
+              ) : assignType === 'employee' ? (
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {(assignType === 'vendor' ? vendors : employees).map((item) => (
+                  {employees.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => handleAssign(item.id)}
-                      className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
+                      className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors text-left"
                     >
-                      <div className={`w-10 h-10 ${assignType === 'vendor' ? 'bg-purple-100' : 'bg-green-100'} rounded-full flex items-center justify-center`}>
-                        {assignType === 'vendor' ? (
-                          <Store className="w-5 h-5 text-purple-600" />
-                        ) : (
-                          <User className="w-5 h-5 text-green-600" />
-                        )}
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <User className="w-5 h-5 text-green-600" />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">
-                          {assignType === 'vendor' ? item.company_name : `${item.first_name} ${item.last_name}`}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {assignType === 'vendor' ? (item.contact_person || item.email) : item.role}
-                        </p>
+                        <p className="font-medium text-gray-900">{item.first_name} {item.last_name}</p>
+                        <p className="text-sm text-gray-500">{item.role}</p>
                       </div>
                     </button>
                   ))}
                 </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">No services found in estimate</p>
               )}
             </div>
+
+            {/* Footer - only show for vendor assignment with services */}
+            {assignType === 'vendor' && serviceAssignments.length > 0 && (
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                <p className="text-xs text-gray-500">
+                  Same vendor can be assigned to multiple services
+                </p>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => { setShowAssignModal(false); setSelectedProperty(null); setServiceAssignments([]); }}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveAssignments}
+                    disabled={savingAssignments || serviceAssignments.filter(s => s.vendorId).length === 0}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      savingAssignments || serviceAssignments.filter(s => s.vendorId).length === 0
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                    }`}
+                  >
+                    {savingAssignments ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Save Assignments
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

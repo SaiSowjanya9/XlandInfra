@@ -23,7 +23,11 @@ import {
   List,
   MapPin,
   ExternalLink,
-  Navigation
+  Navigation,
+  ChevronDown,
+  Pencil,
+  Truck,
+  Trash2
 } from 'lucide-react';
 
 // Use empty string for relative URLs - uploads are served at /uploads on same domain
@@ -44,6 +48,23 @@ const ManagerWorkOrders = ({ user }) => {
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(null);
+  const [assignType, setAssignType] = useState('vendor');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    categoryId: '',
+    subcategoryId: '',
+    description: '',
+    permissionToEnter: '',
+    hasPet: '',
+    entryNotes: '',
+    priority: 'medium',
+    status: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    block: '',
+    flatNumber: ''
+  });
   const [cancelNote, setCancelNote] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [showViewModal, setShowViewModal] = useState(false);
