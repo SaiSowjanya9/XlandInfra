@@ -29,6 +29,7 @@ const TAB_TITLES = {
 const Estimates = ({ admin, defaultTab = 'list' }) => {
   const navigate = useNavigate();
   const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [estimates, setEstimates] = useState([]);
   const [archivedEstimates, setArchivedEstimates] = useState([]);
   const [stats, setStats] = useState({
@@ -56,6 +57,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
   }, []);
 
   const loadStats = useCallback(async () => {
+    setLoading(true);
     try {
       let estUrl, archUrl, pkgUrl, addUrl;
       
@@ -100,6 +102,8 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
       });
     } catch (error) {
       console.error('Load stats error:', error);
+    } finally {
+      setLoading(false);
     }
   }, [selectedFp, token]);
 
@@ -231,7 +235,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
                 className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                 title="Refresh"
               >
-                <RefreshCw className="w-5 h-5 text-gray-600" />
+                <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
               </button>
               
               {/* Quick Stats */}
