@@ -471,7 +471,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     const matchSearch = !searchTerm || e.title?.toLowerCase().includes(searchTerm.toLowerCase()) || e.estimate_id?.toLowerCase().includes(searchTerm.toLowerCase()) || e.client_name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchType = estimateTypeFilter === 'all' || e.estimate_type === estimateTypeFilter;
     const matchStatus = statusFilter === 'all' || e.status === statusFilter;
-    const matchCategory = categoryFilter === 'all' || (e.property_type && normalizePropertyType(e.property_type) === categoryFilter);
+    const isPropertyBased = e.estimate_type === 'property_based' || e.estimate_type === 'property-based';
+    const matchCategory = categoryFilter === 'all' || (isPropertyBased && e.property_type && normalizePropertyType(e.property_type) === categoryFilter);
     // Date filter
     let matchDate = true;
     if (fromDate || toDate) {

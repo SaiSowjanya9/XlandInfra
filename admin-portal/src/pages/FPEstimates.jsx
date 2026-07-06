@@ -1736,7 +1736,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const matchSearch = (e.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.estimate_id || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.client_name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = filterStatus === 'all' || e.status === filterStatus;
     const matchType = filterType === 'all' || e.estimate_type === filterType || (filterType === 'property_based' && (e.estimate_type === 'property_based' || e.estimate_type === 'property-based'));
-    const matchCategory = filterCategory === 'all' || (e.property_type && normalizePropertyType(e.property_type) === filterCategory);
+    const isPropertyBased = e.estimate_type === 'property_based' || e.estimate_type === 'property-based';
+    const matchCategory = filterCategory === 'all' || (isPropertyBased && e.property_type && normalizePropertyType(e.property_type) === filterCategory);
     // Date range filter
     let matchDate = true;
     if (filterFromDate || filterToDate) {
