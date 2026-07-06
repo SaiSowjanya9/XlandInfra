@@ -2961,7 +2961,15 @@ router.put('/employees/:id/zones', requireFPScope, async (req, res) => {
     );
     
     // Insert new zone assignments - store zone names directly since zones can come from multiple sources
-    if (zones && zones.length > 0) {
+    // Handle "all" zones case - store 'all' as a special marker
+    if (zones === 'all') {
+      // Store 'all' as a special value to indicate all zones are assigned
+      await pool.execute(
+        `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_name) VALUES (?, ?, ?)`,
+        [req.fpId, id, 'all']
+      );
+      console.log('Inserted ALL zones assignment:', { fpId: req.fpId, empId: id });
+    } else if (Array.isArray(zones) && zones.length > 0) {
       for (const zoneName of zones) {
         // Store zone name directly in the assignment table
         await pool.execute(

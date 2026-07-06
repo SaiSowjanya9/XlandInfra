@@ -1725,8 +1725,13 @@ router.put('/employees/:id/zones', requireManagerScope, async (req, res) => {
       [id, req.franchisePartnerId]
     );
     
-    // Insert new zone assignments
-    if (zones && zones.length > 0) {
+    // Insert new zone assignments - handle "all" zones case
+    if (zones === 'all') {
+      await pool.execute(
+        `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_name) VALUES (?, ?, ?)`,
+        [req.franchisePartnerId, id, 'all']
+      );
+    } else if (Array.isArray(zones) && zones.length > 0) {
       for (const zoneName of zones) {
         await pool.execute(
           `INSERT INTO fp_employee_zones (franchise_partner_id, fp_employee_id, zone_name) VALUES (?, ?, ?)`,
