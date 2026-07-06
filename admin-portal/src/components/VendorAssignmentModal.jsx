@@ -508,43 +508,35 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
   // Get the property's zone (normalized for comparison)
   const propertyZoneNormalized = normalizeZone(property?.zone);
 
-  // Get all vendors for a service type filtered by property zone
-  const getFilteredVendors = (serviceType) => {
+  // Get all vendors filtered by property zone only (all vendors in zone available for any service)
+  const getZoneVendors = () => {
     if (!vendors.length) {
       debug('[FILTER] No vendors loaded!');
       return [];
     }
-    if (!serviceType) {
-      debug('[FILTER] No service type provided!');
-      return [];
-    }
-    
-    const normalizedService = normalizeServiceType(serviceType);
     
     debug('───────────────────────────────────────────');
-    debug(`[FILTER] Service Type: "${serviceType}" → "${normalizedService}"`);
     debug(`[FILTER] Property Zone: "${property?.zone}" → "${propertyZoneNormalized}"`);
     debug(`[FILTER] Total vendors to check: ${vendors.length}`);
     
-    // Filter vendors by BOTH service type AND zone
+    // Filter vendors by zone ONLY - all zone vendors available for any service
     const filtered = vendors.filter(v => {
-      const vendorServiceNormalized = normalizeServiceType(v.serviceType);
       const vendorZoneNormalized = normalizeZone(v.zone);
-      
-      const matchesService = vendorServiceNormalized === normalizedService;
       const matchesZone = vendorZoneNormalized === propertyZoneNormalized;
       
       // Log each vendor check
-      const serviceMatch = matchesService ? '✓' : '✗';
       const zoneMatch = matchesZone ? '✓' : '✗';
-      debug(`[FILTER]   → ${v.ownerName} | Service: "${vendorServiceNormalized}" ${serviceMatch} | Zone: "${vendorZoneNormalized}" ${zoneMatch}`);
+      debug(`[FILTER]   → ${v.ownerName} | Service: "${v.serviceType}" | Zone: "${vendorZoneNormalized}" ${zoneMatch}`);
       
-      return matchesService && matchesZone;
+      return matchesZone;
     });
     
-    debug(`[FILTER] ═══ RESULT: ${filtered.length} vendors match "${serviceType}" + "${property?.zone}" ═══`);
+    debug(`[FILTER] ═══ RESULT: ${filtered.length} vendors in zone "${property?.zone}" ═══`);
     return filtered;
   };
+
+  // Memoize zone vendors to avoid recalculating on every render
+  const zoneVendors = getZoneVendors();
 
   // Handle vendor selection for a service
   const handleVendorSelect = (serviceIndex, vendorId) => {
@@ -696,40 +688,39 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                 </div>
               )}
 
-              {/* Services Table - Vendor Selection Dropdown */}
+              {/* Services Table - Vendor Selection Dropdown (All Zone Vendors Available) */}
               {serviceAssignments.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3">
-                    Assign Vendors to Services
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-800">
+                      Assign Vendors to Services
+                    </h3>
+                    <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                      {zoneVendors.length} vendor(s) in {property?.zone || 'zone'}
+                    </span>
+                  </div>
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
                       <thead className="bg-slate-50 border-b border-gray-200">
                         <tr>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">Service Type</th>
-                          <th className="px-4 py-3 text-center font-medium text-gray-700 w-20">Freq.</th>
-                          <th className="px-4 py-3 text-center font-medium text-gray-700 w-28">Type</th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700 w-1/3">Service Type</th>
                           <th className="px-4 py-3 text-left font-medium text-gray-700">Select Vendor</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {serviceAssignments.map((service, idx) => {
-                          const filteredVendors = getFilteredVendors(service.serviceType);
-                          const hasVendors = filteredVendors.length > 0;
+                          const hasVendors = zoneVendors.length > 0;
                           const hasSelection = !!service.vendorId;
                           
                           return (
                             <tr key={idx} className="hover:bg-gray-50">
                               <td className="px-4 py-3">
-                                <span className="font-medium text-gray-900">{service.serviceType}</span>
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span className="inline-flex items-center px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-medium">
-                                  {service.frequencyCount}x
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span className="text-gray-600 text-xs">{service.frequencyType}</span>
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-gray-900">{service.serviceType}</span>
+                                  <span className="text-xs text-gray-500">
+                                    {service.frequencyType} - {service.frequencyCount} visits
+                                  </span>
+                                </div>
                               </td>
                               <td className="px-4 py-3">
                                 <div className="relative">
@@ -738,21 +729,21 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                                     onChange={(e) => handleVendorSelect(idx, e.target.value)}
                                     className={`w-full appearance-none px-3 py-2 border rounded-lg text-sm pr-8 outline-none transition-colors cursor-pointer ${
                                       hasSelection 
-                                        ? 'border-slate-400 bg-slate-50 text-slate-800 focus:border-slate-500 focus:ring-2 focus:ring-slate-100'
+                                        ? 'border-green-400 bg-green-50 text-green-800 focus:border-green-500 focus:ring-2 focus:ring-green-100'
                                         : 'border-gray-300 bg-white text-gray-700 focus:border-slate-400 focus:ring-2 focus:ring-slate-100'
                                     }`}
                                   >
                                     {hasVendors ? (
                                       <>
                                         <option value="">-- Select Vendor --</option>
-                                        {filteredVendors.map(v => (
+                                        {zoneVendors.map(v => (
                                           <option key={v.vendorId} value={v.vendorId}>
-                                            {v.ownerName}
+                                            {v.ownerName || v.owner_name} ({v.serviceType || v.service_type})
                                           </option>
                                         ))}
                                       </>
                                     ) : (
-                                      <option value="">No vendor available for this service in selected zone</option>
+                                      <option value="">No vendors available in this zone</option>
                                     )}
                                   </select>
                                   <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-gray-400" />
@@ -812,7 +803,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
         <div className="px-6 py-4 bg-slate-50 border-t border-gray-200 flex items-center justify-between">
           <div className="text-xs text-gray-500">
             {selectedEstimate 
-              ? 'Vendor assignments are auto-matched by service type and zone'
+              ? 'All vendors in this zone are available for any service. Same vendor can be assigned to multiple services.'
               : 'Create an estimate first to enable vendor assignments'
             }
           </div>
