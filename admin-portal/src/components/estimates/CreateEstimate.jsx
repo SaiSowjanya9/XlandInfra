@@ -934,6 +934,28 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
     });
   };
 
+  // Back navigation handler for estimate subsections
+  const handleBackFromEstimate = () => {
+    if (estimateType === 'property' && selectedProperty) {
+      // If property is selected, go back to property ID entry
+      setSelectedProperty(null);
+      setPropertyIdInput('');
+      setSelectedPackage(null);
+      setSelectedAddons([]);
+      setDiscount('');
+      setGstRate('');
+    } else if (estimateType === 'direct' && directSelectedPackage) {
+      // If direct package is selected, go back to property type selection
+      setDirectSelectedPackage(null);
+      setDirectSelectedAddons([]);
+      setDirectDiscount('');
+      setDirectGstRate('');
+    } else {
+      // Otherwise go back to estimate type selection
+      resetForm();
+    }
+  };
+
   const handleAddNewService = (serviceName) => {
     if (serviceName && serviceName.trim()) {
       addService(serviceName.trim());
@@ -1827,10 +1849,10 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                     {/* Action Buttons */}
                     <div className="flex gap-3 justify-end mt-4">
                       <button
-                        onClick={resetForm}
+                        onClick={handleBackFromEstimate}
                         className="px-6 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
                       >
-                        Cancel
+                        Back
                       </button>
                       <button
                         onClick={handleSave}
@@ -2433,10 +2455,10 @@ const CreateEstimate = ({ admin, onSuccess, showToast }) => {
                   {/* Action Buttons */}
                   <div className="flex gap-3 justify-end mt-4">
                     <button
-                      onClick={resetForm}
+                      onClick={handleBackFromEstimate}
                       className="px-6 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
                     >
-                      Cancel
+                      Back
                     </button>
                     {/* Save button - Hidden for Operations Manager */}
                     {!isOpsManager && (

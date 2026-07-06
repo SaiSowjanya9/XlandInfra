@@ -348,6 +348,22 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     });
   };
 
+  // Back navigation handler for estimate subsections
+  const handleBackFromEstimate = () => {
+    if (estimateType === 'property-based' && selectedProperty) {
+      // If property is selected, go back to property ID entry
+      setSelectedProperty(null);
+      setPropertyIdInput('');
+      setSelectedAmcPackage('');
+      setSelectedAddons([]);
+      setDiscountPercent('');
+      setGstPercent('');
+    } else {
+      // Otherwise go back to estimate type selection
+      resetEstimateForm();
+    }
+  };
+
   // AMC Package and Price Summary shared component
   const renderAmcAndPriceSummary = (showSaveButton = false) => (
     <>
@@ -527,7 +543,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-500">* Currency: INR (₹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
         <div className="flex gap-3">
-          <button onClick={resetEstimateForm} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
+          <button onClick={handleBackFromEstimate} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Back</button>
           {showSaveButton && (
             <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save</button>
           )}
@@ -592,7 +608,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold text-gray-900">Estimate Details</h2>
-              <button onClick={() => setEstimateType(null)} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
+              <button onClick={handleBackFromEstimate} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
             </div>
             <div className="p-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">Property ID <span className="text-red-500">*</span></label>
