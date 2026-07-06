@@ -1,5 +1,8 @@
 const PDFDocument = require('pdfkit');
-const { XLAND_LOGO } = require('../utils/logoBase64');
+const path = require('path');
+
+// Logo file path
+const LOGO_PATH = path.join(__dirname, '../assets/logo.webp');
 
 // Generate estimate PDF and return as buffer
 const generateEstimatePDF = async (estimate) => {
@@ -46,12 +49,11 @@ const generateEstimatePDF = async (estimate) => {
       // Header - Black background with horizontal logo layout (taller header)
       doc.rect(0, 0, 612, 70).fill(black);
       
-      // Company Logo - positioned on left, larger size
+      // Company Logo - use logo.webp file, positioned on left
       try {
-        const logoBase64 = XLAND_LOGO.replace(/^data:image\/\w+;base64,/, '');
-        const logoBuffer = Buffer.from(logoBase64, 'base64');
-        doc.image(logoBuffer, 40, 10, { width: 50, height: 50 });
+        doc.image(LOGO_PATH, 40, 10, { width: 50, height: 50 });
       } catch (logoErr) {
+        console.log('Logo load error:', logoErr.message);
         // Fallback to gold square with XI if logo fails
         doc.rect(40, 15, 40, 40).fill(gold);
         doc.fontSize(18).fillColor(black).text('XI', 50, 28);

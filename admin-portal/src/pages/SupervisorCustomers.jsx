@@ -1083,7 +1083,7 @@ const SupervisorCustomers = ({ user, defaultTab = 'list' }) => {
                                 className={`${inputClass(blockError)} bg-gray-100 cursor-not-allowed`}
                                 placeholder="0"
                               />
-                              <FieldError show={blockError} message="Add units below" />
+                              <FieldError show={blockError} message="Please enter at least one bedroom type value (Total units cannot be 0)" />
                             </div>
                           </div>
                           
@@ -1165,7 +1165,7 @@ const SupervisorCustomers = ({ user, defaultTab = 'list' }) => {
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 cursor-not-allowed"
                       placeholder=""
                     />
-                    <FieldError show={hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0)} message="Add unit types below" />
+                    <FieldError show={hasError && (!formData.numberOfUnits || formData.numberOfUnits <= 0)} message="Please enter at least one bedroom type value (Total units cannot be 0)" />
                   </div>
                 </div>
 
