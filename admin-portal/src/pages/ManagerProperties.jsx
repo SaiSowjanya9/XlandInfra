@@ -419,27 +419,23 @@ const ManagerProperties = ({ user }) => {
     return services;
   };
 
-  // Get vendors filtered by property zone and sorted by service type match
+  // Get vendors filtered by property zone AND service type (only matching service type vendors)
   const getZoneFilteredVendors = (propertyZone, serviceType = '') => {
     if (!propertyZone) return vendors;
     const normalizedZone = propertyZone.toLowerCase().trim();
     const normalizedService = serviceType.toLowerCase().trim();
     
+    // Filter by zone first
     const zoneVendors = vendors.filter(v => {
       const vendorZone = (v.zone_name || v.zone || '').toLowerCase().trim();
       return vendorZone === normalizedZone || !vendorZone; // Include vendors without zone
     });
     
-    // Sort vendors - matching service type first
+    // Filter by service type - only show vendors matching the service type
     if (normalizedService) {
-      return zoneVendors.sort((a, b) => {
-        const aService = (a.service_type || a.serviceType || '').toLowerCase().trim();
-        const bService = (b.service_type || b.serviceType || '').toLowerCase().trim();
-        const aMatches = aService.includes(normalizedService) || normalizedService.includes(aService);
-        const bMatches = bService.includes(normalizedService) || normalizedService.includes(bService);
-        if (aMatches && !bMatches) return -1;
-        if (!aMatches && bMatches) return 1;
-        return 0;
+      return zoneVendors.filter(v => {
+        const vendorService = (v.service_type || v.serviceType || '').toLowerCase().trim();
+        return vendorService.includes(normalizedService) || normalizedService.includes(vendorService);
       });
     }
     return zoneVendors;
@@ -1612,12 +1608,18 @@ const ManagerProperties = ({ user }) => {
                                         : 'border-gray-300 bg-white text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100'
                                     }`}
                                   >
-                                    <option value="">-- Select Vendor --</option>
-                                    {zoneVendors.map(v => (
-                                      <option key={v.id} value={v.id}>
-                                        {v.company_name || v.owner_name || v.name} ({v.service_type || v.serviceType || 'General'})
-                                      </option>
-                                    ))}
+                                    {zoneVendors.length > 0 ? (
+                                      <>
+                                        <option value="">-- Select Vendor --</option>
+                                        {zoneVendors.map(v => (
+                                          <option key={v.id} value={v.id}>
+                                            {v.company_name || v.owner_name || v.name} ({v.service_type || v.serviceType || 'General'})
+                                          </option>
+                                        ))}
+                                      </>
+                                    ) : (
+                                      <option value="">No {service.serviceType} vendors in zone</option>
+                                    )}
                                   </select>
                                   <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-gray-400" />
                                 </div>

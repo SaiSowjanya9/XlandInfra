@@ -538,19 +538,14 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
   // Memoize zone vendors to avoid recalculating on every render
   const zoneVendors = getZoneVendors();
 
-  // Get vendors sorted by matching service type first
-  const getSortedVendors = (serviceType) => {
+  // Get vendors filtered by matching service type (only show matching vendors)
+  const getFilteredVendors = (serviceType) => {
     if (!serviceType) return zoneVendors;
     const normalizedService = serviceType.toLowerCase().trim();
     
-    return [...zoneVendors].sort((a, b) => {
-      const aService = (a.serviceType || a.service_type || '').toLowerCase().trim();
-      const bService = (b.serviceType || b.service_type || '').toLowerCase().trim();
-      const aMatches = aService.includes(normalizedService) || normalizedService.includes(aService);
-      const bMatches = bService.includes(normalizedService) || normalizedService.includes(bService);
-      if (aMatches && !bMatches) return -1;
-      if (!aMatches && bMatches) return 1;
-      return 0;
+    return zoneVendors.filter(v => {
+      const vendorService = (v.serviceType || v.service_type || '').toLowerCase().trim();
+      return vendorService.includes(normalizedService) || normalizedService.includes(vendorService);
     });
   };
 
@@ -725,9 +720,9 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {serviceAssignments.map((service, idx) => {
-                          // Get vendors sorted by matching service type first
-                          const sortedVendors = getSortedVendors(service.serviceType);
-                          const hasVendors = sortedVendors.length > 0;
+                          // Get vendors filtered by matching service type
+                          const filteredVendors = getFilteredVendors(service.serviceType);
+                          const hasVendors = filteredVendors.length > 0;
                           const hasSelection = !!service.vendorId;
                           
                           return (
@@ -754,14 +749,14 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                                     {hasVendors ? (
                                       <>
                                         <option value="">-- Select Vendor --</option>
-                                        {sortedVendors.map(v => (
+                                        {filteredVendors.map(v => (
                                           <option key={v.vendorId} value={v.vendorId}>
                                             {v.ownerName || v.owner_name} ({v.serviceType || v.service_type})
                                           </option>
                                         ))}
                                       </>
                                     ) : (
-                                      <option value="">No vendors available in this zone</option>
+                                      <option value="">No {service.serviceType} vendors in zone</option>
                                     )}
                                   </select>
                                   <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-gray-400" />

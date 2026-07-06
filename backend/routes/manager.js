@@ -1058,7 +1058,7 @@ router.patch('/work-orders/:id/status', requireManagerScope, async (req, res) =>
     }
     
     updateQuery += ` WHERE id = ? AND (created_by = ? OR created_by LIKE ? OR franchise_partner_id = ?)`;
-    params.push(req.params.id, req.user?.email || '', `manager-${managerId}`, franchisePartnerId);
+    params.push(req.params.id, req.user?.email || '', `manager-${managerId}`, req.fpId || 0);
     
     await pool.execute(updateQuery, params);
 
