@@ -3954,6 +3954,31 @@ router.put('/estimates/:id/archive', requireFPScope, async (req, res) => {
   }
 });
 
+// Update estimate status (FP only)
+router.put('/estimates/:id/status', requireFPScope, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['draft', 'sent', 'approved', 'rejected'];
+    
+    if (!status || !validStatuses.includes(status.toLowerCase())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid status. Must be one of: draft, sent, approved, rejected' 
+      });
+    }
+    
+    await pool.execute(
+      `UPDATE fp_estimates SET status = ?, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+      [status.toLowerCase(), req.params.id, req.fpId]
+    );
+    
+    res.json({ success: true, message: 'Status updated successfully', status: status.toLowerCase() });
+  } catch (error) {
+    console.error('Update estimate status error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Send estimate via email
 router.post('/estimates/send-email', requireFPScope, async (req, res) => {
   try {
