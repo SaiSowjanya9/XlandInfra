@@ -1867,22 +1867,27 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="text-xs text-gray-400 capitalize">{est.created_by_name ? (est.created_by_role || '').replace(/_/g, ' ') : ''}</div>
                     </td>
                     <td className="px-4 py-4">
-                      {(() => {
-                        const status = (est.status || 'draft').toLowerCase().trim();
-                        const colors = {
-                          approved: 'bg-green-100 text-green-700 border border-green-200',
-                          sent: 'bg-blue-100 text-blue-700 border border-blue-200',
-                          rejected: 'bg-red-100 text-red-700 border border-red-200',
-                          pending: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
-                          expired: 'bg-orange-100 text-orange-700 border border-orange-200',
-                          draft: 'bg-gray-100 text-gray-600 border border-gray-200'
-                        };
-                        return (
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${colors[status] || colors.draft}`}>
-                            {est.status || 'draft'}
-                          </span>
-                        );
-                      })()}
+                      {isFPManager ? (
+                        // FP Manager - View only (badge)
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getEstimateStatusColor(est.status)}`}>
+                          {est.status || 'draft'}
+                        </span>
+                      ) : (
+                        // FP Owner/Admin - Dropdown to change status
+                        <div className="relative inline-block">
+                          <select
+                            value={(est.status || 'draft').toLowerCase()}
+                            onChange={(e) => handleEstimateStatusChange(est.id, e.target.value)}
+                            className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-2 focus:ring-blue-200 ${getEstimateStatusColor(est.status)}`}
+                          >
+                            <option value="draft" className="bg-white text-gray-900">Draft</option>
+                            <option value="sent" className="bg-white text-gray-900">Sent</option>
+                            <option value="approved" className="bg-white text-gray-900">Approved</option>
+                            <option value="rejected" className="bg-white text-gray-900">Rejected</option>
+                          </select>
+                          <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-center gap-1">
@@ -2804,6 +2809,39 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       )}
     </div>
   );
+
+  // Handle estimate status change (FP only)
+  const handleEstimateStatusChange = async (estimateId, newStatus) => {
+    try {
+      const res = await fetch(`/api/fp/estimates/${estimateId}/status`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Status updated to ${newStatus}`);
+        // Update local state immediately for responsive UI
+        setEstimates(prev => prev.map(e => e.id === estimateId ? { ...e, status: newStatus } : e));
+      } else {
+        showToast(result.message || 'Failed to update status', 'error');
+      }
+    } catch (e) {
+      console.error('Status update error:', e);
+      showToast('Failed to update status', 'error');
+    }
+  };
+
+  // Get status color for dropdown
+  const getEstimateStatusColor = (status) => {
+    const s = (status || 'draft').toLowerCase();
+    switch (s) {
+      case 'approved': return 'bg-green-100 text-green-700';
+      case 'sent': return 'bg-blue-100 text-blue-700';
+      case 'rejected': return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  };
 
   // ARCHIVED
   const handleArchiveEstimate = async (id) => { try { const res = await fetch(`/api/fp/estimates/${id}/archive`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate archived'); loadData(); } } catch (e) { showToast('Failed to archive', 'error'); } };
