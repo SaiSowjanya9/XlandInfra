@@ -137,7 +137,8 @@ const ManagerEmployeeZones = ({ user }) => {
         setSelectedEmployee(employee);
         const empZones = employee.assignedZones || employee.assigned_zones;
         const validZoneNames = freshZones.map(z => z.name);
-        if (empZones === 'all') {
+        const isAll = empZones === 'all' || (Array.isArray(empZones) && empZones.length === 1 && empZones[0] === 'all');
+        if (isAll) {
           setSelectedZones(validZoneNames);
         } else if (Array.isArray(empZones)) {
           // Only include zones that still exist in the system
@@ -151,7 +152,8 @@ const ManagerEmployeeZones = ({ user }) => {
       setSelectedEmployee(employee);
       const empZones = employee.assignedZones || employee.assigned_zones;
       const validZoneNames = zones.map(z => z.name);
-      if (empZones === 'all') {
+      const isAll = empZones === 'all' || (Array.isArray(empZones) && empZones.length === 1 && empZones[0] === 'all');
+      if (isAll) {
         setSelectedZones(validZoneNames);
       } else if (Array.isArray(empZones)) {
         // Only include zones that still exist in the system
@@ -251,21 +253,31 @@ const ManagerEmployeeZones = ({ user }) => {
     }
   };
 
+  const isAllZones = (empZones) => {
+    return empZones === 'all' || (Array.isArray(empZones) && empZones.length === 1 && empZones[0] === 'all');
+  };
+
   const getEmployeeZoneCount = (employee) => {
     const empZones = employee.assignedZones || employee.assigned_zones;
-    if (empZones === 'all') return zones.length;
+    if (isAllZones(empZones)) return zones.length;
     if (Array.isArray(empZones)) return empZones.length;
     return 0;
   };
 
   const getEmployeeZoneDisplay = (employee) => {
     const empZones = employee.assignedZones || employee.assigned_zones;
-    if (empZones === 'all') return 'All Zones';
-    if (Array.isArray(empZones) && empZones.length > 0) {
-      if (empZones.length <= 2) {
-        return empZones.join(', ');
+    if (isAllZones(empZones)) {
+      if (zones.length <= 2) {
+        return zones.map(z => z.name).join(', ');
       }
-      return `${empZones.slice(0, 2).join(', ')} +${empZones.length - 2} more`;
+      return `${zones.slice(0, 2).map(z => z.name).join(', ')} +${zones.length - 2} more`;
+    }
+    if (Array.isArray(empZones) && empZones.length > 0) {
+      const validZones = empZones.filter(z => z !== 'all');
+      if (validZones.length <= 2) {
+        return validZones.join(', ');
+      }
+      return `${validZones.slice(0, 2).join(', ')} +${validZones.length - 2} more`;
     }
     return 'No zones assigned';
   };
@@ -282,7 +294,7 @@ const ManagerEmployeeZones = ({ user }) => {
     
     const empZones = e.assignedZones || e.assigned_zones;
     if (statusFilter === 'assigned') {
-      return (empZones === 'all' || (Array.isArray(empZones) && empZones.length > 0));
+      return (isAllZones(empZones) || (Array.isArray(empZones) && empZones.length > 0));
     }
     if (statusFilter === 'unassigned') {
       return !empZones || (Array.isArray(empZones) && empZones.length === 0);
@@ -298,7 +310,7 @@ const ManagerEmployeeZones = ({ user }) => {
 
   const assignedCount = employees.filter(e => {
     const empZones = e.assignedZones || e.assigned_zones;
-    return empZones === 'all' || (Array.isArray(empZones) && empZones.length > 0);
+    return isAllZones(empZones) || (Array.isArray(empZones) && empZones.length > 0);
   }).length;
 
   return (
@@ -476,8 +488,8 @@ const ManagerEmployeeZones = ({ user }) => {
                         {hasZones ? `${zoneCount} Zone${zoneCount !== 1 ? 's' : ''}` : 'No Zones'}
                       </span>
                     </div>
-                    {hasZones && empZones === 'all' && (
-                      <span className="text-xs text-emerald-600">All</span>
+                    {hasZones && isAllZones(empZones) && (
+                      <span className="text-xs text-emerald-600">All Zones</span>
                     )}
                     {hasZones && zoneCount > 2 && (
                       <span className="text-xs text-emerald-500 underline">View all</span>
@@ -696,10 +708,14 @@ const ManagerEmployeeZones = ({ user }) => {
                 {(() => {
                   const empZones = viewZonesEmployee.assignedZones || viewZonesEmployee.assigned_zones || [];
                   let zoneList = [];
-                  if (empZones === 'all') {
+                  // Check for "all" zones - either string 'all' or array ['all']
+                  if (isAllZones(empZones)) {
                     zoneList = zones.map(z => z.name);
                   } else if (Array.isArray(empZones)) {
-                    zoneList = empZones.map(z => typeof z === 'object' ? (z.name || z.zone_name || JSON.stringify(z)) : z);
+                    // Filter out 'all' and map to names
+                    zoneList = empZones
+                      .filter(z => z !== 'all')
+                      .map(z => typeof z === 'object' ? (z.name || z.zone_name || JSON.stringify(z)) : z);
                   } else if (typeof empZones === 'string' && empZones.includes(',')) {
                     zoneList = empZones.split(',').map(s => s.trim());
                   }
