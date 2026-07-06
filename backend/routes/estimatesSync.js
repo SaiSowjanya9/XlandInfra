@@ -475,6 +475,34 @@ router.post('/:estimateId/send', async (req, res) => {
       addons = typeof est.addons === 'string' ? JSON.parse(est.addons) : est.addons;
     }
     
+    // Enrich addons with descriptions from fp_addons table
+    if (addons.length > 0) {
+      const addonIds = addons.map(a => a.id || a.addon_id).filter(Boolean);
+      if (addonIds.length > 0) {
+        try {
+          const [addonDetails] = await pool.execute(
+            `SELECT id, service_name, description, frequency_type, frequency_count, price FROM fp_addons WHERE id IN (${addonIds.map(() => '?').join(',')})`,
+            addonIds
+          );
+          const addonMap = {};
+          addonDetails.forEach(ad => { addonMap[ad.id] = ad; });
+          addons = addons.map(a => {
+            const addonId = a.id || a.addon_id;
+            const details = addonMap[addonId];
+            return {
+              ...a,
+              name: a.name || a.service_name || details?.service_name || 'Add-on',
+              description: a.description || details?.description || '',
+              frequency_type: a.frequency_type || a.frequencyType || details?.frequency_type || 'Monthly',
+              frequency_count: a.frequency_count || a.frequencyCount || details?.frequency_count || 1
+            };
+          });
+        } catch (addonErr) {
+          console.log('Failed to enrich addons:', addonErr.message);
+        }
+      }
+    }
+    
     // Generate action token for approve/reject links
     const actionToken = crypto.randomBytes(32).toString('hex');
     
