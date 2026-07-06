@@ -46,7 +46,25 @@ const DEFAULT_SERVICES = [
 ];
 
 // Property types for AMC packages
-export const PROPERTY_TYPES = ['APT', 'Flats', 'GC', 'Villas', 'Plots', 'Commercial'];
+export const PROPERTY_TYPES = [
+  { id: 'GC', label: 'Gated Community' },
+  { id: 'APT', label: 'Apartment' },
+  { id: 'VILLA', label: 'Villa' },
+  { id: 'FLAT', label: 'Flat' },
+  { id: 'PLOT', label: 'Plot' }
+];
+
+// Helper to normalize property type to standard ID
+export const normalizePropertyType = (type) => {
+  if (!type) return '';
+  const upper = type.toUpperCase().replace(/[_\s-]/g, '');
+  if (upper.includes('GATED') || upper === 'GC') return 'GC';
+  if (upper.includes('APARTMENT') || upper === 'APT') return 'APT';
+  if (upper === 'VILLA' || upper === 'VILLAS' || upper.includes('VILLA')) return 'VILLA';
+  if (upper === 'FLAT' || upper === 'FLATS' || upper.includes('FLAT')) return 'FLAT';
+  if (upper === 'PLOT' || upper === 'PLOTS' || upper.includes('PLOT')) return 'PLOT';
+  return type;
+};
 
 // Frequency types (how often service occurs)
 export const FREQUENCY_TYPES = ['Monthly', 'Every 2 Months', 'Every 3 Months', 'Quarterly', 'Half-Yearly', 'Yearly'];

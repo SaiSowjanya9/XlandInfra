@@ -902,28 +902,30 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </div>
                         );
                       } else {
-                        const unitTypes = blockUnitTypes?.[1] || blockUnitTypes?.['1'] || blockUnitTypes?.['apt'] || {};
-                        const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                        // For APT, check 'apt' key first since that's how it's stored
+                        const unitTypes = blockUnitTypes?.['apt'] || blockUnitTypes?.[1] || blockUnitTypes?.['1'] || {};
+                        const propType = (selectedProperty.property_type || selectedProperty.entry_type || '').toUpperCase();
+                        const isAPT = propType === 'APT' || propType === 'APARTMENT';
                         return (
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
-                                <input type="text" value={selectedProperty.block_name || blockNames?.[1] || blockNames?.['1'] || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                <input type="text" value={selectedProperty.block_name || selectedProperty.block_info || blockNames?.[1] || blockNames?.['1'] || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                               </div>
                               <div>
                                 <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
                                 <input type="text" value={`${selectedProperty.units || selectedProperty.total_units || unitsPerBlock?.[1] || 1} Units`} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                               </div>
                             </div>
-                            {hasUnitTypes && (
+                            {isAPT && (
                               <div className="flex flex-wrap gap-2 p-3 bg-white border border-gray-200 rounded-lg">
                                 <span className="text-xs font-medium text-slate-500 mr-2">Unit Types:</span>
-                                {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                  <span key={type} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">
-                                    {unitTypeLabels[type] || type}: {count}
-                                  </span>
-                                ))}
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio || 0}</span>
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed || 0}</span>
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">2 BHK: {unitTypes.twoBed || 0}</span>
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed || 0}</span>
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed || 0}</span>
                               </div>
                             )}
                           </div>
@@ -1734,10 +1736,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const matchSearch = (e.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.estimate_id || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.client_name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = filterStatus === 'all' || e.status === filterStatus;
     const matchType = filterType === 'all' || e.estimate_type === filterType || (filterType === 'property_based' && (e.estimate_type === 'property_based' || e.estimate_type === 'property-based'));
-    const matchCategory = filterCategory === 'all' || 
-      e.property_type === filterCategory || 
-      (e.property_type || '').toLowerCase().includes(filterCategory.toLowerCase()) ||
-      filterCategory.toLowerCase().includes((e.property_type || '').toLowerCase());
+    const matchCategory = filterCategory === 'all' || normalizePropertyType(e.property_type) === filterCategory;
     // Date range filter
     let matchDate = true;
     if (filterFromDate || filterToDate) {
@@ -1789,14 +1788,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <label className="block text-xs font-medium text-gray-500 mb-1">Property Category</label>
                 <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
                   <option value="all">All Categories</option>
-                  <option value="IV">IV - Individual Villa</option>
-                  <option value="GC">GC - Gated Community</option>
-                  <option value="Gated Community">Gated Community</option>
-                  <option value="APT">APT - Apartment</option>
-                  <option value="Apartment">Apartment</option>
-                  <option value="COMM">COMM - Commercial</option>
-                  <option value="Commercial">Commercial</option>
-                  <option value="Individual Villa">Individual Villa</option>
+                  <option value="GC">Gated Community</option>
+                  <option value="APT">Apartment</option>
+                  <option value="VILLA">Villa</option>
+                  <option value="FLAT">Flat</option>
+                  <option value="PLOT">Plot</option>
                 </select>
               </div>
               <div>
