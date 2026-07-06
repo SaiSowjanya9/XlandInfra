@@ -499,6 +499,7 @@ router.post('/:estimateId/send', async (req, res) => {
       estimateId: est.estimate_id,
       customerName: est.customer_name,
       customerEmail: est.customer_email,
+      customerPhone: est.customer_phone || est.client_phone || '',
       propertyName: est.property_name,
       propertyType: est.property_type,
       zone: est.zone,

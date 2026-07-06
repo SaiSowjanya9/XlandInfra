@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
@@ -61,6 +61,22 @@ const TAB_TITLES = {
 
 const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlEstimateStep = searchParams.get('estimateStep');
+  
+  // Helper to update URL params
+  const updateUrlParam = useCallback((key, value) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (!value || value === '') {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, String(value));
+      }
+      return newParams;
+    }, { replace: true });
+  }, [setSearchParams]);
+  
   // Check if this is an FP-created Manager (has franchisePartnerId)
   const isFPManager = !!user?.franchisePartnerId;
   
