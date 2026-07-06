@@ -467,7 +467,22 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     </>
   );
 
-  const filteredEstimates = estimates.filter(e => e.title?.toLowerCase().includes(searchTerm.toLowerCase()) || e.estimate_id?.toLowerCase().includes(searchTerm.toLowerCase()) || e.client_name?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredEstimates = estimates.filter(e => {
+    const matchSearch = !searchTerm || e.title?.toLowerCase().includes(searchTerm.toLowerCase()) || e.estimate_id?.toLowerCase().includes(searchTerm.toLowerCase()) || e.client_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchType = estimateTypeFilter === 'all' || e.estimate_type === estimateTypeFilter;
+    const matchStatus = statusFilter === 'all' || e.status === statusFilter;
+    const matchCategory = categoryFilter === 'all' || normalizePropertyType(e.property_type) === categoryFilter;
+    // Date filter
+    let matchDate = true;
+    if (fromDate || toDate) {
+      const estDate = e.created_at ? new Date(e.created_at) : null;
+      if (estDate) {
+        if (fromDate && estDate < new Date(fromDate)) matchDate = false;
+        if (toDate && estDate > new Date(toDate + 'T23:59:59')) matchDate = false;
+      }
+    }
+    return matchSearch && matchType && matchStatus && matchCategory && matchDate;
+  });
 
   return (
     <div className="space-y-6">
@@ -774,28 +789,30 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                                   </div>
                                 );
                               } else {
-                                const unitTypes = blockUnitTypes?.[1] || blockUnitTypes?.['1'] || blockUnitTypes?.['apt'] || {};
-                                const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                                // For APT, check 'apt' key first since that's how it's stored
+                                const unitTypes = blockUnitTypes?.['apt'] || blockUnitTypes?.[1] || blockUnitTypes?.['1'] || {};
+                                const propType = (selectedProperty.property_type || selectedProperty.entry_type || '').toUpperCase();
+                                const isAPT = propType === 'APT' || propType === 'APARTMENT';
                                 return (
                                   <div className="space-y-3">
                                     <div className="grid grid-cols-2 gap-4">
                                       <div>
                                         <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
-                                        <input type="text" value={blockNames?.[1] || blockNames?.['1'] || selectedProperty.block_name || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                        <input type="text" value={blockNames?.[1] || blockNames?.['1'] || selectedProperty.block_name || selectedProperty.block_info || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                                       </div>
                                       <div>
                                         <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
                                         <input type="text" value={`${selectedProperty.units || selectedProperty.total_units || unitsPerBlock?.[1] || 1} Units`} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                                       </div>
                                     </div>
-                                    {hasUnitTypes && (
+                                    {isAPT && (
                                       <div className="flex flex-wrap gap-2 p-3 bg-white border border-gray-200 rounded-lg">
                                         <span className="text-xs font-medium text-slate-500 mr-2">Unit Types:</span>
-                                        {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                          <span key={type} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">
-                                            {unitTypeLabels[type] || type}: {count}
-                                          </span>
-                                        ))}
+                                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio || 0}</span>
+                                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed || 0}</span>
+                                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">2 BHK: {unitTypes.twoBed || 0}</span>
+                                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed || 0}</span>
+                                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed || 0}</span>
                                       </div>
                                     )}
                                   </div>

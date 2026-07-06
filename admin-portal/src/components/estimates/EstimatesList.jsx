@@ -6,17 +6,16 @@ import {
 } from 'lucide-react';
 import {
   searchEstimates, updateEstimate, deleteEstimate, calculateEstimateTotal,
-  PROPERTY_TYPES, ESTIMATE_STATUSES
+  PROPERTY_TYPES, ESTIMATE_STATUSES, normalizePropertyType
 } from '../../utils/estimateStore';
 import { exportEstimateToPDF } from '../../utils/pdfExport';
 
 const PROPERTY_ICONS = {
   APT: Home,
-  Flats: LayoutGrid,
+  FLAT: LayoutGrid,
   GC: Layers,
-  Villas: TreePine,
-  Plots: Map,
-  Commercial: Briefcase
+  VILLA: TreePine,
+  PLOT: Map
 };
 
 const STATUS_STYLES = {
@@ -60,7 +59,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
       est.propertyName?.toLowerCase().includes(search);
     const matchType = filters.estimateType === 'all' || est.estimateType === filters.estimateType;
     const matchStatus = filters.status === 'all' || est.status === filters.status;
-    const matchProperty = filters.propertyType === 'all' || est.propertyType === filters.propertyType;
+    const matchProperty = filters.propertyType === 'all' || normalizePropertyType(est.propertyType) === filters.propertyType;
     
     // Date filtering
     const estDate = new Date(est.createdAt);
@@ -300,7 +299,7 @@ const EstimatesList = ({ admin, estimates = [], onRefresh, showToast }) => {
                 >
                   <option value="all">All Categories</option>
                   {PROPERTY_TYPES.map(type => (
-                    <option key={type} value={type}>{type}</option>
+                    <option key={type.id} value={type.id}>{type.label}</option>
                   ))}
                 </select>
               </div>

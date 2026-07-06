@@ -74,6 +74,11 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const [stats, setStats] = useState({ estimates: 0, amcPackages: 0, addons: 0, archived: 0 });
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterType, setFilterType] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterFromDate, setFilterFromDate] = useState('');
+  const [filterToDate, setFilterToDate] = useState('');
   const [estimateType, setEstimateType] = useState(null);
   const [propertyIdInput, setPropertyIdInput] = useState('');
   const [selectedProperty, setSelectedProperty] = useState(null);
@@ -743,28 +748,30 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                           </div>
                         );
                       } else {
-                        const unitTypes = blockUnitTypes?.[1] || blockUnitTypes?.['1'] || blockUnitTypes?.['apt'] || {};
-                        const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                        // For APT, check 'apt' key first since that's how it's stored
+                        const unitTypes = blockUnitTypes?.['apt'] || blockUnitTypes?.[1] || blockUnitTypes?.['1'] || {};
+                        const propType = (selectedProperty.property_type || selectedProperty.entry_type || '').toUpperCase();
+                        const isAPT = propType === 'APT' || propType === 'APARTMENT';
                         return (
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
-                                <input type="text" value={blockNames?.[1] || blockNames?.['1'] || selectedProperty.block_name || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                                <input type="text" value={blockNames?.[1] || blockNames?.['1'] || selectedProperty.block_name || selectedProperty.block_info || 'A'} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                               </div>
                               <div>
                                 <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
                                 <input type="text" value={`${selectedProperty.units || selectedProperty.total_units || unitsPerBlock?.[1] || 1} Units`} readOnly className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                               </div>
                             </div>
-                            {hasUnitTypes && (
+                            {isAPT && (
                               <div className="flex flex-wrap gap-2 p-3 bg-white border border-gray-200 rounded-lg">
                                 <span className="text-xs font-medium text-slate-500 mr-2">Unit Types:</span>
-                                {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                  <span key={type} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">
-                                    {unitTypeLabels[type] || type}: {count}
-                                  </span>
-                                ))}
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio || 0}</span>
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed || 0}</span>
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">2 BHK: {unitTypes.twoBed || 0}</span>
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed || 0}</span>
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed || 0}</span>
                               </div>
                             )}
                           </div>
@@ -927,7 +934,21 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   );
 
   // ALL ESTIMATES
-  const filteredEstimates = estimates.filter(e => (e.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.estimate_id || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.client_name || '').toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredEstimates = estimates.filter(e => {
+    const matchSearch = !searchTerm || (e.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.estimate_id || '').toLowerCase().includes(searchTerm.toLowerCase()) || (e.client_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = filterStatus === 'all' || e.status === filterStatus;
+    const matchType = filterType === 'all' || e.estimate_type === filterType || (filterType === 'property_based' && (e.estimate_type === 'property_based' || e.estimate_type === 'property-based'));
+    const matchCategory = filterCategory === 'all' || normalizePropertyType(e.property_type) === filterCategory;
+    let matchDate = true;
+    if (filterFromDate || filterToDate) {
+      const estDate = e.created_at ? new Date(e.created_at) : null;
+      if (estDate) {
+        if (filterFromDate && estDate < new Date(filterFromDate)) matchDate = false;
+        if (filterToDate && estDate > new Date(filterToDate + 'T23:59:59')) matchDate = false;
+      }
+    }
+    return matchSearch && matchStatus && matchType && matchCategory && matchDate;
+  });
   const renderAllEstimates = () => (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -935,6 +956,50 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Search estimates..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm" /></div>
           <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"><Filter className="w-4 h-4" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
         </div>
+        {showFilters && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Estimate Type</label>
+                <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option value="all">All Estimates</option>
+                  <option value="property_based">Property Based</option>
+                  <option value="direct">Direct</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option value="all">All Statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="sent">Sent</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Property Category</label>
+                <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option value="all">All Categories</option>
+                  <option value="GC">Gated Community</option>
+                  <option value="APT">Apartment</option>
+                  <option value="VILLA">Villa</option>
+                  <option value="FLAT">Flat</option>
+                  <option value="PLOT">Plot</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
+                <input type="date" value={filterFromDate} onChange={(e) => setFilterFromDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
+                <input type="date" value={filterToDate} onChange={(e) => setFilterToDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
+              </div>
+            </div>
+            <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); }} className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium">Clear all filters</button>
+          </div>
+        )}
       </div>
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div></div> : filteredEstimates.length === 0 ? <div className="py-16 text-center"><DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No estimates found</p><p className="text-gray-400 text-sm mt-1">Try adjusting your search or filters</p></div> : (
