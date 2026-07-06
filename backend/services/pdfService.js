@@ -1,8 +1,8 @@
 const PDFDocument = require('pdfkit');
 const path = require('path');
 
-// Logo file path
-const LOGO_PATH = path.join(__dirname, '../assets/logo.webp');
+// Logo file path (PNG format for PDFKit compatibility)
+const LOGO_PATH = path.join(__dirname, '../assets/logo.png');
 
 // Generate estimate PDF and return as buffer
 const generateEstimatePDF = async (estimate) => {
