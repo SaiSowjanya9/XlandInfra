@@ -1107,7 +1107,7 @@ router.post('/work-orders', requireSupervisorScope, (req, res, next) => {
 router.patch('/work-orders/:id/status', requireSupervisorScope, validateOwnership('work_orders'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, closingNotes } = req.body;
+    const { status, closingNotes, cancelNote, cancellationNote } = req.body;
 
     // Supervisors can change status for completed work orders and revert to pending
     const allowedStatuses = ['pending', 'under_review', 'assigned', 'in_progress', 'completed', 'cancelled', 'closed'];
@@ -1117,9 +1117,12 @@ router.patch('/work-orders/:id/status', requireSupervisorScope, validateOwnershi
 
     // If completing, also save closing notes and completed date
     if (status === 'completed') {
-      await pool.query('UPDATE work_orders SET status = ?, closing_notes = ?, completed_date = NOW() WHERE id = ?', [status, closingNotes || null, id]);
+      await pool.query('UPDATE work_orders SET status = ?, closing_notes = ?, completed_date = NOW(), updated_at = NOW() WHERE id = ?', [status, closingNotes || null, id]);
+    } else if (status === 'cancelled') {
+      const cancellationNoteValue = cancelNote || cancellationNote || null;
+      await pool.query('UPDATE work_orders SET status = ?, cancellation_note = ?, cancelled_at = NOW(), updated_at = NOW() WHERE id = ?', [status, cancellationNoteValue, id]);
     } else {
-      await pool.query('UPDATE work_orders SET status = ? WHERE id = ?', [status, id]);
+      await pool.query('UPDATE work_orders SET status = ?, updated_at = NOW() WHERE id = ?', [status, id]);
     }
 
     // Send completion email if status is completed

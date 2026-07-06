@@ -538,6 +538,22 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
   // Memoize zone vendors to avoid recalculating on every render
   const zoneVendors = getZoneVendors();
 
+  // Get vendors sorted by matching service type first
+  const getSortedVendors = (serviceType) => {
+    if (!serviceType) return zoneVendors;
+    const normalizedService = serviceType.toLowerCase().trim();
+    
+    return [...zoneVendors].sort((a, b) => {
+      const aService = (a.serviceType || a.service_type || '').toLowerCase().trim();
+      const bService = (b.serviceType || b.service_type || '').toLowerCase().trim();
+      const aMatches = aService.includes(normalizedService) || normalizedService.includes(aService);
+      const bMatches = bService.includes(normalizedService) || normalizedService.includes(bService);
+      if (aMatches && !bMatches) return -1;
+      if (!aMatches && bMatches) return 1;
+      return 0;
+    });
+  };
+
   // Handle vendor selection for a service
   const handleVendorSelect = (serviceIndex, vendorId) => {
     const vendor = vendors.find(v => v.vendorId === vendorId);
@@ -629,25 +645,25 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
         className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header - Elegant subtle colors */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-slate-700 to-slate-600">
+        {/* Header - Soft Purple */}
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-purple-400">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
                 <Users className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-white">Assign Vendors</h2>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <Building2 className="w-3.5 h-3.5 text-slate-300" />
-                  <span className="text-sm text-slate-200">{property.name || property.communityName}</span>
-                  <span className="text-xs text-slate-400 font-mono">({property.propertyId})</span>
+                  <Building2 className="w-3.5 h-3.5 text-purple-200" />
+                  <span className="text-sm text-purple-100">{property.name || property.communityName}</span>
+                  <span className="text-xs text-purple-200 font-mono">({property.propertyId})</span>
                 </div>
               </div>
             </div>
             <button 
               onClick={onClose}
-              className="p-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -658,7 +674,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 text-slate-500 animate-spin" />
+              <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
               <span className="ml-3 text-gray-600">Loading data...</span>
             </div>
           ) : error ? (
@@ -709,7 +725,9 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {serviceAssignments.map((service, idx) => {
-                          const hasVendors = zoneVendors.length > 0;
+                          // Get vendors sorted by matching service type first
+                          const sortedVendors = getSortedVendors(service.serviceType);
+                          const hasVendors = sortedVendors.length > 0;
                           const hasSelection = !!service.vendorId;
                           
                           return (
@@ -722,7 +740,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                                   </span>
                                 </div>
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3 pb-16">
                                 <div className="relative">
                                   <select
                                     value={service.vendorId || ''}
@@ -730,13 +748,13 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                                     className={`w-full appearance-none px-3 py-2 border rounded-lg text-sm pr-8 outline-none transition-colors cursor-pointer ${
                                       hasSelection 
                                         ? 'border-green-400 bg-green-50 text-green-800 focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                        : 'border-gray-300 bg-white text-gray-700 focus:border-slate-400 focus:ring-2 focus:ring-slate-100'
+                                        : 'border-gray-300 bg-white text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100'
                                     }`}
                                   >
                                     {hasVendors ? (
                                       <>
                                         <option value="">-- Select Vendor --</option>
-                                        {zoneVendors.map(v => (
+                                        {sortedVendors.map(v => (
                                           <option key={v.vendorId} value={v.vendorId}>
                                             {v.ownerName || v.owner_name} ({v.serviceType || v.service_type})
                                           </option>
@@ -785,8 +803,8 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
               {!selectedEstimate && serviceAssignments.length === 0 && (
                 <div className="py-10">
                   <div className="flex flex-col items-center text-center max-w-md mx-auto">
-                    <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-                      <Package className="w-8 h-8 text-amber-600" />
+                    <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                      <Package className="w-8 h-8 text-purple-600" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">No Estimate Linked</h3>
                     <p className="text-gray-600 leading-relaxed">
@@ -822,7 +840,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess }) => {
                 className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
                   saving || assignedCount === 0
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-slate-700 text-white hover:bg-slate-800'
+                    : 'bg-purple-500 text-white hover:bg-purple-600'
                 }`}
               >
                 {saving ? (

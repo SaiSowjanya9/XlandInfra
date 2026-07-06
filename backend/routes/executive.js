@@ -955,7 +955,7 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
 router.patch('/work-orders/:id/status', requireExecutiveScope, async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, closingNotes } = req.body;
+    const { status, closingNotes, cancelNote, cancellationNote } = req.body;
 
     const allowedStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
     if (!allowedStatuses.includes(status)) {
@@ -965,6 +965,9 @@ router.patch('/work-orders/:id/status', requireExecutiveScope, async (req, res) 
     // If completing, also save closing notes and completed date
     if (status === 'completed') {
       await pool.query('UPDATE work_orders SET status = ?, closing_notes = ?, completed_date = NOW(), updated_at = NOW() WHERE id = ?', [status, closingNotes || null, id]);
+    } else if (status === 'cancelled') {
+      const cancellationNoteValue = cancelNote || cancellationNote || null;
+      await pool.query('UPDATE work_orders SET status = ?, cancellation_note = ?, cancelled_at = NOW(), updated_at = NOW() WHERE id = ?', [status, cancellationNoteValue, id]);
     } else {
       await pool.query('UPDATE work_orders SET status = ?, updated_at = NOW() WHERE id = ?', [status, id]);
     }

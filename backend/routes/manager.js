@@ -1039,16 +1039,17 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
 // Update work order status - Manager can only update their own work orders
 router.patch('/work-orders/:id/status', requireManagerScope, async (req, res) => {
   try {
-    const { status, notes, closingNotes } = req.body;
+    const { status, notes, closingNotes, cancelNote, cancellationNote } = req.body;
     const managerId = req.managerId;
     
     // Build update query - include notes if cancelling or closing notes if completing
     let updateQuery = `UPDATE work_orders SET status = ?, updated_at = NOW()`;
     const params = [status];
     
-    if (status === 'cancelled' && notes) {
-      updateQuery += `, cancellation_notes = ?`;
-      params.push(notes);
+    if (status === 'cancelled') {
+      const cancellationNoteValue = cancelNote || cancellationNote || notes || null;
+      updateQuery += `, cancellation_note = ?, cancelled_at = NOW()`;
+      params.push(cancellationNoteValue);
     }
     
     if (status === 'completed') {

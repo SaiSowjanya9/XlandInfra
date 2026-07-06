@@ -1274,13 +1274,20 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
 router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_orders'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, notes, closingNotes } = req.body;
+    const { status, notes, closingNotes, cancelNote, cancellationNote } = req.body;
 
     // If completing, also save closing notes and completed date
     if (status === 'completed') {
       await pool.execute(
         `UPDATE work_orders SET status = ?, closing_notes = ?, completed_date = NOW(), updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
         [status, closingNotes || null, id, req.fpId]
+      );
+    } else if (status === 'cancelled') {
+      // If cancelling, save cancellation note and cancelled timestamp
+      const cancellationNoteValue = cancelNote || cancellationNote || notes || null;
+      await pool.execute(
+        `UPDATE work_orders SET status = ?, cancellation_note = ?, cancelled_at = NOW(), updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
+        [status, cancellationNoteValue, id, req.fpId]
       );
     } else {
       await pool.execute(
