@@ -99,6 +99,8 @@ const FPProperties = ({ user }) => {
   const [loadingEstimates, setLoadingEstimates] = useState(false);
   const [serviceAssignments, setServiceAssignments] = useState([]);
   const [savingAssignments, setSavingAssignments] = useState(false);
+  const [propertyVendorAssignments, setPropertyVendorAssignments] = useState([]);
+  const [loadingVendorAssignments, setLoadingVendorAssignments] = useState(false);
   
   // Derived state for modals based on URL
   const showDetailsModal = !!viewPropertyId;
@@ -211,6 +213,32 @@ const FPProperties = ({ user }) => {
     }
   };
 
+  // Fetch vendor assignments for a property (read-only view)
+  const fetchPropertyVendorAssignments = async (propertyId) => {
+    setLoadingVendorAssignments(true);
+    try {
+      const response = await fetch('/api/fp/vendors/assignments', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        // Filter to only this property's assignments
+        const allAssignments = result.data?.serviceAssignments || result.data || [];
+        const propertyAssignments = allAssignments.filter(a => 
+          String(a.propertyId || a.property_id) === String(propertyId)
+        );
+        setPropertyVendorAssignments(propertyAssignments);
+      } else {
+        setPropertyVendorAssignments([]);
+      }
+    } catch (error) {
+      console.error('Fetch vendor assignments error:', error);
+      setPropertyVendorAssignments([]);
+    } finally {
+      setLoadingVendorAssignments(false);
+    }
+  };
+
   // Extract services from estimate
   const extractServicesFromEstimate = (estimate) => {
     const services = [];
@@ -260,17 +288,33 @@ const FPProperties = ({ user }) => {
     return services;
   };
 
-  // Get vendors filtered by zone
-  const getZoneFilteredVendors = (propertyZone) => {
+  // Get vendors filtered by zone and sorted by service type match
+  const getZoneFilteredVendors = (propertyZone, serviceType = '') => {
     if (!propertyZone) return vendors;
     const normalizedZone = propertyZone.toLowerCase().trim();
-    return vendors.filter(v => {
+    const normalizedService = serviceType.toLowerCase().trim();
+    
+    const zoneVendors = vendors.filter(v => {
       const vendorZone = (v.zone_name || v.zone || '').toLowerCase().trim();
       // Exact zone match or number match
       const propZoneNum = normalizedZone.replace(/[^0-9]/g, '');
       const vendorZoneNum = vendorZone.replace(/[^0-9]/g, '');
       return vendorZone === normalizedZone || (propZoneNum && vendorZoneNum && propZoneNum === vendorZoneNum);
     });
+    
+    // Sort vendors - matching service type first
+    if (normalizedService) {
+      return zoneVendors.sort((a, b) => {
+        const aService = (a.serviceType || a.service_type || '').toLowerCase().trim();
+        const bService = (b.serviceType || b.service_type || '').toLowerCase().trim();
+        const aMatches = aService.includes(normalizedService) || normalizedService.includes(aService);
+        const bMatches = bService.includes(normalizedService) || normalizedService.includes(bService);
+        if (aMatches && !bMatches) return -1;
+        if (!aMatches && bMatches) return 1;
+        return 0;
+      });
+    }
+    return zoneVendors;
   };
 
   // Handle vendor selection for a service
@@ -446,6 +490,7 @@ const FPProperties = ({ user }) => {
       return newParams;
     });
     fetchPropertyEstimates(property.property_id || property.id);
+    fetchPropertyVendorAssignments(property.id);
   };
   
   const closeViewModal = () => {
@@ -1763,6 +1808,58 @@ const FPProperties = ({ user }) => {
                   </div>
                 )}
               </div>
+
+              {/* Assigned Vendors Section - Read Only */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Truck className="w-4 h-4 text-purple-500" />
+                  <h3 className="text-base font-semibold text-gray-900">Assigned Vendors</h3>
+                </div>
+                {loadingVendorAssignments ? (
+                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                    <RefreshCw className="w-6 h-6 text-gray-400 mx-auto mb-2 animate-spin" />
+                    <p className="text-sm text-gray-500">Loading vendor assignments...</p>
+                  </div>
+                ) : propertyVendorAssignments.length === 0 ? (
+                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                    <Truck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No vendors assigned to this property</p>
+                  </div>
+                ) : (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-purple-50 border-b border-purple-100">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-purple-800">Service Type</th>
+                          <th className="px-4 py-3 text-left font-medium text-purple-800">Vendor Name</th>
+                          <th className="px-4 py-3 text-left font-medium text-purple-800">Contact</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {propertyVendorAssignments.map((assignment, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-4 py-3">
+                              <span className="font-medium text-gray-900">
+                                {assignment.serviceType || assignment.service_type || 'General'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-gray-800">
+                                {assignment.vendorName || assignment.vendor_name || '-'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-gray-600 text-xs">
+                                {assignment.vendorPhone || assignment.vendor_phone || '-'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1773,7 +1870,7 @@ const FPProperties = ({ user }) => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowAssignModal(false); setSelectedProperty(null); setServiceAssignments([]); }}>
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-amber-600 to-amber-500">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-purple-400">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -1783,7 +1880,7 @@ const FPProperties = ({ user }) => {
                     <h2 className="text-lg font-semibold text-white">
                       Assign {assignType === 'vendor' ? 'Vendor' : 'Employee'}
                     </h2>
-                    <p className="text-sm text-amber-100">Property: {selectedProperty.name}</p>
+                    <p className="text-sm text-purple-100">Property: {selectedProperty.name}</p>
                   </div>
                 </div>
                 <button 
@@ -1799,13 +1896,13 @@ const FPProperties = ({ user }) => {
             <div className="flex-1 overflow-y-auto p-6">
               {loadingEstimates ? (
                 <div className="text-center py-12">
-                  <RefreshCw className="w-8 h-8 text-amber-500 animate-spin mx-auto mb-3" />
+                  <RefreshCw className="w-8 h-8 text-purple-500 animate-spin mx-auto mb-3" />
                   <p className="text-gray-500">Loading services...</p>
                 </div>
               ) : assignType === 'vendor' && propertyEstimates.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FileText className="w-8 h-8 text-amber-600" />
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-purple-600" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">No Estimate Linked</h3>
                   <p className="text-gray-600 text-sm mb-4">
@@ -1817,7 +1914,7 @@ const FPProperties = ({ user }) => {
                       setSelectedProperty(null);
                       navigate('/fp/estimates');
                     }}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm font-medium"
                   >
                     <FileText className="w-4 h-4" />
                     Go to Estimates
@@ -1828,8 +1925,8 @@ const FPProperties = ({ user }) => {
                   {/* Zone Info */}
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-sm font-medium text-gray-700">Assign vendors to each service</span>
-                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">
-                      {getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone).length} vendor(s) in zone
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                      {getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone, '').length} vendor(s) in zone
                     </span>
                   </div>
 
@@ -1844,7 +1941,8 @@ const FPProperties = ({ user }) => {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {serviceAssignments.map((service, idx) => {
-                          const zoneVendors = getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone);
+                          // Get vendors sorted by matching service type first
+                          const zoneVendors = getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone, service.serviceType);
                           const hasSelection = !!service.vendorId;
                           
                           return (
@@ -1857,7 +1955,7 @@ const FPProperties = ({ user }) => {
                                   </span>
                                 </div>
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3 pb-16">
                                 <div className="relative">
                                   <select
                                     value={service.vendorId || ''}
@@ -1865,7 +1963,7 @@ const FPProperties = ({ user }) => {
                                     className={`w-full appearance-none px-3 py-2 border rounded-lg text-sm pr-8 outline-none transition-colors cursor-pointer ${
                                       hasSelection 
                                         ? 'border-green-400 bg-green-50 text-green-800 focus:border-green-500 focus:ring-2 focus:ring-green-100'
-                                        : 'border-gray-300 bg-white text-gray-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-100'
+                                        : 'border-gray-300 bg-white text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100'
                                     }`}
                                   >
                                     <option value="">-- Select Vendor --</option>
@@ -1939,7 +2037,7 @@ const FPProperties = ({ user }) => {
                     className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
                       savingAssignments || serviceAssignments.filter(s => s.vendorId).length === 0
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-amber-600 text-white hover:bg-amber-700'
+                        : 'bg-purple-500 text-white hover:bg-purple-600'
                     }`}
                   >
                     {savingAssignments ? (

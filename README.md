@@ -2,7 +2,7 @@
 
 A comprehensive full-stack web application for property management, work orders, vendor management, and AMC (Annual Maintenance Contract) packages, built with React, Node.js, and MySQL.
 
-> **Last Updated:** June 23, 2026
+> **Last Updated:** July 6, 2026
 
 ## Features
 
@@ -248,7 +248,34 @@ The application is fully responsive and works on:
 - Tablets
 - Mobile phones
 
-## Recent Updates (June 23, 2026)
+## Recent Updates (July 6, 2026)
+
+### Work Order Action Features Enhancement
+- **Unified Action System**: Implemented comprehensive work order action features across all portals
+- **Status Dropdown**: Inline status change with options: Pending, Assigned, In Progress, Completed, Cancelled
+- **Action Buttons**: View, Edit, Assign Vendor, Assign Employee, Delete functionality
+- **Role-Based Restrictions**:
+  - **Manager/FP Portal**: Full access including Mark As Closed, Revert to Pending, and Closed status
+  - **Coordinator/Supervisor Portal**: Restricted access - NO Mark As Closed, NO Revert to Pending, NO Closed status option
+- **Completion Modal**: Enter closing notes when marking work order as completed
+- **Cancellation Note Modal**: Required note when cancelling work orders - stored in database for audit trail
+
+### Cancellation Note Feature
+- **Database Schema**: Added `cancellation_note`, `cancelled_at`, `cancelled_by` columns to work_orders table
+- **Backend Support**: All routes (FP, Manager, Coordinator, Supervisor, Executive) updated to handle cancellation notes
+- **Frontend Modal**: Professional cancellation modal with required note field and confirmation
+- **History Tracking**: Cancellation notes stored in work_order_history for audit purposes
+- **Migration File**: `add_cancellation_note_to_work_orders.sql` for database updates
+
+### Work Order Modals & UI
+- **Assign Vendor Modal**: Select and assign vendor to work order with visual feedback
+- **Assign Employee Modal**: Select and assign employee to work order
+- **Edit Work Order Modal**: Full edit form with category, subcategory, priority, status, customer details
+- **View Details Modal**: Enhanced with action buttons based on work order status
+
+---
+
+## Previous Updates (June 23, 2026)
 
 ### Unit Type Fields for Properties
 - **Block Details Enhancement**: Added unit type breakdown (Studio, 1-4 Bed) for GC and Apartment properties
@@ -499,6 +526,9 @@ Implemented throughout Create Estimate and Create Work Order sections:
 
 ## Completed Features
 
+- ✅ **Work Order Action Features**: Status dropdown, Edit, Assign Vendor/Employee, Delete across all portals
+- ✅ **Cancellation Note**: Required note when cancelling work orders with database storage
+- ✅ **Role-Based Restrictions**: Coordinator/Supervisor limited features vs Manager/FP full access
 - ✅ **Unit Type Fields**: Studio, 1-4 Bed breakdown for GC and Apartment properties
 - ✅ **Multiple Contacts**: Contact 1 and Contact 2 support with proper display
 - ✅ **Watchman Information**: Watchman Name and Phone fields for properties

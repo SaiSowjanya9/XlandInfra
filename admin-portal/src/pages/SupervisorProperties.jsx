@@ -58,6 +58,8 @@ const SupervisorProperties = ({ user }) => {
   const [editFormData, setEditFormData] = useState({});
   const [propertyEstimates, setPropertyEstimates] = useState([]);
   const [loadingEstimates, setLoadingEstimates] = useState(false);
+  const [propertyVendorAssignments, setPropertyVendorAssignments] = useState([]);
+  const [loadingVendorAssignments, setLoadingVendorAssignments] = useState(false);
 
   const token = sessionStorage.getItem('pm_auth_token');
 
@@ -78,6 +80,31 @@ const SupervisorProperties = ({ user }) => {
       setPropertyEstimates([]);
     } finally {
       setLoadingEstimates(false);
+    }
+  };
+
+  // Fetch vendor assignments for a property (read-only view)
+  const fetchPropertyVendorAssignments = async (propertyId) => {
+    setLoadingVendorAssignments(true);
+    try {
+      const response = await fetch('/api/supervisor/vendors/assignments', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        const allAssignments = result.data?.serviceAssignments || result.data || [];
+        const propertyAssignments = allAssignments.filter(a => 
+          String(a.propertyId || a.property_id) === String(propertyId)
+        );
+        setPropertyVendorAssignments(propertyAssignments);
+      } else {
+        setPropertyVendorAssignments([]);
+      }
+    } catch (error) {
+      console.error('Fetch vendor assignments error:', error);
+      setPropertyVendorAssignments([]);
+    } finally {
+      setLoadingVendorAssignments(false);
     }
   };
 
@@ -743,6 +770,7 @@ const SupervisorProperties = ({ user }) => {
                               setSelectedProperty(property);
                               setShowDetailsModal(true);
                               fetchPropertyEstimates(property.property_id || property.id);
+                              fetchPropertyVendorAssignments(property.id);
                             }}
                             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                             title="View Details"
@@ -1189,6 +1217,58 @@ const SupervisorProperties = ({ user }) => {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Assigned Vendors Section - Read Only */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Truck className="w-4 h-4 text-purple-500" />
+                  <h3 className="text-base font-semibold text-gray-900">Assigned Vendors</h3>
+                </div>
+                {loadingVendorAssignments ? (
+                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                    <RefreshCw className="w-6 h-6 text-gray-400 mx-auto mb-2 animate-spin" />
+                    <p className="text-sm text-gray-500">Loading vendor assignments...</p>
+                  </div>
+                ) : propertyVendorAssignments.length === 0 ? (
+                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                    <Truck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No vendors assigned to this property</p>
+                  </div>
+                ) : (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-purple-50 border-b border-purple-100">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-purple-800">Service Type</th>
+                          <th className="px-4 py-3 text-left font-medium text-purple-800">Vendor Name</th>
+                          <th className="px-4 py-3 text-left font-medium text-purple-800">Contact</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {propertyVendorAssignments.map((assignment, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-4 py-3">
+                              <span className="font-medium text-gray-900">
+                                {assignment.serviceType || assignment.service_type || 'General'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-gray-800">
+                                {assignment.vendorName || assignment.vendor_name || '-'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-gray-600 text-xs">
+                                {assignment.vendorPhone || assignment.vendor_phone || '-'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>

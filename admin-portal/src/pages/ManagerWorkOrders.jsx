@@ -98,6 +98,7 @@ const ManagerWorkOrders = ({ user }) => {
     { value: 'assigned', label: 'Assigned', color: 'bg-purple-100 text-purple-700' },
     { value: 'in_progress', label: 'In Progress', color: 'bg-orange-100 text-orange-700' },
     { value: 'completed', label: 'Completed', color: 'bg-green-100 text-green-700' },
+    { value: 'closed', label: 'Closed', color: 'bg-gray-100 text-gray-700' },
     { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-700' }
   ];
 
@@ -127,27 +128,44 @@ const ManagerWorkOrders = ({ user }) => {
 
   const fetchDependencies = async () => {
     try {
-      const [propRes, catRes, custRes] = await Promise.all([
+      const [propRes, catRes, custRes, vendRes] = await Promise.all([
         fetch('/api/manager/properties', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/manager/categories', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/customers', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch('/api/manager/customers', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/manager/vendors', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
-      const [propData, catData, custData] = await Promise.all([
-        propRes.json(), catRes.json(), custRes.json()
+      const [propData, catData, custData, vendData] = await Promise.all([
+        propRes.json(), catRes.json(), custRes.json(), vendRes.json()
       ]);
 
       if (propData.success) setProperties(propData.data);
       if (catData.success) setCategories(catData.data);
       if (custData.success) setCustomers(custData.data);
+      if (vendData.success) setVendors(vendData.data?.all || vendData.data || []);
     } catch (error) {
       console.error('Fetch dependencies error:', error);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await fetch('/api/manager/employees', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setEmployees(result.data || []);
+      }
+    } catch (error) {
+      console.error('Fetch employees error:', error);
     }
   };
 
   useEffect(() => {
     fetchWorkOrders();
     fetchDependencies();
+    fetchEmployees();
   }, []);
 
   // Count work orders by status - Pending = all except completed, Completed = only completed
@@ -303,6 +321,189 @@ const ManagerWorkOrders = ({ user }) => {
     }
   };
 
+  // Handle status change from dropdown
+  const handleStatusChange = async (workOrderId, newStatus, closingNotesValue = null) => {
+    // If completing, show modal to enter closing notes
+    if (newStatus === 'completed' && closingNotesValue === null) {
+      setCompletingWorkOrderId(workOrderId);
+      setClosingNotes('');
+      setShowCompletionModal(true);
+      return;
+    }
+
+    // If cancelling, show cancel modal
+    if (newStatus === 'cancelled') {
+      const wo = workOrders.find(w => w.id === workOrderId);
+      setShowCancelModal(wo);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/manager/work-orders/${workOrderId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus, closingNotes: closingNotesValue })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setMessage({ type: 'success', text: `Status updated to ${newStatus}` });
+        fetchWorkOrders();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Failed to update status' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to update status' });
+    }
+  };
+
+  // Revert to Pending
+  const handleRevertToPending = async (workOrderId) => {
+    await handleStatusChange(workOrderId, 'pending');
+  };
+
+  // Mark as Closed (same as completed)
+  const handleMarkAsClosed = async (workOrderId) => {
+    setCompletingWorkOrderId(workOrderId);
+    setClosingNotes('');
+    setShowCompletionModal(true);
+  };
+
+  // Delete Work Order
+  const handleDeleteWorkOrder = async (workOrderId) => {
+    if (!window.confirm('Are you sure you want to delete this work order?')) return;
+    
+    try {
+      const response = await fetch(`/api/manager/work-orders/${workOrderId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Work order deleted successfully' });
+        fetchWorkOrders();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Failed to delete work order' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to delete work order' });
+    }
+  };
+
+  // Open Assign Modal
+  const openAssignModal = (workOrder, type) => {
+    setSelectedWorkOrder(workOrder);
+    setAssignType(type);
+    setShowAssignModal(workOrder);
+  };
+
+  // Handle Assignment
+  const handleAssign = async (assigneeId) => {
+    if (!selectedWorkOrder) return;
+
+    try {
+      const endpoint = assignType === 'vendor'
+        ? `/api/manager/work-orders/${selectedWorkOrder.id}/assign-vendor`
+        : `/api/manager/work-orders/${selectedWorkOrder.id}/assign-employee`;
+
+      const response = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(assignType === 'vendor' ? { vendorId: assigneeId } : { employeeId: assigneeId })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage({ type: 'success', text: `${assignType === 'vendor' ? 'Vendor' : 'Employee'} assigned successfully!` });
+        setShowAssignModal(null);
+        setSelectedWorkOrder(null);
+        fetchWorkOrders();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Assignment failed' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: `Failed to assign ${assignType}` });
+    }
+  };
+
+  // Fetch subcategories for edit modal
+  const fetchSubcategories = (categoryId) => {
+    const category = categories.find(c => c.id === parseInt(categoryId));
+    setSubcategories(category?.subcategories || []);
+  };
+
+  // Open edit modal with work order data
+  const handleEditWorkOrder = (wo) => {
+    setSelectedWorkOrder(wo);
+    setEditFormData({
+      categoryId: wo.category_id || '',
+      subcategoryId: wo.subcategory_id || '',
+      description: wo.description || '',
+      permissionToEnter: wo.permission_to_enter || '',
+      hasPet: wo.has_pet || '',
+      entryNotes: wo.entry_notes || '',
+      priority: wo.priority || 'medium',
+      status: wo.status || 'pending',
+      customerName: wo.customer_name || [wo.first_name, wo.last_name].filter(Boolean).join(' ') || '',
+      customerEmail: wo.customer_email || wo.email || '',
+      customerPhone: wo.customer_phone || wo.phone || '',
+      block: wo.block || '',
+      flatNumber: wo.flat_number || ''
+    });
+    // Load subcategories for the selected category
+    if (wo.category_id) {
+      fetchSubcategories(wo.category_id);
+    }
+    setShowEditModal(true);
+  };
+
+  // Save edited work order
+  const handleSaveEdit = async () => {
+    if (!selectedWorkOrder) return;
+    
+    try {
+      const response = await fetch(`/api/manager/work-orders/${selectedWorkOrder.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          category_id: editFormData.categoryId,
+          subcategory_id: editFormData.subcategoryId,
+          description: editFormData.description,
+          permission_to_enter: editFormData.permissionToEnter,
+          has_pet: editFormData.hasPet,
+          entry_notes: editFormData.entryNotes,
+          priority: editFormData.priority,
+          status: editFormData.status,
+          customer_name: editFormData.customerName,
+          customer_email: editFormData.customerEmail,
+          customer_phone: editFormData.customerPhone,
+          block: editFormData.block,
+          flat_number: editFormData.flatNumber
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Work order updated successfully' });
+        setShowEditModal(false);
+        fetchWorkOrders();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Failed to update work order' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to update work order' });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       propertyId: '',
@@ -423,8 +624,9 @@ const ManagerWorkOrders = ({ user }) => {
   const getStatusColor = (status) => {
     const colors = {
       draft: 'bg-gray-100 text-gray-700',
+      pending: 'bg-yellow-100 text-yellow-700',
       requested: 'bg-blue-100 text-blue-700',
-      under_review: 'bg-yellow-100 text-yellow-700',
+      under_review: 'bg-amber-100 text-amber-700',
       assigned: 'bg-purple-100 text-purple-700',
       accepted: 'bg-indigo-100 text-indigo-700',
       in_progress: 'bg-orange-100 text-orange-700',
@@ -620,9 +822,21 @@ const ManagerWorkOrders = ({ user }) => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
-                        {wo.status?.replace(/_/g, ' ').toUpperCase()}
-                      </span>
+                      <div className="relative inline-block">
+                        <select
+                          value={wo.status}
+                          onChange={(e) => handleStatusChange(wo.id, e.target.value)}
+                          className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(wo.status)}`}
+                        >
+                          <option value="pending" className="bg-white text-gray-900">Pending</option>
+                          <option value="assigned" className="bg-white text-gray-900">Assigned</option>
+                          <option value="in_progress" className="bg-white text-gray-900">In Progress</option>
+                          <option value="completed" className="bg-white text-gray-900">Completed</option>
+                          <option value="closed" className="bg-white text-gray-900">Closed</option>
+                          <option value="cancelled" className="bg-white text-gray-900">Cancelled</option>
+                        </select>
+                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-500">{formatDate(wo.created_at)}</span>
@@ -641,14 +855,62 @@ const ManagerWorkOrders = ({ user }) => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-center">
+                      <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => { setSelectedWorkOrder(wo); setShowViewModal(true); }}
-                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                           title="View Details"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4 h-4 text-gray-500" />
                         </button>
+                        <button
+                          onClick={() => handleEditWorkOrder(wo)}
+                          className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit Work Order"
+                        >
+                          <Pencil className="w-4 h-4 text-blue-500" />
+                        </button>
+                        <button
+                          onClick={() => openAssignModal(wo, 'vendor')}
+                          className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
+                          title="Assign Vendor"
+                        >
+                          <Truck className="w-4 h-4 text-purple-500" />
+                        </button>
+                        <button
+                          onClick={() => openAssignModal(wo, 'employee')}
+                          className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Assign Employee"
+                        >
+                          <UserPlus className="w-4 h-4 text-green-500" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteWorkOrder(wo.id)}
+                          className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                        {/* Revert to Pending - for completed/closed work orders */}
+                        {['completed', 'closed'].includes(wo.status) && (
+                          <button
+                            onClick={() => handleRevertToPending(wo.id)}
+                            className="p-1.5 hover:bg-amber-50 rounded-lg transition-colors"
+                            title="Revert to Pending"
+                          >
+                            <RotateCcw className="w-4 h-4 text-amber-500" />
+                          </button>
+                        )}
+                        {/* Mark as Closed - for non-completed/non-closed work orders */}
+                        {!['completed', 'closed', 'cancelled'].includes(wo.status) && (
+                          <button
+                            onClick={() => handleMarkAsClosed(wo.id)}
+                            className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Mark as Closed"
+                          >
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1247,13 +1509,38 @@ const ManagerWorkOrders = ({ user }) => {
                 </div>
               )}
 
-              <div className="flex justify-end pt-4 border-t border-gray-100">
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
                 <button
                   onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }}
                   className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
                 >
                   Close
                 </button>
+                {/* Revert to Pending - for completed/closed work orders */}
+                {['completed', 'closed'].includes(selectedWorkOrder.status) && (
+                  <button
+                    onClick={async () => {
+                      await handleRevertToPending(selectedWorkOrder.id);
+                      setShowViewModal(false);
+                      setSelectedWorkOrder(null);
+                    }}
+                    className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+                  >
+                    Revert to Pending
+                  </button>
+                )}
+                {/* Mark as Closed - for non-completed/non-closed work orders */}
+                {!['completed', 'closed', 'cancelled'].includes(selectedWorkOrder.status) && (
+                  <button
+                    onClick={() => {
+                      handleMarkAsClosed(selectedWorkOrder.id);
+                      setShowViewModal(false);
+                    }}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    Mark as Closed
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1389,6 +1676,268 @@ const ManagerWorkOrders = ({ user }) => {
                 <CheckCircle className="w-4 h-4" />
                 {isSubmittingCompletion ? 'Completing...' : 'Mark as Completed'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Vendor/Employee Modal */}
+      {showAssignModal && selectedWorkOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Assign {assignType === 'vendor' ? 'Vendor' : 'Employee'}
+                </h2>
+                <button onClick={() => { setShowAssignModal(null); setSelectedWorkOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Work Order: {selectedWorkOrder.work_order_id}
+              </p>
+            </div>
+
+            <div className="p-6">
+              {(assignType === 'vendor' ? vendors : employees).length === 0 ? (
+                <p className="text-gray-500 text-center py-4">
+                  No {assignType === 'vendor' ? 'vendors' : 'employees'} available
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {(assignType === 'vendor' ? vendors : employees).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleAssign(item.id)}
+                      className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
+                    >
+                      <div className={`w-10 h-10 ${assignType === 'vendor' ? 'bg-purple-100' : 'bg-green-100'} rounded-full flex items-center justify-center`}>
+                        {assignType === 'vendor' ? (
+                          <Store className="w-5 h-5 text-purple-600" />
+                        ) : (
+                          <User className="w-5 h-5 text-green-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {assignType === 'vendor'
+                            ? (item.ownerName || item.owner_name || item.company_name || 'Unknown Vendor')
+                            : (`${item.first_name || ''} ${item.last_name || ''}`.trim() || item.name || 'Unknown Employee')}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {assignType === 'vendor'
+                            ? (item.serviceType || item.service_type || item.email || '-')
+                            : (item.role || item.email || '-')}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Work Order Modal */}
+      {showEditModal && selectedWorkOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Edit Work Order</h2>
+                  <p className="text-sm text-gray-500 mt-1">{selectedWorkOrder.work_order_id}</p>
+                </div>
+                <button onClick={() => { setShowEditModal(false); setSelectedWorkOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Customer Information */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                  <input
+                    type="text"
+                    value={editFormData.customerName}
+                    onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={editFormData.customerEmail}
+                    onChange={(e) => setEditFormData({ ...editFormData, customerEmail: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    value={editFormData.customerPhone}
+                    onChange={(e) => setEditFormData({ ...editFormData, customerPhone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Category & Subcategory */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    value={editFormData.categoryId}
+                    onChange={(e) => {
+                      setEditFormData({ ...editFormData, categoryId: e.target.value, subcategoryId: '' });
+                      fetchSubcategories(e.target.value);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                  <select
+                    value={editFormData.subcategoryId}
+                    onChange={(e) => setEditFormData({ ...editFormData, subcategoryId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    disabled={!editFormData.categoryId}
+                  >
+                    <option value="">Select subcategory</option>
+                    {subcategories.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Block & Flat */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Block</label>
+                  <input
+                    type="text"
+                    value={editFormData.block}
+                    onChange={(e) => setEditFormData({ ...editFormData, block: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Flat Number</label>
+                  <input
+                    type="text"
+                    value={editFormData.flatNumber}
+                    onChange={(e) => setEditFormData({ ...editFormData, flatNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Priority & Status */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select
+                    value={editFormData.priority}
+                    onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    {priorityOptions.map((p) => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    value={editFormData.status}
+                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    {statusOptions.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Permission & Pet */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Permission to Enter</label>
+                  <select
+                    value={editFormData.permissionToEnter}
+                    onChange={(e) => setEditFormData({ ...editFormData, permissionToEnter: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Has Pet?</label>
+                  <select
+                    value={editFormData.hasPet}
+                    onChange={(e) => setEditFormData({ ...editFormData, hasPet: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Entry Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Entry Notes</label>
+                <textarea
+                  value={editFormData.entryNotes}
+                  onChange={(e) => setEditFormData({ ...editFormData, entryNotes: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Special instructions for entry..."
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => { setShowEditModal(false); setSelectedWorkOrder(null); }}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Save Changes
+                </button>
+              </div>
             </div>
           </div>
         </div>

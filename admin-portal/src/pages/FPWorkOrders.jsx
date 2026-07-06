@@ -70,6 +70,9 @@ const FPWorkOrders = ({ user }) => {
   const [closingNotes, setClosingNotes] = useState('');
   const [completingWorkOrderId, setCompletingWorkOrderId] = useState(null);
   const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelNote, setCancelNote] = useState('');
+  const [cancellingWorkOrderId, setCancellingWorkOrderId] = useState(null);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
@@ -607,12 +610,20 @@ const FPWorkOrders = ({ user }) => {
     setShowDetailModal(true);
   };
 
-  const handleStatusChange = async (workOrderId, newStatus, closingNotesValue = null) => {
+  const handleStatusChange = async (workOrderId, newStatus, closingNotesValue = null, cancelNoteValue = null) => {
     // If completing, show modal to enter closing notes
     if (newStatus === 'completed' && closingNotesValue === null) {
       setCompletingWorkOrderId(workOrderId);
       setClosingNotes('');
       setShowCompletionModal(true);
+      return;
+    }
+
+    // If cancelling, show modal to enter cancellation note
+    if (newStatus === 'cancelled' && cancelNoteValue === null) {
+      setCancellingWorkOrderId(workOrderId);
+      setCancelNote('');
+      setShowCancelModal(true);
       return;
     }
 
@@ -623,17 +634,26 @@ const FPWorkOrders = ({ user }) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ status: newStatus, closingNotes: closingNotesValue })
+        body: JSON.stringify({ 
+          status: newStatus, 
+          closingNotes: closingNotesValue,
+          cancelNote: cancelNoteValue
+        })
       });
       const result = await response.json();
       if (result.success) {
         setMessage({ type: 'success', text: `Status updated to ${newStatus}` });
         fetchWorkOrders();
-        // Close completion modal if open
+        // Close modals if open
         if (newStatus === 'completed') {
           setShowCompletionModal(false);
           setClosingNotes('');
           setCompletingWorkOrderId(null);
+        }
+        if (newStatus === 'cancelled') {
+          setShowCancelModal(false);
+          setCancelNote('');
+          setCancellingWorkOrderId(null);
         }
       } else {
         setMessage({ type: 'error', text: result.message || 'Failed to update status' });
@@ -648,6 +668,16 @@ const FPWorkOrders = ({ user }) => {
       setIsSubmittingCompletion(true);
       await handleStatusChange(completingWorkOrderId, 'completed', closingNotes);
       setIsSubmittingCompletion(false);
+    }
+  };
+
+  const handleCancelWorkOrder = async () => {
+    if (!cancelNote.trim()) {
+      setMessage({ type: 'error', text: 'Cancellation note is required' });
+      return;
+    }
+    if (cancellingWorkOrderId) {
+      await handleStatusChange(cancellingWorkOrderId, 'cancelled', null, cancelNote);
     }
   };
 
@@ -2087,6 +2117,75 @@ const FPWorkOrders = ({ user }) => {
               >
                 <CheckCircle className="w-4 h-4" />
                 {isSubmittingCompletion ? 'Completing...' : 'Mark as Completed'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancellation Modal with Note */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">Cancel Work Order</h2>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setCancelNote('');
+                    setCancellingWorkOrderId(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 mb-4">
+                Please provide a reason for cancelling this work order.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cancellation Note <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={cancelNote}
+                  onChange={(e) => setCancelNote(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+                  placeholder="Enter reason for cancellation..."
+                  required
+                />
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                This note will be recorded with the cancellation for future reference.
+              </p>
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancelNote('');
+                  setCancellingWorkOrderId(null);
+                }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={handleCancelWorkOrder}
+                disabled={!cancelNote.trim()}
+                className={`px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 ${!cancelNote.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <AlertCircle className="w-4 h-4" />
+                Confirm Cancellation
               </button>
             </div>
           </div>

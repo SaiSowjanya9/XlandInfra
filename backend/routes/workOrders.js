@@ -528,7 +528,7 @@ router.get('/:id', async (req, res) => {
 router.patch('/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, notes, adminId, closingNotes } = req.body;
+    const { status, notes, adminId, closingNotes, cancelNote, cancellationNote } = req.body;
     
     const validStatuses = ['pending', 'assigned', 'in_progress', 'completed', 'closed', 'cancelled'];
     if (!validStatuses.includes(status)) {
@@ -546,13 +546,20 @@ router.patch('/:id/status', async (req, res) => {
         return res.status(404).json({ success: false, message: 'Work order not found' });
       }
 
-      // Update status - include closing_notes if completing
+      // Update status - include closing_notes if completing, cancellation_note if cancelling
       const completedAt = (status === 'completed' || status === 'closed') ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
+      const cancelledAt = (status === 'cancelled') ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
+      const cancellationNoteValue = cancelNote || cancellationNote || notes || null;
 
       if (status === 'completed') {
         await pool.query(
           `UPDATE work_orders SET status = ?, closing_notes = ?, completed_at = ?, completed_date = NOW(), updated_at = NOW() WHERE id = ?`,
           [status, closingNotes || null, completedAt, id]
+        );
+      } else if (status === 'cancelled') {
+        await pool.query(
+          `UPDATE work_orders SET status = ?, cancellation_note = ?, cancelled_at = ?, updated_at = NOW() WHERE id = ?`,
+          [status, cancellationNoteValue, cancelledAt, id]
         );
       } else {
         await pool.query(

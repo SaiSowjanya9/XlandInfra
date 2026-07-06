@@ -1091,13 +1091,14 @@ router.post('/work-orders', requireCoordinatorScope, async (req, res) => {
 router.patch('/work-orders/:id/status', requireCoordinatorScope, validateOwnership('work_orders'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, cancellationNote, closingNotes } = req.body;
+    const { status, cancellationNote, cancelNote, closingNotes } = req.body;
 
     // If cancelling, store the cancellation note
-    if (status === 'cancelled' && cancellationNote) {
+    if (status === 'cancelled') {
+      const cancellationNoteValue = cancelNote || cancellationNote || null;
       await pool.query(
-        'UPDATE work_orders SET status = ?, cancellation_note = ?, cancelled_at = NOW() WHERE id = ?', 
-        [status, cancellationNote, id]
+        'UPDATE work_orders SET status = ?, cancellation_note = ?, cancelled_at = NOW(), updated_at = NOW() WHERE id = ?', 
+        [status, cancellationNoteValue, id]
       );
     } else if (status === 'completed') {
       await pool.query(

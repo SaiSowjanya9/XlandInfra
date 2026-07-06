@@ -57,6 +57,8 @@ const ManagerProperties = ({ user }) => {
   const [loadingEstimates, setLoadingEstimates] = useState(false);
   const [serviceAssignments, setServiceAssignments] = useState([]); // {serviceType, frequencyType, frequencyCount, vendorId}
   const [savingAssignments, setSavingAssignments] = useState(false);
+  const [propertyVendorAssignments, setPropertyVendorAssignments] = useState([]);
+  const [loadingVendorAssignments, setLoadingVendorAssignments] = useState(false);
 
   // Property type tabs config
   const propertyTabs = [
@@ -340,6 +342,31 @@ const ManagerProperties = ({ user }) => {
     }
   };
 
+  // Fetch vendor assignments for a property (read-only view)
+  const fetchPropertyVendorAssignments = async (propertyId) => {
+    setLoadingVendorAssignments(true);
+    try {
+      const response = await fetch('/api/manager/vendors/assignments', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        const allAssignments = result.data?.serviceAssignments || result.data || [];
+        const propertyAssignments = allAssignments.filter(a => 
+          String(a.propertyId || a.property_id) === String(propertyId)
+        );
+        setPropertyVendorAssignments(propertyAssignments);
+      } else {
+        setPropertyVendorAssignments([]);
+      }
+    } catch (error) {
+      console.error('Fetch vendor assignments error:', error);
+      setPropertyVendorAssignments([]);
+    } finally {
+      setLoadingVendorAssignments(false);
+    }
+  };
+
   // Extract services from estimate (handles different data structures)
   const extractServicesFromEstimate = (estimate) => {
     const services = [];
@@ -392,14 +419,30 @@ const ManagerProperties = ({ user }) => {
     return services;
   };
 
-  // Get vendors filtered by property zone
-  const getZoneFilteredVendors = (propertyZone) => {
+  // Get vendors filtered by property zone and sorted by service type match
+  const getZoneFilteredVendors = (propertyZone, serviceType = '') => {
     if (!propertyZone) return vendors;
     const normalizedZone = propertyZone.toLowerCase().trim();
-    return vendors.filter(v => {
+    const normalizedService = serviceType.toLowerCase().trim();
+    
+    const zoneVendors = vendors.filter(v => {
       const vendorZone = (v.zone_name || v.zone || '').toLowerCase().trim();
       return vendorZone === normalizedZone || !vendorZone; // Include vendors without zone
     });
+    
+    // Sort vendors - matching service type first
+    if (normalizedService) {
+      return zoneVendors.sort((a, b) => {
+        const aService = (a.service_type || a.serviceType || '').toLowerCase().trim();
+        const bService = (b.service_type || b.serviceType || '').toLowerCase().trim();
+        const aMatches = aService.includes(normalizedService) || normalizedService.includes(aService);
+        const bMatches = bService.includes(normalizedService) || normalizedService.includes(bService);
+        if (aMatches && !bMatches) return -1;
+        if (!aMatches && bMatches) return 1;
+        return 0;
+      });
+    }
+    return zoneVendors;
   };
 
   // Handle vendor selection for a service row
@@ -784,7 +827,7 @@ const ManagerProperties = ({ user }) => {
                       <div className="flex items-center justify-end gap-1">
                         {/* View Details - always visible */}
                         <button
-                          onClick={() => { setViewingProperty(property); setShowViewModal(true); fetchPropertyEstimates(property.property_id || property.id); }}
+                          onClick={() => { setViewingProperty(property); setShowViewModal(true); fetchPropertyEstimates(property.property_id || property.id); fetchPropertyVendorAssignments(property.id); }}
                           className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg"
                           title="View Details"
                         >
@@ -1416,6 +1459,58 @@ const ManagerProperties = ({ user }) => {
                   </div>
                 )}
               </div>
+
+              {/* Assigned Vendors Section - Read Only */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Truck className="w-4 h-4 text-purple-500" />
+                  <h3 className="text-base font-semibold text-gray-900">Assigned Vendors</h3>
+                </div>
+                {loadingVendorAssignments ? (
+                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                    <RefreshCw className="w-6 h-6 text-gray-400 mx-auto mb-2 animate-spin" />
+                    <p className="text-sm text-gray-500">Loading vendor assignments...</p>
+                  </div>
+                ) : propertyVendorAssignments.length === 0 ? (
+                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                    <Truck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No vendors assigned to this property</p>
+                  </div>
+                ) : (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-purple-50 border-b border-purple-100">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-purple-800">Service Type</th>
+                          <th className="px-4 py-3 text-left font-medium text-purple-800">Vendor Name</th>
+                          <th className="px-4 py-3 text-left font-medium text-purple-800">Contact</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {propertyVendorAssignments.map((assignment, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-4 py-3">
+                              <span className="font-medium text-gray-900">
+                                {assignment.serviceType || assignment.service_type || 'General'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-gray-800">
+                                {assignment.vendorName || assignment.vendor_name || '-'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-gray-600 text-xs">
+                                {assignment.vendorPhone || assignment.vendor_phone || '-'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1426,7 +1521,7 @@ const ManagerProperties = ({ user }) => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowAssignModal(false); setSelectedProperty(null); setServiceAssignments([]); }}>
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-purple-500">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-purple-400">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -1457,8 +1552,8 @@ const ManagerProperties = ({ user }) => {
                 </div>
               ) : assignType === 'vendor' && propertyEstimates.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FileText className="w-8 h-8 text-amber-600" />
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-purple-600" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">No Estimate Linked</h3>
                   <p className="text-gray-600 text-sm mb-4">
@@ -1477,7 +1572,7 @@ const ManagerProperties = ({ user }) => {
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-sm font-medium text-gray-700">Assign vendors to each service</span>
                     <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                      {getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone).length} vendor(s) in zone
+                      {getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone, '').length} vendor(s) in zone
                     </span>
                   </div>
 
@@ -1492,7 +1587,8 @@ const ManagerProperties = ({ user }) => {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {serviceAssignments.map((service, idx) => {
-                          const zoneVendors = getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone);
+                          // Get vendors sorted by matching service type first
+                          const zoneVendors = getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone, service.serviceType);
                           const hasSelection = !!service.vendorId;
                           
                           return (
@@ -1505,7 +1601,7 @@ const ManagerProperties = ({ user }) => {
                                   </span>
                                 </div>
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3 pb-16">
                                 <div className="relative">
                                   <select
                                     value={service.vendorId || ''}
@@ -1587,7 +1683,7 @@ const ManagerProperties = ({ user }) => {
                     className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
                       savingAssignments || serviceAssignments.filter(s => s.vendorId).length === 0
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                        : 'bg-purple-500 text-white hover:bg-purple-600'
                     }`}
                   >
                     {savingAssignments ? (

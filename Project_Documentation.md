@@ -1,7 +1,7 @@
 # Customer Portal - Project Documentation
 
-> **Last Updated:** June 23, 2026 at 2:30 PM (UTC-05:00)
-> **Version:** 3.3.0
+> **Last Updated:** July 6, 2026 at 4:30 PM (UTC-05:00)
+> **Version:** 3.4.0
 > **Status:** In Development
 
 ---
@@ -413,6 +413,10 @@ Stores maintenance work orders.
 | assigned_to | VARCHAR(255) | | Assigned technician |
 | scheduled_date | DATETIME | | Scheduled service date |
 | completed_date | DATETIME | | Completion date |
+| closing_notes | TEXT | | Notes when completed |
+| cancellation_note | TEXT | | Reason for cancellation |
+| cancelled_at | DATETIME | | When work order was cancelled |
+| cancelled_by | INT | | User ID who cancelled |
 | notes | TEXT | | Internal notes |
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Submission date |
 | updated_at | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | Last update |
@@ -1323,6 +1327,96 @@ npm run dev
 ---
 
 ## 14. Change Log
+
+### Version 3.4.0 (July 6, 2026)
+
+#### Work Order Action Features Enhancement
+
+**1. Unified Action System Across All Portals**
+- Implemented comprehensive work order action features for FP, Manager, Coordinator, Supervisor, and Executive portals
+- Status dropdown with inline change: Pending, Assigned, In Progress, Completed, Cancelled
+- Action buttons: View, Edit, Assign Vendor, Assign Employee, Delete
+- Edit Modal: Full edit form with category, subcategory, priority, status, customer details
+
+**2. Role-Based Feature Restrictions**
+- **Manager/FP Portal**: Full access including Mark As Closed, Revert to Pending, Closed status option
+- **Coordinator Portal**: NO Mark As Closed, NO Revert to Pending, NO Closed status option
+- **Supervisor Portal**: NO Mark As Closed, NO Revert to Pending, NO Closed status option
+- Status dropdown excludes "Closed" for restricted roles
+
+**3. Completion Modal**
+- Modal appears when marking work order as completed
+- Enter closing notes for documentation
+- Notes stored with work order record
+
+---
+
+#### Cancellation Note Feature
+
+**1. Database Schema Updates**
+- Added `cancellation_note` TEXT column to work_orders table
+- Added `cancelled_at` DATETIME column for timestamp tracking
+- Added `cancelled_by` INT column for user tracking
+- Migration file: `add_cancellation_note_to_work_orders.sql`
+
+**2. Backend Route Updates**
+- All routes updated to handle `cancelNote` and `cancellationNote` parameters:
+  - `/api/work-orders/:id/status` (workOrders.js)
+  - `/api/fp/work-orders/:id/status` (franchisePartner.js)
+  - `/api/manager/work-orders/:id/status` (manager.js)
+  - `/api/coordinator/work-orders/:id/status` (coordinator.js)
+  - `/api/supervisor/work-orders/:id/status` (supervisor.js)
+  - `/api/executive/work-orders/:id/status` (executive.js)
+- Cancellation note stored in database with timestamp
+
+**3. Frontend Cancellation Modal**
+- Professional modal with red theme
+- Required note field with validation
+- "Confirm Cancellation" button disabled until note entered
+- Note stored in database for audit trail
+- Implemented in all work order portals
+
+---
+
+#### Work Order Modals & UI
+
+**1. Assign Vendor Modal**
+- Select and assign vendor to work order
+- Visual feedback with vendor icon and details
+- Service type display
+
+**2. Assign Employee Modal**
+- Select and assign employee to work order
+- Employee role and email display
+- Similar UI pattern to vendor modal
+
+**3. Enhanced View Details Modal**
+- Action buttons based on work order status
+- Revert to Pending button (Manager/FP only)
+- Mark as Closed button (Manager/FP only)
+
+---
+
+#### Files Modified
+
+**Database:**
+- `backend/database/add_cancellation_note_to_work_orders.sql` (NEW)
+
+**Backend Routes:**
+- `backend/routes/workOrders.js` - Added cancelNote handling
+- `backend/routes/franchisePartner.js` - Added cancelNote handling
+- `backend/routes/manager.js` - Added cancelNote handling
+- `backend/routes/coordinator.js` - Added cancelNote handling
+- `backend/routes/supervisor.js` - Added cancelNote handling
+- `backend/routes/executive.js` - Added cancelNote handling
+
+**Frontend:**
+- `admin-portal/src/pages/FPWorkOrders.jsx` - Added cancellation modal
+- `admin-portal/src/pages/ManagerWorkOrders.jsx` - Action features, modals
+- `admin-portal/src/pages/CoordinatorWorkOrders.jsx` - Action features (restricted)
+- `admin-portal/src/pages/SupervisorWorkOrders.jsx` - Action features (restricted)
+
+---
 
 ### Version 3.3.0 (June 23, 2026)
 
