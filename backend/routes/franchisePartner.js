@@ -908,6 +908,13 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
     // Use numeric id for assignment
     const numericVendorId = vendor[0].id;
     const assignedServiceType = serviceType || vendor[0].service_type || 'General';
+    
+    console.log('[Assign Vendor] Saving assignment:', {
+      propertyId: id,
+      vendorId: numericVendorId,
+      serviceType: assignedServiceType,
+      receivedServiceType: serviceType
+    });
 
     // Check if same vendor + service type assignment already exists and is active
     const [existingSame] = await pool.execute(
@@ -1277,10 +1284,20 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
 });
 
 // Update work order status
-router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_orders'), async (req, res) => {
+router.patch('/work-orders/:id/status', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
     const { status, notes, closingNotes, cancelNote, cancellationNote } = req.body;
+    const franchisePartnerId = req.fpId;
+
+    // Validate access - check franchise_partner_id
+    const [accessCheck] = await pool.execute(
+      'SELECT id FROM work_orders WHERE id = ? AND franchise_partner_id = ?',
+      [id, franchisePartnerId]
+    );
+    if (accessCheck.length === 0) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
 
     // If completing, also save closing notes and completed date
     if (status === 'completed') {
@@ -1381,10 +1398,20 @@ router.patch('/work-orders/:id/status', requireFPScope, validateOwnership('work_
 });
 
 // Assign vendor to work order
-router.patch('/work-orders/:id/assign-vendor', requireFPScope, validateOwnership('work_orders'), async (req, res) => {
+router.patch('/work-orders/:id/assign-vendor', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
     const { vendorId } = req.body;
+    const franchisePartnerId = req.fpId;
+
+    // Validate access - check franchise_partner_id
+    const [accessCheck] = await pool.execute(
+      'SELECT id FROM work_orders WHERE id = ? AND franchise_partner_id = ?',
+      [id, franchisePartnerId]
+    );
+    if (accessCheck.length === 0) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
 
     // Validate vendor belongs to FP (check onboarded_vendors table)
     const [vendor] = await pool.execute(
@@ -2038,6 +2065,9 @@ router.get('/vendors/assignments', requireFPScope, async (req, res) => {
     }));
 
     console.log('[Vendor Assignments] Found:', propertyAssignments.length, 'assignments');
+    console.log('[Vendor Assignments] Details:', propertyAssignments.map(a => ({
+      id: a.id, property_id: a.property_id, service_type: a.service_type, vendor_name: a.vendor_name
+    })));
     
     res.json({
       success: true,
@@ -2063,12 +2093,14 @@ router.put('/vendors/assignments/:id', requireFPScope, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vendor ID is required' });
     }
 
-    // Verify assignment belongs to FP's property
+    // Verify assignment belongs to FP (check via property OR vendor ownership)
     const [assignment] = await pool.execute(
-      `SELECT pva.id, pva.property_id FROM property_vendor_assignments pva
-       JOIN properties p ON pva.property_id = p.id
-       WHERE pva.id = ? AND p.franchise_partner_id = ?`,
-      [id, req.fpId]
+      `SELECT pva.id, pva.property_id, pva.vendor_id FROM property_vendor_assignments pva
+       LEFT JOIN properties p ON pva.property_id = p.id
+       LEFT JOIN onboarded_properties op ON pva.property_id = op.id
+       LEFT JOIN onboarded_vendors v ON pva.vendor_id = v.id
+       WHERE pva.id = ? AND (p.franchise_partner_id = ? OR op.franchise_partner_id = ? OR v.franchise_partner_id = ?)`,
+      [id, req.fpId, req.fpId, req.fpId]
     );
 
     if (assignment.length === 0) {
@@ -2103,12 +2135,14 @@ router.delete('/vendors/assignments/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Verify assignment belongs to FP's property
+    // Verify assignment belongs to FP (check via property OR vendor ownership)
     const [assignment] = await pool.execute(
       `SELECT pva.id FROM property_vendor_assignments pva
-       JOIN properties p ON pva.property_id = p.id
-       WHERE pva.id = ? AND p.franchise_partner_id = ?`,
-      [id, req.fpId]
+       LEFT JOIN properties p ON pva.property_id = p.id
+       LEFT JOIN onboarded_properties op ON pva.property_id = op.id
+       LEFT JOIN onboarded_vendors v ON pva.vendor_id = v.id
+       WHERE pva.id = ? AND (p.franchise_partner_id = ? OR op.franchise_partner_id = ? OR v.franchise_partner_id = ?)`,
+      [id, req.fpId, req.fpId, req.fpId]
     );
 
     if (assignment.length === 0) {
