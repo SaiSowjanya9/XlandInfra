@@ -849,23 +849,37 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
 
 
     // Fetch property details if not provided - including actual property_id, zone, and division
+    // Priority: onboarded_properties first (for FP context), then properties table
     let finalPropertyName = propertyName;
     let finalPropertyType = null;
     let actualPropertyId = null;
     let propertyZone = null;
     let propertyDivision = null;
     if (propertyId) {
-      const [props] = await pool.query(
-        `SELECT name, property_type, property_id, zone_id as zone, COALESCE(division_id, division) as division FROM properties WHERE id = ? 
-         UNION SELECT community_name as name, property_type, property_id, zone, division FROM onboarded_properties WHERE id = ?`,
-        [propertyId, propertyId]
+      // First check onboarded_properties (FP context)
+      const [onbProps] = await pool.query(
+        `SELECT community_name as name, property_type, property_id, zone, division FROM onboarded_properties WHERE id = ?`,
+        [propertyId]
       );
-      if (props.length > 0) {
-        finalPropertyName = finalPropertyName || props[0].name;
-        finalPropertyType = props[0].property_type;
-        actualPropertyId = props[0].property_id;
-        propertyZone = props[0].zone;
-        propertyDivision = props[0].division;
+      if (onbProps.length > 0) {
+        finalPropertyName = finalPropertyName || onbProps[0].name;
+        finalPropertyType = onbProps[0].property_type;
+        actualPropertyId = onbProps[0].property_id;
+        propertyZone = onbProps[0].zone;
+        propertyDivision = onbProps[0].division;
+      } else {
+        // Fallback to properties table
+        const [props] = await pool.query(
+          `SELECT name, property_type, property_id, zone_id as zone, COALESCE(division_id, division) as division FROM properties WHERE id = ?`,
+          [propertyId]
+        );
+        if (props.length > 0) {
+          finalPropertyName = finalPropertyName || props[0].name;
+          finalPropertyType = props[0].property_type;
+          actualPropertyId = props[0].property_id;
+          propertyZone = props[0].zone;
+          propertyDivision = props[0].division;
+        }
       }
     }
 

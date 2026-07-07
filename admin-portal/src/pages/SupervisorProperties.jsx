@@ -918,7 +918,9 @@ const SupervisorProperties = ({ user }) => {
                         return (
                           <div className="space-y-4">
                             {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
-                              const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || {};
+                              const blockName = blockNames[blockNum] || blockNames[String(blockNum)] || `Block ${blockNum}`;
+                              // Try multiple key formats: block number, string block number, block name
+                              const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || blockUnitTypes[blockName] || {};
                               const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                               return (
                                 <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">

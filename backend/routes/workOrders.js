@@ -181,29 +181,30 @@ router.post('/', (req, res, next) => {
       const propId = propertyId && propertyId !== 'undefined' ? propertyId : null;
       
       if (propId) {
-        // Try properties table first - check by both id and property_id columns
-        const [propData] = await pool.query(
-          `SELECT id, franchise_partner_id, name, property_type, property_id, zone_id as zone, COALESCE(division_id, division) as division,
+        // Priority: onboarded_properties first (FP context), then properties table
+        // Try onboarded_properties first - check by both id and property_id columns
+        const [opData] = await pool.query(
+          `SELECT id, franchise_partner_id, community_name as name, property_type, property_id, zone, division,
                   address, city, state, contact_person, contact_phone, contact_email
-           FROM properties WHERE id = ? OR property_id = ?`,
+           FROM onboarded_properties WHERE id = ? OR property_id = ?`,
           [propId, propId]
         );
-        if (propData.length > 0) {
-          propDetails = propData[0];
-          franchisePartnerId = propData[0].franchise_partner_id;
-          actualPropertyId = propData[0].property_id;
+        if (opData.length > 0) {
+          propDetails = opData[0];
+          franchisePartnerId = opData[0].franchise_partner_id;
+          actualPropertyId = opData[0].property_id;
         } else {
-          // Try onboarded_properties - check by both id and property_id columns
-          const [opData] = await pool.query(
-            `SELECT id, franchise_partner_id, community_name as name, property_type, property_id, zone, division,
+          // Fallback to properties table - check by both id and property_id columns
+          const [propData] = await pool.query(
+            `SELECT id, franchise_partner_id, name, property_type, property_id, zone_id as zone, COALESCE(division_id, division) as division,
                     address, city, state, contact_person, contact_phone, contact_email
-             FROM onboarded_properties WHERE id = ? OR property_id = ?`,
+             FROM properties WHERE id = ? OR property_id = ?`,
             [propId, propId]
           );
-          if (opData.length > 0) {
-            propDetails = opData[0];
-            franchisePartnerId = opData[0].franchise_partner_id;
-            actualPropertyId = opData[0].property_id;
+          if (propData.length > 0) {
+            propDetails = propData[0];
+            franchisePartnerId = propData[0].franchise_partner_id;
+            actualPropertyId = propData[0].property_id;
           }
         }
         console.log('[WorkOrder] Property lookup - fpId:', franchisePartnerId, 'zone:', propDetails.zone, 'propertyId:', actualPropertyId);
@@ -722,30 +723,31 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
     const propId = propertyId && propertyId !== 'undefined' ? propertyId : null;
     
     if (propId) {
-      const [propData] = await pool.query(
-        `SELECT property_id, name, property_type, franchise_partner_id, zone_id as zone, COALESCE(division_id, division) as division FROM properties WHERE id = ?`,
+      // Priority: onboarded_properties first (FP context), then properties table
+      const [opData] = await pool.query(
+        `SELECT property_id, community_name as name, property_type, franchise_partner_id, zone, division FROM onboarded_properties WHERE id = ?`,
         [propId]
       );
-      if (propData.length > 0) {
-        actualPropertyId = propData[0].property_id;
-        finalPropertyName = finalPropertyName || propData[0].name;
-        finalPropertyType = finalPropertyType || propData[0].property_type;
-        propFranchisePartnerId = propData[0].franchise_partner_id;
-        propZone = propData[0].zone;
-        propDivision = propData[0].division;
+      if (opData.length > 0) {
+        actualPropertyId = opData[0].property_id;
+        finalPropertyName = finalPropertyName || opData[0].name;
+        finalPropertyType = finalPropertyType || opData[0].property_type;
+        propFranchisePartnerId = opData[0].franchise_partner_id;
+        propZone = opData[0].zone;
+        propDivision = opData[0].division;
       } else {
-        // Try onboarded_properties
-        const [opData] = await pool.query(
-          `SELECT property_id, community_name as name, property_type, franchise_partner_id, zone, division FROM onboarded_properties WHERE id = ?`,
+        // Fallback to properties table
+        const [propData] = await pool.query(
+          `SELECT property_id, name, property_type, franchise_partner_id, zone_id as zone, COALESCE(division_id, division) as division FROM properties WHERE id = ?`,
           [propId]
         );
-        if (opData.length > 0) {
-          actualPropertyId = opData[0].property_id;
-          finalPropertyName = finalPropertyName || opData[0].name;
-          finalPropertyType = finalPropertyType || opData[0].property_type;
-          propFranchisePartnerId = opData[0].franchise_partner_id;
-          propZone = opData[0].zone;
-          propDivision = opData[0].division;
+        if (propData.length > 0) {
+          actualPropertyId = propData[0].property_id;
+          finalPropertyName = finalPropertyName || propData[0].name;
+          finalPropertyType = finalPropertyType || propData[0].property_type;
+          propFranchisePartnerId = propData[0].franchise_partner_id;
+          propZone = propData[0].zone;
+          propDivision = propData[0].division;
         }
       }
     }

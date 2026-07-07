@@ -102,6 +102,12 @@ const FPProperties = ({ user }) => {
   const [propertyVendorAssignments, setPropertyVendorAssignments] = useState([]);
   const [loadingVendorAssignments, setLoadingVendorAssignments] = useState(false);
   
+  // Assigned employees modal state
+  const [showAssignedEmployeesModal, setShowAssignedEmployeesModal] = useState(false);
+  const [assignedEmployeesProperty, setAssignedEmployeesProperty] = useState(null);
+  const [assignedEmployees, setAssignedEmployees] = useState([]);
+  const [loadingAssignedEmployees, setLoadingAssignedEmployees] = useState(false);
+  
   // Derived state for modals based on URL
   const showDetailsModal = !!viewPropertyId;
   const showEditModal = !!editPropertyId;
@@ -179,6 +185,41 @@ const FPProperties = ({ user }) => {
     } catch (error) {
       console.error('Fetch employees error:', error);
     }
+  };
+
+  // Fetch employees assigned to a specific zone (from Employee Zone Management)
+  const fetchAssignedEmployeesForZone = async (zoneName) => {
+    setLoadingAssignedEmployees(true);
+    try {
+      const response = await fetch('/api/fp/employees/zones', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        // Filter employees who have this zone assigned
+        const employeesWithZone = (result.data || []).filter(emp => {
+          const empZones = emp.zones || emp.zone_names || [];
+          // Check if employee has this zone or "all" zones
+          return empZones.some(z => 
+            z.toLowerCase() === zoneName?.toLowerCase() || 
+            z.toLowerCase() === 'all'
+          );
+        });
+        setAssignedEmployees(employeesWithZone);
+      }
+    } catch (error) {
+      console.error('Fetch assigned employees error:', error);
+      setAssignedEmployees([]);
+    } finally {
+      setLoadingAssignedEmployees(false);
+    }
+  };
+
+  // Open assigned employees modal
+  const openAssignedEmployeesModal = (property) => {
+    setAssignedEmployeesProperty(property);
+    setShowAssignedEmployeesModal(true);
+    fetchAssignedEmployeesForZone(property.zone_name || property.zone);
   };
 
   const fetchPropertyEstimates = async (propertyId) => {
@@ -1364,11 +1405,11 @@ const FPProperties = ({ user }) => {
                                 <Truck className="w-4 h-4 text-purple-500" />
                               </button>
                               <button
-                                onClick={() => openAssignModal(property, 'employee')}
+                                onClick={() => openAssignedEmployeesModal(property)}
                                 className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
-                                title="Assign Employee"
+                                title="Assigned Employees"
                               >
-                                <UserPlus className="w-4 h-4 text-green-500" />
+                                <Users className="w-4 h-4 text-green-500" />
                               </button>
                               {property.status === 'inactive' ? (
                                 <>
@@ -1508,14 +1549,16 @@ const FPProperties = ({ user }) => {
                         return (
                           <div className="space-y-4">
                             {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
-                              const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || {};
+                              const blockName = blockNames[blockNum] || blockNames[String(blockNum)] || `Block ${blockNum}`;
+                              // Try multiple key formats: block number, string block number, block name
+                              const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || blockUnitTypes[blockName] || {};
                               const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                               return (
                                 <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                                   <div className="flex gap-4 mb-3">
                                     <div>
                                       <p className="text-xs text-gray-500 mb-1">Block Name</p>
-                                      <p className="text-sm font-medium text-gray-900">{blockNames[blockNum] || blockNames[String(blockNum)] || `Block ${blockNum}`}</p>
+                                      <p className="text-sm font-medium text-gray-900">{blockName}</p>
                                     </div>
                                     <div>
                                       <p className="text-xs text-gray-500 mb-1">Total Units</p>
@@ -2024,24 +2067,6 @@ const FPProperties = ({ user }) => {
                     )}
                   </div>
                 </>
-              ) : assignType === 'employee' ? (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {employees.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleAssign(item.id)}
-                      className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors text-left"
-                    >
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{item.first_name} {item.last_name}</p>
-                        <p className="text-sm text-gray-500">{item.role}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
               ) : (
                 <p className="text-gray-500 text-center py-4">No services found in estimate</p>
               )}
@@ -2084,6 +2109,94 @@ const FPProperties = ({ user }) => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Assigned Employees Modal - View Only */}
+      {showAssignedEmployeesModal && assignedEmployeesProperty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }}>
+          <div className="bg-white rounded-xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-500 to-green-400">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Users className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-white">Assigned Employees</h2>
+                    <p className="text-sm text-green-100">Zone: {assignedEmployeesProperty.zone_name || assignedEmployeesProperty.zone || 'N/A'}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }} 
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Property Info */}
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">Property: <span className="font-medium text-gray-900">{assignedEmployeesProperty.name}</span></p>
+              </div>
+
+              {loadingAssignedEmployees ? (
+                <div className="text-center py-12">
+                  <RefreshCw className="w-8 h-8 text-green-500 animate-spin mx-auto mb-3" />
+                  <p className="text-gray-500">Loading assigned employees...</p>
+                </div>
+              ) : assignedEmployees.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">No Employees Assigned</h3>
+                  <p className="text-gray-600 text-sm">
+                    No employees are assigned to the zone "{assignedEmployeesProperty.zone_name || assignedEmployeesProperty.zone}".
+                  </p>
+                  <p className="text-gray-500 text-xs mt-2">
+                    Zone assignments are managed in Employee Zone Management.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600 mb-4">
+                    {assignedEmployees.length} employee(s) assigned to this zone
+                  </p>
+                  {assignedEmployees.map((emp) => (
+                    <div key={emp.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-white">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <User className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{emp.first_name} {emp.last_name}</p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <span className="capitalize px-2 py-0.5 bg-gray-100 rounded text-xs">{emp.role}</span>
+                          {emp.email && <span className="text-xs">{emp.email}</span>}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-400">
+                          {(emp.zones || emp.zone_names || []).join(', ')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+              <p className="text-xs text-gray-500 text-center">
+                Employee zone assignments are managed in the Employee Zone Management section
+              </p>
+            </div>
           </div>
         </div>
       )}
