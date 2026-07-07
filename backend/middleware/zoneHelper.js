@@ -13,7 +13,7 @@ const { pool } = require('../config/database');
  * Get assigned zones for an FP employee
  * @param {number} employeeId - The employee's user ID or fp_employee ID
  * @param {string} email - Optional email for fallback lookup
- * @returns {Promise<string[]>} Array of zone names assigned to the employee
+ * @returns {Promise<string[]>} Array of zone names assigned to the employee, or ['__ALL__'] for unrestricted access
  */
 async function getAssignedZones(employeeId, email = null) {
   if (!employeeId && !email) {
@@ -61,6 +61,13 @@ async function getAssignedZones(employeeId, email = null) {
     }
     
     const zoneNames = zones.map(z => z.zone_name).filter(Boolean);
+    
+    // Handle "all" zone - means unrestricted access to all zones
+    if (zoneNames.some(z => z.toLowerCase() === 'all')) {
+      console.log('[ZoneHelper] Employee has "all" zones - unrestricted access');
+      return ['__ALL__']; // Special marker for unrestricted access
+    }
+    
     console.log('[ZoneHelper] Final zones for employeeId:', employeeId, 'email:', email, '=> zones:', zoneNames);
     return zoneNames;
   } catch (e) {
@@ -212,6 +219,12 @@ function buildVendorAssignmentZoneFilter(zones, vendorAlias = 'v') {
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildVendorZoneOrCreatorFilter(zones, createdBy, tableAlias = 'ov') {
+  // If __ALL__ marker present, no zone filtering needed (unrestricted access)
+  if (zones && zones.includes('__ALL__')) {
+    console.log('[ZoneHelper] Unrestricted access - no zone filter applied');
+    return { clause: '', params: [] };
+  }
+  
   // If no zones assigned, allow access to own created vendors only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created vendors only');
@@ -265,6 +278,12 @@ async function hasZoneRestrictions(employeeId) {
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p', zonesTableAlias = 'z') {
+  // If __ALL__ marker present, no zone filtering needed (unrestricted access)
+  if (zones && zones.includes('__ALL__')) {
+    console.log('[ZoneHelper] Unrestricted access - no zone filter applied');
+    return { clause: '', params: [] };
+  }
+  
   // If no zones assigned, allow access to own created properties only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created properties only');
@@ -289,6 +308,12 @@ function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p', zo
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'op') {
+  // If __ALL__ marker present, no zone filtering needed (unrestricted access)
+  if (zones && zones.includes('__ALL__')) {
+    console.log('[ZoneHelper] Unrestricted access - no zone filter applied');
+    return { clause: '', params: [] };
+  }
+  
   // If no zones assigned, allow access to own created properties only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created properties only');
@@ -314,6 +339,12 @@ function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias 
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p', workOrderAlias = 'wo', onboardedPropertyAlias = 'op', zonesTableAlias = 'z') {
+  // If __ALL__ marker present, no zone filtering needed (unrestricted access)
+  if (zones && zones.includes('__ALL__')) {
+    console.log('[ZoneHelper] Unrestricted access - no zone filter applied');
+    return { clause: '', params: [] };
+  }
+  
   // If no zones assigned, allow access to own created work orders only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created work orders only');
@@ -344,6 +375,12 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', propertyAlias = 'p') {
+  // If __ALL__ marker present, no zone filtering needed (unrestricted access)
+  if (zones && zones.includes('__ALL__')) {
+    console.log('[ZoneHelper] Unrestricted access - no zone filter applied');
+    return { clause: '', params: [] };
+  }
+  
   // If no zones assigned, allow access to own created clients only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created clients only');
@@ -368,6 +405,12 @@ function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', pro
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
 function buildEstimateZoneOrCreatorFilter(zones, createdBy, estimateAlias = 'e', propertyAlias = 'p') {
+  // If __ALL__ marker present, no zone filtering needed (unrestricted access)
+  if (zones && zones.includes('__ALL__')) {
+    console.log('[ZoneHelper] Unrestricted access - no zone filter applied');
+    return { clause: '', params: [] };
+  }
+  
   // If no zones assigned, allow access to own created estimates only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created estimates only');
