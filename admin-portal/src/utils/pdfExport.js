@@ -90,7 +90,7 @@ const generatePDF = (data, type, filename) => {
     doc.setFillColor(20, 20, 20); // Near black
     doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
-    // Logo Symbol (left side)
+    // Logo with built-in company name (left side)
     const logoSize = 18;
     try {
       doc.addImage(XLAND_LOGO, 'PNG', margin, 3, logoSize, logoSize);
@@ -104,17 +104,15 @@ const generatePDF = (data, type, filename) => {
       doc.text('XI', margin + 8, 14, { align: 'center' });
     }
     
-    // Company Name beside logo - "XLAND INFRA" with "PVT LTD" below
-    const textX = margin + logoSize + 4;
+    // Company Name to the RIGHT of logo (vertically centered)
+    const textX = margin + logoSize + 5;
     doc.setTextColor(...gold);
-    doc.setFontSize(11); // Medium font size
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 10);
-    
-    // "— PVT LTD —" below
+    doc.text('XLAND INFRA', textX, 11);
     doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.text('— PVT LTD —', textX, 16);
+    doc.text('— PVT LTD —', textX, 17);
 
     // Document Badge (right side)
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
