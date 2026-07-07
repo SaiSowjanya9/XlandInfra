@@ -857,12 +857,12 @@ router.get('/work-orders', requireSupervisorScope, async (req, res) => {
     // FP employees see FP work orders, standalone supervisors see their created work orders
     let query = `
       SELECT wo.*, 
-        COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-        COALESCE(p.property_id, op.property_id) as property_code,
-        COALESCE(p.property_id, op.property_id) as actual_property_id,
-        COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-        COALESCE(z.name, p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
-        COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+        COALESCE(op.community_name, p.name, wo.property_name) as property_name,
+        COALESCE(op.property_id, p.property_id) as property_code,
+        COALESCE(op.property_id, p.property_id) as actual_property_id,
+        COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
+        COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
+        COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
         op.total_units, op.number_of_blocks as total_blocks,
         COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name
       FROM work_orders wo
@@ -913,12 +913,12 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
     const query = `SELECT wo.*, 
-        COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-        COALESCE(p.property_id, op.property_id) as property_code,
-        COALESCE(p.property_id, op.property_id) as actual_property_id,
-        COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-        COALESCE(z.name, p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
-        COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+        COALESCE(op.community_name, p.name, wo.property_name) as property_name,
+        COALESCE(op.property_id, p.property_id) as property_code,
+        COALESCE(op.property_id, p.property_id) as actual_property_id,
+        COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
+        COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
+        COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
         op.total_units, op.number_of_blocks as total_blocks,
         COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name
        FROM work_orders wo
@@ -962,12 +962,12 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
     const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
 
     const query = `SELECT wo.*, 
-        COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-        COALESCE(p.property_id, op.property_id) as property_code,
-        COALESCE(p.property_id, op.property_id) as actual_property_id,
-        COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-        COALESCE(z.name, p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
-        COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+        COALESCE(op.community_name, p.name, wo.property_name) as property_name,
+        COALESCE(op.property_id, p.property_id) as property_code,
+        COALESCE(op.property_id, p.property_id) as actual_property_id,
+        COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
+        COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
+        COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
         op.total_units, op.number_of_blocks as total_blocks,
         COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name
        FROM work_orders wo
@@ -1698,10 +1698,10 @@ router.get('/vendors/assignments', requireSupervisorScope, async (req, res) => {
     const [propertyAssignments] = await pool.execute(
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
         COALESCE(p.name, op.community_name) as property_name, 
-        COALESCE(p.property_id, op.property_id) as propertyId, 
-        COALESCE(p.property_type, op.property_type) as property_type, 
-        COALESCE(p.address, op.address) as address, 
-        COALESCE(p.city, op.city) as city,
+        COALESCE(op.property_id, p.property_id) as propertyId, 
+        COALESCE(op.property_type, p.property_type) as property_type, 
+        COALESCE(op.address, p.address) as address, 
+        COALESCE(op.city, p.city) as city,
         v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone as zone_name, v.area_name as area, v.rate_per_visit, v.coverage_per_day
