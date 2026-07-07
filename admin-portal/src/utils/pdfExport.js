@@ -1,7 +1,7 @@
 // Professional PDF Export using jsPDF - Direct Download, No Print Dialog
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { XLAND_LOGO } from './logoBase64.js';
+import { XLAND_LOGO_ICON } from './logoIconBase64.js';
 
 // Debug logger - only logs in development
 const isDev = import.meta.env.DEV;
@@ -90,29 +90,25 @@ const generatePDF = (data, type, filename) => {
     doc.setFillColor(20, 20, 20); // Near black
     doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
-    // Logo with built-in company name (left side)
+    // Logo Icon (symbol only - left side)
     const logoSize = 18;
     try {
-      doc.addImage(XLAND_LOGO, 'PNG', margin, 3, logoSize, logoSize);
+      doc.addImage(XLAND_LOGO_ICON, 'PNG', margin, 3, logoSize, logoSize);
     } catch (e) {
-      // Fallback to gold square with XI if logo fails
+      // Fallback to gold square
       doc.setFillColor(...gold);
       doc.roundedRect(margin, 4, 16, 16, 2, 2, 'F');
-      doc.setTextColor(20, 20, 20);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text('XI', margin + 8, 14, { align: 'center' });
     }
     
-    // Company Name to the RIGHT of logo (vertically centered)
-    const textX = margin + logoSize + 5;
+    // Company Name text beside logo (aligned vertically center)
+    const textX = margin + logoSize + 4;
     doc.setTextColor(...gold);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 11);
+    doc.text('XLAND INFRA', textX, 10);
     doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.text('— PVT LTD —', textX, 17);
+    doc.text('— PVT LTD —', textX, 16);
 
     // Document Badge (right side)
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
