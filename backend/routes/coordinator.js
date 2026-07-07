@@ -710,15 +710,15 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
     if (isFPCoordinator) {
       query = `
         SELECT wo.*, 
-          COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-          COALESCE(p.property_id, op.property_id) as property_code,
-          COALESCE(p.property_id, op.property_id) as actual_property_id,
-          COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-          COALESCE(z.name, p.zone_id, op.zone) as zone,
-          COALESCE(p.division_id, op.division) as division,
-          COALESCE(p.address, op.address) as property_address,
-          COALESCE(p.city, op.city) as property_city,
-          COALESCE(p.state, op.state) as property_state,
+          COALESCE(op.community_name, p.name, wo.property_name) as property_name,
+          COALESCE(op.property_id, p.property_id) as property_code,
+          COALESCE(op.property_id, p.property_id) as actual_property_id,
+          COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
+          COALESCE(op.zone, z.name, p.zone_id) as zone,
+          COALESCE(op.division, p.division_id) as division,
+          COALESCE(op.address, p.address) as property_address,
+          COALESCE(op.city, p.city) as property_city,
+          COALESCE(op.state, p.state) as property_state,
           op.total_units, op.number_of_blocks as total_blocks, op.entry_type,
           COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(
@@ -740,15 +740,15 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
     } else {
       query = `
         SELECT wo.*, 
-          COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-          COALESCE(p.property_id, op.property_id) as property_code,
-          COALESCE(p.property_id, op.property_id) as actual_property_id,
-          COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-          COALESCE(z.name, p.zone_id, op.zone) as zone,
-          COALESCE(p.division_id, op.division) as division,
-          COALESCE(p.address, op.address) as property_address,
-          COALESCE(p.city, op.city) as property_city,
-          COALESCE(p.state, op.state) as property_state,
+          COALESCE(op.community_name, p.name, wo.property_name) as property_name,
+          COALESCE(op.property_id, p.property_id) as property_code,
+          COALESCE(op.property_id, p.property_id) as actual_property_id,
+          COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
+          COALESCE(op.zone, z.name, p.zone_id) as zone,
+          COALESCE(op.division, p.division_id) as division,
+          COALESCE(op.address, p.address) as property_address,
+          COALESCE(op.city, p.city) as property_city,
+          COALESCE(op.state, p.state) as property_state,
           op.total_units, op.number_of_blocks as total_blocks, op.entry_type,
           COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(
@@ -813,12 +813,12 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
     
     if (isFPCoordinator) {
       query = `SELECT wo.*, 
-          COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-          COALESCE(p.property_id, op.property_id) as property_code,
-          COALESCE(p.property_id, op.property_id) as actual_property_id,
-          COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-          COALESCE(z.name, p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
-          COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+          COALESCE(op.community_name, p.name, wo.property_name) as property_name,
+          COALESCE(op.property_id, p.property_id) as property_code,
+          COALESCE(op.property_id, p.property_id) as actual_property_id,
+          COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
+          COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
+          COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
           op.total_units, op.number_of_blocks as total_blocks,
           COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
@@ -835,12 +835,12 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
       params = [franchisePartnerId, ...zoneFilter.params];
     } else {
       query = `SELECT wo.*, 
-          COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-          COALESCE(p.property_id, op.property_id) as property_code,
-          COALESCE(p.property_id, op.property_id) as actual_property_id,
-          COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-          COALESCE(z.name, p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
-          COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+          COALESCE(op.community_name, p.name, wo.property_name) as property_name,
+          COALESCE(op.property_id, p.property_id) as property_code,
+          COALESCE(op.property_id, p.property_id) as actual_property_id,
+          COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
+          COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
+          COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
           op.total_units, op.number_of_blocks as total_blocks,
           COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
@@ -892,12 +892,12 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
     
     if (isFPCoordinator) {
       query = `SELECT wo.*, 
-          COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-          COALESCE(p.property_id, op.property_id) as property_code,
-          COALESCE(p.property_id, op.property_id) as actual_property_id,
-          COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-          COALESCE(z.name, p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
-          COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+          COALESCE(op.community_name, p.name, wo.property_name) as property_name,
+          COALESCE(op.property_id, p.property_id) as property_code,
+          COALESCE(op.property_id, p.property_id) as actual_property_id,
+          COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
+          COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
+          COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
           op.total_units, op.number_of_blocks as total_blocks,
           COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
@@ -914,12 +914,12 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
       params = [franchisePartnerId, ...zoneFilter.params];
     } else {
       query = `SELECT wo.*, 
-          COALESCE(p.name, wo.property_name, op.community_name) as property_name,
-          COALESCE(p.property_id, op.property_id) as property_code,
-          COALESCE(p.property_id, op.property_id) as actual_property_id,
-          COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-          COALESCE(z.name, p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
-          COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
+          COALESCE(op.community_name, p.name, wo.property_name) as property_name,
+          COALESCE(op.property_id, p.property_id) as property_code,
+          COALESCE(op.property_id, p.property_id) as actual_property_id,
+          COALESCE(op.property_type, p.property_type, wo.property_type) as property_type,
+          COALESCE(op.zone, z.name, p.zone_id) as zone, COALESCE(op.division, p.division_id) as division,
+          COALESCE(op.address, p.address) as property_address, COALESCE(op.city, p.city) as property_city,
           op.total_units, op.number_of_blocks as total_blocks,
           COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name,
           COALESCE(CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')), wo.created_by, 'System') as created_by_name
@@ -1159,7 +1159,7 @@ router.patch('/work-orders/:id/status', requireCoordinatorScope, async (req, res
                 COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
                 wo.customer_name, wo.customer_email, wo.customer_phone, 
                 wo.category_name, wo.subcategory_name, wo.description, wo.closing_notes, wo.franchise_partner_id,
-                COALESCE(p.zone_id, op.zone) as property_zone,
+                COALESCE(op.zone, p.zone_id) as property_zone,
                 COALESCE(fd.name, fd2.name, p.division_id, op.division) as division
          FROM work_orders wo
          LEFT JOIN properties p ON wo.property_id = p.id
@@ -1638,10 +1638,10 @@ router.get('/vendors/assignments', requireCoordinatorScope, async (req, res) => 
     const [propertyAssignments] = await pool.execute(
       `SELECT pva.id, pva.property_id, pva.vendor_id, pva.assigned_at, pva.is_active,
         COALESCE(p.name, op.community_name) as property_name, 
-        COALESCE(p.property_id, op.property_id) as propertyId, 
-        COALESCE(p.property_type, op.property_type) as property_type, 
-        COALESCE(p.address, op.address) as address, 
-        COALESCE(p.city, op.city) as city,
+        COALESCE(op.property_id, p.property_id) as propertyId, 
+        COALESCE(op.property_type, p.property_type) as property_type, 
+        COALESCE(op.address, p.address) as address, 
+        COALESCE(op.city, p.city) as city,
         v.owner_name as vendor_name, v.vendor_id as vendor_code, v.service_type,
         v.owner_mobile as vendor_phone, v.owner_email as vendor_email,
         v.zone as zone_name, v.area_name as area, v.rate_per_visit, v.coverage_per_day,

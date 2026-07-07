@@ -585,7 +585,7 @@ router.patch('/:id/status', async (req, res) => {
                   COALESCE(p.property_id, op.property_id, wo.property_id) as property_code,
                   wo.customer_name, wo.customer_email, wo.customer_phone, 
                   wo.category_name, wo.subcategory_name, wo.description, wo.closing_notes, wo.franchise_partner_id,
-                  COALESCE(p.zone_id, op.zone) as property_zone,
+                  COALESCE(op.zone, p.zone_id) as property_zone,
                   COALESCE(fd.name, fd2.name, p.division_id, op.division) as division
            FROM work_orders wo
            LEFT JOIN properties p ON wo.property_id = p.id
