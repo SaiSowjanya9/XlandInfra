@@ -15,42 +15,39 @@ const isIOS = () => {
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 };
 
-// Cross-platform PDF save function - handles iOS Safari limitations
+// Cross-platform PDF save function - uses blob download for reliability
 const savePDFCrossPlatform = (doc, filename) => {
   console.log('[PDF Save] Starting save for:', filename);
   try {
-    if (isIOS()) {
-      // iOS Safari doesn't support direct download via doc.save()
-      // Open PDF in new tab where user can share/save
-      const pdfBlob = doc.output('blob');
-      const blobUrl = URL.createObjectURL(pdfBlob);
-      
-      // Open in new tab - iOS will show native PDF viewer with share options
-      const newWindow = window.open(blobUrl, '_blank');
-      
-      // If popup blocked, try alternative approach
-      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-        // Create a link and simulate click for in-app browsers
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-      
-      // Clean up blob URL after delay to allow download
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-    } else {
-      // Standard download for desktop and Android
-      console.log('[PDF Save] Calling doc.save()');
-      doc.save(filename);
-      console.log('[PDF Save] doc.save() completed');
-    }
+    // Use blob-based download for all platforms (more reliable)
+    const pdfBlob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    
+    // Create download link
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    
+    // Trigger download
+    link.click();
+    console.log('[PDF Save] Download triggered for:', filename);
+    
+    // Cleanup
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    }, 1000);
+    
   } catch (error) {
     console.error('[PDF Save] Error:', error);
-    throw error;
+    // Fallback to doc.save()
+    try {
+      doc.save(filename);
+    } catch (e2) {
+      console.error('[PDF Save] Fallback also failed:', e2);
+    }
   }
 };
 let isExporting = false;
