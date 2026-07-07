@@ -17,32 +17,40 @@ const isIOS = () => {
 
 // Cross-platform PDF save function - handles iOS Safari limitations
 const savePDFCrossPlatform = (doc, filename) => {
-  if (isIOS()) {
-    // iOS Safari doesn't support direct download via doc.save()
-    // Open PDF in new tab where user can share/save
-    const pdfBlob = doc.output('blob');
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    
-    // Open in new tab - iOS will show native PDF viewer with share options
-    const newWindow = window.open(blobUrl, '_blank');
-    
-    // If popup blocked, try alternative approach
-    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-      // Create a link and simulate click for in-app browsers
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  console.log('[PDF Save] Starting save for:', filename);
+  try {
+    if (isIOS()) {
+      // iOS Safari doesn't support direct download via doc.save()
+      // Open PDF in new tab where user can share/save
+      const pdfBlob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      
+      // Open in new tab - iOS will show native PDF viewer with share options
+      const newWindow = window.open(blobUrl, '_blank');
+      
+      // If popup blocked, try alternative approach
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        // Create a link and simulate click for in-app browsers
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      // Clean up blob URL after delay to allow download
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    } else {
+      // Standard download for desktop and Android
+      console.log('[PDF Save] Calling doc.save()');
+      doc.save(filename);
+      console.log('[PDF Save] doc.save() completed');
     }
-    
-    // Clean up blob URL after delay to allow download
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-  } else {
-    // Standard download for desktop and Android
-    doc.save(filename);
+  } catch (error) {
+    console.error('[PDF Save] Error:', error);
+    throw error;
   }
 };
 let isExporting = false;
