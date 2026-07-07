@@ -86,59 +86,37 @@ const generatePDF = (data, type, filename) => {
     const gold = [180, 144, 52];             // Professional gold
 
     // ===== HEADER with Dark Background =====
-    const headerHeight = 28;
+    const headerHeight = 24;
     doc.setFillColor(20, 20, 20); // Near black
     doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
-    // Company Logo (left side)
-    const logoSize = 22;
-    try {
-      doc.addImage(XLAND_LOGO, 'PNG', margin, 3, logoSize, logoSize);
-    } catch (e) {
-      // Fallback to text if logo fails
-      doc.setFillColor(...gold);
-      doc.roundedRect(margin, 4, 18, 18, 2, 2, 'F');
-      doc.setTextColor(20, 20, 20);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('XI', margin + 9, 15, { align: 'center' });
-    }
-    
-    // Company Name "XLAND INFRA" in gold - 20px font (≈15pt in jsPDF)
-    const textX = margin + logoSize + 6;
-    doc.setTextColor(...gold);
-    doc.setFontSize(15); // 20px ≈ 15pt
-    doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 13);
-    
-    // "PVT LTD" with decorative lines
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    const pvtText = 'PVT LTD';
-    const pvtWidth = doc.getTextWidth(pvtText);
-    const lineY = 19;
-    const lineWidth = 18;
-    // Left decorative line
-    doc.setDrawColor(...gold);
-    doc.setLineWidth(0.3);
-    doc.line(textX, lineY, textX + lineWidth, lineY);
-    // PVT LTD text
-    doc.text(pvtText, textX + lineWidth + 3, lineY + 1);
-    // Right decorative line
-    doc.line(textX + lineWidth + 6 + pvtWidth, lineY, textX + lineWidth + 6 + pvtWidth + lineWidth, lineY);
-
-    // Document Badge (right side) - centered text
+    // Document Badge (left side)
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
     const badgeWidth = 28;
     const badgeHeight = 10;
-    const badgeX = pageWidth - margin - badgeWidth;
-    const badgeY = 9;
+    const badgeX = margin;
+    const badgeY = 7;
     doc.setFillColor(...gold);
     doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 1.5, 1.5, 'F');
     doc.setTextColor(20, 20, 20);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.text(docType, badgeX + badgeWidth/2, badgeY + badgeHeight/2 + 1, { align: 'center' });
+    
+    // Company Logo with built-in name (right side)
+    const logoSize = 20;
+    const logoX = pageWidth - margin - logoSize;
+    try {
+      doc.addImage(XLAND_LOGO, 'PNG', logoX, 2, logoSize, logoSize);
+    } catch (e) {
+      // Fallback to text if logo fails
+      doc.setFillColor(...gold);
+      doc.roundedRect(logoX, 3, 18, 18, 2, 2, 'F');
+      doc.setTextColor(20, 20, 20);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('XI', logoX + 9, 14, { align: 'center' });
+    }
 
     y = headerHeight + 8;
 

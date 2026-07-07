@@ -46,32 +46,24 @@ const generateEstimatePDF = async (estimate) => {
       const navy = '#1e3a5f';
       const lightGray = '#f8f9fa';
 
-      // Header - Black background with horizontal logo layout (taller header)
-      doc.rect(0, 0, 612, 80).fill(black);
+      // Header - Black background with clean layout
+      doc.rect(0, 0, 612, 70).fill(black);
       
-      // Company Logo - positioned on left
+      // ESTIMATE badge on the left
+      doc.rect(50, 22, 95, 28).fill(gold);
+      doc.fontSize(12).fillColor(black).text('ESTIMATE', 68, 30);
+      
+      // Company Logo with built-in name - positioned on right
       try {
-        doc.image(LOGO_PATH, 40, 12, { width: 55, height: 55 });
+        doc.image(LOGO_PATH, 497, 10, { width: 55, height: 55 });
       } catch (logoErr) {
         console.log('Logo load error:', logoErr.message);
         // Fallback to gold square with XI if logo fails
-        doc.rect(40, 15, 50, 50).fill(gold);
-        doc.fontSize(20).fillColor(black).text('XI', 52, 32);
+        doc.rect(502, 12, 50, 50).fill(gold);
+        doc.fontSize(20).fillColor(black).text('XI', 514, 30);
       }
-      
-      // Company name - "XLAND INFRA" with letter spacing effect
-      doc.fontSize(28).fillColor(gold);
-      doc.text('X L A N D   I N F R A', 110, 20, { characterSpacing: 1 });
-      
-      // "— PVT LTD —" decorative text underneath
-      doc.fontSize(10).fillColor(gold);
-      doc.text('—————  PVT LTD  —————', 110, 52);
-      
-      // ESTIMATE badge on the right
-      doc.rect(470, 25, 95, 30).fill(gold);
-      doc.fontSize(12).fillColor(black).text('ESTIMATE', 483, 33);
 
-      let y = 100;
+      let y = 90;
 
       // Estimate Info
       doc.fontSize(9).fillColor('#666666');

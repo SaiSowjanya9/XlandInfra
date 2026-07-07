@@ -1510,12 +1510,8 @@ const sendVendorAssignmentEmail = async (vendorEmail, vendorName, property) => {
                   <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #fff;">${property.city || '-'}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #888;">Zone:</td>
-                  <td style="padding: 12px 10px; border-bottom: 1px solid #D8B25C22; color: #fff;">${property.zone || property.zone_id || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px 10px; color: #888;">Contact:</td>
-                  <td style="padding: 12px 10px; color: #fff;">${property.contact_person || '-'} ${property.contact_phone ? '(' + property.contact_phone + ')' : ''}</td>
+                  <td style="padding: 12px 10px; color: #888;">Zone:</td>
+                  <td style="padding: 12px 10px; color: #fff;">${property.zone || property.zone_id || '-'}</td>
                 </tr>
               </table>
             </div>
