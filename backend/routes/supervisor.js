@@ -1045,12 +1045,15 @@ router.post('/work-orders', requireSupervisorScope, (req, res, next) => {
     // Get creator identifier for zone-centric filtering
     const createdBy = req.user?.email || req.user?.username || `supervisor-${supervisorId}`;
 
+    // Get the subcategory ID (use null for "Other" category with custom subcategory)
+    const finalSubcategoryId = isOtherCategory ? null : (subcategoryId || null);
+
     const [result] = await pool.query(
-      `INSERT INTO work_orders (work_order_id, property_id, category_id, client_id, title, description, 
+      `INSERT INTO work_orders (work_order_id, property_id, category_id, subcategory_id, client_id, title, description, 
         priority, permission_to_enter, has_pet, scheduled_date, franchise_partner_id, status,
         property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone, zone, created_by, entry_notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [workOrderId, propertyId, categoryId || null, clientId || null, title, description,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [workOrderId, propertyId, categoryId || null, finalSubcategoryId, clientId || null, title, description,
         priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, franchisePartnerId,
         finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
         customerName || null, customerEmail || null, customerPhone || null, propertyZone, createdBy, entryNotes || null]
