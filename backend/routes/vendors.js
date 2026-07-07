@@ -911,19 +911,29 @@ router.get('/assignments', authenticate, managerOrAdmin, async (req, res) => {
 // Assign vendor to property
 router.post('/assignments', authenticate, managerOrAdmin, async (req, res) => {
   try {
-    const { propertyId, vendorId } = req.body;
+    const { propertyId, vendorId, serviceType } = req.body;
 
     if (!propertyId || !vendorId) {
       return res.status(400).json({ success: false, message: 'Property ID and Vendor ID are required' });
     }
 
-    // Get property details
-    const [property] = await pool.execute(
+    // Get property details - check both tables
+    let property = [];
+    [property] = await pool.execute(
       `SELECT id, property_id, name, property_type, address, city, state, zone_id, 
               contact_person, contact_phone 
        FROM properties WHERE id = ?`,
       [propertyId]
     );
+
+    if (property.length === 0) {
+      [property] = await pool.execute(
+        `SELECT id, property_id, community_name as name, property_type, address, city, state, zone as zone_id, 
+                contact_person, contact_phone 
+         FROM onboarded_properties WHERE id = ?`,
+        [propertyId]
+      );
+    }
 
     if (property.length === 0) {
       return res.status(404).json({ success: false, message: 'Property not found' });
@@ -941,22 +951,29 @@ router.post('/assignments', authenticate, managerOrAdmin, async (req, res) => {
     }
 
     const numericVendorId = vendor[0].id;
+    const assignedServiceType = serviceType || vendor[0].service_type || 'General';
 
-    // Check if same assignment exists
+    // Check if same vendor + service type assignment exists
     const [existing] = await pool.execute(
-      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND is_active = 1`,
-      [propertyId, numericVendorId]
+      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND service_type = ? AND is_active = 1`,
+      [propertyId, numericVendorId, assignedServiceType]
     );
 
     if (existing.length > 0) {
-      return res.status(400).json({ success: false, message: 'This vendor is already assigned to this property' });
+      return res.status(400).json({ success: false, message: 'This vendor is already assigned to this service' });
     }
 
-    // Create assignment
+    // Deactivate existing assignments for this property + service type
     await pool.execute(
-      `INSERT INTO property_vendor_assignments (property_id, vendor_id, assigned_by, assigned_at, is_active)
-       VALUES (?, ?, ?, NOW(), TRUE)`,
-      [propertyId, numericVendorId, req.user.id]
+      `UPDATE property_vendor_assignments SET is_active = 0 WHERE property_id = ? AND service_type = ? AND is_active = 1`,
+      [propertyId, assignedServiceType]
+    );
+
+    // Create assignment with service_type
+    await pool.execute(
+      `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
+       VALUES (?, ?, ?, ?, NOW(), TRUE)`,
+      [propertyId, numericVendorId, assignedServiceType, req.user.id]
     );
 
     // Send email notification

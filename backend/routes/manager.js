@@ -676,23 +676,86 @@ router.delete('/properties/:id', requireManagerScope, validateOwnership('propert
 });
 
 // Assign vendor to property - DISABLED for FP Manager
-router.post('/properties/:id/assign-vendor', requireManagerScope, validateOwnership('properties'), async (req, res) => {
+router.post('/properties/:id/assign-vendor', requireManagerScope, async (req, res) => {
   // FP Managers cannot assign vendors
   if (req.isFPManager) {
     return res.status(403).json({ success: false, message: 'Assign vendor not allowed for this role' });
   }
   try {
-    const { vendorId } = req.body;
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
-    
-    await pool.execute(
-      `UPDATE properties SET assigned_vendor_id = ?, updated_at = NOW() WHERE id = ? AND ${scopeColumn} = ?`,
-      [vendorId, req.params.id, scopeId]
+    const { id } = req.params;
+    const { vendorId, serviceType } = req.body;
+    const managerId = req.managerId;
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+
+    if (!vendorId) {
+      return res.status(400).json({ success: false, message: 'Vendor ID is required' });
+    }
+
+    // Verify property access
+    let property = [];
+    if (franchisePartnerId) {
+      [property] = await pool.execute(
+        `SELECT id, name FROM properties WHERE id = ? AND franchise_partner_id = ?
+         UNION
+         SELECT id, community_name as name FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+        [id, franchisePartnerId, id, franchisePartnerId]
+      );
+    } else {
+      [property] = await pool.execute(
+        `SELECT id, name FROM properties WHERE id = ? AND manager_id = ?`,
+        [id, managerId]
+      );
+    }
+
+    if (property.length === 0) {
+      return res.status(403).json({ success: false, message: 'Cannot assign vendor to this property' });
+    }
+
+    // Verify vendor exists and get details
+    const [vendor] = await pool.execute(
+      `SELECT id, owner_name, service_type FROM onboarded_vendors WHERE (id = ? OR vendor_id = ?)${franchisePartnerId ? ' AND franchise_partner_id = ?' : ''}`,
+      franchisePartnerId ? [vendorId, vendorId, franchisePartnerId] : [vendorId, vendorId]
     );
 
-    res.json({ success: true, message: 'Vendor assigned to property' });
+    if (vendor.length === 0) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    const numericVendorId = vendor[0].id;
+    const assignedServiceType = serviceType || vendor[0].service_type || 'General';
+
+    // Check if same vendor + service type assignment already exists
+    const [existingSame] = await pool.execute(
+      `SELECT id FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND service_type = ? AND is_active = 1`,
+      [id, numericVendorId, assignedServiceType]
+    );
+
+    if (existingSame.length > 0) {
+      return res.status(400).json({ success: false, message: 'This vendor is already assigned to this service' });
+    }
+
+    // Deactivate existing assignments for this property + service type
+    await pool.execute(
+      `UPDATE property_vendor_assignments SET is_active = 0 WHERE property_id = ? AND service_type = ? AND is_active = 1`,
+      [id, assignedServiceType]
+    );
+
+    // Create new assignment in property_vendor_assignments table
+    await pool.execute(
+      `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
+       VALUES (?, ?, ?, ?, NOW(), TRUE)`,
+      [id, numericVendorId, assignedServiceType, req.user?.id || managerId]
+    );
+
+    // Also update the property's assigned_vendor_id for backward compatibility
+    await pool.execute(
+      `UPDATE properties SET assigned_vendor_id = ?, updated_at = NOW() WHERE id = ?`,
+      [numericVendorId, id]
+    );
+
+    res.json({ success: true, message: 'Vendor assigned to property', data: { vendorName: vendor[0].owner_name } });
   } catch (error) {
+    console.error('Assign vendor error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1129,16 +1192,32 @@ router.patch('/work-orders/:id/status', requireManagerScope, async (req, res) =>
 });
 
 // Assign vendor to work order
-router.patch('/work-orders/:id/assign-vendor', requireManagerScope, validateOwnership('work_orders'), async (req, res) => {
+router.patch('/work-orders/:id/assign-vendor', requireManagerScope, async (req, res) => {
   try {
+    const { id } = req.params;
     const { vendorId } = req.body;
-    const scopeId = getScopeId(req);
-    const scopeColumn = getScopeColumn(req);
+    const managerId = req.managerId;
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+    const creatorEmail = getCreatorIdentifier(req);
+
+    // Validate access - FP managers use franchise_partner_id, others use manager_id/created_by
+    let accessQuery, accessParams;
+    if (franchisePartnerId) {
+      accessQuery = 'SELECT id FROM work_orders WHERE id = ? AND franchise_partner_id = ?';
+      accessParams = [id, franchisePartnerId];
+    } else {
+      accessQuery = 'SELECT id FROM work_orders WHERE id = ? AND (manager_id = ? OR created_by = ? OR created_by = ?)';
+      accessParams = [id, managerId, managerId, creatorEmail];
+    }
+    
+    const [accessCheck] = await pool.query(accessQuery, accessParams);
+    if (accessCheck.length === 0) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
     
     await pool.execute(
-      `UPDATE work_orders SET assigned_vendor_id = ?, status = 'assigned', updated_at = NOW() 
-       WHERE id = ? AND ${scopeColumn} = ?`,
-      [vendorId, req.params.id, scopeId]
+      `UPDATE work_orders SET assigned_vendor_id = ?, status = 'assigned', updated_at = NOW() WHERE id = ?`,
+      [vendorId, id]
     );
 
     res.json({ success: true, message: 'Vendor assigned' });

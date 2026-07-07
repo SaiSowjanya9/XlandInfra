@@ -1091,10 +1091,28 @@ router.post('/work-orders', requireCoordinatorScope, async (req, res) => {
   }
 });
 
-router.patch('/work-orders/:id/status', requireCoordinatorScope, validateOwnership('work_orders'), async (req, res) => {
+router.patch('/work-orders/:id/status', requireCoordinatorScope, async (req, res) => {
   try {
     const { id } = req.params;
     const { status, cancellationNote, cancelNote, closingNotes } = req.body;
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+    const creatorEmail = getCreatorIdentifier(req);
+
+    // Validate access - FP coordinators use franchise_partner_id, others use coordinator_id/created_by
+    let accessQuery, accessParams;
+    if (franchisePartnerId) {
+      accessQuery = 'SELECT id FROM work_orders WHERE id = ? AND franchise_partner_id = ?';
+      accessParams = [id, franchisePartnerId];
+    } else {
+      accessQuery = 'SELECT id FROM work_orders WHERE id = ? AND (coordinator_id = ? OR created_by = ? OR created_by = ?)';
+      accessParams = [id, coordinatorId, coordinatorId, creatorEmail];
+    }
+    
+    const [accessCheck] = await pool.query(accessQuery, accessParams);
+    if (accessCheck.length === 0) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
 
     // If cancelling, store the cancellation note
     if (status === 'cancelled') {
@@ -1176,10 +1194,28 @@ router.patch('/work-orders/:id/status', requireCoordinatorScope, validateOwnersh
   }
 });
 
-router.patch('/work-orders/:id/assign-vendor', requireCoordinatorScope, validateOwnership('work_orders'), async (req, res) => {
+router.patch('/work-orders/:id/assign-vendor', requireCoordinatorScope, async (req, res) => {
   try {
     const { id } = req.params;
     const { vendorId } = req.body;
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+    const creatorEmail = getCreatorIdentifier(req);
+
+    // Validate access - FP coordinators use franchise_partner_id, others use coordinator_id/created_by
+    let accessQuery, accessParams;
+    if (franchisePartnerId) {
+      accessQuery = 'SELECT id FROM work_orders WHERE id = ? AND franchise_partner_id = ?';
+      accessParams = [id, franchisePartnerId];
+    } else {
+      accessQuery = 'SELECT id FROM work_orders WHERE id = ? AND (coordinator_id = ? OR created_by = ? OR created_by = ?)';
+      accessParams = [id, coordinatorId, coordinatorId, creatorEmail];
+    }
+    
+    const [accessCheck] = await pool.query(accessQuery, accessParams);
+    if (accessCheck.length === 0) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
 
     await pool.query(
       'UPDATE work_orders SET assigned_vendor_id = ?, status = ? WHERE id = ?',
@@ -1193,10 +1229,28 @@ router.patch('/work-orders/:id/assign-vendor', requireCoordinatorScope, validate
   }
 });
 
-router.patch('/work-orders/:id/assign-employee', requireCoordinatorScope, validateOwnership('work_orders'), async (req, res) => {
+router.patch('/work-orders/:id/assign-employee', requireCoordinatorScope, async (req, res) => {
   try {
     const { id } = req.params;
     const { employeeId } = req.body;
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+    const creatorEmail = getCreatorIdentifier(req);
+
+    // Validate access - FP coordinators use franchise_partner_id, others use coordinator_id/created_by
+    let accessQuery, accessParams;
+    if (franchisePartnerId) {
+      accessQuery = 'SELECT id FROM work_orders WHERE id = ? AND franchise_partner_id = ?';
+      accessParams = [id, franchisePartnerId];
+    } else {
+      accessQuery = 'SELECT id FROM work_orders WHERE id = ? AND (coordinator_id = ? OR created_by = ? OR created_by = ?)';
+      accessParams = [id, coordinatorId, coordinatorId, creatorEmail];
+    }
+    
+    const [accessCheck] = await pool.query(accessQuery, accessParams);
+    if (accessCheck.length === 0) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
 
     await pool.query(
       'UPDATE work_orders SET assigned_employee_id = ?, status = ? WHERE id = ?',
@@ -1210,9 +1264,27 @@ router.patch('/work-orders/:id/assign-employee', requireCoordinatorScope, valida
   }
 });
 
-router.delete('/work-orders/:id', requireCoordinatorScope, validateOwnership('work_orders'), async (req, res) => {
+router.delete('/work-orders/:id', requireCoordinatorScope, async (req, res) => {
   try {
     const { id } = req.params;
+    const coordinatorId = req.coordinatorId;
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+    const creatorEmail = getCreatorIdentifier(req);
+
+    // Validate access - FP coordinators use franchise_partner_id, others use coordinator_id/created_by
+    let accessQuery, accessParams;
+    if (franchisePartnerId) {
+      accessQuery = 'SELECT id FROM work_orders WHERE id = ? AND franchise_partner_id = ?';
+      accessParams = [id, franchisePartnerId];
+    } else {
+      accessQuery = 'SELECT id FROM work_orders WHERE id = ? AND (coordinator_id = ? OR created_by = ? OR created_by = ?)';
+      accessParams = [id, coordinatorId, coordinatorId, creatorEmail];
+    }
+    
+    const [accessCheck] = await pool.query(accessQuery, accessParams);
+    if (accessCheck.length === 0) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
 
     // Soft delete - update status to cancelled
     await pool.query(
