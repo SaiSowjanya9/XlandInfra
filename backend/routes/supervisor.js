@@ -861,12 +861,13 @@ router.get('/work-orders', requireSupervisorScope, async (req, res) => {
         COALESCE(p.property_id, op.property_id) as property_code,
         COALESCE(p.property_id, op.property_id) as actual_property_id,
         COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-        COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
+        COALESCE(z.name, p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
         COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
         op.total_units, op.number_of_blocks as total_blocks,
         COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name
       FROM work_orders wo
       LEFT JOIN properties p ON wo.property_id = p.id
+      LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
       LEFT JOIN onboarded_properties op ON wo.property_id = op.id
       LEFT JOIN categories c ON wo.category_id = c.id
       LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
@@ -916,12 +917,13 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
         COALESCE(p.property_id, op.property_id) as property_code,
         COALESCE(p.property_id, op.property_id) as actual_property_id,
         COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-        COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
+        COALESCE(z.name, p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
         COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
         op.total_units, op.number_of_blocks as total_blocks,
         COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
+       LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
@@ -964,12 +966,13 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
         COALESCE(p.property_id, op.property_id) as property_code,
         COALESCE(p.property_id, op.property_id) as actual_property_id,
         COALESCE(p.property_type, op.property_type, wo.property_type) as property_type,
-        COALESCE(p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
+        COALESCE(z.name, p.zone_id, op.zone) as zone, COALESCE(p.division_id, op.division) as division,
         COALESCE(p.address, op.address) as property_address, COALESCE(p.city, op.city) as property_city,
         op.total_units, op.number_of_blocks as total_blocks,
         COALESCE(c.name, wo.category_name) as category_name, v.company_name as vendor_name
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
+       LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id OR p.zone_id = z.name
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id

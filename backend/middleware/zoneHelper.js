@@ -261,9 +261,10 @@ async function hasZoneRestrictions(employeeId) {
  * @param {string[]} zones - Array of zone names
  * @param {string} createdBy - Creator identifier (email/username)
  * @param {string} tableAlias - Table alias (e.g., 'p' for properties)
+ * @param {string} zonesTableAlias - Zones table alias for JOIN (e.g., 'z')
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
-function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p') {
+function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p', zonesTableAlias = 'z') {
   // If no zones assigned, allow access to own created properties only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created properties only');
@@ -271,10 +272,11 @@ function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p') {
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // zone_id stores zone name directly (no separate zones table)
+  // Handle both: zone_id as zone name directly OR zone_id as numeric ID (via zones table JOIN)
+  // COALESCE(z.name, p.zone_id) handles both cases
   return {
-    clause: ` AND (${tableAlias}.zone_id IN (${placeholders}) OR ${tableAlias}.created_by = ?)`,
-    params: [...zones, createdBy]
+    clause: ` AND (${tableAlias}.zone_id IN (${placeholders}) OR COALESCE(${zonesTableAlias}.name, ${tableAlias}.zone_id) IN (${placeholders}) OR ${tableAlias}.created_by = ?)`,
+    params: [...zones, ...zones, createdBy]
   };
 }
 
@@ -308,9 +310,10 @@ function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias 
  * @param {string} propertyAlias - Property table alias
  * @param {string} workOrderAlias - Work order table alias
  * @param {string} onboardedPropertyAlias - Onboarded property table alias (optional)
+ * @param {string} zonesTableAlias - Zones table alias for JOIN (e.g., 'z')
  * @returns {{ clause: string, params: string[] }} SQL clause and parameters
  */
-function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p', workOrderAlias = 'wo', onboardedPropertyAlias = 'op') {
+function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p', workOrderAlias = 'wo', onboardedPropertyAlias = 'op', zonesTableAlias = 'z') {
   // If no zones assigned, allow access to own created work orders only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created work orders only');
@@ -319,14 +322,15 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
   
   const placeholders = zones.map(() => '?').join(',');
   // Check zone_id/zone on properties and onboarded_properties, or created_by fallback
-  // zone_id stores zone name directly (no separate zones table)
+  // Handle both: zone_id as zone name directly OR zone_id as numeric ID (via zones table JOIN)
   return {
     clause: ` AND (
       ${propertyAlias}.zone_id IN (${placeholders}) 
+      OR COALESCE(${zonesTableAlias}.name, ${propertyAlias}.zone_id) IN (${placeholders})
       OR ${onboardedPropertyAlias}.zone IN (${placeholders}) 
       OR ${workOrderAlias}.created_by = ?
     )`,
-    params: [...zones, ...zones, createdBy]
+    params: [...zones, ...zones, ...zones, createdBy]
   };
 }
 
