@@ -2919,9 +2919,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     try { 
       // Use the same export logic as handleExportPDF for consistency
       handleExportPDF(estimate);
-      showToast('PDF downloaded!'); 
     } catch (e) { 
-      showToast('PDF failed', 'error'); 
+      console.error('PDF download error:', e);
+      showToast('PDF failed: ' + e.message, 'error'); 
     } 
   };
 
