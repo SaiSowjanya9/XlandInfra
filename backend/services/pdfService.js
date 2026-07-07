@@ -47,21 +47,25 @@ const generateEstimatePDF = async (estimate) => {
       const lightGray = '#f8f9fa';
 
       // Header - Black background with clean layout
-      doc.rect(0, 0, 612, 70).fill(black);
+      doc.rect(0, 0, 612, 65).fill(black);
       
-      // ESTIMATE badge on the left
-      doc.rect(50, 22, 95, 28).fill(gold);
-      doc.fontSize(12).fillColor(black).text('ESTIMATE', 68, 30);
-      
-      // Company Logo with built-in name - positioned on right
+      // Logo Symbol (left side)
       try {
-        doc.image(LOGO_PATH, 497, 10, { width: 55, height: 55 });
+        doc.image(LOGO_PATH, 50, 12, { width: 42, height: 42 });
       } catch (logoErr) {
         console.log('Logo load error:', logoErr.message);
         // Fallback to gold square with XI if logo fails
-        doc.rect(502, 12, 50, 50).fill(gold);
-        doc.fontSize(20).fillColor(black).text('XI', 514, 30);
+        doc.rect(50, 12, 42, 42).fill(gold);
+        doc.fontSize(18).fillColor(black).text('XI', 62, 28);
       }
+      
+      // Company Name beside logo - "XLAND INFRA" with "PVT LTD" below
+      doc.fontSize(22).fillColor(gold).text('XLAND INFRA', 100, 18);
+      doc.fontSize(9).fillColor(gold).text('— PVT LTD —', 100, 42);
+      
+      // ESTIMATE badge on the right
+      doc.rect(470, 20, 95, 28).fill(gold);
+      doc.fontSize(12).fillColor(black).text('ESTIMATE', 488, 28);
 
       let y = 90;
 

@@ -90,11 +90,37 @@ const generatePDF = (data, type, filename) => {
     doc.setFillColor(20, 20, 20); // Near black
     doc.rect(0, 0, pageWidth, headerHeight, 'F');
     
-    // Document Badge (left side)
+    // Logo Symbol (left side)
+    const logoSize = 18;
+    try {
+      doc.addImage(XLAND_LOGO, 'PNG', margin, 3, logoSize, logoSize);
+    } catch (e) {
+      // Fallback to gold square with XI if logo fails
+      doc.setFillColor(...gold);
+      doc.roundedRect(margin, 4, 16, 16, 2, 2, 'F');
+      doc.setTextColor(20, 20, 20);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('XI', margin + 8, 14, { align: 'center' });
+    }
+    
+    // Company Name beside logo - "XLAND INFRA" with "PVT LTD" below
+    const textX = margin + logoSize + 4;
+    doc.setTextColor(...gold);
+    doc.setFontSize(11); // Medium font size
+    doc.setFont('helvetica', 'bold');
+    doc.text('XLAND INFRA', textX, 10);
+    
+    // "— PVT LTD —" below
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.text('— PVT LTD —', textX, 16);
+
+    // Document Badge (right side)
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
     const badgeWidth = 28;
     const badgeHeight = 10;
-    const badgeX = margin;
+    const badgeX = pageWidth - margin - badgeWidth;
     const badgeY = 7;
     doc.setFillColor(...gold);
     doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 1.5, 1.5, 'F');
@@ -102,21 +128,6 @@ const generatePDF = (data, type, filename) => {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.text(docType, badgeX + badgeWidth/2, badgeY + badgeHeight/2 + 1, { align: 'center' });
-    
-    // Company Logo with built-in name (right side)
-    const logoSize = 20;
-    const logoX = pageWidth - margin - logoSize;
-    try {
-      doc.addImage(XLAND_LOGO, 'PNG', logoX, 2, logoSize, logoSize);
-    } catch (e) {
-      // Fallback to text if logo fails
-      doc.setFillColor(...gold);
-      doc.roundedRect(logoX, 3, 18, 18, 2, 2, 'F');
-      doc.setTextColor(20, 20, 20);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('XI', logoX + 9, 14, { align: 'center' });
-    }
 
     y = headerHeight + 8;
 
