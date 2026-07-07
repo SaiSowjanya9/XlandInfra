@@ -100,15 +100,15 @@ const generatePDF = (data, type, filename) => {
       doc.roundedRect(margin, 4, 16, 16, 2, 2, 'F');
     }
     
-    // Company Name text beside logo (aligned vertically center)
+    // Company Name text beside logo (vertically centered with logo)
     const textX = margin + logoSize + 4;
     doc.setTextColor(...gold);
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('XLAND INFRA', textX, 10);
-    doc.setFontSize(6);
+    doc.text('XLAND INFRA', textX, 12);
+    doc.setFontSize(5);
     doc.setFont('helvetica', 'normal');
-    doc.text('— PVT LTD —', textX, 16);
+    doc.text('— PVT LTD —', textX, 17);
 
     // Document Badge (right side)
     const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
