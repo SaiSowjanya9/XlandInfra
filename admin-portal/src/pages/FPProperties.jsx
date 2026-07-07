@@ -243,68 +243,58 @@ const FPProperties = ({ user }) => {
   const extractServicesFromEstimate = (estimate) => {
     const services = [];
     
-    // Try services_data first
-    if (estimate.services_data) {
+    // Helper to extract service array from various formats
+    const extractServiceArray = (data) => {
+      if (!data) return [];
       try {
-        const servicesData = typeof estimate.services_data === 'string' 
-          ? JSON.parse(estimate.services_data) 
-          : estimate.services_data;
-        if (Array.isArray(servicesData)) {
-          servicesData.forEach(s => {
-            services.push({
-              serviceType: s.service || s.name || s.serviceType,
-              frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
-              frequencyCount: s.frequencyCount || s.frequency_count || s.visits || 1
-            });
-          });
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        // Handle {serviceRows: [...]} format
+        if (parsed?.serviceRows && Array.isArray(parsed.serviceRows)) {
+          return parsed.serviceRows;
         }
-      } catch (e) { console.error('Error parsing services_data:', e); }
-    }
+        // Handle {services: [...]} format
+        if (parsed?.services && Array.isArray(parsed.services)) {
+          return parsed.services;
+        }
+        // Handle direct array
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      } catch (e) { console.log('Parse error:', e); }
+      return [];
+    };
+
+    // Helper to push service to array
+    const pushService = (s) => {
+      const serviceType = s.service || s.name || s.serviceType || s.serviceName;
+      if (serviceType) {
+        services.push({
+          serviceType,
+          frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
+          frequencyCount: s.frequencyCount || s.frequency_count || s.visits || s.frequency || 1
+        });
+      }
+    };
     
-    // Try package_services (from estimate table)
-    if (services.length === 0 && estimate.package_services) {
-      try {
-        const pkgServices = typeof estimate.package_services === 'string'
-          ? JSON.parse(estimate.package_services)
-          : estimate.package_services;
-        if (Array.isArray(pkgServices)) {
-          pkgServices.forEach(s => {
-            services.push({
-              serviceType: s.service || s.name || s.serviceType,
-              frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
-              frequencyCount: s.frequencyCount || s.frequency_count || s.visits || 1
-            });
-          });
-        }
-      } catch (e) { console.error('Error parsing package_services:', e); }
+    // Try multiple sources in order of priority
+    const sources = [
+      estimate.services_data,
+      estimate.package_services,
+      estimate.packageServices
+    ];
+
+    for (const source of sources) {
+      if (services.length === 0 && source) {
+        extractServiceArray(source).forEach(pushService);
+      }
     }
 
-    // Try packageServices (from JOIN with fp_amc_packages)
-    if (services.length === 0 && estimate.packageServices) {
-      try {
-        const pkgServices = typeof estimate.packageServices === 'string'
-          ? JSON.parse(estimate.packageServices)
-          : estimate.packageServices;
-        if (Array.isArray(pkgServices)) {
-          pkgServices.forEach(s => {
-            services.push({
-              serviceType: s.service || s.name || s.serviceType,
-              frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
-              frequencyCount: s.frequencyCount || s.frequency_count || s.visits || 1
-            });
-          });
-        }
-      } catch (e) { console.error('Error parsing packageServices:', e); }
-    }
-
-    // Fallback to package_name if no services found
-    if (services.length === 0 && estimate.package_name) {
-      services.push({
-        serviceType: estimate.package_name,
-        frequencyType: 'Monthly',
-        frequencyCount: 12
-      });
-    }
+    // Debug log
+    console.log('Extract services - Estimate:', estimate.estimate_id, 'Services found:', services.length, 'Sources:', {
+      services_data: !!estimate.services_data,
+      package_services: !!estimate.package_services,
+      packageServices: !!estimate.packageServices
+    });
     
     return services;
   };
@@ -353,6 +343,8 @@ const FPProperties = ({ user }) => {
     setSavingAssignments(true);
     try {
       let successCount = 0;
+      const failedServices = [];
+      
       for (const assignment of assignmentsToSave) {
         const response = await fetch(`/api/fp/properties/${selectedProperty.id}/assign-vendor`, {
           method: 'POST',
@@ -366,12 +358,24 @@ const FPProperties = ({ user }) => {
           })
         });
         const result = await response.json();
-        if (result.success) successCount++;
+        if (result.success) {
+          successCount++;
+        } else {
+          failedServices.push(`${assignment.serviceType}: ${result.message || 'Failed'}`);
+          console.error(`Failed to save ${assignment.serviceType}:`, result);
+        }
       }
 
+      if (successCount === assignmentsToSave.length) {
+        setMessage({ type: 'success', text: `All ${successCount} vendor assignment(s) saved!` });
+      } else if (successCount > 0) {
+        setMessage({ type: 'success', text: `${successCount} of ${assignmentsToSave.length} saved. Failed: ${failedServices.join(', ')}` });
+      } else {
+        setMessage({ type: 'error', text: `Failed: ${failedServices.join(', ')}` });
+      }
+      
+      // Refresh data regardless of partial success
       if (successCount > 0) {
-        setMessage({ type: 'success', text: `${successCount} vendor assignment(s) saved!` });
-        // Refresh the property vendor assignments if modal is still open for viewing
         if (selectedProperty) {
           fetchPropertyVendorAssignments(selectedProperty.id);
         }
@@ -379,11 +383,10 @@ const FPProperties = ({ user }) => {
         setSelectedProperty(null);
         setServiceAssignments([]);
         fetchProperties();
-      } else {
-        setMessage({ type: 'error', text: 'Failed to save assignments' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to save assignments' });
+      console.error('Save assignments error:', error);
+      setMessage({ type: 'error', text: 'Failed to save assignments: ' + error.message });
     } finally {
       setSavingAssignments(false);
     }
