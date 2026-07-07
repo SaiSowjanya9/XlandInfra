@@ -1142,23 +1142,24 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
     }
 
     // Validate property belongs to FP - check both tables (include property_id, property_type, zone, and division for email)
+    // Priority: onboarded_properties first (FP context), then properties table
     let property = [];
     
-    // Check properties table first
-    const [regularProp] = await pool.execute(
-      'SELECT id, name, property_id, property_type, zone_id as zone, COALESCE(division_id, division) as division FROM properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
+    // Check onboarded_properties table first
+    const [onboardedProp] = await pool.execute(
+      'SELECT id, community_name as name, property_id, property_type, zone, division FROM onboarded_properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
       [propertyId, propertyId, req.fpId]
     );
     
-    if (regularProp.length > 0) {
-      property = regularProp;
+    if (onboardedProp.length > 0) {
+      property = onboardedProp;
     } else {
-      // Check onboarded_properties table
-      const [onboardedProp] = await pool.execute(
-        'SELECT id, community_name as name, property_id, property_type, zone, division FROM onboarded_properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
+      // Fallback to properties table
+      const [regularProp] = await pool.execute(
+        'SELECT id, name, property_id, property_type, zone_id as zone, COALESCE(division_id, division) as division FROM properties WHERE (id = ? OR property_id = ?) AND franchise_partner_id = ?',
         [propertyId, propertyId, req.fpId]
       );
-      property = onboardedProp;
+      property = regularProp;
     }
 
     if (property.length === 0) {
