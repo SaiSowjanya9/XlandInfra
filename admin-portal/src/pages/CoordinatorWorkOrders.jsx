@@ -32,7 +32,8 @@ import {
   List,
   Pencil,
   Truck,
-  UserPlus
+  UserPlus,
+  XCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -1811,6 +1812,17 @@ const CoordinatorWorkOrders = ({ user }) => {
                     Completion Notes
                   </p>
                   <p className="text-sm text-green-700">{selectedWorkOrder.closing_notes}</p>
+                </div>
+              )}
+
+              {/* Cancellation Note Section - Show when work order is cancelled */}
+              {selectedWorkOrder.status === 'cancelled' && selectedWorkOrder.cancellation_note && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+                  <p className="text-sm font-medium text-red-800 mb-2 flex items-center gap-2">
+                    <XCircle className="w-4 h-4" />
+                    Cancellation Reason
+                  </p>
+                  <p className="text-sm text-red-700">{selectedWorkOrder.cancellation_note}</p>
                 </div>
               )}
             </div>

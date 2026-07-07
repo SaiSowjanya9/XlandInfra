@@ -1715,6 +1715,17 @@ const EmployeeWorkOrders = ({ admin }) => {
                   <p className="text-sm text-green-700">{selectedOrder.closing_notes}</p>
                 </div>
               )}
+
+              {/* Cancellation Note Section - Show when work order is cancelled */}
+              {selectedOrder.status === 'cancelled' && selectedOrder.cancellation_note && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-red-800 mb-2 flex items-center gap-2">
+                    <XCircle className="w-4 h-4" />
+                    Cancellation Reason
+                  </p>
+                  <p className="text-sm text-red-700">{selectedOrder.cancellation_note}</p>
+                </div>
+              )}
             </div>
 
             <div className="p-5 border-t border-gray-200 flex justify-end space-x-3">

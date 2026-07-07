@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Eye, X, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle2, Pencil, Plus, Building2, User, List } from 'lucide-react';
+import { Search, Eye, X, XCircle, Check, Clock, AlertCircle, ChevronDown, Shield, RefreshCw, ClipboardList, CheckCircle, CheckCircle2, Pencil, Plus, Building2, User, List } from 'lucide-react';
 import { useFP } from '../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -1153,6 +1153,28 @@ const WorkOrders = ({ admin }) => {
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* Closing Notes Section - Show when work order is completed */}
+              {selectedOrder.status === 'completed' && selectedOrder.closing_notes && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-green-800 mb-2 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    Completion Notes
+                  </p>
+                  <p className="text-sm text-green-700">{selectedOrder.closing_notes}</p>
+                </div>
+              )}
+
+              {/* Cancellation Note Section - Show when work order is cancelled */}
+              {selectedOrder.status === 'cancelled' && selectedOrder.cancellation_note && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-red-800 mb-2 flex items-center gap-2">
+                    <XCircle className="w-4 h-4" />
+                    Cancellation Reason
+                  </p>
+                  <p className="text-sm text-red-700">{selectedOrder.cancellation_note}</p>
                 </div>
               )}
 
