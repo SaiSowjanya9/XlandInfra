@@ -59,7 +59,8 @@ const SupervisorDashboard = ({ user }) => {
     { label: 'Total Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, bgColor: 'bg-indigo-50', textColor: 'text-indigo-600', path: '/supervisor/work-orders' },
     { label: 'Pending Work Orders', value: stats?.pendingWorkOrders || 0, icon: Clock, bgColor: 'bg-amber-50', textColor: 'text-amber-600', path: '/supervisor/work-orders' },
     { label: 'Completed Work Orders', value: stats?.completedWorkOrders || 0, icon: CheckCircle, bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/supervisor/work-orders' },
-    { label: 'Estimates', value: stats?.estimates || 0, icon: FileText, bgColor: 'bg-teal-50', textColor: 'text-teal-600', path: '/supervisor/estimates' }
+    { label: 'Direct Estimates', value: stats?.directEstimates || 0, icon: FileText, bgColor: 'bg-teal-50', textColor: 'text-teal-600', path: '/supervisor/estimates' },
+    { label: 'Property Estimates', value: stats?.propertyEstimates || 0, icon: FileText, bgColor: 'bg-cyan-50', textColor: 'text-cyan-600', path: '/supervisor/estimates' }
   ];
 
   const getColorClasses = (color) => {

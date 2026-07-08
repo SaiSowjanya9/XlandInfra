@@ -581,9 +581,10 @@ const Properties = () => {
     showToast(`Exported ${filteredProperties.length} properties`);
   };
 
-  // Derived data
-  const divisions = [...new Set(properties.map(p => p.division).filter(Boolean))];
-  const zones = [...new Set(properties.map(p => p.zone).filter(Boolean))];
+  // Derived data - only from ACTIVE properties for filter dropdowns
+  const activeProperties = properties.filter(p => p.isActive !== false && p.status !== 'inactive' && p.status !== 'deleted');
+  const divisions = [...new Set(activeProperties.map(p => p.division).filter(Boolean))];
+  const zones = [...new Set(activeProperties.map(p => p.zone).filter(Boolean))];
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredProperties = properties.filter(p => {

@@ -1101,13 +1101,19 @@ const FPProperties = ({ user }) => {
     return filtered.filter(p => normalizePropertyType(p.property_type) === type).length;
   };
 
-  // Get unique divisions from properties
-  const uniqueDivisions = [...new Set(properties.map(p => p.division).filter(Boolean))];
+  // Get unique divisions from ACTIVE properties only (for filter dropdowns)
+  const activePropertiesForFilters = properties.filter(p => 
+    p.status !== 'inactive' && p.status !== 'deleted' && p.is_active !== 0 && p.is_active !== false
+  );
+  const uniqueDivisions = [...new Set(activePropertiesForFilters.map(p => p.division).filter(Boolean))];
 
-  // Get available zones from current properties (dynamic based on status filter)
+  // Get available zones from ACTIVE properties only (for filter dropdowns)
   const availableZones = useMemo(() => {
+    const activeProps = properties.filter(p => 
+      p.status !== 'inactive' && p.status !== 'deleted' && p.is_active !== 0 && p.is_active !== false
+    );
     const zoneMap = new Map();
-    properties.forEach(p => {
+    activeProps.forEach(p => {
       const zoneName = p.zone_name || p.zone;
       const zoneId = p.zone_id;
       if (zoneName && !zoneMap.has(zoneName)) {

@@ -269,9 +269,10 @@ const VendorDetails = () => {
     showToast('All vendors exported successfully');
   };
 
-  // Derived data
-  const divisions = [...new Set(vendors.map(v => v.division).filter(Boolean))];
-  const zones = [...new Set(vendors.map(v => v.zone || v.zone_name).filter(Boolean))];
+  // Derived data - only from ACTIVE vendors for filter dropdowns
+  const activeVendors = vendors.filter(v => (v.status || 'active') === 'active');
+  const divisions = [...new Set(activeVendors.map(v => v.division).filter(Boolean))];
+  const zones = [...new Set(activeVendors.map(v => v.zone || v.zone_name).filter(Boolean))];
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredVendors = vendors.filter(v => {

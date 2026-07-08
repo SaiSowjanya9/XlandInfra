@@ -1471,7 +1471,8 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
       onboardedVendors,
       fpEmployees,
       workOrderStats,
-      estimates,
+      directEstimates,
+      propertyEstimates,
       recentWorkOrders
     ] = await Promise.all([
       // ALL properties (exclude deleted)
@@ -1492,8 +1493,16 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
         pending: Number(r.pending) || 0, 
         completed: Number(r.completed) || 0 
       })).catch(() => ({ total: 0, pending: 0, completed: 0 })),
-      // Estimates (from fp_estimates table, non-archived only)
-      safeCount('SELECT COUNT(*) as count FROM fp_estimates WHERE (is_archived = 0 OR is_archived IS NULL)'),
+      // Direct Estimates (non-archived, active only)
+      safeCount(`SELECT COUNT(*) as count FROM fp_estimates 
+        WHERE (is_archived = 0 OR is_archived IS NULL) 
+        AND status NOT IN ('archived', 'rejected')
+        AND (estimate_type = 'direct' OR property_id IS NULL)`),
+      // Property-based Estimates (non-archived, active only)
+      safeCount(`SELECT COUNT(*) as count FROM fp_estimates 
+        WHERE (is_archived = 0 OR is_archived IS NULL) 
+        AND status NOT IN ('archived', 'rejected')
+        AND (estimate_type = 'property_based' OR (estimate_type IS NULL AND property_id IS NOT NULL))`),
       // Recent work orders
       pool.execute(
         `SELECT wo.id, wo.work_order_id, wo.title, wo.status, wo.priority, wo.created_at,
@@ -1506,7 +1515,7 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
       ).then(([rows]) => rows).catch(() => [])
     ]);
     
-    console.log('Admin Dashboard Stats:', { properties, onboardedVendors, fpEmployees, workOrderStats, estimates });
+    console.log('Admin Dashboard Stats:', { properties, onboardedVendors, fpEmployees, workOrderStats, directEstimates, propertyEstimates });
     
     res.json({
       success: true,
@@ -1516,7 +1525,8 @@ router.get('/dashboard-stats', authenticate, adminOnly, async (req, res) => {
         totalEmployees: fpEmployees,
         pendingWorkOrders: workOrderStats.pending,
         completedWorkOrders: workOrderStats.completed,
-        totalEstimates: estimates,
+        directEstimates: directEstimates,
+        propertyEstimates: propertyEstimates,
         recentWorkOrders: recentWorkOrders
       }
     });

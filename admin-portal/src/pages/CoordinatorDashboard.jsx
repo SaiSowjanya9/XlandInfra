@@ -63,7 +63,8 @@ const CoordinatorDashboard = ({ user }) => {
     { label: 'Total Work Orders', value: stats?.workOrders || 0, icon: ClipboardList, color: 'indigo', bgColor: 'bg-indigo-50', textColor: 'text-indigo-600', path: '/coordinator/work-orders' },
     { label: 'Pending Work Orders', value: stats?.pendingWorkOrders || 0, icon: Clock, color: 'amber', bgColor: 'bg-amber-50', textColor: 'text-amber-600', path: '/coordinator/work-orders' },
     { label: 'Completed Work Orders', value: stats?.completedWorkOrders || 0, icon: CheckCircle, color: 'green', bgColor: 'bg-green-50', textColor: 'text-green-600', path: '/coordinator/work-orders' },
-    { label: 'Estimates', value: stats?.estimates || 0, icon: FileText, color: 'teal', bgColor: 'bg-teal-50', textColor: 'text-teal-600', path: '/coordinator/estimates' }
+    { label: 'Direct Estimates', value: stats?.directEstimates || 0, icon: FileText, color: 'teal', bgColor: 'bg-teal-50', textColor: 'text-teal-600', path: '/coordinator/estimates' },
+    { label: 'Property Estimates', value: stats?.propertyEstimates || 0, icon: FileText, color: 'cyan', bgColor: 'bg-cyan-50', textColor: 'text-cyan-600', path: '/coordinator/estimates' }
   ];
 
   const getColorClasses = (color) => {

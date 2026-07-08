@@ -214,8 +214,14 @@ const Dashboard = () => {
       path: '/employee/work-orders'
     },
     { 
-      title: 'Estimates',
-      value: stats?.totalEstimates ?? stats?.totalZones ?? 0,
+      title: 'Direct Estimates',
+      value: stats?.directEstimates ?? 0,
+      icon: FileText,
+      path: '/employee/estimates/list'
+    },
+    { 
+      title: 'Property Estimates',
+      value: stats?.propertyEstimates ?? 0,
       icon: FileText,
       path: '/employee/estimates/list'
     },
@@ -637,17 +643,17 @@ const Dashboard = () => {
           {/* System Overview */}
           <div className="bg-white rounded-xl p-5 border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-gray-800">System Overview</h3>
+              <h3 className="font-medium text-gray-800">Estimates Overview</h3>
               <Activity className="w-4 h-4 text-gray-400" />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-semibold text-gray-800">{stats?.totalEstimates ?? 0}</p>
-                <p className="text-xs text-gray-500 mt-1">Estimates</p>
+              <div className="text-center p-3 bg-teal-50 rounded-lg">
+                <p className="text-2xl font-semibold text-teal-700">{stats?.directEstimates ?? 0}</p>
+                <p className="text-xs text-gray-500 mt-1">Direct Estimates</p>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-semibold text-gray-800">{stats?.activeWorkOrders ?? 0}</p>
-                <p className="text-xs text-gray-500 mt-1">Active Orders</p>
+              <div className="text-center p-3 bg-cyan-50 rounded-lg">
+                <p className="text-2xl font-semibold text-cyan-700">{stats?.propertyEstimates ?? 0}</p>
+                <p className="text-xs text-gray-500 mt-1">Property Estimates</p>
               </div>
             </div>
           </div>

@@ -252,10 +252,21 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
       [franchisePartnerId, creatorEmail, req.user?.username || '', coordinatorId]
     );
 
-    // Estimates - by FP (non-archived only)
-    const [estimatesCount] = await pool.query(
+    // Direct Estimates - by FP (non-archived, active only)
+    const [directEstimatesCount] = await pool.query(
       `SELECT COUNT(*) as count FROM fp_estimates 
-       WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL)`,
+       WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
+       AND status NOT IN ('archived', 'rejected')
+       AND (estimate_type = 'direct' OR property_id IS NULL)`,
+      [franchisePartnerId]
+    );
+
+    // Property-based Estimates - by FP (non-archived, active only)
+    const [propertyEstimatesCount] = await pool.query(
+      `SELECT COUNT(*) as count FROM fp_estimates 
+       WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
+       AND status NOT IN ('archived', 'rejected')
+       AND (estimate_type = 'property_based' OR (estimate_type IS NULL AND property_id IS NOT NULL))`,
       [franchisePartnerId]
     );
 
@@ -291,7 +302,8 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
           workOrders: workOrdersCount[0]?.count || 0,
           pendingWorkOrders: pendingWOCount[0]?.count || 0,
           completedWorkOrders: completedWOCount[0]?.count || 0,
-          estimates: estimatesCount[0]?.count || 0
+          directEstimates: directEstimatesCount[0]?.count || 0,
+          propertyEstimates: propertyEstimatesCount[0]?.count || 0
         },
         recentWorkOrders
       }
@@ -2267,12 +2279,13 @@ router.get('/zones', requireCoordinatorScope, async (req, res) => {
     // Get global zones
     const [globalZones] = await pool.query('SELECT id, name FROM zones WHERE is_active = 1');
     
-    // Get zones from properties (FP-scoped or coordinator-scoped)
+    // Get zones from ACTIVE properties only (FP-scoped or coordinator-scoped)
     const scopeColumn = req.franchisePartnerId ? 'franchise_partner_id' : 'coordinator_id';
     const scopeId = req.franchisePartnerId || req.coordinatorId;
     const [propertyZones] = await pool.query(
       `SELECT DISTINCT zone_id as name FROM properties 
-       WHERE ${scopeColumn} = ? AND zone_id IS NOT NULL AND zone_id != ''`,
+       WHERE ${scopeColumn} = ? AND zone_id IS NOT NULL AND zone_id != ''
+       AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`,
       [scopeId]
     );
 
@@ -2381,7 +2394,9 @@ router.get('/divisions', requireCoordinatorScope, async (req, res) => {
     }
     const [propertyDivisions] = await pool.execute(
       `SELECT DISTINCT division as name FROM properties WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''
-       UNION SELECT DISTINCT division as name FROM onboarded_vendors WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''`,
+       AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)
+       UNION SELECT DISTINCT division as name FROM onboarded_vendors WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''
+       AND (status = 'active' OR status IS NULL) AND (is_active = 1 OR is_active IS NULL)`,
       [franchisePartnerId || 0, franchisePartnerId || 0]
     );
     const allDivisionNames = new Set(divisions.map(d => d.name));
