@@ -358,28 +358,15 @@ const FPProperties = ({ user }) => {
     return services;
   };
 
-  // Get vendors filtered by zone AND service type (only matching service type vendors)
-  const getZoneFilteredVendors = (propertyZone, serviceType = '') => {
-    if (!propertyZone) return vendors;
-    const normalizedZone = propertyZone.toLowerCase().trim();
+  // Get vendors filtered by service type only (no zone filtering)
+  const getVendorsByServiceType = (serviceType = '') => {
+    if (!serviceType) return vendors;
+    
     const normalizedService = serviceType.toLowerCase().trim();
-    
-    // Filter by zone first
-    const zoneVendors = vendors.filter(v => {
-      const vendorZone = (v.zone_name || v.zone || '').toLowerCase().trim();
-      const propZoneNum = normalizedZone.replace(/[^0-9]/g, '');
-      const vendorZoneNum = vendorZone.replace(/[^0-9]/g, '');
-      return vendorZone === normalizedZone || (propZoneNum && vendorZoneNum && propZoneNum === vendorZoneNum);
+    return vendors.filter(v => {
+      const vendorService = (v.serviceType || v.service_type || '').toLowerCase().trim();
+      return vendorService.includes(normalizedService) || normalizedService.includes(vendorService);
     });
-    
-    // Filter by service type - only show vendors matching the service type
-    if (normalizedService) {
-      return zoneVendors.filter(v => {
-        const vendorService = (v.serviceType || v.service_type || '').toLowerCase().trim();
-        return vendorService.includes(normalizedService) || normalizedService.includes(vendorService);
-      });
-    }
-    return zoneVendors;
   };
 
   // Handle vendor selection for a service
@@ -2016,7 +2003,7 @@ const FPProperties = ({ user }) => {
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-sm font-medium text-gray-700">Assign vendors to each service</span>
                     <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                      {getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone, '').length} vendor(s) in zone
+                      {vendors.length} vendor(s) available
                     </span>
                   </div>
 
@@ -2031,8 +2018,8 @@ const FPProperties = ({ user }) => {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {serviceAssignments.map((service, idx) => {
-                          // Get vendors sorted by matching service type first
-                          const zoneVendors = getZoneFilteredVendors(selectedProperty.zone_name || selectedProperty.zone, service.serviceType);
+                          // Get vendors matching service type
+                          const serviceVendors = getVendorsByServiceType(service.serviceType);
                           const hasSelection = !!service.vendorId;
                           
                           return (
@@ -2056,17 +2043,17 @@ const FPProperties = ({ user }) => {
                                         : 'border-gray-300 bg-white text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100'
                                     }`}
                                   >
-                                    {zoneVendors.length > 0 ? (
+                                    {serviceVendors.length > 0 ? (
                                       <>
                                         <option value="">-- Select Vendor --</option>
-                                        {zoneVendors.map(v => (
+                                        {serviceVendors.map(v => (
                                           <option key={v.id} value={v.id}>
                                             {v.ownerName || v.owner_name || v.company_name || v.name} ({v.serviceType || v.service_type || 'General'})
                                           </option>
                                         ))}
                                       </>
                                     ) : (
-                                      <option value="">No {service.serviceType} vendors in zone</option>
+                                      <option value="">No {service.serviceType} vendors available</option>
                                     )}
                                   </select>
                                   <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-gray-400" />
