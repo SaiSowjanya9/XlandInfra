@@ -2,6 +2,16 @@ const nodemailer = require('nodemailer');
 const { generateEstimatePDF } = require('./pdfService');
 const { pool } = require('../config/database');
 
+/**
+ * Clean property ID by stripping role-based prefixes (EXEC-, MNG-, SUP-, COORD-, FP-)
+ * e.g., "EXEC-GC-1781058144329" -> "GC-1781058144329"
+ */
+const cleanPropertyId = (propertyId) => {
+  if (!propertyId) return propertyId;
+  // Strip role prefixes: EXEC-, MNG-, SUP-, COORD-, FP-
+  return propertyId.replace(/^(EXEC|MNG|SUP|COORD|FP)-/i, '');
+};
+
 // Notification email addresses - Use info@xlandinfra.com only (no Gmail)
 const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'info@xlandinfra.com';
 const CONTACT_EMAILS = ['info@xlandinfra.com'];
@@ -1658,7 +1668,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
               <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <!-- Header -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #334155 0%, #1e293b 100%); padding: 25px 20px; text-align: center;">
+                  <td style="background-color: #1e293b; background: linear-gradient(135deg, #334155 0%, #1e293b 100%); padding: 25px 20px; text-align: center;">
                     <h1 style="margin: 0; color: #c9a227; font-size: 20px; font-weight: 600; word-wrap: break-word;">New Work Order Created</h1>
                   </td>
                 </tr>
@@ -1714,7 +1724,7 @@ const sendWorkOrderCreatedNotification = async (workOrderData) => {
                             </tr>
                             <tr>
                               <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">ID:</td>
-                              <td style="padding: 6px 0; color: #64748b; font-family: monospace; font-size: 12px; word-break: break-all;">${propertyId || '-'}</td>
+                              <td style="padding: 6px 0; color: #64748b; font-family: monospace; font-size: 12px; word-break: break-all;">${cleanPropertyId(propertyId) || '-'}</td>
                             </tr>
                             ${fullAddress ? `
                             <tr>
@@ -1902,7 +1912,7 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
               <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <!-- Header -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 25px 20px; text-align: center;">
+                  <td style="background-color: #059669; background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 25px 20px; text-align: center;">
                     <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 600;">Work Order Completed</h1>
                   </td>
                 </tr>
@@ -1992,7 +2002,7 @@ const sendWorkOrderCompletedNotification = async (workOrderData) => {
                             </tr>
                             <tr>
                               <td style="padding: 6px 0; color: #64748b; font-size: 13px; vertical-align: top;">ID:</td>
-                              <td style="padding: 6px 0; color: #64748b; font-family: monospace; font-size: 12px;">${propertyId || '-'}</td>
+                              <td style="padding: 6px 0; color: #64748b; font-family: monospace; font-size: 12px;">${cleanPropertyId(propertyId) || '-'}</td>
                             </tr>
                           </table>
                         </td>
