@@ -966,10 +966,11 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
         [id, assignedServiceType]
       );
 
-      // Create new assignment
+      // Create or update assignment
       await pool.execute(
         `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
-         VALUES (?, ?, ?, ?, NOW(), TRUE)`,
+         VALUES (?, ?, ?, ?, NOW(), TRUE)
+         ON DUPLICATE KEY UPDATE service_type = VALUES(service_type), assigned_by = VALUES(assigned_by), assigned_at = NOW(), is_active = TRUE`,
         [id, numericVendorId, assignedServiceType, req.user.id]
       );
       console.log('[Assign Vendor] Created new assignment for property:', id, 'vendor:', numericVendorId, 'service:', assignedServiceType);
