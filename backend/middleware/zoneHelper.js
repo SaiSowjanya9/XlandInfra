@@ -291,11 +291,10 @@ function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p', zo
   }
   
   const placeholders = zones.map(() => '?').join(',');
-  // Handle both: zone_id as zone name directly OR zone_id as numeric ID (via zones table JOIN)
-  // COALESCE(z.name, p.zone_id) handles both cases
+  // zone_id stores zone name directly in most cases
   return {
-    clause: ` AND (${tableAlias}.zone_id IN (${placeholders}) OR COALESCE(${zonesTableAlias}.name, ${tableAlias}.zone_id) IN (${placeholders}) OR ${tableAlias}.created_by = ?)`,
-    params: [...zones, ...zones, createdBy]
+    clause: ` AND (${tableAlias}.zone_id IN (${placeholders}) OR ${tableAlias}.created_by = ?)`,
+    params: [...zones, createdBy]
   };
 }
 
@@ -353,15 +352,14 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
   
   const placeholders = zones.map(() => '?').join(',');
   // Check zone_id/zone on properties and onboarded_properties, or created_by fallback
-  // Handle both: zone_id as zone name directly OR zone_id as numeric ID (via zones table JOIN)
+  // zone_id stores zone name directly in most cases
   return {
     clause: ` AND (
       ${propertyAlias}.zone_id IN (${placeholders}) 
-      OR COALESCE(${zonesTableAlias}.name, ${propertyAlias}.zone_id) IN (${placeholders})
       OR ${onboardedPropertyAlias}.zone IN (${placeholders}) 
       OR ${workOrderAlias}.created_by = ?
     )`,
-    params: [...zones, ...zones, ...zones, createdBy]
+    params: [...zones, ...zones, createdBy]
   };
 }
 

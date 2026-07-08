@@ -969,10 +969,11 @@ router.post('/assignments', authenticate, managerOrAdmin, async (req, res) => {
       [propertyId, assignedServiceType]
     );
 
-    // Create assignment with service_type
+    // Create or update assignment with service_type
     await pool.execute(
       `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
-       VALUES (?, ?, ?, ?, NOW(), TRUE)`,
+       VALUES (?, ?, ?, ?, NOW(), TRUE)
+       ON DUPLICATE KEY UPDATE service_type = VALUES(service_type), assigned_by = VALUES(assigned_by), assigned_at = NOW(), is_active = TRUE`,
       [propertyId, numericVendorId, assignedServiceType, req.user.id]
     );
 

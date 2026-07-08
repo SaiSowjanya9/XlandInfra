@@ -801,10 +801,11 @@ router.post('/properties/:id/assign-vendor', requireSupervisorScope, async (req,
       [id, assignedServiceType]
     );
 
-    // Create new assignment in property_vendor_assignments table
+    // Create or update assignment in property_vendor_assignments table
     await pool.query(
       `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
-       VALUES (?, ?, ?, ?, NOW(), TRUE)`,
+       VALUES (?, ?, ?, ?, NOW(), TRUE)
+       ON DUPLICATE KEY UPDATE service_type = VALUES(service_type), assigned_by = VALUES(assigned_by), assigned_at = NOW(), is_active = TRUE`,
       [id, numericVendorId, assignedServiceType, req.user?.id || supervisorId]
     );
 
