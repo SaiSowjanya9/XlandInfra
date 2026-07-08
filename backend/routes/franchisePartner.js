@@ -916,40 +916,52 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
       receivedServiceType: serviceType
     });
 
-    // Check if same vendor is already assigned to this property (regardless of service type)
+    // Ensure service_type column exists
+    try {
+      await pool.execute(`ALTER TABLE property_vendor_assignments ADD COLUMN service_type VARCHAR(100)`);
+    } catch (e) { /* Column exists */ }
+
+    // Drop old unique constraint that only allows one vendor per property
+    try {
+      await pool.execute(`ALTER TABLE property_vendor_assignments DROP INDEX unique_property_vendor`);
+      console.log('[Assign Vendor] Dropped old unique_property_vendor constraint');
+    } catch (e) { /* Constraint doesn't exist or already dropped */ }
+
+    // Add new unique constraint that allows same vendor for different service types
+    try {
+      await pool.execute(`ALTER TABLE property_vendor_assignments ADD UNIQUE INDEX unique_property_vendor_service (property_id, vendor_id, service_type)`);
+      console.log('[Assign Vendor] Created new unique_property_vendor_service constraint');
+    } catch (e) { /* Constraint already exists */ }
+
+    // Check if this exact combination (property + vendor + service_type) already exists
     const [existingAssignment] = await pool.execute(
-      `SELECT id, service_type, is_active FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ?`,
-      [id, numericVendorId]
+      `SELECT id, is_active FROM property_vendor_assignments WHERE property_id = ? AND vendor_id = ? AND service_type = ?`,
+      [id, numericVendorId, assignedServiceType]
     );
 
     if (existingAssignment.length > 0) {
-      // Update existing assignment instead of inserting
+      // Reactivate existing assignment
       await pool.execute(
         `UPDATE property_vendor_assignments 
-         SET service_type = ?, is_active = 1, assigned_by = ?, assigned_at = NOW()
-         WHERE property_id = ? AND vendor_id = ?`,
-        [assignedServiceType, req.user.id, id, numericVendorId]
+         SET is_active = 1, assigned_by = ?, assigned_at = NOW()
+         WHERE property_id = ? AND vendor_id = ? AND service_type = ?`,
+        [req.user.id, id, numericVendorId, assignedServiceType]
       );
-      console.log('[Assign Vendor] Updated existing assignment for property:', id, 'vendor:', numericVendorId);
+      console.log('[Assign Vendor] Reactivated existing assignment for property:', id, 'vendor:', numericVendorId, 'service:', assignedServiceType);
     } else {
-      // Deactivate any existing vendor assignments for this property + service type only
+      // Deactivate any existing vendor for this property + service type (one vendor per service)
       await pool.execute(
         `UPDATE property_vendor_assignments SET is_active = 0 WHERE property_id = ? AND service_type = ? AND is_active = 1`,
         [id, assignedServiceType]
       );
 
-      // Ensure service_type column exists
-      try {
-        await pool.execute(`ALTER TABLE property_vendor_assignments ADD COLUMN service_type VARCHAR(100)`);
-      } catch (e) { /* Column exists */ }
-
-      // Create new assignment with service type
+      // Create new assignment
       await pool.execute(
         `INSERT INTO property_vendor_assignments (property_id, vendor_id, service_type, assigned_by, assigned_at, is_active)
          VALUES (?, ?, ?, ?, NOW(), TRUE)`,
         [id, numericVendorId, assignedServiceType, req.user.id]
       );
-      console.log('[Assign Vendor] Created new assignment for property:', id, 'vendor:', numericVendorId);
+      console.log('[Assign Vendor] Created new assignment for property:', id, 'vendor:', numericVendorId, 'service:', assignedServiceType);
     }
     
     // Send email notification to vendor
