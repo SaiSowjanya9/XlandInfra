@@ -509,7 +509,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           <button onClick={fetchData} className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" title="Refresh">
             <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <div className="text-center"><p className="text-xl font-bold text-gray-900">{estimates.length}</p><p className="text-xs text-gray-500">Active Estimates</p></div>
+          <div className="text-center"><p className="text-xl font-bold text-gray-900">{filteredEstimates.length}</p><p className="text-xs text-gray-500">Active Estimates</p></div>
           <div className="text-center"><p className="text-xl font-bold text-gray-900">{amcPackages.length}</p><p className="text-xs text-gray-500">AMC Packages</p></div>
           <div className="text-center"><p className="text-xl font-bold text-gray-900">{addons.length}</p><p className="text-xs text-gray-500">Add-ons</p></div>
           <div className="text-center"><p className="text-xl font-bold text-gray-900">{archivedEstimates.length}</p><p className="text-xs text-gray-500">Archived</p></div>

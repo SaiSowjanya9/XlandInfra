@@ -1537,10 +1537,10 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
               <button onClick={loadData} className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" title="Refresh">
                 <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
               </button>
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{stats.estimates}</p><p className="text-xs text-gray-500">Active Estimates</p></div>
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{stats.amcPackages}</p><p className="text-xs text-gray-500">AMC Packages</p></div>
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{stats.addons}</p><p className="text-xs text-gray-500">Add-ons</p></div>
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{stats.archived}</p><p className="text-xs text-gray-500">Archived</p></div>
+              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredEstimates.length}</p><p className="text-xs text-gray-500">Active Estimates</p></div>
+              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredAmcPackages.length}</p><p className="text-xs text-gray-500">AMC Packages</p></div>
+              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredAddons.length}</p><p className="text-xs text-gray-500">Add-ons</p></div>
+              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{archivedEstimates.length}</p><p className="text-xs text-gray-500">Archived</p></div>
             </div>
           </div>
         </div>
