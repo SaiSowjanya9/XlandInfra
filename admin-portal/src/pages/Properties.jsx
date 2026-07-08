@@ -9,6 +9,7 @@ import {
 import VendorAssignmentModal from '../components/VendorAssignmentModal';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
+import { useFP } from '../contexts/FPContext';
 import * as XLSX from 'xlsx';
 
 // Category options for Properties (same as Onboarding)
@@ -78,6 +79,9 @@ const normalizePropertyType = (type) => {
 };
 
 const Properties = () => {
+  // Get FP selection from context
+  const { selectedFp } = useFP();
+  
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [properties, setProperties] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
@@ -120,12 +124,16 @@ const Properties = () => {
   // Admin and super_admin should always have full access
   const hasFullAccess = !isOpsManager || currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
-  // Load properties from backend API (onboarding endpoint)
+  // Load properties from backend API based on selected FP
   const loadData = async (showLoading = false) => {
     // Only show loading spinner on initial load or manual refresh
     if (showLoading) setLoading(true);
     try {
-      const response = await fetch('/api/onboarding', {
+      // Use FP-specific endpoint if an FP is selected, otherwise get all
+      const endpoint = selectedFp && selectedFp.id !== 'all' 
+        ? `/api/admin/fp-view/${selectedFp.id}/properties`
+        : '/api/onboarding';
+      const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -167,12 +175,19 @@ const Properties = () => {
     }
   };
 
+  // Reset filters and reload data when FP selection changes
   useEffect(() => {
-    loadData(true); // Initial load shows loading spinner
+    // Reset filters when FP changes
+    setDivisionFilter('');
+    setZoneFilter('');
+    setSearchTerm('');
+    setActiveTab('all');
+    
+    loadData(true); // Load with spinner when FP changes
     // Poll for new entries every 30 seconds (silent background refresh)
     const interval = setInterval(() => loadData(false), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedFp?.id]);
 
   // Show toast helper
   const showToast = (message, type = 'success') => {

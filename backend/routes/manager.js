@@ -260,7 +260,7 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
         [franchisePartnerId, creatorEmail, req.user?.username || '', managerId]
       ).then(([r]) => r[0].count).catch(() => 0),
       
-      // Recent work orders (own created) with creator name lookup
+      // Recent work orders (zone-centric + own created) with creator name lookup
       pool.execute(
         `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name, 
                 v.company_name as vendor_name,
@@ -277,10 +277,10 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
          LEFT JOIN fp_employees fpe ON wo.created_by = fpe.id OR wo.created_by = fpe.email
          LEFT JOIN users pma ON wo.created_by = pma.id OR wo.created_by = pma.email
-         WHERE wo.franchise_partner_id = ? AND (wo.created_by = ? OR wo.created_by = ? OR wo.created_by LIKE ?)
+         WHERE wo.franchise_partner_id = ? AND (wo.created_by = ? OR wo.created_by = ? OR wo.created_by LIKE ? OR wo.manager_id = ?${zoneList ? ` OR p.zone_id IN (${zoneList})` : ''})
          ORDER BY wo.created_at DESC
          LIMIT 10`,
-        [franchisePartnerId, creatorEmail, req.user?.username || '', `manager-${managerId}`]
+        [franchisePartnerId, creatorEmail, req.user?.username || '', `manager-${managerId}`, managerId, ...assignedZones]
       ).then(([rows]) => rows).catch(() => [])
     ]);
 

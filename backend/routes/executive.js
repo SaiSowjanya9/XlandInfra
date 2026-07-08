@@ -283,7 +283,8 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
       [franchisePartnerId]
     );
 
-    // Get recent work orders (own created) with creator name lookup
+    // Get recent work orders (own created + zone-centric) with creator name lookup
+    const zonePlaceholders = assignedZones.length > 0 ? assignedZones.map(() => '?').join(',') : null;
     const [recentWorkOrders] = await pool.query(
       `SELECT wo.*, p.name as property_name, COALESCE(c.name, wo.category_name) as category_name,
               COALESCE(
@@ -298,10 +299,10 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN fp_employees fpe ON wo.created_by = fpe.id OR wo.created_by = fpe.email
        LEFT JOIN users pma ON wo.created_by = pma.id OR wo.created_by = pma.email
-       WHERE wo.franchise_partner_id = ? AND (wo.created_by = ? OR wo.created_by = ? OR wo.executive_id = ?)
+       WHERE wo.franchise_partner_id = ? AND (wo.created_by = ? OR wo.created_by = ? OR wo.executive_id = ?${zonePlaceholders ? ` OR p.zone_id IN (${zonePlaceholders})` : ''})
        ORDER BY wo.created_at DESC
-       LIMIT 5`,
-      [franchisePartnerId, creatorEmail, req.user?.username || '', executiveId]
+       LIMIT 10`,
+      [franchisePartnerId, creatorEmail, req.user?.username || '', executiveId, ...assignedZones]
     );
 
     res.json({
